@@ -1,10 +1,6 @@
-import * as dotenv from 'dotenv'
-dotenv.config()
-const SECRET_KEY = process.env.FIREBASE_API_KEY
-
 // Configura o Firebase
 const firebaseConfig = {
-    apiKey: SECRET_KEY,
+    apiKey: FIREBASE_API_KEY,
     authDomain: "estacaometereologicaesp32.firebaseapp.com",
     databaseURL: "https://estacaometereologicaesp32-default-rtdb.firebaseio.com",
     projectId: "estacaometereologicaesp32",
