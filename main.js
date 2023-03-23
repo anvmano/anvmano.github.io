@@ -1,6 +1,5 @@
-require('dotenv').config();
+require('dotenv').config()
 const SECRET_KEY = process.env.FIREBASE_API_KEY;
-
 
 // Configura o Firebase
 const firebaseConfig = {
