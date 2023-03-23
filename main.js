@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 // Configura o Firebase
 const firebaseConfig = {
     apiKey: process.env.FIREBASE_API_KEY,
