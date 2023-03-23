@@ -148,7 +148,6 @@ function hourAndData(data) {
     return { hours, dadostemp, dadosST, dadosUmidade };
 }
 
-
 function createTemperatureChart(data) {
     const { hours, dadostemp: temperatureData } = hourAndData(data);
 
