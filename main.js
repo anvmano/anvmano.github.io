@@ -176,7 +176,7 @@ function createSTChart(data) {
             labels: hours, //X-axis data 
             datasets: [{
                 label: 'Sensacao termica',
-                data: STData, //Y-axis data 
+                data: STData,
                 borderColor: 'green',
                 fill: false, //Fills the curve under the line with the babckground color. It's true by default 
             }]
