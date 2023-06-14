@@ -70,10 +70,13 @@ function createTable(data) {
     headerRow.appendChild(headerCell);
   }
 
+  // Obtém a data atual
+  const currentDate = new Date();
+
   // Obtém as chaves de data ordenadas de forma decrescente
   const dateKeys = Object.keys(data).sort((a, b) => new Date(b) - new Date(a));
 
-  // Preenche a tabela com os dados dos últimos 24 registros
+  // Preenche a tabela com os dados dos últimos 24 registros a partir da data atual
   let counter = 0;
   for (const date of dateKeys) {
     const dateData = data[date];
@@ -81,6 +84,13 @@ function createTable(data) {
       const timeData = dateData[time];
       for (const key in timeData) {
         const item = timeData[key];
+        const recordDate = new Date(`${date} ${time}`);
+        
+        // Verifica se a data do registro é posterior à data atual
+        if (recordDate <= currentDate) {
+          continue;
+        }
+
         const temperature = item.Temperatura.toFixed(2);
         const thermalSensation = item["Sensacao termica"].toFixed(2);
         const humidity = item.Umidade.toFixed(2);
@@ -92,34 +102,23 @@ function createTable(data) {
         const thermalSensationCell = row.insertCell();
         const humidityCell = row.insertCell();
 
-        // Verifica se o limite de 24 registros foi atingido
-        if (counter >= 24) {
-          break;
-        }
-
-        // Verifica se o dia atual é diferente do último dia apresentado
-        if (date !== lastDate) {
-          dateCell.innerText = date;
-          lastDate = date; // Atualiza a variável com o novo dia
-        } else {
-          dateCell.innerText = ''; // Não apresenta o dia na célula
-        }
-
+        dateCell.innerText = date;
         timeCell.innerText = time;
         temperatureCell.innerText = temperature;
         thermalSensationCell.innerText = thermalSensation;
         humidityCell.innerText = humidity;
 
         counter++;
+        if (counter >= 24) {
+          break;
+        }
       }
 
-      // Verifica se o limite de 24 registros foi atingido
       if (counter >= 24) {
         break;
       }
     }
 
-    // Verifica se o limite de 24 registros foi atingido
     if (counter >= 24) {
       break;
     }
@@ -127,7 +126,6 @@ function createTable(data) {
 
   return table;
 }
-
 
 function hourAndData(data) {
     var hours = [];
