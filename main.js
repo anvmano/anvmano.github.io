@@ -68,9 +68,9 @@ function createTable(data) {
 
   // Ordenar as datas em ordem cronológica descendente
   allDates.sort((a, b) => {
-    const dateA = new Date(a.split("-").reverse().join("-"));
-    const dateB = new Date(b.split("-").reverse().join("-"));
-    return dateB - dateA;
+  const dateA = new Date(a.split("-").reverse().join("-"));
+  const dateB = new Date(b.split("-").reverse().join("-"));
+  return dateB - dateA;
   });
 
   // Preenche a tabela com os dados ordenados cronologicamente
