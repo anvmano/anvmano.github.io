@@ -59,72 +59,52 @@ plots.forEach(plot => {
 
 
 function createTable(data) {
-  const table = document.createElement("table");
+    const table = document.createElement("table");
 
-  // Cria o cabeçalho da tabela
-  const headerRow = table.insertRow();
-  const headers = ["Data", "Hora", "Temperatura", "Sensação Térmica", "Umidade"];
-  for (let i = 0; i < headers.length; i++) {
-    const headerCell = document.createElement("th");
-    headerCell.innerText = headers[i];
-    headerRow.appendChild(headerCell);
-  }
-
-  // Obtém a data atual
-  const currentDate = new Date();
-
-  // Obtém as chaves de data ordenadas de forma decrescente
-  const dateKeys = Object.keys(data).sort((a, b) => new Date(b) - new Date(a));
-
-  // Preenche a tabela com os dados dos últimos 24 registros a partir da data atual
-  let counter = 0;
-  for (const date of dateKeys) {
-    const dateData = data[date];
-    for (const time in dateData) {
-      const timeData = dateData[time];
-      for (const key in timeData) {
-        const item = timeData[key];
-        const recordDate = new Date(`${date} ${time}`);
-        
-        // Verifica se a data do registro é posterior à data atual
-        if (recordDate <= currentDate) {
-          continue;
-        }
-
-        const temperature = item.Temperatura.toFixed(2);
-        const thermalSensation = item["Sensacao termica"].toFixed(2);
-        const humidity = item.Umidade.toFixed(2);
-
-        const row = table.insertRow();
-        const dateCell = row.insertCell();
-        const timeCell = row.insertCell();
-        const temperatureCell = row.insertCell();
-        const thermalSensationCell = row.insertCell();
-        const humidityCell = row.insertCell();
-
-        dateCell.innerText = date;
-        timeCell.innerText = time;
-        temperatureCell.innerText = temperature;
-        thermalSensationCell.innerText = thermalSensation;
-        humidityCell.innerText = humidity;
-
-        counter++;
-        if (counter >= 24) {
-          break;
-        }
-      }
-
-      if (counter >= 24) {
-        break;
-      }
+    // Cria o cabeçalho da tabela
+    const headerRow = table.insertRow();
+    const headers = ["Data", "Hora", "Temperatura", "Sensação Térmica", "Umidade"];
+    for (let i = 0; i < headers.length; i++) {
+        const headerCell = document.createElement("th");
+        headerCell.innerText = headers[i];
+        headerRow.appendChild(headerCell);
     }
 
-    if (counter >= 24) {
-      break;
-    }
-  }
+    // Obter a data atual
+    const currentDate = new Date().toLocaleDateString();
 
-  return table;
+    // Preenche a tabela com os últimos registros da data atual
+    for (const date in data) {
+        if (date === currentDate) { // Verifica se a data é igual à data atual
+            const dateData = data[date];
+            const lastTime = Object.keys(dateData).pop(); // Obter o último horário
+
+            const timeData = dateData[lastTime];
+            for (const key in timeData) {
+                const item = timeData[key];
+                const temperature = item.Temperatura.toFixed(2);
+                const thermalSensation = item["Sensacao termica"].toFixed(2);
+                const humidity = item.Umidade.toFixed(2);
+
+                const row = table.insertRow();
+                const dateCell = row.insertCell();
+                const timeCell = row.insertCell();
+                const temperatureCell = row.insertCell();
+                const thermalSensationCell = row.insertCell();
+                const humidityCell = row.insertCell();
+
+                dateCell.innerText = date;
+                timeCell.innerText = lastTime;
+                temperatureCell.innerText = temperature;
+                thermalSensationCell.innerText = thermalSensation;
+                humidityCell.innerText = humidity;
+            }
+
+            break; // Interrompe o loop após encontrar os registros da data atual
+        }
+    }
+
+    return table;
 }
 
 function hourAndData(data) {
