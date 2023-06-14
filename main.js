@@ -63,8 +63,15 @@ function createTable(data) {
   // Cria o cabeçalho da tabela
   createTableHeader(table);
 
-  // Preenche a tabela com os dados
-  Object.entries(data).forEach(([date, dateData]) => {
+  // Obter todas as datas presentes nos dados
+  const allDates = Object.keys(data);
+
+  // Ordenar as datas em ordem cronológica ascendente
+  allDates.sort((a, b) => new Date(a) - new Date(b));
+
+  // Preenche a tabela com os dados ordenados cronologicamente
+  allDates.forEach(date => {
+    const dateData = data[date];
     Object.entries(dateData).forEach(([time, timeData]) => {
       Object.entries(timeData).forEach(([key, item]) => {
         const { Temperatura, "Sensacao termica": SensacaoTermica, Umidade } = item;
@@ -79,14 +86,7 @@ function createTable(data) {
         const thermalSensationCell = row.insertCell();
         const humidityCell = row.insertCell();
 
-        // Verifica se o dia atual é diferente do último dia apresentado
-        if (date !== lastDate) {
-          dateCell.innerText = date;
-          lastDate = date; // Atualiza a variável com o novo dia
-        } else {
-          dateCell.innerText = ''; // Não apresenta o dia na célula
-        }
-
+        dateCell.innerText = date;
         timeCell.innerText = time;
         temperatureCell.innerText = temperature;
         thermalSensationCell.innerText = thermalSensation;
