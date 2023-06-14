@@ -66,14 +66,17 @@ function createTable(data) {
   // Obter todas as datas presentes nos dados
   const allDates = Object.keys(data);
 
-  // Ordenar as datas em ordem cronológica ascendente
+  // Ordenar as datas em ordem cronológica descendente
   allDates.sort((a, b) => {
     const dateA = new Date(a.split("-").reverse().join("-"));
     const dateB = new Date(b.split("-").reverse().join("-"));
-    return dateA - dateB;
+    return dateB - dateA;
   });
 
-  // Preenche a tabela com os dados ordenados cronologicamente
+  // Contador para controlar o número de registros exibidos
+  let count = 0;
+
+  // Preenche a tabela com os últimos 24 registros
   allDates.forEach(date => {
     const dateData = data[date];
     Object.entries(dateData).forEach(([time, timeData]) => {
@@ -95,8 +98,21 @@ function createTable(data) {
         temperatureCell.innerText = temperature;
         thermalSensationCell.innerText = thermalSensation;
         humidityCell.innerText = humidity;
+
+        // Incrementa o contador
+        count++;
+
+        // Verifica se alcançou o limite de 24 registros
+        if (count >= 24) {
+          return;
+        }
       });
     });
+
+    // Verifica se alcançou o limite de 24 registros
+    if (count >= 24) {
+      return;
+    }
   });
 
   return table;
