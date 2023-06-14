@@ -75,20 +75,20 @@ function createTable(data) {
 
   // Preenche a tabela com os dados ordenados cronologicamente
   let rowCount = 0;
-  allDates.some(date => {
+  for (const date of allDates) {
     if (rowCount >= 24) {
-      return true;
+      break;
     }
 
     const dateData = data[date];
-    return Object.entries(dateData).some(([time, timeData]) => {
+    for (const [time, timeData] of Object.entries(dateData)) {
       if (rowCount >= 24) {
-        return true;
+        break;
       }
 
-      return Object.entries(timeData).some(([key, item]) => {
+      for (const [key, item] of Object.entries(timeData)) {
         if (rowCount >= 24) {
-          return true;
+          break;
         }
 
         const { Temperatura, "Sensacao termica": SensacaoTermica, Umidade } = item;
@@ -110,9 +110,9 @@ function createTable(data) {
         humidityCell.innerText = humidity;
 
         rowCount++;
-      });
-    });
-  });
+      }
+    }
+  }
 
   return table;
 }
