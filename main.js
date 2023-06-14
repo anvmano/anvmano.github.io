@@ -67,7 +67,11 @@ function createTable(data) {
   const allDates = Object.keys(data);
 
   // Ordenar as datas em ordem cronológica ascendente
-  allDates.sort((a, b) => new Date(a) - new Date(b));
+  allDates.sort((a, b) => {
+    const dateA = new Date(a.split("-").reverse().join("-"));
+    const dateB = new Date(b.split("-").reverse().join("-"));
+    return dateA - dateB;
+  });
 
   // Preenche a tabela com os dados ordenados cronologicamente
   allDates.forEach(date => {
