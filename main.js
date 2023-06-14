@@ -77,43 +77,56 @@ function createTable(data) {
   let count = 0;
 
   // Preenche a tabela com os últimos 24 registros
-  allDates.forEach(date => {
+  for (let i = allDates.length - 1; i >= 0; i--) {
+    const date = allDates[i];
     const dateData = data[date];
-    Object.entries(dateData).forEach(([time, timeData]) => {
-      Object.entries(timeData).forEach(([key, item]) => {
-        const { Temperatura, "Sensacao termica": SensacaoTermica, Umidade } = item;
-        const temperature = formatDecimal(Temperatura, 2);
-        const thermalSensation = formatDecimal(SensacaoTermica, 2);
-        const humidity = formatDecimal(Umidade, 2);
 
-        const row = table.insertRow();
-        const dateCell = row.insertCell();
-        const timeCell = row.insertCell();
-        const temperatureCell = row.insertCell();
-        const thermalSensationCell = row.insertCell();
-        const humidityCell = row.insertCell();
+    // Percorre os horários em ordem alfabética
+    Object.keys(dateData)
+      .sort()
+      .forEach(time => {
+        const timeData = dateData[time];
 
-        dateCell.innerText = date;
-        timeCell.innerText = time;
-        temperatureCell.innerText = temperature;
-        thermalSensationCell.innerText = thermalSensation;
-        humidityCell.innerText = humidity;
+        // Percorre os itens de cada horário
+        Object.values(timeData).forEach(item => {
+          const { Temperatura, "Sensacao termica": SensacaoTermica, Umidade } = item;
+          const temperature = formatDecimal(Temperatura, 2);
+          const thermalSensation = formatDecimal(SensacaoTermica, 2);
+          const humidity = formatDecimal(Umidade, 2);
 
-        // Incrementa o contador
-        count++;
+          const row = table.insertRow();
+          const dateCell = row.insertCell();
+          const timeCell = row.insertCell();
+          const temperatureCell = row.insertCell();
+          const thermalSensationCell = row.insertCell();
+          const humidityCell = row.insertCell();
+
+          dateCell.innerText = date;
+          timeCell.innerText = time;
+          temperatureCell.innerText = temperature;
+          thermalSensationCell.innerText = thermalSensation;
+          humidityCell.innerText = humidity;
+
+          // Incrementa o contador
+          count++;
+
+          // Verifica se alcançou o limite de 24 registros
+          if (count >= 24) {
+            return;
+          }
+        });
 
         // Verifica se alcançou o limite de 24 registros
         if (count >= 24) {
           return;
         }
       });
-    });
 
     // Verifica se alcançou o limite de 24 registros
     if (count >= 24) {
-      return;
+      break;
     }
-  });
+  }
 
   return table;
 }
