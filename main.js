@@ -66,24 +66,24 @@ function createTable(data) {
   // Obter todas as datas presentes nos dados
   const allDates = Object.keys(data);
 
-  // Ordenar as datas em ordem cronológica descendente
+  // Ordenar as datas em ordem cronológica reversa
   allDates.sort((a, b) => new Date(b) - new Date(a));
 
   // Contador para controlar o número de registros exibidos
   let count = 0;
 
-  // Preenche a tabela com os últimos 24 registros
+  // Preenche a tabela com os últimos 24 registros em ordem cronológica reversa
   for (let i = allDates.length - 1; i >= 0; i--) {
     const date = allDates[i];
     const dateData = data[date];
 
-    // Percorre os horários em ordem alfabética
-    const times = Object.keys(dateData).sort();
+    // Percorre os horários em ordem alfabética reversa
+    const times = Object.keys(dateData).sort().reverse();
     for (const time of times) {
       const timeData = dateData[time];
 
-      // Percorre os itens de cada horário
-      const items = Object.values(timeData);
+      // Percorre os itens de cada horário em ordem inversa
+      const items = Object.values(timeData).reverse();
       for (const item of items) {
         const { Temperatura, "Sensacao termica": SensacaoTermica, Umidade } = item;
         const temperature = formatDecimal(Temperatura, 2);
