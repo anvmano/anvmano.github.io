@@ -67,11 +67,7 @@ function createTable(data) {
   const allDates = Object.keys(data);
 
   // Ordenar as datas em ordem cronológica descendente
-  allDates.sort((a, b) => {
-    const dateA = new Date(a.split("-").reverse().join("-"));
-    const dateB = new Date(b.split("-").reverse().join("-"));
-    return dateB - dateA;
-  });
+  allDates.sort((a, b) => new Date(b) - new Date(a));
 
   // Contador para controlar o número de registros exibidos
   let count = 0;
@@ -82,49 +78,39 @@ function createTable(data) {
     const dateData = data[date];
 
     // Percorre os horários em ordem alfabética
-    Object.keys(dateData)
-      .sort()
-      .forEach(time => {
-        const timeData = dateData[time];
+    const times = Object.keys(dateData).sort();
+    for (const time of times) {
+      const timeData = dateData[time];
 
-        // Percorre os itens de cada horário
-        Object.values(timeData).forEach(item => {
-          const { Temperatura, "Sensacao termica": SensacaoTermica, Umidade } = item;
-          const temperature = formatDecimal(Temperatura, 2);
-          const thermalSensation = formatDecimal(SensacaoTermica, 2);
-          const humidity = formatDecimal(Umidade, 2);
+      // Percorre os itens de cada horário
+      const items = Object.values(timeData);
+      for (const item of items) {
+        const { Temperatura, "Sensacao termica": SensacaoTermica, Umidade } = item;
+        const temperature = formatDecimal(Temperatura, 2);
+        const thermalSensation = formatDecimal(SensacaoTermica, 2);
+        const humidity = formatDecimal(Umidade, 2);
 
-          const row = table.insertRow();
-          const dateCell = row.insertCell();
-          const timeCell = row.insertCell();
-          const temperatureCell = row.insertCell();
-          const thermalSensationCell = row.insertCell();
-          const humidityCell = row.insertCell();
+        const row = table.insertRow();
+        const dateCell = row.insertCell();
+        const timeCell = row.insertCell();
+        const temperatureCell = row.insertCell();
+        const thermalSensationCell = row.insertCell();
+        const humidityCell = row.insertCell();
 
-          dateCell.innerText = date;
-          timeCell.innerText = time;
-          temperatureCell.innerText = temperature;
-          thermalSensationCell.innerText = thermalSensation;
-          humidityCell.innerText = humidity;
+        dateCell.innerText = date;
+        timeCell.innerText = time;
+        temperatureCell.innerText = temperature;
+        thermalSensationCell.innerText = thermalSensation;
+        humidityCell.innerText = humidity;
 
-          // Incrementa o contador
-          count++;
-
-          // Verifica se alcançou o limite de 24 registros
-          if (count >= 24) {
-            return;
-          }
-        });
+        // Incrementa o contador
+        count++;
 
         // Verifica se alcançou o limite de 24 registros
         if (count >= 24) {
-          return;
+          return table;
         }
-      });
-
-    // Verifica se alcançou o limite de 24 registros
-    if (count >= 24) {
-      break;
+      }
     }
   }
 
