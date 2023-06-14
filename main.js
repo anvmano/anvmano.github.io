@@ -59,53 +59,75 @@ plots.forEach(plot => {
 
 
 function createTable(data) {
-    const table = document.createElement("table");
+  const table = document.createElement("table");
 
-    // Cria o cabeçalho da tabela
-    const headerRow = table.insertRow();
-    const headers = ["Data", "Hora", "Temperatura", "Sensação Térmica", "Umidade"];
-    for (let i = 0; i < headers.length; i++) {
-        const headerCell = document.createElement("th");
-        headerCell.innerText = headers[i];
-        headerRow.appendChild(headerCell);
-    }
+  // Cria o cabeçalho da tabela
+  const headerRow = table.insertRow();
+  const headers = ["Data", "Hora", "Temperatura", "Sensação Térmica", "Umidade"];
+  for (let i = 0; i < headers.length; i++) {
+    const headerCell = document.createElement("th");
+    headerCell.innerText = headers[i];
+    headerRow.appendChild(headerCell);
+  }
 
-    // Preenche a tabela com os dados
-    for (const date in data) {
-        const dateData = data[date];
-        for (const time in dateData) {
-            const timeData = dateData[time];
-            for (const key in timeData) {
-                const item = timeData[key];
-                const temperature = item.Temperatura.toFixed(2);
-                const thermalSensation = item["Sensacao termica"].toFixed(2);
-                const humidity = item.Umidade.toFixed(2);
+  // Obtém as chaves de data ordenadas de forma decrescente
+  const dateKeys = Object.keys(data).sort((a, b) => new Date(b) - new Date(a));
 
-                const row = table.insertRow();
-                const dateCell = row.insertCell();
-                const timeCell = row.insertCell();
-                const temperatureCell = row.insertCell();
-                const thermalSensationCell = row.insertCell();
-                const humidityCell = row.insertCell();
+  // Preenche a tabela com os dados dos últimos 24 registros
+  let counter = 0;
+  for (const date of dateKeys) {
+    const dateData = data[date];
+    for (const time in dateData) {
+      const timeData = dateData[time];
+      for (const key in timeData) {
+        const item = timeData[key];
+        const temperature = item.Temperatura.toFixed(2);
+        const thermalSensation = item["Sensacao termica"].toFixed(2);
+        const humidity = item.Umidade.toFixed(2);
 
-                // Verifica se o dia atual é diferente do último dia apresentado
-                if (date !== lastDate) {
-                    dateCell.innerText = date;
-                    lastDate = date; // Atualiza a variável com o novo dia
-                } else {
-                    dateCell.innerText = ''; // Não apresenta o dia na célula
-                }
+        const row = table.insertRow();
+        const dateCell = row.insertCell();
+        const timeCell = row.insertCell();
+        const temperatureCell = row.insertCell();
+        const thermalSensationCell = row.insertCell();
+        const humidityCell = row.insertCell();
 
-                timeCell.innerText = time;
-                temperatureCell.innerText = temperature;
-                thermalSensationCell.innerText = thermalSensation;
-                humidityCell.innerText = humidity;
-            }
+        // Verifica se o limite de 24 registros foi atingido
+        if (counter >= 24) {
+          break;
         }
+
+        // Verifica se o dia atual é diferente do último dia apresentado
+        if (date !== lastDate) {
+          dateCell.innerText = date;
+          lastDate = date; // Atualiza a variável com o novo dia
+        } else {
+          dateCell.innerText = ''; // Não apresenta o dia na célula
+        }
+
+        timeCell.innerText = time;
+        temperatureCell.innerText = temperature;
+        thermalSensationCell.innerText = thermalSensation;
+        humidityCell.innerText = humidity;
+
+        counter++;
+      }
+
+      // Verifica se o limite de 24 registros foi atingido
+      if (counter >= 24) {
+        break;
+      }
     }
 
-    return table;
+    // Verifica se o limite de 24 registros foi atingido
+    if (counter >= 24) {
+      break;
+    }
+  }
+
+  return table;
 }
+
 
 function hourAndData(data) {
     var hours = [];
