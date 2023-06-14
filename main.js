@@ -57,54 +57,54 @@ plots.forEach(plot => {
     });
 });
 
+function formatDateKey(dateKey) {
+  return new Date(dateKey.split("-").reverse().join("-"));
+}
+
+function createDataRow(date, time, item, table) {
+  const { Temperatura, "Sensacao termica": SensacaoTermica, Umidade } = item;
+  const temperature = formatDecimal(Temperatura, 2);
+  const thermalSensation = formatDecimal(SensacaoTermica, 2);
+  const humidity = formatDecimal(Umidade, 2);
+
+  const row = table.insertRow();
+  const dateCell = row.insertCell();
+  const timeCell = row.insertCell();
+  const temperatureCell = row.insertCell();
+  const thermalSensationCell = row.insertCell();
+  const humidityCell = row.insertCell();
+
+  dateCell.innerText = date;
+  timeCell.innerText = time;
+  temperatureCell.innerText = temperature;
+  thermalSensationCell.innerText = thermalSensation;
+  humidityCell.innerText = humidity;
+}
+
+function flattenData(data) {
+  return Object.entries(data).flatMap(([date, dateData]) => {
+    return Object.entries(dateData).map(([time, item]) => {
+      return { date, time, ...item };
+    });
+  });
+}
+
 function createTable(data) {
   const table = document.createElement("table");
-
+  
   // Cria o cabeçalho da tabela
   createTableHeader(table);
 
-  // Obter todas as datas presentes nos dados
-  const allDates = Object.keys(data);
+  const flattenedData = flattenData(data);
 
-  // Ordenar as datas em ordem cronológica descendente
-  allDates.sort((a, b) => {
-    const dateA = new Date(a.split("-").reverse().join("-"));
-    const dateB = new Date(b.split("-").reverse().join("-"));
-    return dateB - dateA;
+  // Ordenar os dados por data em ordem cronológica descendente
+  flattenedData.sort((a, b) => {
+    return formatDateKey(b.date) - formatDateKey(a.date);
   });
 
-  // Transformar todos os dados em uma única matriz
-  const allData = [];
-  allDates.forEach(date => {
-    const dateData = data[date];
-    Object.entries(dateData).forEach(([time, timeData]) => {
-      Object.entries(timeData).forEach(([key, item]) => {
-        allData.push({date, time, ...item});
-      });
-    });
-  });
-
-  // Pegar os primeiros 24 itens desta matriz
-  const top24Data = allData.slice(0, 24);
-
-  // Preencher a tabela com os dados
-  top24Data.forEach(({date, time, Temperatura, "Sensacao termica": SensacaoTermica, Umidade}) => {
-    const temperature = formatDecimal(Temperatura, 2);
-    const thermalSensation = formatDecimal(SensacaoTermica, 2);
-    const humidity = formatDecimal(Umidade, 2);
-
-    const row = table.insertRow();
-    const dateCell = row.insertCell();
-    const timeCell = row.insertCell();
-    const temperatureCell = row.insertCell();
-    const thermalSensationCell = row.insertCell();
-    const humidityCell = row.insertCell();
-
-    dateCell.innerText = date;
-    timeCell.innerText = time;
-    temperatureCell.innerText = temperature;
-    thermalSensationCell.innerText = thermalSensation;
-    humidityCell.innerText = humidity;
+  // Preenche a tabela com os dados ordenados cronologicamente
+  flattenedData.forEach(({ date, time, ...item }) => {
+    createDataRow(date, time, item, table);
   });
 
   return table;
