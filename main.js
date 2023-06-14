@@ -66,18 +66,31 @@ function createTable(data) {
   // Obter todas as datas presentes nos dados
   const allDates = Object.keys(data);
 
-// Ordenar as datas em ordem cronológica ascendente
-allDates.sort((a, b) => {
-  const dateA = new Date(a.split("-").reverse().join("-"));
-  const dateB = new Date(b.split("-").reverse().join("-"));
-  return dateA - dateB;
-});
+  // Ordenar as datas em ordem cronológica descendente
+  allDates.sort((a, b) => {
+    const dateA = new Date(a.split("-").reverse().join("-"));
+    const dateB = new Date(b.split("-").reverse().join("-"));
+    return dateB - dateA;
+  });
 
   // Preenche a tabela com os dados ordenados cronologicamente
-  allDates.forEach(date => {
+  let rowCount = 0;
+  allDates.some(date => {
+    if (rowCount >= 24) {
+      return true;
+    }
+
     const dateData = data[date];
-    Object.entries(dateData).forEach(([time, timeData]) => {
-      Object.entries(timeData).forEach(([key, item]) => {
+    return Object.entries(dateData).some(([time, timeData]) => {
+      if (rowCount >= 24) {
+        return true;
+      }
+
+      return Object.entries(timeData).some(([key, item]) => {
+        if (rowCount >= 24) {
+          return true;
+        }
+
         const { Temperatura, "Sensacao termica": SensacaoTermica, Umidade } = item;
         const temperature = formatDecimal(Temperatura, 2);
         const thermalSensation = formatDecimal(SensacaoTermica, 2);
@@ -95,6 +108,8 @@ allDates.sort((a, b) => {
         temperatureCell.innerText = temperature;
         thermalSensationCell.innerText = thermalSensation;
         humidityCell.innerText = humidity;
+
+        rowCount++;
       });
     });
   });
