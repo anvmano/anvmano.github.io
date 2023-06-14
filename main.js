@@ -57,49 +57,59 @@ plots.forEach(plot => {
     });
 });
 
-
 function createTable(data) {
   const table = document.createElement("table");
-  const headers = ["Data", "Hora", "Temperatura", "Sensação Térmica", "Umidade"];
 
   // Cria o cabeçalho da tabela
-  const headerRow = table.insertRow();
-  for (let i = 0; i < headers.length; i++) {
-    const headerCell = document.createElement("th");
-    headerCell.innerText = headers[i];
-    headerRow.appendChild(headerCell);
-  }
+  createTableHeader(table);
 
-  // Obter a data atual
-  const currentDate = new Date().toLocaleDateString();
-  const currentData = data[currentDate];
+  // Preenche a tabela com os dados
+  Object.entries(data).forEach(([date, dateData]) => {
+    Object.entries(dateData).forEach(([time, timeData]) => {
+      Object.entries(timeData).forEach(([key, item]) => {
+        const { Temperatura, "Sensacao termica": SensacaoTermica, Umidade } = item;
+        const temperature = formatDecimal(Temperatura, 2);
+        const thermalSensation = formatDecimal(SensacaoTermica, 2);
+        const humidity = formatDecimal(Umidade, 2);
 
-  if (currentData) {
-    const lastTime = Object.keys(currentData).pop(); // Obter o último horário
-    const lastData = currentData[lastTime];
+        const row = table.insertRow();
+        const dateCell = row.insertCell();
+        const timeCell = row.insertCell();
+        const temperatureCell = row.insertCell();
+        const thermalSensationCell = row.insertCell();
+        const humidityCell = row.insertCell();
 
-    for (const key in lastData) {
-      const item = lastData[key];
-      const temperature = item.Temperatura.toFixed(2);
-      const thermalSensation = item["Sensacao termica"].toFixed(2);
-      const humidity = item.Umidade.toFixed(2);
+        // Verifica se o dia atual é diferente do último dia apresentado
+        if (date !== lastDate) {
+          dateCell.innerText = date;
+          lastDate = date; // Atualiza a variável com o novo dia
+        } else {
+          dateCell.innerText = ''; // Não apresenta o dia na célula
+        }
 
-      const row = table.insertRow();
-      const dateCell = row.insertCell();
-      const timeCell = row.insertCell();
-      const temperatureCell = row.insertCell();
-      const thermalSensationCell = row.insertCell();
-      const humidityCell = row.insertCell();
-
-      dateCell.innerText = currentDate;
-      timeCell.innerText = lastTime;
-      temperatureCell.innerText = temperature;
-      thermalSensationCell.innerText = thermalSensation;
-      humidityCell.innerText = humidity;
-    }
-  }
+        timeCell.innerText = time;
+        temperatureCell.innerText = temperature;
+        thermalSensationCell.innerText = thermalSensation;
+        humidityCell.innerText = humidity;
+      });
+    });
+  });
 
   return table;
+}
+
+function createTableHeader(table) {
+  const headers = ["Data", "Hora", "Temperatura", "Sensação Térmica", "Umidade"];
+  const headerRow = table.insertRow();
+  headers.forEach(headerText => {
+    const headerCell = document.createElement("th");
+    headerCell.innerText = headerText;
+    headerRow.appendChild(headerCell);
+  });
+}
+
+function formatDecimal(number, decimalPlaces) {
+  return number.toFixed(decimalPlaces);
 }
 
 function hourAndData(data) {
