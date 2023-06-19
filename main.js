@@ -61,7 +61,8 @@ function createTable(data) {
     const table = document.createElement("table");
 
     // Pega a data atual
-    const currentDate = new Date().toISOString().slice(0,10);
+    const now = new Date();
+    const currentDate = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
 
     // Cria o cabeçalho da tabela
     const headerRow = table.insertRow();
@@ -108,6 +109,7 @@ function createTable(data) {
             }
         }
     }
+
     return table;
 }
 
