@@ -63,18 +63,30 @@ function createTable(data) {
   // Cria o cabeçalho da tabela
   createTableHeader(table);
 
-  // Obter as duas primeiras datas presentes nos dados
-  const allDates = Object.keys(data).slice(0, 2);
+  // Obter a data atual e a data anterior
+  const currentDate = new Date();
+  const previousDate = new Date();
+  previousDate.setDate(previousDate.getDate() - 1);
+
+  // Converter as datas para o formato esperado
+  const currentDateString = formatDate(currentDate);
+  const previousDateString = formatDate(previousDate);
+
+  // Obter as datas presentes nos dados
+  const allDates = Object.keys(data);
+
+  // Filtrar apenas as datas atual e anterior
+  const filteredDates = allDates.filter(date => date === currentDateString || date === previousDateString);
 
   // Ordenar as datas em ordem cronológica descendente
-  allDates.sort((a, b) => {
+  filteredDates.sort((a, b) => {
     const dateA = new Date(a.split("-").reverse().join("-"));
     const dateB = new Date(b.split("-").reverse().join("-"));
     return dateB - dateA;
   });
 
   // Preenche a tabela com os dados ordenados cronologicamente
-  allDates.forEach(date => {
+  filteredDates.forEach(date => {
     const dateData = data[date];
     Object.entries(dateData).forEach(([time, timeData]) => {
       Object.entries(timeData).forEach(([key, item]) => {
@@ -100,15 +112,6 @@ function createTable(data) {
   });
 
   return table;
-}
-function createTableHeader(table) {
-  const headers = ["Data", "Hora", "Temperatura", "Sensação Térmica", "Umidade"];
-  const headerRow = table.insertRow();
-  headers.forEach(headerText => {
-    const headerCell = document.createElement("th");
-    headerCell.innerText = headerText;
-    headerRow.appendChild(headerCell);
-  });
 }
 
 function formatDecimal(number, decimalPlaces) {
