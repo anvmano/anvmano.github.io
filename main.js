@@ -11,12 +11,16 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 
-
 // Get the HTML canvas by its id 
 plotsTemp = document.getElementById("plotsTemp");
 plotsST = document.getElementById("plotsST");
 plotsUmidade = document.getElementById("plotsUmidade");
+
+const alturaGrafico = '250px';
+
 let lastDate = '';
+const currentDate = dataAtual();
+const yesterdayDate = dataOntem();
 
 const dbRef = firebase.database().ref("historico/Temperatura");
 dbRef.on("value", snapshot => {
@@ -32,117 +36,166 @@ dbRef.on("value", snapshot => {
     dataElement.appendChild(table);
 });
 
+function handleZoom(plot) {
+    // Verifica se o gráfico já está maximizado
+    if (plot.classList.contains('zoom')) {
+        // Remove a classe de maximizado para voltar ao tamanho normal
+        plot.classList.remove('zoom');
+    } else {
+        // Adiciona a classe de maximizado para aumentar o tamanho
+        plot.classList.add('zoom');
+        // Scroll para o gráfico
+        const rect = plot.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+        const x = rect.left + scrollLeft + rect.width / 2;
+        const y = rect.top + scrollTop + rect.height / 2;
+        window.scrollTo({ top: y, left: x, behavior: 'smooth' });
+    }
+}
+
 // Seleciona todos os gráficos
 const plots = document.querySelectorAll('.plot');
 
 // Percorre cada gráfico
 plots.forEach(plot => {
     // Adiciona um evento de clique em cada gráfico
-    plot.addEventListener('click', () => {
-        // Verifica se o gráfico já está maximizado
-        if (plot.classList.contains('zoom')) {
-            // Remove a classe de maximizado para voltar ao tamanho normal
-            plot.classList.remove('zoom');
-        } else {
-            // Adiciona a classe de maximizado para aumentar o tamanho
-            plot.classList.add('zoom');
-            // scroll para o gráfico
-            const rect = plot.getBoundingClientRect();
-            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-            const x = rect.left + scrollLeft + rect.width / 2;
-            const y = rect.top + scrollTop + rect.height / 2;
-            window.scrollTo({ top: y, left: x, behavior: 'smooth' });
-        }
-    });
+    plot.addEventListener('click', () => handleZoom(plot));
 });
 
 function createTable(data) {
-  const table = document.createElement("table");
+    const table = document.createElement("table");
 
-  // Cria o cabeçalho da tabela
-  createTableHeader(table);
+    // Cria o cabeçalho da tabela
+    const headerRow = table.insertRow();
+    const headers = ["Data", "Hora", "Temperatura", "Sensação Térmica", "Umidade"];
+    for (let i = 0; i < headers.length; i++) {
+        const headerCell = document.createElement("th");
+        headerCell.innerText = headers[i];
+        headerRow.appendChild(headerCell);
+    }
 
-  // Obter todas as datas presentes nos dados
-  const allDates = Object.keys(data);
+    const allDates = Object.keys(data).filter(
+        (date) => date === currentDate || date === yesterdayDate
+    );
 
-  // Ordenar as datas em ordem cronológica ascendente
-  allDates.sort((a, b) => {
-    const dateA = new Date(a.split("-").reverse().join("-"));
-    const dateB = new Date(b.split("-").reverse().join("-"));
-    return dateA - dateB;
-  });
+    let count = 0; // Variável para controlar o número de registros inseridos na tabela
+    let lastDate = null; // Variável para armazenar a última data exibida
 
-  // Preenche a tabela com os dados ordenados cronologicamente
-  allDates.forEach(date => {
-    const dateData = data[date];
-    Object.entries(dateData).forEach(([time, timeData]) => {
-      Object.entries(timeData).forEach(([key, item]) => {
-        const { Temperatura, "Sensacao termica": SensacaoTermica, Umidade } = item;
-        const temperature = formatDecimal(Temperatura, 2);
-        const thermalSensation = formatDecimal(SensacaoTermica, 2);
-        const humidity = formatDecimal(Umidade, 2);
+    // Preenche a tabela com os dados
+    for (const date of allDates.reverse()) {
+        const dateData = data[date];
+        const allTimes = Object.keys(dateData).sort().reverse();
 
-        const row = table.insertRow();
-        const dateCell = row.insertCell();
-        const timeCell = row.insertCell();
-        const temperatureCell = row.insertCell();
-        const thermalSensationCell = row.insertCell();
-        const humidityCell = row.insertCell();
+        for (const time of allTimes) {
+            const timeData = dateData[time];
 
-        dateCell.innerText = date;
-        timeCell.innerText = time;
-        temperatureCell.innerText = temperature;
-        thermalSensationCell.innerText = thermalSensation;
-        humidityCell.innerText = humidity;
-      });
-    });
-  });
+            for (const key in timeData) {
+                const item = timeData[key];
+                const temperature = item.Temperatura.toFixed(2);
+                const thermalSensation = item["Sensacao termica"].toFixed(2);
+                const humidity = item.Umidade.toFixed(2);
 
-  return table;
+                const row = table.insertRow();
+                const dateCell = row.insertCell();
+                const timeCell = row.insertCell();
+                const temperatureCell = row.insertCell();
+                const thermalSensationCell = row.insertCell();
+                const humidityCell = row.insertCell();
+
+                dateCell.innerText = date !== lastDate ? date : '';
+                timeCell.innerText = time;
+                temperatureCell.innerText = temperature;
+                thermalSensationCell.innerText = thermalSensation;
+                humidityCell.innerText = humidity;
+
+                count++; // Incrementa o contador de registros inseridos
+
+                if (count === 24) {
+                    return table; // Retorna a tabela após inserir os 24 registros
+                }
+            }
+            lastDate = date; // Atualiza a variável com a última data exibida
+        }
+    }
+
+    return table;
 }
 
-function formatDecimal(number, decimalPlaces) {
-  return number.toFixed(decimalPlaces);
+function dataAtual() {
+    var data = new Date();
+    var dia = String(data.getDate()).padStart(2, '0');
+    var mes = String(data.getMonth() + 1).padStart(2, '0');
+    var ano = data.getFullYear();
+    var dataAtual = dia + '-' + mes + '-' + ano;
+    return dataAtual;
+}
+
+function dataOntem() {
+    var data = new Date();
+    data.setDate(data.getDate() - 1); // Obtém o dia anterior
+    var dia = String(data.getDate()).padStart(2, '0');
+    var mes = String(data.getMonth() + 1).padStart(2, '0');
+    var ano = data.getFullYear();
+    var dataAnterior = dia + '-' + mes + '-' + ano;
+    return dataAnterior;
 }
 
 function hourAndData(data) {
-    var hours = []
+    var hours = [];
     var dadostemp = [];
     var dadosST = [];
     var dadosUmidade = [];
-    for (const date in data) {
+
+    const allDates = Object.keys(data).filter(
+        (date) => date === currentDate || date === yesterdayDate
+    );
+
+    for (const date of allDates) {
         const dateData = data[date];
-        for (const time in dateData) {
+        const allTimes = Object.keys(dateData).sort();
+
+        for (const time of allTimes) {
             const timeData = dateData[time];
-            const hour = time.split('-')[0]; // Pega somente a hora (segundo elemento do array)
+            const hour = time.split("-")[0]; // Pega somente a hora (segundo elemento do array)
             hours.push(hour);
+
             for (const key in timeData) {
                 const item = timeData[key];
-                console.log(item);
                 dadostemp.push(item.Temperatura);
-                dadosST.push(item['Sensacao termica']);
+                dadosST.push(item["Sensacao termica"]);
                 dadosUmidade.push(item.Umidade);
             }
         }
     }
+
     return { hours, dadostemp, dadosST, dadosUmidade };
 }
 
 function createTemperatureChart(data) {
     const { hours, dadostemp: temperatureData } = hourAndData(data);
 
-    // Create an instance of Chart object:
+    // Define a altura dos gráficos
+    plotsTemp.style.height = alturaGrafico;
+
     new Chart(plotsTemp, {
-        type: 'line', //Declare the chart type 
+        type: 'line',
         data: {
-            labels: hours, //X-axis data 
+            labels: hours,
             datasets: [{
                 label: 'Temperatura',
-                data: temperatureData, //Y-axis data 
+                data: temperatureData,
                 borderColor: 'blue',
-                fill: false, //Fills the curve under the line with the babckground color. It's true by default 
+                tension: 0.1
             }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { display: true, title: { display: true } },
+                y: { display: true, title: { display: true, text: 'Value' } }
+            }
         },
     });
 }
@@ -150,17 +203,26 @@ function createTemperatureChart(data) {
 function createSTChart(data) {
     const { hours, dadosST: STData } = hourAndData(data);
 
-    // Create an instance of Chart object:
+    plotsST.style.height = alturaGrafico;
+
     new Chart(plotsST, {
-        type: 'line', //Declare the chart type 
+        type: 'line',
         data: {
-            labels: hours, //X-axis data 
+            labels: hours,
             datasets: [{
                 label: 'Sensacao termica',
                 data: STData,
                 borderColor: 'green',
-                fill: false, //Fills the curve under the line with the babckground color. It's true by default 
+                tension: 0.1
             }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { display: true, title: { display: true } },
+                y: { display: true, title: { display: true, text: 'Value' } }
+            }
         },
     });
 }
@@ -168,17 +230,26 @@ function createSTChart(data) {
 function createUmidadeChart(data) {
     const { hours, dadosUmidade: dadosUmidade } = hourAndData(data);
 
-    // Create an instance of Chart object:
+    plotsUmidade.style.height = alturaGrafico;
+
     new Chart(plotsUmidade, {
-        type: 'line', //Declare the chart type 
+        type: 'line',
         data: {
-            labels: hours, //X-axis data 
+            labels: hours,
             datasets: [{
                 label: 'Umidade',
-                data: dadosUmidade, //Y-axis data 
+                data: dadosUmidade,
                 borderColor: '#36A2EB',
-                fill: false, //Fills the curve under the line with the babckground color. It's true by default 
+                tension: 0.1
             }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { display: true, title: { display: true } },
+                y: { display: true, title: { display: true, text: 'Value' } }
+            }
         },
     });
 }
