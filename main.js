@@ -58,48 +58,52 @@ plots.forEach(plot => {
 });
 
 function createTable(data) {
-  const table = document.createElement("table");
+    const table = document.createElement("table");
 
-  // Cria o cabeçalho da tabela
-  createTableHeader(table);
+    // Cria o cabeçalho da tabela
+    const headerRow = table.insertRow();
+    const headers = ["Data", "Hora", "Temperatura", "Sensação Térmica", "Umidade"];
+    for (let i = 0; i < headers.length; i++) {
+        const headerCell = document.createElement("th");
+        headerCell.innerText = headers[i];
+        headerRow.appendChild(headerCell);
+    }
 
-  // Obter todas as datas presentes nos dados
-  const allDates = Object.keys(data);
+    // Preenche a tabela com os dados
+    for (const date in data) {
+        const dateData = data[date];
+        for (const time in dateData) {
+            const timeData = dateData[time];
+            for (const key in timeData) {
+                const item = timeData[key];
+                const temperature = item.Temperatura.toFixed(2);
+                const thermalSensation = item["Sensacao termica"].toFixed(2);
+                const humidity = item.Umidade.toFixed(2);
 
-  // Ordenar as datas em ordem cronológica descendente
-  allDates.sort((a, b) => {
-  const dateA = new Date(a.split("-").reverse().join("-"));
-  const dateB = new Date(b.split("-").reverse().join("-"));
-  return dateB - dateA;
-  });
+                const row = table.insertRow();
+                const dateCell = row.insertCell();
+                const timeCell = row.insertCell();
+                const temperatureCell = row.insertCell();
+                const thermalSensationCell = row.insertCell();
+                const humidityCell = row.insertCell();
 
-  // Preenche a tabela com os dados ordenados cronologicamente
-  allDates.forEach(date => {
-    const dateData = data[date];
-    Object.entries(dateData).forEach(([time, timeData]) => {
-      Object.entries(timeData).forEach(([key, item]) => {
-        const { Temperatura, "Sensacao termica": SensacaoTermica, Umidade } = item;
-        const temperature = formatDecimal(Temperatura, 2);
-        const thermalSensation = formatDecimal(SensacaoTermica, 2);
-        const humidity = formatDecimal(Umidade, 2);
+                // Verifica se o dia atual é diferente do último dia apresentado
+                if (date !== lastDate) {
+                    dateCell.innerText = date;
+                    lastDate = date; // Atualiza a variável com o novo dia
+                } else {
+                    dateCell.innerText = ''; // Não apresenta o dia na célula
+                }
 
-        const row = table.insertRow();
-        const dateCell = row.insertCell();
-        const timeCell = row.insertCell();
-        const temperatureCell = row.insertCell();
-        const thermalSensationCell = row.insertCell();
-        const humidityCell = row.insertCell();
+                timeCell.innerText = time;
+                temperatureCell.innerText = temperature;
+                thermalSensationCell.innerText = thermalSensation;
+                humidityCell.innerText = humidity;
+            }
+        }
+    }
 
-        dateCell.innerText = date;
-        timeCell.innerText = time;
-        temperatureCell.innerText = temperature;
-        thermalSensationCell.innerText = thermalSensation;
-        humidityCell.innerText = humidity;
-      });
-    });
-  });
-
-  return table;
+    return table;
 }
 
 function formatDecimal(number, decimalPlaces) {
