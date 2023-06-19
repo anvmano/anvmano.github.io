@@ -66,15 +66,18 @@ function createTable(data) {
   // Obter todas as datas presentes nos dados
   const allDates = Object.keys(data);
 
+  // Limitar o número de datas aos dois últimos dias
+  const lastTwoDates = allDates.slice(-2);
+
   // Ordenar as datas em ordem cronológica descendente
-  allDates.sort((a, b) => {
-  const dateA = new Date(a.split("-").reverse().join("-"));
-  const dateB = new Date(b.split("-").reverse().join("-"));
-  return dateB - dateA;
+  lastTwoDates.sort((a, b) => {
+    const dateA = new Date(a.split("-").reverse().join("-"));
+    const dateB = new Date(b.split("-").reverse().join("-"));
+    return dateB - dateA;
   });
 
   // Preenche a tabela com os dados ordenados cronologicamente
-  allDates.forEach(date => {
+  lastTwoDates.forEach(date => {
     const dateData = data[date];
     Object.entries(dateData).forEach(([time, timeData]) => {
       Object.entries(timeData).forEach(([key, item]) => {
