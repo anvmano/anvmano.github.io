@@ -60,10 +60,6 @@ plots.forEach(plot => {
 function createTable(data) {
     const table = document.createElement("table");
 
-    // Pega a data atual
-    const now = new Date();
-    const currentDate = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
-
     // Cria o cabeçalho da tabela
     const headerRow = table.insertRow();
     const headers = ["Data", "Hora", "Temperatura", "Sensação Térmica", "Umidade"];
@@ -74,38 +70,35 @@ function createTable(data) {
     }
 
     // Preenche a tabela com os dados
-    let lastDate = '';
     for (const date in data) {
-        if (date === currentDate) {
-            const dateData = data[date];
-            for (const time in dateData) {
-                const timeData = dateData[time];
-                for (const key in timeData) {
-                    const item = timeData[key];
-                    const temperature = item.Temperatura.toFixed(2);
-                    const thermalSensation = item["Sensacao termica"].toFixed(2);
-                    const humidity = item.Umidade.toFixed(2);
+        const dateData = data[date];
+        for (const time in dateData) {
+            const timeData = dateData[time];
+            for (const key in timeData) {
+                const item = timeData[key];
+                const temperature = item.Temperatura.toFixed(2);
+                const thermalSensation = item["Sensacao termica"].toFixed(2);
+                const humidity = item.Umidade.toFixed(2);
 
-                    const row = table.insertRow();
-                    const dateCell = row.insertCell();
-                    const timeCell = row.insertCell();
-                    const temperatureCell = row.insertCell();
-                    const thermalSensationCell = row.insertCell();
-                    const humidityCell = row.insertCell();
+                const row = table.insertRow();
+                const dateCell = row.insertCell();
+                const timeCell = row.insertCell();
+                const temperatureCell = row.insertCell();
+                const thermalSensationCell = row.insertCell();
+                const humidityCell = row.insertCell();
 
-                    // Verifica se o dia atual é diferente do último dia apresentado
-                    if (date !== lastDate) {
-                        dateCell.innerText = date;
-                        lastDate = date; // Atualiza a variável com o novo dia
-                    } else {
-                        dateCell.innerText = ''; // Não apresenta o dia na célula
-                    }
-
-                    timeCell.innerText = time;
-                    temperatureCell.innerText = temperature;
-                    thermalSensationCell.innerText = thermalSensation;
-                    humidityCell.innerText = humidity;
+                // Verifica se o dia atual é diferente do último dia apresentado
+                if (date !== lastDate) {
+                    dateCell.innerText = date;
+                    lastDate = date; // Atualiza a variável com o novo dia
+                } else {
+                    dateCell.innerText = ''; // Não apresenta o dia na célula
                 }
+
+                timeCell.innerText = time;
+                temperatureCell.innerText = temperature;
+                thermalSensationCell.innerText = thermalSensation;
+                humidityCell.innerText = humidity;
             }
         }
     }
