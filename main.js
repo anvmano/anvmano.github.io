@@ -69,8 +69,17 @@ function createTable(data) {
         headerRow.appendChild(headerCell);
     }
 
+    // Converte o objeto em array e ordena em ordem decrescente
+    const sortedData = Object.keys(data).sort((a, b) => {
+        const dateA = new Date(a.split('-').reverse().join('-'));
+        const dateB = new Date(b.split('-').reverse().join('-'));
+        return dateB - dateA;
+    });
+
     // Preenche a tabela com os dados
-    for (const date in data) {
+    let lastDate = '';
+    for (let i = 0; i < sortedData.length; i++) {
+        const date = sortedData[i];
         const dateData = data[date];
         for (const time in dateData) {
             const timeData = dateData[time];
