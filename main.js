@@ -63,21 +63,18 @@ function createTable(data) {
   // Cria o cabeçalho da tabela
   createTableHeader(table);
 
-  // Obter todas as datas presentes nos dados
-  const allDates = Object.keys(data);
-
-  // Limitar o número de datas às duas primeiras datas
-  const firstTwoDates = allDates.slice(0, 2);
+  // Obter as duas primeiras datas presentes nos dados
+  const allDates = Object.keys(data).slice(0, 2);
 
   // Ordenar as datas em ordem cronológica descendente
-  firstTwoDates.sort((a, b) => {
+  allDates.sort((a, b) => {
     const dateA = new Date(a.split("-").reverse().join("-"));
     const dateB = new Date(b.split("-").reverse().join("-"));
     return dateB - dateA;
   });
 
   // Preenche a tabela com os dados ordenados cronologicamente
-  firstTwoDates.forEach(date => {
+  allDates.forEach(date => {
     const dateData = data[date];
     Object.entries(dateData).forEach(([time, timeData]) => {
       Object.entries(timeData).forEach(([key, item]) => {
@@ -104,7 +101,6 @@ function createTable(data) {
 
   return table;
 }
-
 function createTableHeader(table) {
   const headers = ["Data", "Hora", "Temperatura", "Sensação Térmica", "Umidade"];
   const headerRow = table.insertRow();
