@@ -63,31 +63,12 @@ function createTable(data) {
   // Cria o cabeçalho da tabela
   createTableHeader(table);
 
-  // Obter a data atual e a data anterior
-  const currentDate = new Date();
-  const previousDate = new Date();
-  previousDate.setDate(previousDate.getDate() - 1);
+  // Obter a data atual
+  const currentDate = new Date().toLocaleDateString();
 
-  // Converter as datas para o formato esperado
-  const currentDateString = formatDate(currentDate);
-  const previousDateString = formatDate(previousDate);
-
-  // Obter as datas presentes nos dados
-  const allDates = Object.keys(data);
-
-  // Filtrar apenas as datas atual e anterior
-  const filteredDates = allDates.filter(date => date === currentDateString || date === previousDateString);
-
-  // Ordenar as datas em ordem cronológica descendente
-  filteredDates.sort((a, b) => {
-    const dateA = new Date(a.split("-").reverse().join("-"));
-    const dateB = new Date(b.split("-").reverse().join("-"));
-    return dateB - dateA;
-  });
-
-  // Preenche a tabela com os dados ordenados cronologicamente
-  filteredDates.forEach(date => {
-    const dateData = data[date];
+  // Preenche a tabela com os dados da data atual
+  const dateData = data[currentDate];
+  if (dateData) {
     Object.entries(dateData).forEach(([time, timeData]) => {
       Object.entries(timeData).forEach(([key, item]) => {
         const { Temperatura, "Sensacao termica": SensacaoTermica, Umidade } = item;
@@ -102,14 +83,14 @@ function createTable(data) {
         const thermalSensationCell = row.insertCell();
         const humidityCell = row.insertCell();
 
-        dateCell.innerText = date;
+        dateCell.innerText = currentDate;
         timeCell.innerText = time;
         temperatureCell.innerText = temperature;
         thermalSensationCell.innerText = thermalSensation;
         humidityCell.innerText = humidity;
       });
     });
-  });
+  }
 
   return table;
 }
