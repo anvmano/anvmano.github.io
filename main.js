@@ -18,8 +18,14 @@ plotsUmidade = document.getElementById("plotsUmidade");
 plotSunriseSunset = document.getElementById("plotSunriseSunset");
 
 const alturaGrafico = '250px';
-
+var chartTemp;
+var chartTempST;
+var dadostemp = [];
+var dadostempF = [];
+var dadosST = [];
+var dadosSTF = [];
 let lastDate = '';
+var isCelsius = true;
 const currentDate = dataAtual();
 const yesterdayDate = dataOntem();
 
@@ -47,7 +53,6 @@ dbRefSunriseSunset.on("value", snapshot => {
     dataElement.appendChild(sunriseSunsetChart.canvas);
 });
 
-
 function handleZoom(plot) {
     // Verifica se o gráfico já está maximizado
     if (plot.classList.contains('zoom')) {
@@ -57,23 +62,22 @@ function handleZoom(plot) {
         // Adiciona a classe de maximizado para aumentar o tamanho
         plot.classList.add('zoom');
         // Scroll para o gráfico
-        const rect = plot.getBoundingClientRect();
-        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-        const x = rect.left + scrollLeft + rect.width / 2;
-        const y = rect.top + scrollTop + rect.height / 2;
-        window.scrollTo({ top: y, left: x, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: 'smooth' });  // Ir para o topo da página
     }
 }
 
 // Seleciona todos os gráficos
 const plots = document.querySelectorAll('.plot');
 
-// Percorre cada gráfico
-plots.forEach(plot => {
-    // Adiciona um evento de clique em cada gráfico
-    plot.addEventListener('click', () => handleZoom(plot));
+// Percorre cada gráfico - menos nascer e por do sol
+plots.forEach((plot, index) => {
+    // Verifica se o gráfico não é de nascer e pôr do sol
+    if (index !== 3) {
+        // Adiciona um evento de clique apenas para os gráficos que não são de nascer e pôr do sol
+        plot.addEventListener('click', () => handleZoom(plot));
+    }
 });
+
 
 function createTable(data) {
     const table = document.createElement("table");
@@ -155,8 +159,6 @@ function dataOntem() {
 
 function hourAndData(data) {
     var hours = [];
-    var dadostemp = [];
-    var dadosST = [];
     var dadosUmidade = [];
 
     const allDates = Object.keys(data).filter(
@@ -174,14 +176,20 @@ function hourAndData(data) {
 
             for (const key in timeData) {
                 const item = timeData[key];
-                dadostemp.push(item.Temperatura);
-                dadosST.push(item["Sensacao termica"]);
+                const temperatureCelsius = item.Temperatura;
+                const temperatureFahrenheit = (temperatureCelsius * 9 / 5) + 32;
+                const temperatureSTCelsius = item["Sensacao termica"];
+                const temperatureSTFahrenheit = (temperatureSTCelsius * 9 / 5) + 32;
+                dadostemp.push(temperatureCelsius);
+                dadostempF.push(temperatureFahrenheit);
+                dadosST.push(temperatureSTCelsius);
+                dadosSTF.push(temperatureSTFahrenheit);
                 dadosUmidade.push(item.Umidade);
             }
         }
     }
 
-    return { hours, dadostemp, dadosST, dadosUmidade };
+    return { hours, dadostemp, dadostempF, dadosST, dadosSTF, dadosUmidade };
 }
 
 function getSunriseSunsetData(data) {
@@ -310,11 +318,10 @@ function createSunriseSunsetChart(data) {
     });
 }
 
-
 function createTemperatureChart(data) {
-    const { hours, dadostemp: temperatureData } = hourAndData(data);
+    const { hours, dadostemp: temperatureData, dadostempF: temperatureDataF } = hourAndData(data);
 
-    new Chart(plotsTemp, {
+    chartTemp = new Chart(plotsTemp, {
         type: 'line',
         data: {
             labels: hours,
@@ -330,7 +337,18 @@ function createTemperatureChart(data) {
             maintainAspectRatio: false,
             scales: {
                 x: { display: true, title: { display: true } },
-                y: { display: true, title: { display: true, text: 'Value' } }
+                y: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: '(°C)'
+                    },
+                    ticks: {
+                        callback: function (value, index, values) {
+                            return value + '°';
+                        }
+                    }
+                }
             }
         },
     });
@@ -339,7 +357,7 @@ function createTemperatureChart(data) {
 function createSTChart(data) {
     const { hours, dadosST: STData } = hourAndData(data);
 
-    new Chart(plotsST, {
+    chartTempST = new Chart(plotsST, {
         type: 'line',
         data: {
             labels: hours,
@@ -355,7 +373,18 @@ function createSTChart(data) {
             maintainAspectRatio: false,
             scales: {
                 x: { display: true, title: { display: true } },
-                y: { display: true, title: { display: true, text: 'Value' } }
+                y: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: '(°C)'
+                    },
+                    ticks: {
+                        callback: function (value, index, values) {
+                            return value + '°';
+                        }
+                    }
+                }
             }
         },
     });
@@ -380,8 +409,38 @@ function createUmidadeChart(data) {
             maintainAspectRatio: false,
             scales: {
                 x: { display: true, title: { display: true } },
-                y: { display: true, title: { display: true, text: 'Value' } }
+                y: {
+                    display: true,
+                    title: {
+                        display: false,
+                    },
+                    ticks: {
+                        callback: function (value, index, values) {
+                            return value + '%';
+                        }
+                    }
+                }
             }
         },
     });
+}
+
+function updateChartDataAndUnit(chart, data, unit) {
+    chart.data.datasets[0].data = data;
+    chart.options.scales.y.title.text = `(${unit})`;
+    chart.update();
+
+    const temperatureUnitSpan = document.getElementById('temperature-unit');
+    temperatureUnitSpan.innerText = unit;
+}
+
+function updateChart() {
+    if (isCelsius) {
+        updateChartDataAndUnit(chartTemp, dadostempF, '°F');
+        updateChartDataAndUnit(chartTempST, dadosSTF, '°F');
+    } else {
+        updateChartDataAndUnit(chartTemp, dadostemp, '°C');
+        updateChartDataAndUnit(chartTempST, dadosST, '°C');
+    }
+    isCelsius = !isCelsius;
 }
