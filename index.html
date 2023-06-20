@@ -11,14 +11,17 @@
 <body>
     <h1>Estação Climática ESP32</h1>
     <div id="chart-container">
-        <canvas id="plotsTemp" class="plot" style="max-width:500px"></canvas>
-        <canvas id="plotsST" class="plot" style="max-width:500px"></canvas>
-        <canvas id="plotsUmidade" class="plot" style="max-width:500px"></canvas>
+        <canvas id="plotsTemp" class="plot" style="max-width:500px; height:250px;"></canvas>
+        <canvas id="plotsST" class="plot" style="max-width:500px; height:250px;"></canvas>
+        <canvas id="plotsUmidade" class="plot" style="max-width:500px; height:250px;"></canvas>
+    </div>
+    <div id="chart-container">
+        <canvas id="plotSunriseSunset" class="plot" style="max-width:90%; height:350px;"></canvas>
     </div>
     <div id="data"></div>
     <script src="https://www.gstatic.com/firebasejs/8.9.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.9.1/firebase-database.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.5.1/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="main.js"></script>
 </body>
 
