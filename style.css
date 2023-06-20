@@ -42,28 +42,44 @@ tr:hover {
     background-color: var(--color-hover);
 }
 
-#chart-container {
+#chart-container-sun {
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    margin-top: 1em;
+    height: 30vh;
+}
+
+#chart-container-sun .plot {
+    max-width: 90%;
+    background-color: var(--color-bg);
+    transition: transform 0.5s ease-out;
+    cursor: pointer;
+    justify-content: center;
+}
+
+#chart-container-temp {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     justify-content: center;
     width: 100%;
     margin-top: 2em;
 }
 
-.plot {
-    max-width: 400px;
-    /* ajuste o valor conforme necessário */
-    margin-right: 1em;
-    margin-bottom: 2em;
+#chart-container-temp .plot {
+    max-width: 29%;
+    height: 25vh;
+    margin: 1em;
     background-color: var(--color-bg);
     transition: transform 0.5s ease-out;
     cursor: pointer;
-    display: flex;
     justify-content: center;
 }
 
 .plot.zoom {
-    position: absolute;
+    position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) scale(2.5);
@@ -71,17 +87,47 @@ tr:hover {
     display: flex;
     align-items: center;
     justify-content: center;
+    z-index: 999;
 }
 
+.chart-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
 
+.toggle-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: blue;
+    color: white;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    transition: background-color 0.3s;
+}
 
-@media only screen and (max-width: 768px) {
-    table {
-        font-size: 0.8em;
+.toggle-button:hover {
+    background-color: darkblue;
+}
+
+#plotsTemp {
+    margin-left: 10px;
+}
+
+/* Media queries for smaller screens */
+@media (max-width: 768px) {
+    #chart-container-temp {
+        flex-direction: column;
     }
 
-    th,
-    td {
-        padding: 0.5em;
+    #chart-container-temp .plot,
+    #chart-container-sun .plot {
+        max-width: 100%;
     }
 }
