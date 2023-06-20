@@ -15,6 +15,7 @@ firebase.initializeApp(firebaseConfig);
 plotsTemp = document.getElementById("plotsTemp");
 plotsST = document.getElementById("plotsST");
 plotsUmidade = document.getElementById("plotsUmidade");
+plotSunriseSunset = document.getElementById("plotSunriseSunset");
 
 const alturaGrafico = '250px';
 
@@ -35,6 +36,17 @@ dbRef.on("value", snapshot => {
     dataElement.innerHTML = "";
     dataElement.appendChild(table);
 });
+
+const dbRefSunriseSunset = firebase.database().ref("historico/NascePorDoSol");
+dbRefSunriseSunset.on("value", snapshot => {
+    const data = snapshot.val();
+    const sunriseSunsetChart = createSunriseSunsetChart(data);
+
+    // Adiciona o gráfico ao elemento "data" da página HTML
+    const dataElement = document.getElementById("data");
+    dataElement.appendChild(sunriseSunsetChart.canvas);
+});
+
 
 function handleZoom(plot) {
     // Verifica se o gráfico já está maximizado
@@ -172,11 +184,135 @@ function hourAndData(data) {
     return { hours, dadostemp, dadosST, dadosUmidade };
 }
 
+function getSunriseSunsetData(data) {
+    var dates = [];
+    var sunriseTimes = [];
+    var sunsetTimes = [];
+
+    //const allDates = Object.keys(data).sort();
+    //const allDates = Object.keys(data).filter((date) => date === currentDate || date === yesterdayDate);
+    const allDates = Object.keys(data).sort((a, b) => {
+        const [dayA, monthA, yearA] = a.split("-").map(Number);
+        const [dayB, monthB, yearB] = b.split("-").map(Number);
+
+        const dateA = new Date(yearA, monthA - 1, dayA);
+        const dateB = new Date(yearB, monthB - 1, dayB);
+
+        return dateA - dateB;
+    });
+
+    for (const date of allDates) {
+        const dateData = data[date];
+        dates.push(date);
+        console.log(date);
+
+        for (const key in dateData) {
+            const item = dateData[key];
+            // Calcula o número de segundos desde a meia-noite
+            const sunriseTimeInSeconds = item.HourNascerDoSol * 3600 + item.MinuteNascerDoSol * 60;
+            const sunsetTimeInSeconds = item.HoraPorDoSol * 3600 + item.MinutePorDoSol * 60;
+            sunriseTimes.push(sunriseTimeInSeconds);
+            sunsetTimes.push(sunsetTimeInSeconds);
+        }
+    }
+
+    return { dates, sunriseTimes, sunsetTimes };
+}
+
+function mapRange(value, in_min, in_max, out_min, out_max) {
+    return (value - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+function createSunriseSunsetChart(data) {
+    const { dates, sunriseTimes, sunsetTimes } = getSunriseSunsetData(data);
+
+    const sunriseTimesMapped = sunriseTimes.map(time => mapRange(time, 18000, 25200, 5, 7));
+    const sunsetTimesMapped = sunsetTimes.map(time => mapRange(time, 61200, 68400, 17, 19));
+
+    new Chart(plotSunriseSunset, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Nascer do sol',
+                yAxisID: 'A',
+                data: sunriseTimesMapped,
+                borderColor: '#FFA500',
+                tension: 1
+            }, {
+                label: 'Pôr do sol',
+                yAxisID: 'B',
+                data: sunsetTimesMapped,
+                borderColor: '#800000',
+                tension: 0.5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                A: {
+                    type: 'linear',
+                    position: 'left',
+                    min: 5,
+                    max: 7,
+                    ticks: {
+                        color: '#FFA500', // Cor dos rótulos dos ticks à esquerda
+                        callback: function (value, index, values) {
+                            var hours = Math.floor(value);
+                            var minutes = Math.round((value - hours) * 60);
+                            if (minutes < 10) minutes = '0' + minutes;
+                            return hours + ':' + minutes;
+                        }
+                    }
+                },
+                B: {
+                    type: 'linear',
+                    position: 'right',
+                    min: 17,
+                    max: 19,
+                    ticks: {
+                        color: '#800000', // Cor dos rótulos dos ticks à direita
+                        callback: function (value, index, values) {
+                            var hours = Math.floor(value);
+                            var minutes = Math.round((value - hours) * 60);
+                            if (minutes < 10) minutes = '0' + minutes;
+                            return hours + ':' + minutes;
+                        }
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            var label = context.dataset.label || '';
+
+                            if (label) {
+                                label += ': ';
+                            }
+
+                            const timeValue = context.raw;
+                            var hours = Math.floor(timeValue);
+                            var minutes = Math.round((timeValue - hours) * 60);
+                            if (minutes < 10) minutes = '0' + minutes;
+                            label += hours + ':' + minutes;
+
+                            return label;
+                        }
+                    }
+                }
+            }
+        },
+    });
+}
+
+
 function createTemperatureChart(data) {
     const { hours, dadostemp: temperatureData } = hourAndData(data);
-
-    // Define a altura dos gráficos
-    plotsTemp.style.height = alturaGrafico;
 
     new Chart(plotsTemp, {
         type: 'line',
@@ -186,7 +322,7 @@ function createTemperatureChart(data) {
                 label: 'Temperatura',
                 data: temperatureData,
                 borderColor: 'blue',
-                tension: 0.1
+                tension: 0.5
             }]
         },
         options: {
@@ -203,8 +339,6 @@ function createTemperatureChart(data) {
 function createSTChart(data) {
     const { hours, dadosST: STData } = hourAndData(data);
 
-    plotsST.style.height = alturaGrafico;
-
     new Chart(plotsST, {
         type: 'line',
         data: {
@@ -213,7 +347,7 @@ function createSTChart(data) {
                 label: 'Sensacao termica',
                 data: STData,
                 borderColor: 'green',
-                tension: 0.1
+                tension: 0.5
             }]
         },
         options: {
@@ -230,8 +364,6 @@ function createSTChart(data) {
 function createUmidadeChart(data) {
     const { hours, dadosUmidade: dadosUmidade } = hourAndData(data);
 
-    plotsUmidade.style.height = alturaGrafico;
-
     new Chart(plotsUmidade, {
         type: 'line',
         data: {
@@ -240,7 +372,7 @@ function createUmidadeChart(data) {
                 label: 'Umidade',
                 data: dadosUmidade,
                 borderColor: '#36A2EB',
-                tension: 0.1
+                tension: 0.5
             }]
         },
         options: {
