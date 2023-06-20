@@ -123,11 +123,11 @@ tr:hover {
 /* Media queries for smaller screens */
 @media (max-width: 768px) {
     #chart-container-temp {
-        flex-direction: column;
+        flex-wrap: wrap;
     }
 
     #chart-container-temp .plot,
     #chart-container-sun .plot {
-        max-width: 100%;
+        max-width: 90%;
     }
 }
