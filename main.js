@@ -12,10 +12,10 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 
 // Get the HTML canvas by its id 
-plotsTemp = document.getElementById("plotsTemp");
-plotsST = document.getElementById("plotsST");
-plotsUmidade = document.getElementById("plotsUmidade");
-plotSunriseSunset = document.getElementById("plotSunriseSunset");
+plotsTemp = document.getElementById("plotsTemp").getContext('2d');
+plotsST = document.getElementById("plotsST").getContext('2d');
+plotsUmidade = document.getElementById("plotsUmidade").getContext('2d');
+plotSunriseSunset = document.getElementById("plotSunriseSunset").getContext('2d');
 
 const alturaGrafico = '250px';
 var chartTemp;
