@@ -10,20 +10,22 @@
 
 <body>
     <h1>Estação Climática ESP32</h1>
-    <div id="chart-container-temp">
-        <div class="chart-wrapper">
-            <button class="toggle-button" onclick="updateChart()">
-                <span id="temperature-unit">&#8451;</span>
-            </button>
+    <div class="divPai">
+        <div id="chart-container-temp">
+            <div class="chart-wrapper">
+                <button class="toggle-button" onclick="updateChart()">
+                    <span id="temperature-unit">&#8451;</span>
+                </button>
+            </div>
+            <canvas id="plotsTemp" class="plot" alt="Gráfico de Temperatura"></canvas>
+            <canvas id="plotsST" class="plot" alt="Gráfico de Sensação Térmica"></canvas>
+            <canvas id="plotsUmidade" class="plot" alt="Gráfico de Umidade"></canvas>
         </div>
-        <canvas id="plotsTemp" class="plot" alt="Gráfico de Temperatura"></canvas>
-        <canvas id="plotsST" class="plot" alt="Gráfico de Sensação Térmica"></canvas>
-        <canvas id="plotsUmidade" class="plot" alt="Gráfico de Umidade"></canvas>
+        <div id="chart-container-sun">
+            <canvas id="plotSunriseSunset" class="plot" alt="Gráfico de Nascer e Pôr do Sol"></canvas>
+        </div>
+        <div id="data"></div>
     </div>
-    <div id="chart-container-sun">
-        <canvas id="plotSunriseSunset" class="plot" alt="Gráfico de Nascer e Pôr do Sol"></canvas>
-    </div>
-    <div id="data"></div>
     <script src="https://www.gstatic.com/firebasejs/8.9.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.9.1/firebase-database.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
