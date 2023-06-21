@@ -100,7 +100,7 @@ tr:hover {
     width: 100%;
     margin-top: 1em;
     height: 30vh;
-    z-index: 1;
+    z-index: 0;
 }
 
 #chart-container-sun .plot {
