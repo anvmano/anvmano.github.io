@@ -197,8 +197,6 @@ function getSunriseSunsetData(data) {
     var sunriseTimes = [];
     var sunsetTimes = [];
 
-    //const allDates = Object.keys(data).sort();
-    //const allDates = Object.keys(data).filter((date) => date === currentDate || date === yesterdayDate);
     const allDates = Object.keys(data).sort((a, b) => {
         const [dayA, monthA, yearA] = a.split("-").map(Number);
         const [dayB, monthB, yearB] = b.split("-").map(Number);
@@ -242,16 +240,16 @@ function createSunriseSunsetChart(data) {
         data: {
             labels: dates,
             datasets: [{
-                label: 'Nascer do sol',
-                yAxisID: 'A',
-                data: sunriseTimesMapped,
-                borderColor: '#FFA500',
-                tension: 1
-            }, {
                 label: 'Pôr do sol',
-                yAxisID: 'B',
+                yAxisID: 'A',
                 data: sunsetTimesMapped,
                 borderColor: '#800000',
+                tension: 0.5
+            }, {
+                label: 'Nascer do sol',
+                yAxisID: 'B',
+                data: sunriseTimesMapped,
+                borderColor: '#FFA500',
                 tension: 0.5
             }]
         },
@@ -262,10 +260,10 @@ function createSunriseSunsetChart(data) {
                 A: {
                     type: 'linear',
                     position: 'left',
-                    min: 5,
-                    max: 7,
+                    min: 17,
+                    max: 19,
                     ticks: {
-                        color: '#FFA500', // Cor dos rótulos dos ticks à esquerda
+                        color: '#800000', // Cor dos rótulos dos ticks à esquerda
                         callback: function (value, index, values) {
                             var hours = Math.floor(value);
                             var minutes = Math.round((value - hours) * 60);
@@ -277,10 +275,10 @@ function createSunriseSunsetChart(data) {
                 B: {
                     type: 'linear',
                     position: 'right',
-                    min: 17,
-                    max: 19,
+                    min: 5,
+                    max: 7,
                     ticks: {
-                        color: '#800000', // Cor dos rótulos dos ticks à direita
+                        color: '#FFA500', // Cor dos rótulos dos ticks à direita
                         callback: function (value, index, values) {
                             var hours = Math.floor(value);
                             var minutes = Math.round((value - hours) * 60);
