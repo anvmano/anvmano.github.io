@@ -259,7 +259,7 @@ function createSunriseSunsetChart(data) {
             scales: {
                 A: {
                     type: 'linear',
-                    position: 'left',
+                    position: 'right',
                     min: 17,
                     max: 19,
                     ticks: {
@@ -274,7 +274,7 @@ function createSunriseSunsetChart(data) {
                 },
                 B: {
                     type: 'linear',
-                    position: 'right',
+                    position: 'left',
                     min: 5,
                     max: 7,
                     ticks: {
