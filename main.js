@@ -240,15 +240,15 @@ function createSunriseSunsetChart(data) {
         data: {
             labels: dates,
             datasets: [{
-                label: 'Nascer do sol', 
-                yAxisID: 'B',
-                data: sunriseTimesMapped, 
+                label: 'Nascer do sol',
+                yAxisID: 'A',
+                data: sunriseTimesMapped,
                 borderColor: '#FFA500',
                 tension: 0.3
             }, {
-                label: 'Pôr do sol', 
-                yAxisID: 'A',
-                data: sunsetTimesMapped, 
+                label: 'Pôr do sol',
+                yAxisID: 'B',
+                data: sunsetTimesMapped,
                 borderColor: '#800000',
                 tension: 0.3
             }]
@@ -258,21 +258,6 @@ function createSunriseSunsetChart(data) {
             maintainAspectRatio: false,
             scales: {
                 A: {
-                    type: 'linear',
-                    position: 'right',
-                    min: 17,
-                    max: 19,
-                    ticks: {
-                        color: '#800000', // Cor dos rótulos dos ticks à esquerda
-                        callback: function (value, index, values) {
-                            var hours = Math.floor(value);
-                            var minutes = Math.round((value - hours) * 60);
-                            if (minutes < 10) minutes = '0' + minutes;
-                            return hours + ':' + minutes;
-                        }
-                    }
-                },
-                B: {
                     type: 'linear',
                     position: 'left',
                     min: 5,
@@ -285,9 +270,21 @@ function createSunriseSunsetChart(data) {
                             if (minutes < 10) minutes = '0' + minutes;
                             return hours + ':' + minutes;
                         }
-                    },
-                    grid: {
-                        drawOnChartArea: false,
+                    }
+                },
+                B: {
+                    type: 'linear',
+                    position: 'right',
+                    min: 17,
+                    max: 19,
+                    ticks: {
+                        color: '#800000', // Cor dos rótulos dos ticks à esquerda
+                        callback: function (value, index, values) {
+                            var hours = Math.floor(value);
+                            var minutes = Math.round((value - hours) * 60);
+                            if (minutes < 10) minutes = '0' + minutes;
+                            return hours + ':' + minutes;
+                        }
                     }
                 }
             },
