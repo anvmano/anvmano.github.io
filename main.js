@@ -240,17 +240,17 @@ function createSunriseSunsetChart(data) {
         data: {
             labels: dates,
             datasets: [{
-                label: 'Pôr do sol',
-                yAxisID: 'A',
-                data: sunsetTimesMapped,
-                borderColor: '#800000',
-                tension: 0.5
-            }, {
-                label: 'Nascer do sol',
+                label: 'Nascer do sol', 
                 yAxisID: 'B',
-                data: sunriseTimesMapped,
+                data: sunriseTimesMapped, 
                 borderColor: '#FFA500',
-                tension: 0.5
+                tension: 0.3
+            }, {
+                label: 'Pôr do sol', 
+                yAxisID: 'A',
+                data: sunsetTimesMapped, 
+                borderColor: '#800000',
+                tension: 0.3
             }]
         },
         options: {
