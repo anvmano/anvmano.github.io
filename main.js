@@ -241,13 +241,13 @@ function createSunriseSunsetChart(data) {
             labels: dates,
             datasets: [{
                 label: 'Nascer do sol',
-                yAxisID: 'A',
+                yAxisID: 'B',
                 data: sunriseTimesMapped,
                 borderColor: '#FFA500',
                 tension: 0.3
             }, {
                 label: 'Pôr do sol',
-                yAxisID: 'B',
+                yAxisID: 'A',
                 data: sunsetTimesMapped,
                 borderColor: '#800000',
                 tension: 0.3
@@ -257,7 +257,7 @@ function createSunriseSunsetChart(data) {
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-                A: {
+                B: {
                     type: 'linear',
                     position: 'right',
                     min: 5,
@@ -272,7 +272,7 @@ function createSunriseSunsetChart(data) {
                         }
                     }
                 },
-                B: {
+                A: {
                     type: 'linear',
                     position: 'left',
                     min: 17,
