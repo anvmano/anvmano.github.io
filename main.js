@@ -258,35 +258,38 @@ function createSunriseSunsetChart(data) {
             maintainAspectRatio: false,
             scales: {
                 A: {
-                    type: 'linear',
-                    position: 'left',
-                    min: 17,
-                    max: 19,
-                    ticks: {
-                        color: '#800000', // Cor dos rótulos dos ticks à esquerda
-                        callback: function (value, index, values) {
-                            var hours = Math.floor(value);
-                            var minutes = Math.round((value - hours) * 60);
-                            if (minutes < 10) minutes = '0' + minutes;
-                            return hours + ':' + minutes;
-                        }
-                    }
-                },
+    type: 'linear',
+    position: 'left',
+    min: 19,   // Alterado de 17 para 19
+    max: 17,   // Alterado de 19 para 17
+    reverse: true,   // Adicionado
+    ticks: {
+        color: '#800000',
+        callback: function (value, index, values) {
+            var hours = Math.floor(value);
+            var minutes = Math.round((value - hours) * 60);
+            if (minutes < 10) minutes = '0' + minutes;
+            return hours + ':' + minutes;
+        }
+    }
+},
                 B: {
-                    type: 'linear',
-                    position: 'right',
-                    min: 5,
-                    max: 7,
-                    ticks: {
-                        color: '#FFA500', // Cor dos rótulos dos ticks à direita
-                        callback: function (value, index, values) {
-                            var hours = Math.floor(value);
-                            var minutes = Math.round((value - hours) * 60);
-                            if (minutes < 10) minutes = '0' + minutes;
-                            return hours + ':' + minutes;
-                        }
-                    }
-                }
+    type: 'linear',
+    position: 'right',
+    min: 7,     // Alterado de 5 para 7
+    max: 5,     // Alterado de 7 para 5
+    reverse: true,   // Adicionado
+    ticks: {
+        color: '#FFA500',
+        callback: function (value, index, values) {
+            var hours = Math.floor(value);
+            var minutes = Math.round((value - hours) * 60);
+            if (minutes < 10) minutes = '0' + minutes;
+            return hours + ':' + minutes;
+        }
+    }
+}
+
             },
             plugins: {
                 tooltip: {
