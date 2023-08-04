@@ -229,90 +229,83 @@ function mapRange(value, in_min, in_max, out_min, out_max) {
     return (value - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
-function createSunriseSunsetChart(data) {
+function formatTime(value) {
+    const hours = Math.floor(value);
+    const minutes = Math.round((value - hours) * 60);
+    return `${hours}:${minutes < 10 ? '0' + minutes : minutes}`;
+}
+
+function tooltipLabel(context) {
+    const label = context.dataset.label || '';
+    return `${label}: ${formatTime(context.raw)}`;
+}
+
+function createSunriseSunsetChart(data, chartElement) {
     const { dates, sunriseTimes, sunsetTimes } = getSunriseSunsetData(data);
 
     const sunriseTimesMapped = sunriseTimes.map(time => mapRange(time, 18000, 25200, 5, 7));
     const sunsetTimesMapped = sunsetTimes.map(time => mapRange(time, 61200, 68400, 17, 19));
 
-    new Chart(plotSunriseSunset, {
-        type: 'line',
-        data: {
-    labels: dates,
-    datasets: [{
-        label: 'Nascer do sol',
-        yAxisID: 'B',
-        data: sunriseTimesMapped,
-        borderColor: '#FFA500',
-        tension: 0.3
-    }, {
-        label: 'Pôr do sol',
-        yAxisID: 'A',
-        data: sunsetTimesMapped,
-        borderColor: '#800000',
-        tension: 0.3
-    }]
-},
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                A: {
-    type: 'linear',
-    position: 'left',
-    min: 19,   // Alterado de 17 para 19
-    max: 17,   // Alterado de 19 para 17
-    reverse: true,   // Adicionado
-    ticks: {
-        color: '#800000',
-        callback: function (value, index, values) {
-            var hours = Math.floor(value);
-            var minutes = Math.round((value - hours) * 60);
-            if (minutes < 10) minutes = '0' + minutes;
-            return hours + ':' + minutes;
-        }
-    }
-},
-                B: {
-    type: 'linear',
-    position: 'right',
-    min: 7,     // Alterado de 5 para 7
-    max: 5,     // Alterado de 7 para 5
-    reverse: true,   // Adicionado
-    ticks: {
-        color: '#FFA500',
-        callback: function (value, index, values) {
-            var hours = Math.floor(value);
-            var minutes = Math.round((value - hours) * 60);
-            if (minutes < 10) minutes = '0' + minutes;
-            return hours + ':' + minutes;
-        }
-    }
-}
+    const chartData = {
+        labels: dates,
+        datasets: [{
+            label: 'Pôr do sol',
+            yAxisID: 'yRight',
+            data: sunsetTimesMapped,
+            borderColor: '#800000',
+            tension: 0.3,
+            order: 1
+        }, {
+            label: 'Nascer do sol',
+            yAxisID: 'yLeft',
+            data: sunriseTimesMapped,
+            borderColor: '#FFA500',
+            tension: 0.3,
+            order: 2
+        }]
+    };
 
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            yLeft: {
+                type: 'linear',
+                position: 'left',
+                min: 5,
+                max: 7,
+                reverse: false,
+                ticks: {
+                    callback: formatTime
+                }
             },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function (context) {
-                            var label = context.dataset.label || '';
-
-                            if (label) {
-                                label += ': ';
-                            }
-
-                            const timeValue = context.raw;
-                            var hours = Math.floor(timeValue);
-                            var minutes = Math.round((timeValue - hours) * 60);
-                            if (minutes < 10) minutes = '0' + minutes;
-                            label += hours + ':' + minutes;
-
-                            return label;
-                        }
-                    }
+            yRight: {
+                type: 'linear',
+                position: 'right',
+                min: 17,
+                max: 19,
+                reverse: false,
+                grid: {
+                    drawOnChartArea: true
+                },
+                ticks: {
+                    callback: formatTime
                 }
             }
         },
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: tooltipLabel
+                }
+            }
+        }
+    };
+
+    new Chart(chartElement || plotSunriseSunset, {
+        type: 'line',
+        data: chartData,
+        options: chartOptions
     });
 }
 
