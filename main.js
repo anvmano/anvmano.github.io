@@ -336,7 +336,7 @@ function createTemperatureChart(data) {
                     },
                     ticks: {
                         callback: function (value, index, values) {
-                            return value + '°';
+                            return value.toFixed(2) + '°';
                         }
                     }
                 }
@@ -372,7 +372,7 @@ function createSTChart(data) {
                     },
                     ticks: {
                         callback: function (value, index, values) {
-                            return value + '°';
+                            return value.toFixed(2) + '°';
                         }
                     }
                 }
