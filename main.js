@@ -271,9 +271,9 @@ function createSunriseSunsetChart(data, chartElement) {
         scales: {
             yLeft: {
                 type: 'linear',
-                position: 'left',
+                position: 'right',
                 min: 5,
-                max: 7,
+                max: 19,
                 reverse: false,
                 ticks: {
                     callback: formatTime
@@ -281,12 +281,12 @@ function createSunriseSunsetChart(data, chartElement) {
             },
             yRight: {
                 type: 'linear',
-                position: 'right',
-                min: 17,
+                position: 'left',
+                min: 5,
                 max: 19,
                 reverse: false,
                 grid: {
-                    drawOnChartArea: true
+                    drawOnChartArea: false
                 },
                 ticks: {
                     callback: formatTime
