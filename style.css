@@ -44,19 +44,35 @@ tr:hover {
 
 .divPai {
     display: flex;
+    flex-direction: column;
+    /* Organiza as divs verticalmente */
+    align-items: center;
+    /* Centraliza as divs horizontalmente */
     flex-wrap: wrap;
 }
+
 
 .chart-wrapper {
     position: relative;
     display: flex;
     align-items: center;
+    justify-content: center;
+    /* Centraliza horizontalmente o conteúdo da div */
+    width: 100%;
+    /* Toma toda a largura da div pai */
+    margin: auto;
+    /* Centraliza a div na tela */
 }
 
 .toggle-button {
-    width: 40px;
+    width: auto;
+    /* Ajustar automaticamente a largura ao conteúdo */
     height: 40px;
-    border-radius: 50%;
+    /* Ajuste conforme necessário */
+    padding: 10px 20px;
+    /* Adicionar preenchimento em torno do texto */
+    border-radius: 10px;
+    /* Cantos arredondados */
     background-color: blue;
     color: white;
     font-size: 18px;
@@ -89,7 +105,6 @@ tr:hover {
     margin: 1em;
     background-color: var(--color-bg);
     transition: transform 0.5s ease-out;
-    cursor: pointer;
     padding: 10px;
 }
 
