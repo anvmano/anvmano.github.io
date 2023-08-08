@@ -78,7 +78,6 @@ plots.forEach((plot, index) => {
     }
 });
 
-
 function createTable(data) {
     const table = document.createElement("table");
 
@@ -124,6 +123,13 @@ function createTable(data) {
                 temperatureCell.innerText = temperature;
                 thermalSensationCell.innerText = thermalSensation;
                 humidityCell.innerText = humidity;
+
+                //Formatação da coluna "Data" (dd/mm/yyyy)
+                const formattedDate = new Date(date).toLocaleDateString("pt-BR");
+                dateCell.innerText = date !== lastDate ? formattedDate : '';
+                // Formatação da coluna "Hora" (HH:mm)
+                const formattedTime = time.replace("-", ":");
+                timeCell.innerText = time !== lastDate ? formattedTime : '';
 
                 count++; // Incrementa o contador de registros inseridos
 
@@ -240,20 +246,27 @@ function tooltipLabel(context) {
     return `${label}: ${formatTime(context.raw)}`;
 }
 
+function formatHoursArray(hours) {
+    return hours.map(hour => formatTime(hour));
+}
+
 function createSunriseSunsetChart(data, chartElement) {
     const { dates, sunriseTimes, sunsetTimes } = getSunriseSunsetData(data);
-
+    const formattedDates = dates.map(date => {
+        const parts = date.split("-");
+        return `${parts[0]}/${parts[1]}/${parts[2]}`;
+    });
     const sunriseTimesMapped = sunriseTimes.map(time => mapRange(time, 18000, 25200, 5, 7));
     const sunsetTimesMapped = sunsetTimes.map(time => mapRange(time, 61200, 68400, 17, 19));
 
     const chartData = {
-        labels: dates,
+        labels: formattedDates,
         datasets: [{
             label: 'Pôr do sol',
             yAxisID: 'yRight',
             data: sunsetTimesMapped,
             borderColor: '#800000',
-            tension: 0.3,
+            tension: 0.4,
             order: 1
         }, {
             label: 'Nascer do sol',
@@ -310,12 +323,12 @@ function createSunriseSunsetChart(data, chartElement) {
 }
 
 function createTemperatureChart(data) {
-    const { hours, dadostemp: temperatureData, dadostempF: temperatureDataF } = hourAndData(data);
+    const { hours, dadostemp: temperatureData } = hourAndData(data);
 
     chartTemp = new Chart(plotsTemp, {
         type: 'line',
         data: {
-            labels: hours,
+            labels: formatHoursArray(hours), // Usa as horas formatadas
             datasets: [{
                 label: 'Temperatura',
                 data: temperatureData,
@@ -345,13 +358,15 @@ function createTemperatureChart(data) {
     });
 }
 
+
 function createSTChart(data) {
     const { hours, dadosST: STData } = hourAndData(data);
+    const formattedHours = hours.map(hour => formatTime(hour)); // Formata as horas
 
     chartTempST = new Chart(plotsST, {
         type: 'line',
         data: {
-            labels: hours,
+            labels: formatHoursArray(hours),
             datasets: [{
                 label: 'Sensacao termica',
                 data: STData,
@@ -387,7 +402,7 @@ function createUmidadeChart(data) {
     new Chart(plotsUmidade, {
         type: 'line',
         data: {
-            labels: hours,
+            labels: formatHoursArray(hours),
             datasets: [{
                 label: 'Umidade',
                 data: dadosUmidade,
