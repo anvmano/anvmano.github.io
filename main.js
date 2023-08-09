@@ -1,6 +1,6 @@
 // Configura o Firebase
 const firebaseConfig = {
-    apiKey: CHAVE_API_FIREBASE,
+    apiKey: FIREBASE_API_KEY,
     authDomain: "estacaometereologicaesp32.firebaseapp.com",
     databaseURL: "https://estacaometereologicaesp32-default-rtdb.firebaseio.com",
     projectId: "estacaometereologicaesp32",
