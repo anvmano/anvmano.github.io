@@ -18,6 +18,7 @@ plotsUmidade = document.getElementById("plotsUmidade").getContext('2d');
 plotSunriseSunset = document.getElementById("plotSunriseSunset").getContext('2d');
 
 const alturaGrafico = '250px';
+var chartSol;
 var chartTemp;
 var chartTempST;
 var dadostemp = [];
@@ -49,8 +50,8 @@ dbRefSunriseSunset.on("value", snapshot => {
     const sunriseSunsetChart = createSunriseSunsetChart(data);
 
     // Adiciona o gráfico ao elemento "data" da página HTML
-    const dataElement = document.getElementById("data");
-    dataElement.appendChild(sunriseSunsetChart.canvas);
+    //const dataElement = document.getElementById("data");
+    //dataElement.appendChild(sunriseSunsetChart);
 });
 
 function handleZoom(plot) {
@@ -216,7 +217,6 @@ function getSunriseSunsetData(data) {
     for (const date of allDates) {
         const dateData = data[date];
         dates.push(date);
-        console.log(date);
 
         for (const key in dateData) {
             const item = dateData[key];
@@ -315,7 +315,7 @@ function createSunriseSunsetChart(data, chartElement) {
         }
     };
 
-    new Chart(chartElement || plotSunriseSunset, {
+    chartSol = new Chart(chartElement || plotSunriseSunset, {
         type: 'line',
         data: chartData,
         options: chartOptions
