@@ -125,13 +125,6 @@ function createTable(data) {
                 thermalSensationCell.innerText = thermalSensation;
                 humidityCell.innerText = humidity;
 
-                //Formatação da coluna "Data" (dd/mm/yyyy)
-                const formattedDate = new Date(date).toLocaleDateString("pt-BR");
-                dateCell.innerText = date !== lastDate ? formattedDate : '';
-                // Formatação da coluna "Hora" (HH:mm)
-                const formattedTime = time.replace("-", ":");
-                timeCell.innerText = time !== lastDate ? formattedTime : '';
-
                 count++; // Incrementa o contador de registros inseridos
 
                 if (count === 24) {
