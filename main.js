@@ -119,12 +119,16 @@ function createTable(data) {
                 const thermalSensationCell = row.insertCell();
                 const humidityCell = row.insertCell();
 
-                dateCell.innerText = date !== lastDate ? date : '';
-                timeCell.innerText = time;
+                // Formatacao de data (dd/mm/yyyy)
+                const formattedDate = date.replace(/-/g, "/");
+                dateCell.innerText = date !== lastDate ? formattedDate : '';
+                // Formatação da coluna "Hora" (HH:mm)
+                const formattedTime = time.replace("-", ":");
+                timeCell.innerText = time !== lastDate ? formattedTime : '';
                 temperatureCell.innerText = temperature;
                 thermalSensationCell.innerText = thermalSensation;
                 humidityCell.innerText = humidity;
-
+                
                 count++; // Incrementa o contador de registros inseridos
 
                 if (count === 24) {
