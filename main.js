@@ -50,8 +50,8 @@ dbRefSunriseSunset.on("value", snapshot => {
     const sunriseSunsetChart = createSunriseSunsetChart(data);
 
     // Adiciona o gráfico ao elemento "data" da página HTML
-    //const dataElement = document.getElementById("data");
-    //dataElement.appendChild(sunriseSunsetChart);
+    const dataElement = document.getElementById("data");
+    dataElement.appendChild(sunriseSunsetChart);
 });
 
 function handleZoom(plot) {
