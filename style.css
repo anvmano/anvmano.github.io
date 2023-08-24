@@ -20,6 +20,8 @@ table {
     border-collapse: collapse;
     width: 90%;
     margin: var(--margin);
+    padding: var(--padding);
+    table-layout: fixed;
 }
 
 th,
@@ -28,11 +30,15 @@ td {
     vertical-align: middle;
     border: 1px solid var(--color-border);
     padding: var(--padding);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 th {
     background-color: var(--color-bg-alt);
 }
+
 
 tr:nth-child(even) {
     background-color: var(--color-bg-alt);
@@ -45,34 +51,24 @@ tr:hover {
 .divPai {
     display: flex;
     flex-direction: column;
-    /* Organiza as divs verticalmente */
     align-items: center;
-    /* Centraliza as divs horizontalmente */
-    flex-wrap: wrap;
+    justify-content: center;
 }
-
 
 .chart-wrapper {
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Centraliza horizontalmente o conteúdo da div */
     width: 100%;
-    /* Toma toda a largura da div pai */
     margin: auto;
-    /* Centraliza a div na tela */
 }
 
 .toggle-button {
     width: auto;
-    /* Ajustar automaticamente a largura ao conteúdo */
     height: 40px;
-    /* Ajuste conforme necessário */
     padding: 10px 20px;
-    /* Adicionar preenchimento em torno do texto */
     border-radius: 10px;
-    /* Cantos arredondados */
     background-color: blue;
     color: white;
     font-size: 18px;
@@ -98,6 +94,17 @@ tr:hover {
     z-index: 1;
 }
 
+
+#chart-container-sun {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    align-items: center;
+    height: 30vh;
+    z-index: 0;
+}
+
 #chart-container-temp .plot {
     min-width: 27%;
     max-width: 509px;
@@ -108,18 +115,9 @@ tr:hover {
     padding: 10px;
 }
 
-#chart-container-sun {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    width: 100%;
-    margin-top: 1em;
-    height: 30vh;
-    z-index: 0;
-}
-
 #chart-container-sun .plot {
     max-width: 90%;
+    max-height: 35vh;
     background-color: var(--color-bg);
     transition: transform 0.5s ease-out;
     cursor: pointer;
@@ -147,6 +145,12 @@ tr:hover {
 
 /* Media queries for smaller screens */
 @media only screen and (max-width: 600px) {
+
+    th,
+    td {
+        font-size: 0.8rem;
+    }
+
     .divPai {
         flex-direction: column;
     }
@@ -155,10 +159,6 @@ tr:hover {
     #chart-container-sun .plot {
         width: 100%;
         max-width: none;
-    }
-
-    #chart-container-sun {
-        height: auto;
     }
 
     #data {
