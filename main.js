@@ -55,15 +55,22 @@ dbRefSunriseSunset.on("value", snapshot => {
 });
 
 function handleZoom(plot) {
-    // Verifica se o gráfico já está maximizado
-    if (plot.classList.contains('zoom')) {
-        // Remove a classe de maximizado para voltar ao tamanho normal
-        plot.classList.remove('zoom');
+    var isMobile = window.innerWidth <= 768;
+
+    if (isMobile) {
+        // Se já estiver em zoom, remova o zoom
+        if (plot.classList.contains('mobile-zoom')) {
+            plot.classList.remove('mobile-zoom');
+        }
+        // Não faça nada se tentar dar zoom em dispositivos móveis
     } else {
-        // Adiciona a classe de maximizado para aumentar o tamanho
-        plot.classList.add('zoom');
-        // Scroll para o gráfico
-        window.scrollTo({ top: 0, behavior: 'smooth' });  // Ir para o topo da página
+        // Comportamento existente para dispositivos não móveis
+        if (plot.classList.contains('zoom')) {
+            plot.classList.remove('zoom');
+        } else {
+            plot.classList.add('zoom');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
     }
 }
 
@@ -269,8 +276,8 @@ function createSunriseSunsetChart(data, chartElement) {
             label: 'Amanhecer',
             yAxisID: 'yLeft',
             data: amanhecerTimesMapped,
-            borderColor: '#FFA500',
-            backgroundColor: '#FFA500',
+            borderColor: '#FAD6A5',
+            backgroundColor: '#FAD6A5',
             tension: 0.4,
             order: 1
         }, {
@@ -285,16 +292,16 @@ function createSunriseSunsetChart(data, chartElement) {
             label: 'Pôr do sol',
             yAxisID: 'yRight',
             data: sunsetTimesMapped,
-            borderColor: '#800000',
-            backgroundColor: '#800000',
+            borderColor: '#FF4500',
+            backgroundColor: '#FF4500',
             tension: 0.4,
             order: 3
         }, {
             label: 'Anoitecer',
             yAxisID: 'yRight',
             data: anoitecerTimesMapped,
-            borderColor: '#4c0000',
-            backgroundColor: '#4c0000',
+            borderColor: '#483D8B',
+            backgroundColor: '#483D8B',
             tension: 0.4,
             order: 4
         }]
