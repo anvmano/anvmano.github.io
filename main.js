@@ -50,8 +50,8 @@ dbRefSunriseSunset.on("value", snapshot => {
     const sunriseSunsetChart = createSunriseSunsetChart(data);
 
     // Adiciona o gráfico ao elemento "data" da página HTML
-    const dataElement = document.getElementById("data");
-    dataElement.appendChild(sunriseSunsetChart);
+    //const dataElement = document.getElementById("data");
+    //dataElement.appendChild(sunriseSunsetChart);
 });
 
 function handleZoom(plot) {
@@ -128,7 +128,7 @@ function createTable(data) {
                 temperatureCell.innerText = temperature;
                 thermalSensationCell.innerText = thermalSensation;
                 humidityCell.innerText = humidity;
-                
+
                 count++; // Incrementa o contador de registros inseridos
 
                 if (count === 24) {
@@ -138,7 +138,6 @@ function createTable(data) {
             lastDate = date; // Atualiza a variável com a última data exibida
         }
     }
-
     return table;
 }
 
@@ -200,6 +199,8 @@ function getSunriseSunsetData(data) {
     var dates = [];
     var sunriseTimes = [];
     var sunsetTimes = [];
+    var amanhecerTimes = [];
+    var anoitecerTimes = [];
 
     const allDates = Object.keys(data).sort((a, b) => {
         const [dayA, monthA, yearA] = a.split("-").map(Number);
@@ -220,12 +221,16 @@ function getSunriseSunsetData(data) {
             // Calcula o número de segundos desde a meia-noite
             const sunriseTimeInSeconds = item.HourNascerDoSol * 3600 + item.MinuteNascerDoSol * 60;
             const sunsetTimeInSeconds = item.HoraPorDoSol * 3600 + item.MinutePorDoSol * 60;
+            const amanhecerTimeInSeconds = item.HoraAmanhecer * 3600 + item.MinuteAmanhecer * 60;
+            const anoitecerTimeInSeconds = item.HourAnoitecer * 3600 + item.MinuteAnoitecer * 60;
             sunriseTimes.push(sunriseTimeInSeconds);
             sunsetTimes.push(sunsetTimeInSeconds);
+            amanhecerTimes.push(amanhecerTimeInSeconds);
+            anoitecerTimes.push(anoitecerTimeInSeconds);
         }
     }
 
-    return { dates, sunriseTimes, sunsetTimes };
+    return { dates, sunriseTimes, sunsetTimes, amanhecerTimes, anoitecerTimes };
 }
 
 function mapRange(value, in_min, in_max, out_min, out_max) {
@@ -248,30 +253,50 @@ function formatHoursArray(hours) {
 }
 
 function createSunriseSunsetChart(data, chartElement) {
-    const { dates, sunriseTimes, sunsetTimes } = getSunriseSunsetData(data);
+    const { dates, sunriseTimes, sunsetTimes, amanhecerTimes, anoitecerTimes } = getSunriseSunsetData(data);
     const formattedDates = dates.map(date => {
         const parts = date.split("-");
         return `${parts[0]}/${parts[1]}/${parts[2]}`;
     });
     const sunriseTimesMapped = sunriseTimes.map(time => mapRange(time, 18000, 25200, 5, 7));
-    const sunsetTimesMapped = sunsetTimes.map(time => mapRange(time, 61200, 68400, 17, 19));
+    const sunsetTimesMapped = sunsetTimes.map(time => mapRange(time, 61200, 72000, 17, 20));
+    const amanhecerTimesMapped = amanhecerTimes.map(time => mapRange(time, 18000, 25200, 5, 7));
+    const anoitecerTimesMapped = anoitecerTimes.map(time => mapRange(time, 61200, 72000, 17, 20));
 
     const chartData = {
         labels: formattedDates,
         datasets: [{
-            label: 'Pôr do sol',
-            yAxisID: 'yRight',
-            data: sunsetTimesMapped,
-            borderColor: '#800000',
+            label: 'Amanhecer',
+            yAxisID: 'yLeft',
+            data: amanhecerTimesMapped,
+            borderColor: '#FFA500',
+            backgroundColor: '#FFA500',
             tension: 0.4,
             order: 1
         }, {
             label: 'Nascer do sol',
             yAxisID: 'yLeft',
             data: sunriseTimesMapped,
-            borderColor: '#FFA500',
-            tension: 0.3,
+            borderColor: '#ffc966',
+            backgroundColor: '#ffc966',
+            tension: 0.4,
             order: 2
+        }, {
+            label: 'Pôr do sol',
+            yAxisID: 'yRight',
+            data: sunsetTimesMapped,
+            borderColor: '#800000',
+            backgroundColor: '#800000',
+            tension: 0.4,
+            order: 3
+        }, {
+            label: 'Anoitecer',
+            yAxisID: 'yRight',
+            data: anoitecerTimesMapped,
+            borderColor: '#4c0000',
+            backgroundColor: '#4c0000',
+            tension: 0.4,
+            order: 4
         }]
     };
 
@@ -283,7 +308,7 @@ function createSunriseSunsetChart(data, chartElement) {
                 type: 'linear',
                 position: 'right',
                 min: 5,
-                max: 19,
+                max: 20,
                 reverse: false,
                 ticks: {
                     callback: formatTime
@@ -293,7 +318,7 @@ function createSunriseSunsetChart(data, chartElement) {
                 type: 'linear',
                 position: 'left',
                 min: 5,
-                max: 19,
+                max: 20,
                 reverse: false,
                 grid: {
                     drawOnChartArea: false
@@ -355,10 +380,8 @@ function createTemperatureChart(data) {
     });
 }
 
-
 function createSTChart(data) {
     const { hours, dadosST: STData } = hourAndData(data);
-    const formattedHours = hours.map(hour => formatTime(hour)); // Formata as horas
 
     chartTempST = new Chart(plotsST, {
         type: 'line',
