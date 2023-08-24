@@ -113,6 +113,7 @@ tr:hover {
     background-color: var(--color-bg);
     transition: transform 0.5s ease-out;
     padding: 10px;
+    cursor: pointer;
 }
 
 #chart-container-sun .plot {
@@ -120,7 +121,6 @@ tr:hover {
     max-height: 35vh;
     background-color: var(--color-bg);
     transition: transform 0.5s ease-out;
-    cursor: pointer;
     justify-content: center;
     padding: 10px;
 }
