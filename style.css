@@ -139,10 +139,6 @@ tr:hover {
     z-index: 999;
 }
 
-.espaco {
-    height: 100px;
-}
-
 #data {
     position: static;
     width: 100%;
@@ -155,10 +151,14 @@ tr:hover {
         flex-direction: column;
     }
 
-    #chart-container-temp {
-        align-items: flex-start;
-        flex-direction: column;
-        align-content: center;
+    #chart-container-temp .plot,
+    #chart-container-sun .plot {
+        width: 100%;
+        max-width: none;
+    }
+
+    #chart-container-sun {
+        height: auto;
     }
 
     #data {
