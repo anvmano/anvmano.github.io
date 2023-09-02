@@ -10,22 +10,64 @@
 
 <body>
     <h1>Estação Climática ESP32</h1>
-    <div class="divPai">
-        <div class="chart-wrapper">
-            <button class="toggle-button" onclick="updateChart()">
-                <span id="temperature-unit">°C < -> °F</span>
-            </button>
+    <div class="container">
+        <div class="tabs">
+            <div class="tab-links">
+                <div class="tablink active" onclick="openTab(event, 'Tab1')">Dados do quarto</div>
+                <div class="tablink" onclick="openTab(event, 'Tab2')">Dados da sala</div>
+                <div class="tablink" onclick="openTab(event, 'Tab3')">Dados do aquario</div>
+            </div>
+
+            <div id="Tab1" class="tabcontent">
+                <div class="divPai">
+                    <div class="chart-wrapper">
+                        <button class="toggle-button" onclick="updateChart()">
+                            <span id="temperature-unit">°C < -> °F</span>
+                        </button>
+                    </div>
+                    <div id="chart-container-temp">
+                        <canvas id="plotsTemp" class="plot" alt="Gráfico de Temperatura"></canvas>
+                        <canvas id="plotsST" class="plot" alt="Gráfico de Sensação Térmica"></canvas>
+                        <canvas id="plotsUmidade" class="plot" alt="Gráfico de Umidade"></canvas>
+                    </div>
+                    <div id="chart-container-sun">
+                        <canvas id="plotSunriseSunset" class="plot" alt="Gráfico de Nascer e Pôr do Sol"></canvas>
+                    </div>
+                    <div id="data"></div>
+                </div>
+            </div>
+
+            <div id="Tab2" class="tabcontent">
+                <div class="divPai">
+                    <div class="chart-wrapper">
+                        <button class="toggle-button" onclick="updateChart()">
+                            <span id="temperature-unit">°C < -> °F</span>
+                        </button>
+                    </div>
+                    <div id="chart-container-temp">
+                        <canvas id="plotsTempSala" class="plot" alt="Gráfico de Temperatura"></canvas>
+                        <canvas id="plotsSTSala" class="plot" alt="Gráfico de Sensação Térmica"></canvas>
+                        <canvas id="plotsUmidadeSala" class="plot" alt="Gráfico de Umidade"></canvas>
+                    </div>
+                    <div id="dataSala"></div>
+                </div>
+            </div>
+
+            <div id="Tab3" class="tabcontent">
+                <div class="divPai">
+                    <div id="chart-container-temp">
+                        <canvas id="plotsTempAquario" class="plot" alt="Gráfico de Temperatura do Aquario"></canvas>
+                        <canvas id="plotsPH" class="plot" alt="Gráfico de PH do Aquario"></canvas>
+                        <canvas id="plotsTDS" class="plot" alt="Gráfico de TDS do Aquario"></canvas>
+                        <canvas id="plotsTurbidez" class="plot" alt="Gráfico de Turbidez do Aquario"></canvas>
+                    </div>
+                    <div id="dataAquario"></div>
+                </div>
+            </div>
         </div>
-        <div id="chart-container-temp">
-            <canvas id="plotsTemp" class="plot" alt="Gráfico de Temperatura"></canvas>
-            <canvas id="plotsST" class="plot" alt="Gráfico de Sensação Térmica"></canvas>
-            <canvas id="plotsUmidade" class="plot" alt="Gráfico de Umidade"></canvas>
-        </div>
-        <div id="chart-container-sun">
-            <canvas id="plotSunriseSunset" class="plot" alt="Gráfico de Nascer e Pôr do Sol"></canvas>
-        </div>
-        <div id="data"></div>
     </div>
+    <hr>
+
     <script src="https://www.gstatic.com/firebasejs/8.9.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.9.1/firebase-database.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
