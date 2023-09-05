@@ -249,12 +249,20 @@ function createTables(headers, data) {
         headerRow.appendChild(headerCell);
     }
 
-    const allDates = Object.keys(data);
+    // Ordena as datas em ordem decrescente
+    const allDates = Object.keys(data).sort((a, b) => {
+        const [dayA, monthA, yearA] = a.split('-').map(Number);
+        const [dayB, monthB, yearB] = b.split('-').map(Number);
+        return new Date(yearB, monthB - 1, dayB) - new Date(yearA, monthA - 1, dayA);
+    });
 
     let lastDate = null;
+    let rowCount = 0;  // Contador de registros
 
     // Preenche a tabela com os dados
-    for (const date of allDates.reverse()) {
+    for (const date of allDates) {
+        if (rowCount >= 24) break;  // Limita para os últimos 24 registros
+
         const dateData = data[date];
         const allTimes = Object.keys(dateData).sort().reverse();
 
@@ -262,8 +270,9 @@ function createTables(headers, data) {
             const timeData = dateData[time];
 
             for (const key in timeData) {
-                const item = timeData[key];
+                if (rowCount >= 24) break;  // Limita para os últimos 24 registros
 
+                const item = timeData[key];
                 const row = table.insertRow();
                 const dateCell = row.insertCell();
                 const timeCell = row.insertCell();
@@ -281,12 +290,15 @@ function createTables(headers, data) {
                     cell.innerText = value ? value.toFixed(2) : "0";
                 }
 
+                rowCount++;
                 lastDate = date;
             }
         }
     }
+
     return table;
 }
+
 
 // Reutilizacao de codigo - obter dados
 function extractData(data, keys, todasDatas) {
@@ -321,7 +333,6 @@ function extractData(data, keys, todasDatas) {
             }
         }
     }
-    console.log("extractedData: ", extractedData);
     return { hours, ...extractedData };
 }
 
@@ -359,17 +370,17 @@ function getSunriseSunsetData(data) {
 }
 
 // função para criar o gráfico de temperatura
-function createTemperatureChart(data){
+function createTemperatureChart(data) {
     return createChart(plotsTemp, data, "Temperatura", "Temperatura", "blue", "(°C)", "°", false);
 }
 
 // função para criar o gráfico de sensaocao termica
-function createSTChart(data){
+function createSTChart(data) {
     return createChart(plotsST, data, "Sensacao termica", "Sensacao termica", "green", "(°C)", "°", false);
 }
 
 // função para criar o gráfico de umidade
-function createUmidadeChart(data){
+function createUmidadeChart(data) {
     return createChart(plotsUmidade, data, "Umidade", "Umidade", "#36A2EB", null, "%", false);
 }
 
@@ -467,50 +478,49 @@ function createSunriseSunsetChart(data, chartElement) {
 }
 
 // função para criar o tabela com dados do quarto
-function createTable(data){
+function createTable(data) {
     headers = ["Data", "Hora", "Temperatura", "Sensacao termica", "Umidade"];
     return createTables(headers, data);
 }
 
-
 // função para criar o gráfico de temperatura
-function createTemperatureChartAquario(dataAquario){
+function createTemperatureChartAquario(dataAquario) {
     return createChart(plotsTempAquario, dataAquario, "temperaturaDS18B20", "Temperatura", "blue", "(°C)", "°", true);
 }
 
 // função para criar o gráfico de PH
-function createPHChartAquario(dataAquario){
-    return chartPHAquario = createChart(plotsPH,dataAquario,"PH", "PH","#00A896",null, null, true);
+function createPHChartAquario(dataAquario) {
+    return chartPHAquario = createChart(plotsPH, dataAquario, "PH", "PH", "#00A896", null, null, true);
 }
 
 // função para criar o gráfico de TDS
-function createTDSChartAquario(dataAquario){
+function createTDSChartAquario(dataAquario) {
     return createChart(plotsTDS, dataAquario, "TDS", "TDS", "#7D4427", null, null, true);
 }
 
 // função para criar o gráfico de turbidez
-function createTurbidezChartAquario(dataAquario){
-    return createChart(plotsTurbidez, dataAquario, "Turbidez", "Turbidez","#B2B2B2" , null, null, true);
+function createTurbidezChartAquario(dataAquario) {
+    return createChart(plotsTurbidez, dataAquario, "Turbidez", "Turbidez", "#B2B2B2", null, null, true);
 }
 
 // função para criar o tabela com dados do aquario
-function createTableAquario(dataAquario){
+function createTableAquario(dataAquario) {
     const headersAquario = ["Data", "Hora", "temperaturaDS18B20", "PH", "TDS", "Turbidez"];
     return createTables(headersAquario, dataAquario);
 }
 
 // função para criar o gráfico de temperatura da sala
-function createTemperatureChartSala(dataSala){
-    return createChart(plotsTempSala, dataSala, "TemperaturaBMP180", "Temperatura","blue", null, "°C", true );
+function createTemperatureChartSala(dataSala) {
+    return createChart(plotsTempSala, dataSala, "TemperaturaBMP180", "Temperatura", "blue", null, "°C", true);
 }
 
 // função para criar o gráfico de sensacao termica da sala
-function createSTChartSala(dataSala){
-    return createChart(plotsSTSala, dataSala, "SensacaoTermicaBMP180", "Sensacao termica", "green", null, "°C", true );
+function createSTChartSala(dataSala) {
+    return createChart(plotsSTSala, dataSala, "SensacaoTermicaBMP180", "Sensacao termica", "green", null, "°C", true);
 }
 
 // função para criar o gráfico de umidade da sala
-function createUmidadeChartSala(dataSala){
+function createUmidadeChartSala(dataSala) {
     return createChart(plotsUmidadeSala, dataSala, "UmidadeBMP180", "Umidade", "#36A2EB", null, "%", true);
 }
 
