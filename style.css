@@ -86,7 +86,25 @@ tr:hover {
     background-color: darkblue;
 }
 
-#chart-container-temp {
+#chart-container-temp-quarto {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    align-items: center;
+    z-index: 1;
+}
+
+#chart-container-temp-sala {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    align-items: center;
+    z-index: 1;
+}
+
+#chart-container-temp-aquario {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
@@ -106,13 +124,15 @@ tr:hover {
     z-index: 0;
 }
 
-#chart-container-temp .plot {
+#chart-container-temp-quarto .plot,
+#chart-container-temp-sala .plot,
+#chart-container-temp-aquario .plot {
     min-width: 27%;
     max-width: 509px;
     max-height: 35vh;
     margin: 1em;
     background-color: var(--color-bg);
-    transition: transform 0.5s ease-out;
+    transition: transform 0.5s emphasized;
     padding: 10px;
     cursor: pointer;
 }
