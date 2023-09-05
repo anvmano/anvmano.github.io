@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 
 <head>
     <meta charset="UTF-8">
@@ -14,8 +14,8 @@
         <div class="tabs">
             <div class="tab-links">
                 <div class="tablink active" onclick="openTab(event, 'Tab1')">Dados do quarto</div>
-                <div class="tablink" onclick="openTab(event, 'Tab2')">Dados da sala</div>
-                <div class="tablink" onclick="openTab(event, 'Tab3')">Dados do aquario</div>
+                <div class="tablink" onclick="openTab(event, 'Tab2')">Dados da aquario</div>
+                <div class="tablink" onclick="openTab(event, 'Tab3')">Dados do sala</div>
             </div>
 
             <div id="Tab1" class="tabcontent">
@@ -25,7 +25,7 @@
                             <span id="temperature-unit">°C < -> °F</span>
                         </button>
                     </div>
-                    <div id="chart-container-temp">
+                    <div id="chart-container-temp-quarto">
                         <canvas id="plotsTemp" class="plot" alt="Gráfico de Temperatura"></canvas>
                         <canvas id="plotsST" class="plot" alt="Gráfico de Sensação Térmica"></canvas>
                         <canvas id="plotsUmidade" class="plot" alt="Gráfico de Umidade"></canvas>
@@ -39,29 +39,30 @@
 
             <div id="Tab2" class="tabcontent">
                 <div class="divPai">
-                    <div class="chart-wrapper">
-                        <button class="toggle-button" onclick="updateChart()">
-                            <span id="temperature-unit">°C < -> °F</span>
-                        </button>
-                    </div>
-                    <div id="chart-container-temp">
-                        <canvas id="plotsTempSala" class="plot" alt="Gráfico de Temperatura"></canvas>
-                        <canvas id="plotsSTSala" class="plot" alt="Gráfico de Sensação Térmica"></canvas>
-                        <canvas id="plotsUmidadeSala" class="plot" alt="Gráfico de Umidade"></canvas>
-                    </div>
-                    <div id="dataSala"></div>
-                </div>
-            </div>
-
-            <div id="Tab3" class="tabcontent">
-                <div class="divPai">
-                    <div id="chart-container-temp">
+                    <div id="chart-container-temp-aquario">
                         <canvas id="plotsTempAquario" class="plot" alt="Gráfico de Temperatura do Aquario"></canvas>
                         <canvas id="plotsPH" class="plot" alt="Gráfico de PH do Aquario"></canvas>
                         <canvas id="plotsTDS" class="plot" alt="Gráfico de TDS do Aquario"></canvas>
                         <canvas id="plotsTurbidez" class="plot" alt="Gráfico de Turbidez do Aquario"></canvas>
                     </div>
                     <div id="dataAquario"></div>
+                </div>
+            </div>
+
+            <div id="Tab3" class="tabcontent">
+                <div class="divPai">
+                    <div class="chart-wrapper">
+                        <button class="toggle-button" onclick="updateChart()">
+                            <span id="temperature-unit">°C < -> °F</span>
+                        </button>
+                    </div>
+                    <div id="chart-container-temp-sala">
+                        <!-- <canvas id="plotsTempAquario" class="plot" alt="Gráfico de Temperatura do Aquario"></canvas> -->
+                        <canvas id="plotsTempSala" class="plot" alt="Gráfico de Temperatura"></canvas>
+                        <canvas id="plotsSTSala" class="plot" alt="Gráfico de Sensação Térmica"></canvas>
+                        <canvas id="plotsUmidadeSala" class="plot" alt="Gráfico de Umidade"></canvas>
+                    </div>
+                    <div id="dataSala"></div>
                 </div>
             </div>
         </div>
