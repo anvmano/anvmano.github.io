@@ -1,51 +1,14 @@
 // Variaveis globais
-// Quarto
-var chartTemp;
-var chartTempST;
-var chartUmidade;
-var dadostemp = [];
-var dadostempF = [];
-var dadosST = [];
-var dadosSTF = [];
-var dadosUmidade = [];
-
 // Nascer e por do sol
+var amanhecerTimes = [];
+var anoitecerTimes = [];
 var chartSol;
 var sunriseTimes = [];
 var sunsetTimes = [];
-var amanhecerTimes = [];
-var anoitecerTimes = [];
-
-// Aquario
-var chartTempAquario;
-var chartPH;
-var chartTDS;
-var chartTurbidez;
-var dadostempAquario = [];
-var dadostempAquarioF = [];
-var dadosPH = [];
-var dadosTDS = [];
-var dadosTurbidez = [];
-
-// Sala
-var chartTempSala;
-var chartTempSTSala;
-var chartUmidadeSala;
-var dadosTemperaturaBMP180Sala = [];
-var dadostempFSala = [];
-var dadosSensacaoTermicaBMP180Sala = [];
-var dadosSTFSala = [];
-var dadosUmidadeBMP180Sala = [];
-var dadosAceton = [];
-var dadosAlcohol = [];
-var dadosCO = [];
-var dadosCO2 = [];
-var dadosNH4 = [];
 
 // Gerais
 var lastDate = "";
 var isCelsius = true;
-const alturaGrafico = "250px";
 const currentDate = dataAtual();
 const yesterdayDate = dataOntem();
 const plots = document.querySelectorAll(".plot");
@@ -62,7 +25,6 @@ const firebaseConfig = {
     measurementId: "G-8GE5G3X1Y9"
 };
 firebase.initializeApp(firebaseConfig);
-
 
 // Graficos
 // Get the HTML canvas by its id (Quarto)
@@ -81,7 +43,6 @@ plotsTurbidez = document.getElementById("plotsTurbidez").getContext("2d");
 plotsTempSala = document.getElementById("plotsTempSala").getContext("2d");
 plotsSTSala = document.getElementById("plotsSTSala").getContext("2d");
 plotsUmidadeSala = document.getElementById("plotsUmidadeSala").getContext("2d");
-
 
 // Obtencao de dados
 // Obtencao de dados do Quarto
@@ -239,25 +200,18 @@ document.addEventListener("DOMContentLoaded", function () {
     defaultTab.classList.add("active");
 });
 
-// Percorre cada gráfico - menos nascer e por do sol
-plots.forEach((plot, index) => {
-    // Verifica se o gráfico não é de nascer e pôr do sol
-    if (index !== 3) {
-        plot.addEventListener("click", () => handleZoom(plot));
-    }
-});
-
 // Reutilizacao de codigo - graficos
-function createChart(canvas, label, data, borderColor, yAxisLabel, yAxisSuffix) {
-    const { hours, dados: chartData } = hourAndData(data);
-    return new Chart(canvas, {
+function createChart(element, data, key, label, color, yAxisTitle, yAxisSuffix = "", todasDatas) {
+    const { hours, [key]: chartData } = extractData(data, [key], todasDatas);
+
+    return new Chart(element, {
         type: "line",
         data: {
             labels: formatHoursArray(hours),
             datasets: [{
                 label: label,
                 data: chartData,
-                borderColor: borderColor,
+                borderColor: color,
                 tension: 0.5
             }]
         },
@@ -269,12 +223,12 @@ function createChart(canvas, label, data, borderColor, yAxisLabel, yAxisSuffix) 
                 y: {
                     display: true,
                     title: {
-                        display: yAxisLabel !== undefined,
-                        text: yAxisLabel
+                        display: yAxisTitle !== null,
+                        text: yAxisTitle
                     },
                     ticks: {
                         callback: function (value, index, values) {
-                            return value.toFixed(2) + yAxisSuffix;
+                            return value + yAxisSuffix;
                         }
                     }
                 }
@@ -284,7 +238,7 @@ function createChart(canvas, label, data, borderColor, yAxisLabel, yAxisSuffix) 
 }
 
 // Reutilizacao de codigo - tabelas
-function createTable(headers, data) {
+function createTables(headers, data) {
     const table = document.createElement("table");
 
     // Cria o cabeçalho da tabela
@@ -324,7 +278,7 @@ function createTable(headers, data) {
                 for (let i = 0; i < headers.length - 2; i++) {
                     const cell = row.insertCell();
                     const value = item[headers[i + 2]];
-                    cell.innerText = value ? value.toFixed(2) : "";
+                    cell.innerText = value ? value.toFixed(2) : "0";
                 }
 
                 lastDate = date;
@@ -336,7 +290,7 @@ function createTable(headers, data) {
 
 // Reutilizacao de codigo - obter dados
 function extractData(data, keys, todasDatas) {
-    let allDates;
+    var hours = [];
     if (todasDatas) {
         allDates = Object.keys(data);
     } else {
@@ -345,40 +299,10 @@ function extractData(data, keys, todasDatas) {
         );
     }
 
-    var hours = [];
     var extractedData = {};
     keys.forEach(key => {
         extractedData[key] = [];
     });
-
-    for (const date of allDates) {
-        var dateData = data[date];
-        var allTimes = Object.keys(dateData).sort();
-
-        for (const time of allTimes) {
-            var timeData = dateData[time];
-            var hour = time.split("-")[0];
-            hours.push(hour);
-
-            keys.forEach(key => {
-                var item = timeData[key];
-                if (item !== undefined) {
-                    extractedData[key].push(item);
-                }
-            });
-        }
-    }
-
-    return { hours, ...extractedData };
-}
-
-// Quarto
-function hourAndData(data) {
-    var hours = [];
-
-    const allDates = Object.keys(data).filter(
-        (date) => date === currentDate || date === yesterdayDate
-    );
 
     for (const date of allDates) {
         const dateData = data[date];
@@ -391,20 +315,14 @@ function hourAndData(data) {
 
             for (const key in timeData) {
                 const item = timeData[key];
-                const temperatureCelsius = item.Temperatura;
-                const temperatureFahrenheit = (temperatureCelsius * 9 / 5) + 32;
-                const temperatureSTCelsius = item["Sensacao termica"];
-                const temperatureSTFahrenheit = (temperatureSTCelsius * 9 / 5) + 32;
-                dadostemp.push(temperatureCelsius);
-                dadostempF.push(temperatureFahrenheit);
-                dadosST.push(temperatureSTCelsius);
-                dadosSTF.push(temperatureSTFahrenheit);
-                dadosUmidade.push(item.Umidade);
+                keys.forEach(key => {
+                    extractedData[key].push(item[key]);
+                });
             }
         }
     }
-
-    return { hours, dadostemp, dadostempF, dadosST, dadosSTF, dadosUmidade };
+    console.log("extractedData: ", extractedData);
+    return { hours, ...extractedData };
 }
 
 function getSunriseSunsetData(data) {
@@ -440,120 +358,19 @@ function getSunriseSunsetData(data) {
     return { dates, sunriseTimes, sunsetTimes, amanhecerTimes, anoitecerTimes };
 }
 
-// const keys1 = ["Temperatura"];
-// const { hours, dadostemp: temperatureData } = extractData(data, keys1, false);
 // função para criar o gráfico de temperatura
-function createTemperatureChart(data) {
-    const { hours, dadostemp: temperatureData } = hourAndData(data);
-
-    chartTemp = new Chart(plotsTemp, {
-        type: 'line',
-        data: {
-            labels: formatHoursArray(hours), // Usa as horas formatadas
-            datasets: [{
-                label: 'Temperatura',
-                data: temperatureData,
-                borderColor: 'blue',
-                tension: 0.5
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: { display: true, title: { display: true } },
-                y: {
-                    display: true,
-                    title: {
-                        display: true,
-                        text: '(°C)'
-                    },
-                    ticks: {
-                        callback: function (value, index, values) {
-                            return value.toFixed(2) + '°';
-                        }
-                    }
-                }
-            }
-        },
-    });
+function createTemperatureChart(data){
+    return createChart(plotsTemp, data, "Temperatura", "Temperatura", "blue", "(°C)", "°", false);
 }
 
 // função para criar o gráfico de sensaocao termica
-// const keys1 = ["Sensacao termica"];
-// const { hours, dadosST: STData } = extractData(data, keys1, false);
-function createSTChart(data) {
-    const { hours, dadosST: STData } = hourAndData(data);
-
-    chartTempST = new Chart(plotsST, {
-        type: 'line',
-        data: {
-            labels: formatHoursArray(hours),
-            datasets: [{
-                label: 'Sensacao termica',
-                data: STData,
-                borderColor: 'green',
-                tension: 0.5
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: { display: true, title: { display: true } },
-                y: {
-                    display: true,
-                    title: {
-                        display: true,
-                        text: '(°C)'
-                    },
-                    ticks: {
-                        callback: function (value, index, values) {
-                            return value.toFixed(2) + '°';
-                        }
-                    }
-                }
-            }
-        },
-    });
+function createSTChart(data){
+    return createChart(plotsST, data, "Sensacao termica", "Sensacao termica", "green", "(°C)", "°", false);
 }
 
 // função para criar o gráfico de umidade
-function createUmidadeChart(data) {
-    // const keys1 = ["Umidade"];
-    // const { hours, dadosUmidade: dadosUmidade2 } = extractData(data, keys1, false);
-    const { hours, dadosUmidade: dadosUmidade2 } = hourAndData(data);
-
-    chartUmidade = new Chart(plotsUmidade, {
-        type: "line",
-        data: {
-            labels: formatHoursArray(hours),
-            datasets: [{
-                label: "Umidade",
-                data: dadosUmidade2,
-                borderColor: "#36A2EB",
-                tension: 0.5
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: { display: true, title: { display: true } },
-                y: {
-                    display: true,
-                    title: {
-                        display: false,
-                    },
-                    ticks: {
-                        callback: function (value, index, values) {
-                            return value + "%";
-                        }
-                    }
-                }
-            }
-        },
-    });
+function createUmidadeChart(data){
+    return createChart(plotsUmidade, data, "Umidade", "Umidade", "#36A2EB", null, "%", false);
 }
 
 // função para criar o gráfico de nascer e por do sol
@@ -649,493 +466,64 @@ function createSunriseSunsetChart(data, chartElement) {
     });
 }
 
-// função para criar o tabela
-function createTable(data) {
-    const table = document.createElement("table");
-
-    // Cria o cabeçalho da tabela
-    const headerRow = table.insertRow();
-    const headers = ["Data", "Hora", "Temperatura", "Sensação Térmica", "Umidade"];
-    for (let i = 0; i < headers.length; i++) {
-        const headerCell = document.createElement("th");
-        headerCell.innerText = headers[i];
-        headerRow.appendChild(headerCell);
-    }
-
-    const allDates = Object.keys(data).filter(
-        (date) => date === currentDate || date === yesterdayDate
-    );
-
-    let count = 0; // Variável para controlar o número de registros inseridos na tabela
-    let lastDate = null; // Variável para armazenar a última data exibida
-
-    // Preenche a tabela com os dados
-    for (const date of allDates.reverse()) {
-        const dateData = data[date];
-        const allTimes = Object.keys(dateData).sort().reverse();
-
-        for (const time of allTimes) {
-            const timeData = dateData[time];
-
-            for (const key in timeData) {
-                const item = timeData[key];
-                const temperature = item.Temperatura.toFixed(2);
-                const thermalSensation = item["Sensacao termica"].toFixed(2);
-                const humidity = item.Umidade.toFixed(2);
-
-                const row = table.insertRow();
-                const dateCell = row.insertCell();
-                const timeCell = row.insertCell();
-                const temperatureCell = row.insertCell();
-                const thermalSensationCell = row.insertCell();
-                const humidityCell = row.insertCell();
-
-                // Formatacao de data (dd/mm/yyyy)
-                const formattedDate = date.replace(/-/g, "/");
-                dateCell.innerText = date !== lastDate ? formattedDate : "";
-                // Formatação da coluna "Hora" (HH:mm)
-                const formattedTime = time.replace("-", ":");
-                timeCell.innerText = time !== lastDate ? formattedTime : "";
-                temperatureCell.innerText = temperature;
-                thermalSensationCell.innerText = thermalSensation;
-                humidityCell.innerText = humidity;
-
-                count++; // Incrementa o contador de registros inseridos
-
-                if (count === 24) {
-                    return table; // Retorna a tabela após inserir os 24 registros
-                }
-            }
-            lastDate = date; // Atualiza a variável com a última data exibida
-        }
-    }
-    return table;
+// função para criar o tabela com dados do quarto
+function createTable(data){
+    headers = ["Data", "Hora", "Temperatura", "Sensacao termica", "Umidade"];
+    return createTables(headers, data);
 }
 
-// Aquario
-function hourAndDataAgua(dataAquario) {
-    var hours = [];
-
-    // let allDates = Object.keys(dataAquario).filter(
-    //     (date) => date === currentDate || date === yesterdayDate
-    // );
-    let allDates = Object.keys(dataAquario);
-
-    for (const date of allDates) {
-        const dateData = dataAquario[date];
-        const allTimes = Object.keys(dateData).sort();
-
-        for (const time of allTimes) {
-            const timeData = dateData[time];
-            const hour = time.split("-")[0]; // Pega somente a hora (segundo elemento do array)
-            hours.push(hour);
-
-            for (const key in timeData) {
-                const item = timeData[key];
-                const temperatureCelsius = item.temperaturaDS18B20;
-                const PH = item.PH;
-                const TDS = item.TDS;
-                const Turbidez = item.Turbidez;
-                dadostempAquario.push(temperatureCelsius);
-                dadosPH.push(PH);
-                dadosTDS.push(TDS);
-                dadosTurbidez.push(Turbidez);
-            }
-        }
-    }
-
-    return { hours, dadostempAquario, dadosPH, dadosTDS, dadosTurbidez };
-}
 
 // função para criar o gráfico de temperatura
-function createTemperatureChartAquario(dataAquario) {
-    const { hours, dadostempAquario: temperatureData } = hourAndDataAgua(dataAquario);
-    // const keys2 = ["temperaturaDS18B20"];
-    // const { hours, dadostempAquario: temperatureData } = extractData(dataAquario, keys2, true);
-    chartTempAquario = new Chart(plotsTempAquario, {
-        type: "line",
-        data: {
-            labels: formatHoursArray(hours), // Usa as horas formatadas
-            datasets: [{
-                label: "Temperatura",
-                data: temperatureData,
-                borderColor: "blue",
-                tension: 0.5
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: { display: true, title: { display: true } },
-                y: {
-                    display: true,
-
-                    ticks: {
-                        callback: function (value, index, values) {
-                            return value.toFixed(2) + "°C";
-                        }
-                    }
-                }
-            }
-        },
-    });
+function createTemperatureChartAquario(dataAquario){
+    return createChart(plotsTempAquario, dataAquario, "temperaturaDS18B20", "Temperatura", "blue", "(°C)", "°", true);
 }
 
 // função para criar o gráfico de PH
-function createPHChartAquario(dataAquario) {
-    const { hours, dadosPH: PHData } = hourAndDataAgua(dataAquario);
-    // const keys2 = ["PH"];
-    // const { hours, dadosPH: PHData } = extractData(dataAquario, keys2, true);
-
-    chartPH = new Chart(plotsPH, {
-        type: "line",
-        data: {
-            labels: formatHoursArray(hours),
-            datasets: [{
-                label: "PH",
-                data: PHData,
-                borderColor: "#00A896",
-                tension: 0.5
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: { display: true, title: { display: true } },
-                y: {
-                    display: true,
-                }
-            }
-        },
-    });
+function createPHChartAquario(dataAquario){
+    return chartPHAquario = createChart(plotsPH,dataAquario,"PH", "PH","#00A896",null, null, true);
 }
 
 // função para criar o gráfico de TDS
-function createTDSChartAquario(dataAquario) {
-    const { hours, dadosTDS: TDSData } = hourAndDataAgua(dataAquario);
-    // const keys2 = ["TDS"];
-    // const { hours, dadosTDS: TDSData } = extractData(dataAquario, keys2, true);
-    chartPH = new Chart(plotsTDS, {
-        type: "line",
-        data: {
-            labels: formatHoursArray(hours),
-            datasets: [{
-                label: "TDS",
-                data: TDSData,
-                borderColor: "#7D4427",
-                tension: 0.5
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: { display: true, title: { display: true } },
-                y: {
-                    display: true,
-                }
-            }
-        },
-    });
+function createTDSChartAquario(dataAquario){
+    return createChart(plotsTDS, dataAquario, "TDS", "TDS", "#7D4427", null, null, true);
 }
 
 // função para criar o gráfico de turbidez
-function createTurbidezChartAquario(dataAquario) {
-    const { hours, dadosTurbidez: TurbidezData } = hourAndDataAgua(dataAquario);
-    // const keys2 = ["Turbidez"];
-    // const { hours, dadosTurbidez: TurbidezData } = extractData(dataAquario, keys2, true);
-
-    chartPH = new Chart(plotsTurbidez, {
-        type: "line",
-        data: {
-            labels: formatHoursArray(hours),
-            datasets: [{
-                label: "Turbidez",
-                data: TurbidezData,
-                borderColor: "#B2B2B2",
-                tension: 0.5
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: { display: true, title: { display: true } },
-                y: {
-                    display: true,
-                }
-            }
-        },
-    });
+function createTurbidezChartAquario(dataAquario){
+    return createChart(plotsTurbidez, dataAquario, "Turbidez", "Turbidez","#B2B2B2" , null, null, true);
 }
 
-// função para criar o tabela
-function createTableAquario(dataAquario) {
-    const tableAquario = document.createElement("table");
-
-    // Cria o cabeçalho da tabela
-    const headerRow = tableAquario.insertRow();
-    const headers = ["Data", "Hora", "Temperatura", "PH", "TDS", "Turbidez"];
-    for (let i = 0; i < headers.length; i++) {
-        const headerCell = document.createElement("th");
-        headerCell.innerText = headers[i];
-        headerRow.appendChild(headerCell);
-    }
-
-    const allDates = Object.keys(dataAquario);
-
-    let lastDate = null; // Variável para armazenar a última data exibida
-
-    // Preenche a tabela com os dados
-    for (const date of allDates.reverse()) {
-        const dateData = dataAquario[date];
-        const allTimes = Object.keys(dateData).sort().reverse();
-
-        for (const time of allTimes) {
-            const timeData = dateData[time];
-
-            for (const key in timeData) {
-                const item = timeData[key];
-                const temperature = item.temperaturaDS18B20.toFixed(2);
-                const PH = item.PH.toFixed(2);
-                const TDS = item.TDS.toFixed(2);
-                const Turbidez = item.Turbidez.toFixed(2);
-
-                const row = tableAquario.insertRow();
-                const dateCell = row.insertCell();
-                const timeCell = row.insertCell();
-                const temperatureCell = row.insertCell();
-                const PHCell = row.insertCell();
-                const TDSCell = row.insertCell();
-                const TurbidezCell = row.insertCell();
-
-                // Formatacao de data (dd/mm/yyyy)
-                const formattedDate = date.replace(/-/g, "/");
-                dateCell.innerText = date !== lastDate ? formattedDate : "";
-                // Formatação da coluna "Hora" (HH:mm)
-                const formattedTime = time.replace("-", ":");
-                timeCell.innerText = formattedTime;
-                temperatureCell.innerText = temperature;
-                PHCell.innerText = PH;
-                TDSCell.innerText = TDS;
-                TurbidezCell.innerText = Turbidez;
-
-                lastDate = date;
-            }
-        }
-    }
-    return tableAquario;
+// função para criar o tabela com dados do aquario
+function createTableAquario(dataAquario){
+    const headersAquario = ["Data", "Hora", "temperaturaDS18B20", "PH", "TDS", "Turbidez"];
+    return createTables(headersAquario, dataAquario);
 }
 
-// Sala
-function hourAndDataSala(dataSala) {
-    var hours = [];
-
-    // let allDates = Object.keys(dataAquario).filter(
-    //     (date) => date === currentDate || date === yesterdayDate
-    // );
-    let allDates = Object.keys(dataSala);
-
-    for (const date of allDates) {
-        const dateData = dataSala[date];
-        const allTimes = Object.keys(dateData).sort();
-
-        for (const time of allTimes) {
-            const timeData = dateData[time];
-            const hour = time.split("-")[0];
-            hours.push(hour);
-
-            for (const key in timeData) {
-                const item = timeData[key];
-                const TemperaturaBMP180 = item.TemperaturaBMP180;
-                const SensacaoTermicaBMP180 = item.SensacaoTermicaBMP180;
-                const UmidadeBMP180 = item.UmidadeBMP180;
-                const Aceton = item.Aceton;
-                const Alcohol = item.Alcohol;
-                const CO = item.CO;
-                const CO2 = item.CO2;
-                const NH4 = item.NH4;
-                dadosTemperaturaBMP180Sala.push(TemperaturaBMP180);
-                dadosSensacaoTermicaBMP180Sala.push(SensacaoTermicaBMP180);
-                dadosUmidadeBMP180Sala.push(UmidadeBMP180);
-                dadosAceton.push(Aceton);
-                dadosAlcohol.push(Alcohol);
-                dadosCO.push(CO);
-                dadosCO2.push(CO2);
-                dadosNH4.push(NH4);
-            }
-        }
-    }
-
-    return { hours, dadosTemperaturaBMP180Sala, dadosSensacaoTermicaBMP180Sala, dadosUmidadeBMP180Sala, dadosAceton, dadosAlcohol, dadosCO, dadosCO2, dadosNH4 };
+// função para criar o gráfico de temperatura da sala
+function createTemperatureChartSala(dataSala){
+    return createChart(plotsTempSala, dataSala, "TemperaturaBMP180", "Temperatura","blue", null, "°C", true );
 }
 
-function createTemperatureChartSala(dataSala) {
-    const { hours, dadosTemperaturaBMP180Sala: temperatureData } = hourAndDataSala(dataSala);
-    // const keys3 = ["temperaturaDS18B20"];
-    // const { hours, dadosTemperaturaBMP180Sala: temperatureData } = extractData(dataSala, keys3, true);
-
-    chartTempSala = new Chart(plotsTempSala, {
-        type: "line",
-        data: {
-            labels: formatHoursArray(hours), // Usa as horas formatadas
-            datasets: [{
-                label: "Temperatura",
-                data: temperatureData,
-                borderColor: "blue",
-                tension: 0.5
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: { display: true, title: { display: true } },
-                y: {
-                    display: true,
-
-                    ticks: {
-                        callback: function (value, index, values) {
-                            return value.toFixed(2) + "°C";
-                        }
-                    }
-                }
-            }
-        },
-    });
+// função para criar o gráfico de sensacao termica da sala
+function createSTChartSala(dataSala){
+    return createChart(plotsSTSala, dataSala, "SensacaoTermicaBMP180", "Sensacao termica", "green", null, "°C", true );
 }
 
-function createSTChartSala(dataSala) {
-    const { hours, dadosSensacaoTermicaBMP180Sala: temperatureSTData } = hourAndDataSala(dataSala);
-    // const keys3 = ["SensacaoTermicaBMP180"];
-    // const { hours, dadosSensacaoTermicaBMP180Sala: temperatureData } = extractData(dataSala, keys3, true);
-
-    chartTempSTSala = new Chart(plotsSTSala, {
-        type: "line",
-        data: {
-            labels: formatHoursArray(hours), // Usa as horas formatadas
-            datasets: [{
-                label: "Sensacao termica",
-                data: temperatureSTData,
-                borderColor: "green",
-                tension: 0.5
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: { display: true, title: { display: true } },
-                y: {
-                    display: true,
-
-                    ticks: {
-                        callback: function (value, index, values) {
-                            return value.toFixed(2) + "°C";
-                        }
-                    }
-                }
-            }
-        },
-    });
+// função para criar o gráfico de umidade da sala
+function createUmidadeChartSala(dataSala){
+    return createChart(plotsUmidadeSala, dataSala, "UmidadeBMP180", "Umidade", "#36A2EB", null, "%", true);
 }
 
-function createUmidadeChartSala(dataSala) {
-    const { hours, dadosUmidadeBMP180Sala: dadosUmidadeBMP180Sala } = hourAndDataSala(dataSala);
-    // const keys3 = ["UmidadeBMP180"];
-    // const { hours, dadosUmidadeBMP180Sala: dadosUmidadeBMP180Sala2 } = extractData(dataSala, keys3, true);
-
-    chartUmidadeSala = new Chart(plotsUmidadeSala, {
-        type: "line",
-        data: {
-            labels: formatHoursArray(hours),
-            datasets: [{
-                label: "Umidade",
-                data: dadosUmidadeBMP180Sala,
-                borderColor: "#36A2EB",
-                tension: 0.5
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: { display: true, title: { display: true } },
-                y: {
-                    display: true,
-                    title: {
-                        display: false,
-                    },
-                    ticks: {
-                        callback: function (value, index, values) {
-                            return value + "%";
-                        }
-                    }
-                }
-            }
-        },
-    });
-}
-
-// função para criar o tabela
+// função para criar o tabela com dados da sala
 function createTableSala(dataSala) {
-    const tableSala = document.createElement("table");
-
-    // Cria o cabeçalho da tabela
-    const headerRow = tableSala.insertRow();
-    const headers = ["Data", "Hora", "Aceton", "Alcohol", "CO", "CO2", "NH4"];
-    for (let i = 0; i < headers.length; i++) {
-        const headerCell = document.createElement("th");
-        headerCell.innerText = headers[i];
-        headerRow.appendChild(headerCell);
-    }
-
-    const allDates = Object.keys(dataSala);
-
-    let lastDate = null; // Variável para armazenar a última data exibida
-
-    // Preenche a tabela com os dados
-    for (const date of allDates.reverse()) {
-        const dateData = dataSala[date];
-        const allTimes = Object.keys(dateData).sort().reverse();
-
-        for (const time of allTimes) {
-            const timeData = dateData[time];
-
-            for (const key in timeData) {
-                const item = timeData[key];
-                const Aceton = item.Aceton ? item.Aceton.toFixed(2) : "";
-                const Alcohol = item.Alcohol ? item.Alcohol.toFixed(2) : "";
-                const CO = item.CO ? item.CO.toFixed(2) : "";
-                const CO2 = item.CO2 ? item.CO2.toFixed(2) : "";
-                const NH4 = item.NH4 ? item.CO2.toFixed(2) : "";
-
-                const row = tableSala.insertRow();
-                const dateCell = row.insertCell();
-                const timeCell = row.insertCell();
-                const AcetonCell = row.insertCell();
-                const AlcoholCell = row.insertCell();
-                const COCell = row.insertCell();
-                const CO2Cell = row.insertCell();
-                const NH4Cell = row.insertCell();
-
-                // Formatacao de data (dd/mm/yyyy)
-                const formattedDate = date.replace(/-/g, "/");
-                dateCell.innerText = date !== lastDate ? formattedDate : "";
-                // Formatação da coluna "Hora" (HH:mm)
-                const formattedTime = time.replace("-", ":");
-                timeCell.innerText = formattedTime;
-                AcetonCell.innerText = Aceton;
-                AlcoholCell.innerText = Alcohol;
-                COCell.innerText = CO;
-                CO2Cell.innerText = CO2;
-                NH4Cell.innerText = NH4;
-
-                lastDate = date;
-            }
-        }
-    }
-    return tableSala;
+    const headersSala = ["Data", "Hora", "Aceton", "Alcohol", "CO", "CO2", "NH4"];
+    return createTables(headersSala, dataSala);
 }
+
+// Percorre cada gráfico - menos nascer e por do sol
+plots.forEach((plot, index) => {
+    // Verifica se o gráfico não é de nascer e pôr do sol
+    if (index !== 3) {
+        plot.addEventListener("click", () => handleZoom(plot));
+    }
+});
