@@ -227,6 +227,7 @@ function createChart(element, data, key, label, color, yAxisTitle, yAxisSuffix =
                         text: yAxisTitle
                     },
                     ticks: {
+                        precision: 0,
                         callback: function (value, index, values) {
                             return value + yAxisSuffix;
                         }
@@ -281,8 +282,10 @@ function createTables(headers, data) {
                 const formattedDate = date.replace(/-/g, "/");
                 dateCell.innerText = date !== lastDate ? formattedDate : "";
                 // Formatação da coluna "Hora" (HH:mm)
-                const formattedTime = time.replace("-", ":");
-                timeCell.innerText = formattedTime;
+                const [hour, minute] = time.split("-");
+                const formattedHour = hour.padStart(2, '0');
+                const formattedMinute = minute.padStart(2, '0');
+                timeCell.innerText = `${formattedHour}:${formattedMinute}`;
 
                 for (let i = 0; i < headers.length - 2; i++) {
                     const cell = row.insertCell();
