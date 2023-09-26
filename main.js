@@ -212,7 +212,7 @@ function createChart(element, data, key, label, color, yAxisTitle, yAxisSuffix =
                 label: label,
                 data: chartData,
                 borderColor: color,
-                tension: 0.5
+                tension: 0.4
             }]
         },
         options: {
@@ -302,7 +302,6 @@ function createTables(headers, data) {
     return table;
 }
 
-
 // Reutilizacao de codigo - obter dados
 function extractData(data, keys, todasDatas) {
     var hours = [];
@@ -371,7 +370,9 @@ function getSunriseSunsetData(data) {
 
     return { dates, sunriseTimes, sunsetTimes, amanhecerTimes, anoitecerTimes };
 }
+function loadChartsTab1() {
 
+}
 // função para criar o gráfico de temperatura
 function createTemperatureChart(data) {
     return createChart(plotsTemp, data, "Temperatura", "Temperatura", "blue", "(°C)", "°", false);
@@ -488,22 +489,22 @@ function createTable(data) {
 
 // função para criar o gráfico de temperatura
 function createTemperatureChartAquario(dataAquario) {
-    return createChart(plotsTempAquario, dataAquario, "temperaturaDS18B20", "Temperatura", "blue", "(°C)", "°", true);
+    return createChart(plotsTempAquario, dataAquario, "temperaturaDS18B20", "Temperatura", "blue", "(°C)", "°", false);
 }
 
 // função para criar o gráfico de PH
 function createPHChartAquario(dataAquario) {
-    return chartPHAquario = createChart(plotsPH, dataAquario, "PH", "PH", "#00A896", null, null, true);
+    return chartPHAquario = createChart(plotsPH, dataAquario, "PH", "PH", "#00A896", null, null, false);
 }
 
 // função para criar o gráfico de TDS
 function createTDSChartAquario(dataAquario) {
-    return createChart(plotsTDS, dataAquario, "TDS", "TDS", "#7D4427", null, null, true);
+    return createChart(plotsTDS, dataAquario, "TDS", "TDS", "#7D4427", null, null, false);
 }
 
 // função para criar o gráfico de turbidez
 function createTurbidezChartAquario(dataAquario) {
-    return createChart(plotsTurbidez, dataAquario, "Turbidez", "Turbidez", "#B2B2B2", null, null, true);
+    return createChart(plotsTurbidez, dataAquario, "Turbidez", "Turbidez", "#B2B2B2", null, null, false);
 }
 
 // função para criar o tabela com dados do aquario
@@ -514,17 +515,17 @@ function createTableAquario(dataAquario) {
 
 // função para criar o gráfico de temperatura da sala
 function createTemperatureChartSala(dataSala) {
-    return createChart(plotsTempSala, dataSala, "TemperaturaBMP180", "Temperatura", "blue", null, "°C", true);
+    return createChart(plotsTempSala, dataSala, "TemperaturaBMP180", "Temperatura", "blue", null, "°C", false);
 }
 
 // função para criar o gráfico de sensacao termica da sala
 function createSTChartSala(dataSala) {
-    return createChart(plotsSTSala, dataSala, "SensacaoTermicaBMP180", "Sensacao termica", "green", null, "°C", true);
+    return createChart(plotsSTSala, dataSala, "SensacaoTermicaBMP180", "Sensacao termica", "green", null, "°C", false);
 }
 
 // função para criar o gráfico de umidade da sala
 function createUmidadeChartSala(dataSala) {
-    return createChart(plotsUmidadeSala, dataSala, "UmidadeBMP180", "Umidade", "#36A2EB", null, "%", true);
+    return createChart(plotsUmidadeSala, dataSala, "UmidadeBMP180", "Umidade", "#36A2EB", null, "%", false);
 }
 
 // função para criar o tabela com dados da sala
