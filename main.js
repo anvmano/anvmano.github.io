@@ -43,6 +43,7 @@ plotsTurbidez = document.getElementById("plotsTurbidez").getContext("2d");
 plotsTempSala = document.getElementById("plotsTempSala").getContext("2d");
 plotsSTSala = document.getElementById("plotsSTSala").getContext("2d");
 plotsUmidadeSala = document.getElementById("plotsUmidadeSala").getContext("2d");
+plotsPressaoSala = document.getElementById("plotsPressaoSala").getContext("2d");
 
 // Obtencao de dados
 // Obtencao de dados do Quarto
@@ -91,6 +92,7 @@ dbRefSala.on("value", snapshot => {
     createTemperatureChartSala(dataSala);
     createSTChartSala(dataSala);
     createUmidadeChartSala(dataSala);
+    createPressaoChartSala(dataSala);
 
     // Adiciona a tabela e o gráfico ao elemento "dataSala" da página HTML
     const dataElement = document.getElementById("dataSala");
@@ -515,17 +517,23 @@ function createTableAquario(dataAquario) {
 
 // função para criar o gráfico de temperatura da sala
 function createTemperatureChartSala(dataSala) {
-    return createChart(plotsTempSala, dataSala, "TemperaturaBMP180", "Temperatura", "blue", null, "°C", false);
+    return createChart(plotsTempSala, dataSala, "temperatura", "Temperatura", "blue", null, "°C", false);
 }
 
 // função para criar o gráfico de sensacao termica da sala
 function createSTChartSala(dataSala) {
-    return createChart(plotsSTSala, dataSala, "SensacaoTermicaBMP180", "Sensacao termica", "green", null, "°C", false);
+    return createChart(plotsSTSala, dataSala, "sensacaoTermica", "Sensacao termica", "green", null, "°C", false);
 }
 
 // função para criar o gráfico de umidade da sala
 function createUmidadeChartSala(dataSala) {
-    return createChart(plotsUmidadeSala, dataSala, "UmidadeBMP180", "Umidade", "#36A2EB", null, "%", false);
+    console.log(dataSala);
+    return createChart(plotsUmidadeSala, dataSala, "umidade", "Umidade", "#36A2EB", null, "%", false);
+}
+
+// função para criar o gráfico de pressao da sala
+function createPressaoChartSala(dataSala) {
+    return createChart(plotsPressaoSala, dataSala, "pressao", "Pressao (hPa)", "#4B0082", null, null, false);
 }
 
 // função para criar o tabela com dados da sala
