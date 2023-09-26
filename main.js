@@ -157,25 +157,25 @@ function formatHoursArray(hours) {
     return hours.map(hour => formatTime(hour));
 }
 
-function updateChartDataAndUnit(chart, data, unit) {
-    chart.data.datasets[0].data = data;
-    chart.options.scales.y.title.text = `(${unit})`;
-    chart.update();
+// function updateChartDataAndUnit(chart, data, unit) {
+//     chart.data.datasets[0].data = data;
+//     chart.options.scales.y.title.text = `(${unit})`;
+//     chart.update();
 
-    const temperatureUnitSpan = document.getElementById("temperature-unit");
-    temperatureUnitSpan.innerText = unit;
-}
+//     const temperatureUnitSpan = document.getElementById("temperature-unit");
+//     temperatureUnitSpan.innerText = unit;
+// }
 
-function updateChart() {
-    if (isCelsius) {
-        updateChartDataAndUnit(chartTemp, dadostempF, "°F");
-        updateChartDataAndUnit(chartTempST, dadosSTF, "°F");
-    } else {
-        updateChartDataAndUnit(chartTemp, dadostemp, "°C");
-        updateChartDataAndUnit(chartTempST, dadosST, "°C");
-    }
-    isCelsius = !isCelsius;
-}
+// function updateChart() {
+//     if (isCelsius) {
+//         updateChartDataAndUnit(chartTemp, dadostempF, "°F");
+//         updateChartDataAndUnit(chartTempST, dadosSTF, "°F");
+//     } else {
+//         updateChartDataAndUnit(chartTemp, dadostemp, "°C");
+//         updateChartDataAndUnit(chartTempST, dadosST, "°C");
+//     }
+//     isCelsius = !isCelsius;
+// }
 
 function openTab(evt, tabName) {
     var i, tabcontent, tablinks;
