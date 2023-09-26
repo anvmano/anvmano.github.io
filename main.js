@@ -686,10 +686,10 @@ getLastGasValue((gasResistance, error) => {
 });
 
 function getQualidadeAr(gasResistance) {
-    if (gasResistance > 30000.0) return "Excelente";
-    else if (gasResistance > 25000.0) return "Muito Bom";
-    else if (gasResistance > 20000.0) return "Bom";
-    else if (gasResistance > 15000.0) return "Moderado";
-    else if (gasResistance > 10000.0) return "Ruim";
+    if (gasResistance > 35000.0) return "Excelente";
+    else if (gasResistance > 30000.0) return "Muito Bom";
+    else if (gasResistance > 25000.0) return "Bom";
+    else if (gasResistance > 20000.0) return "Moderado";
+    else if (gasResistance > 15000.0) return "Ruim";
     else return "Muito Ruim";
 }
