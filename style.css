@@ -1,15 +1,3 @@
-/* Reset and Globals */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body,
-html {
-    width: 100%;
-}
-
 :root {
     --color-bg: #ffffff;
     --color-bg-alt: #f2f2f2;
@@ -17,16 +5,17 @@ html {
     --color-hover: #ddd;
     --padding: 1em;
     --margin: 2em 5%;
+    --max-width: 100%;
+    --max-width-lg: none;
     --font-size: 16px;
     --font-size-sm: 14px;
+    --grid-gap: 2em;
 }
 
-/* Typography */
 h1 {
     text-align: center;
 }
 
-/* Tables */
 table {
     border-collapse: collapse;
     width: 90%;
@@ -46,7 +35,11 @@ td {
     text-overflow: ellipsis;
 }
 
-th,
+th {
+    background-color: var(--color-bg-alt);
+}
+
+
 tr:nth-child(even) {
     background-color: var(--color-bg-alt);
 }
@@ -55,37 +48,34 @@ tr:hover {
     background-color: var(--color-hover);
 }
 
-/* Flex containers */
-.divPai,
-.chart-wrapper,
-.container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
 .divPai {
     margin-top: 20px;
+    display: flex;
     flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
 .chart-wrapper {
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
     margin: auto;
 }
 
-/* Buttons */
 .toggle-button {
     width: auto;
     height: 40px;
     padding: 10px 20px;
     border-radius: 10px;
-    max-width: 90%;
     background-color: blue;
     color: white;
     font-size: 18px;
     display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     border: none;
     outline: none;
@@ -96,18 +86,49 @@ tr:hover {
     background-color: darkblue;
 }
 
-/* Chart Containers */
-.chart-container {
+#chart-container-temp-quarto {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     width: 100%;
     align-items: center;
+    z-index: 1;
 }
 
-.chart-container .plot {
+#chart-container-temp-sala {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    align-items: center;
+    z-index: 1;
+}
+
+#chart-container-temp-aquario {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    align-items: center;
+    z-index: 1;
+}
+
+
+#chart-container-sun {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    align-items: center;
+    height: 30vh;
+    z-index: 0;
+}
+
+#chart-container-temp-quarto .plot,
+#chart-container-temp-sala .plot,
+#chart-container-temp-aquario .plot {
     min-width: 27%;
-    /* max-width: 509px; */
+    max-width: 509px;
     max-height: 35vh;
     margin: 1em;
     background-color: var(--color-bg);
@@ -116,16 +137,13 @@ tr:hover {
     cursor: pointer;
 }
 
-#chart-container-sun {
-    height: 30vh;
-    width: 98%;
-    z-index: 0;
-}
-
 #chart-container-sun .plot {
+    max-width: 90%;
     max-height: 35vh;
-    justify-content: center;
+    background-color: var(--color-bg);
     transition: transform 0.5s ease-out;
+    justify-content: center;
+    padding: 10px;
 }
 
 .plot.zoom {
@@ -133,34 +151,27 @@ tr:hover {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) scale(2.5);
+    transition: transform 0.5s ease-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     z-index: 999;
 }
 
-/* Data and Tabs */
 #data {
     position: static;
     width: 100%;
     height: auto;
 }
 
-h1,
-.tab-links,
-.tablink {
-    background: linear-gradient(#e2e2e2, white);
+body,
+html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
 }
 
-h1,
-.tab-link {
-    background-image: linear-gradient(to top, #e2e2e2, white);
-    color: #000000;
-}
-
-.tab-link a, .tablink {
-    background-image: inherit; /* Herda o gradiente do elemento pai */
-    color: inherit; /* Herda a cor do texto do elemento pai */
-}
-
-*/ .tabcontent {
+.tabcontent {
     display: none;
     padding: 15px;
     border-top: 1px solid #ccc;
@@ -171,6 +182,7 @@ h1,
     justify-content: center;
     gap: 10px;
     border-bottom: 1px solid #ccc;
+    background: linear-gradient(white, #e2e2e2);
 }
 
 .tablink {
@@ -179,14 +191,26 @@ h1,
     border: 1px solid #ccc;
     border-bottom: none;
     border-radius: 5px 5px 0 0;
+    background: linear-gradient(white, #e2e2e2);
 }
 
 .tablink:hover {
     background: linear-gradient(#f1f1f1, #e2e2e2);
 }
 
+.container {
+    display: flex;
+    justify-content: center;
+}
+
 .tablink.active {
     background: lightblue;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 /* Media queries for smaller screens */
@@ -201,7 +225,8 @@ h1,
         flex-direction: column;
     }
 
-    .chart-container .plot {
+    #chart-container-temp .plot,
+    #chart-container-sun .plot {
         width: 100%;
         max-width: none;
     }
