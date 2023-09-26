@@ -17,14 +17,16 @@
                 <div class="tablink" onclick="openTab(event, 'Tab2')">Dados da aquario</div>
                 <div class="tablink" onclick="openTab(event, 'Tab3')">Dados do sala</div>
             </div>
-
+            <!-- <div class="slide-switch-container">
+                <input type="checkbox" class="slide-temp-switch" id="tempSwitch" onclick="updateChart()">
+                <label class="slide-switch-label" for="tempSwitch"></label>
+                <div class="slide-switch-text">
+                    <span>°C</span>
+                    <span>°F</span>
+                </div>
+            </div> -->
             <div id="Tab1" class="tabcontent">
                 <div class="divPai">
-                    <div class="chart-wrapper">
-                        <button class="toggle-button" onclick="updateChart()">
-                            <span id="temperature-unit">°C < -> °F</span>
-                        </button>
-                    </div>
                     <div id="chart-container-temp-quarto">
                         <canvas id="plotsTemp" class="plot" alt="Gráfico de Temperatura"></canvas>
                         <canvas id="plotsST" class="plot" alt="Gráfico de Sensação Térmica"></canvas>
@@ -51,11 +53,6 @@
 
             <div id="Tab3" class="tabcontent">
                 <div class="divPai">
-                    <div class="chart-wrapper">
-                        <button class="toggle-button" onclick="updateChart()">
-                            <span id="temperature-unit">°C < -> °F</span>
-                        </button>
-                    </div>
                     <div id="chart-container-temp-sala">
                         <!-- <canvas id="plotsTempAquario" class="plot" alt="Gráfico de Temperatura do Aquario"></canvas> -->
                         <canvas id="plotsTempSala" class="plot" alt="Gráfico de Temperatura"></canvas>
