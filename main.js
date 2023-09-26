@@ -527,7 +527,6 @@ function createSTChartSala(dataSala) {
 
 // função para criar o gráfico de umidade da sala
 function createUmidadeChartSala(dataSala) {
-    console.log(dataSala);
     return createChart(plotsUmidadeSala, dataSala, "umidade", "Umidade", "#36A2EB", null, "%", false);
 }
 
@@ -549,3 +548,148 @@ plots.forEach((plot, index) => {
         plot.addEventListener("click", () => handleZoom(plot));
     }
 });
+
+var gasResistance = 0;
+function getLastGasValue(callback) {
+    const dbRefSala = firebase.database().ref("historico/AirQuality");
+
+    dbRefSala.once("value", snapshot => {
+        const allData = snapshot.val();
+
+        if (!allData) {
+            callback(null, "No data found.");
+            return;
+        }
+
+        const sortedDates = Object.keys(allData).sort((a, b) => {
+            const [dayB, monthB, yearB] = b.split('/').map(Number);
+            const [dayA, monthA, yearA] = a.split('/').map(Number);
+            return new Date(yearB, monthB - 1, dayB) - new Date(yearA, monthA - 1, dayA);
+        });
+
+        const latestDate = sortedDates[0];
+        const latestDateData = allData[latestDate];
+
+        const sortedTimes = Object.keys(latestDateData).sort((a, b) => {
+            const [hourB, minuteB] = b.split(':').map(Number);
+            const [hourA, minuteA] = a.split(':').map(Number);
+            return new Date(1970, 0, 1, hourB, minuteB) - new Date(1970, 0, 1, hourA, minuteA);
+        });
+
+        const latestTime = sortedTimes[0];
+        const latestTimeData = latestDateData[latestTime];
+
+        let latestGasValue;
+
+        for (const key in latestTimeData) {
+            if (latestTimeData[key].gas !== undefined) {
+                latestGasValue = latestTimeData[key].gas;
+                break;
+            }
+        }
+
+        if (latestGasValue !== undefined) {
+            callback(latestGasValue);
+        } else {
+            callback(null, "No gas value found.");
+        }
+    });
+}
+
+// Chame a função para testar
+const gaugeChart = Highcharts.chart('gauge-chart', {
+    chart: {
+        type: 'solidgauge'
+    },
+
+    title: {
+        text: 'Qualidade do Ar',
+        style: {
+            fontSize: '24px'
+        }
+    },
+
+    pane: {
+        center: ['50%', '85%'],
+        size: '140%',
+        startAngle: -90,
+        endAngle: 90,
+        background: {
+            backgroundColor: '#EEE',
+            innerRadius: '60%',
+            outerRadius: '100%',
+            shape: 'arc'
+        }
+    },
+
+    yAxis: {
+        min: 0,
+        max: 40000,
+        reversed: false,
+        title: {
+            text: 'Resistência do Gás',
+            y: -70
+        },
+        stops: [
+            [0.25, '#8B0000'],        // Muito Ruim
+            [0.375, '#FF0000'],       // Ruim
+            [0.5, '#FF4500'],         // Moderado
+            [0.625, '#FF8C00'],       // Bom
+            [0.75, '#DDDF0D'],        // Muito Bom
+            [1.0, '#55BF3B']          // Excelente
+        ],
+        lineWidth: 0,
+        tickWidth: 0,
+        minorTickInterval: null,
+        tickAmount: 2,
+        labels: {
+            y: 16
+        }
+    },
+
+    plotOptions: {
+        solidgauge: {
+            dataLabels: {
+                borderWidth: 0,
+                useHTML: true
+            }
+        }
+    },
+
+
+    series: [{
+        name: 'Resistência',
+        data: [], // Vazio por enquanto
+        dataLabels: {
+            format: '<div style="text-align:center"><span style="font-size:25px">' + getQualidadeAr(gasResistance) + '</span><br/><span style="font-size:12px;opacity:0.4">{y}</span></div>'
+        },
+        tooltip: {
+            valueSuffix: ' Ohms'
+        }
+    }]
+});
+
+getLastGasValue((gasResistance, error) => {
+    if (error) {
+        console.error("Error:", error);
+        return;
+    }
+
+    // Atualize o gráfico com o valor recuperado
+    gaugeChart.series[0].setData([gasResistance]);
+    // Atualizar a exibição do valor de resistência no gráfico
+    gaugeChart.series[0].update({
+        dataLabels: {
+            format: '<div style="text-align:center"><span style="font-size:25px">' + getQualidadeAr(gasResistance) + '</span><br/><span style="font-size:12px;opacity:0.4">{y}</span></div>'
+        }
+    });
+});
+
+function getQualidadeAr(gasResistance) {
+    if (gasResistance > 30000.0) return "Excelente";
+    else if (gasResistance > 25000.0) return "Muito Bom";
+    else if (gasResistance > 20000.0) return "Bom";
+    else if (gasResistance > 15000.0) return "Moderado";
+    else if (gasResistance > 10000.0) return "Ruim";
+    else return "Muito Ruim";
+}
