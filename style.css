@@ -3,6 +3,8 @@
     --color-bg-alt: #f2f2f2;
     --color-border: #ddd;
     --color-hover: #ddd;
+    --color-active: #4CAF50;
+    --color-light-blue: #ADD8E6;
     --padding: 1em;
     --margin: 2em 5%;
     --max-width: 100%;
@@ -39,7 +41,6 @@ th {
     background-color: var(--color-bg-alt);
 }
 
-
 tr:nth-child(even) {
     background-color: var(--color-bg-alt);
 }
@@ -49,7 +50,6 @@ tr:hover {
 }
 
 .divPai {
-    margin-top: 20px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -57,35 +57,17 @@ tr:hover {
 }
 
 .chart-wrapper {
-    position: relative;
     display: flex;
+    flex-direction: column;
+    position: relative;
     align-items: center;
     justify-content: center;
     width: 100%;
     margin: auto;
 }
 
-.toggle-button {
-    width: auto;
-    height: 40px;
-    padding: 10px 20px;
-    border-radius: 10px;
-    background-color: blue;
-    color: white;
-    font-size: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    border: none;
-    outline: none;
-    transition: background-color 0.3s;
-}
-
-.toggle-button:hover {
-    background-color: darkblue;
-}
-
+#chart-container-temp-sala,
+#chart-container-temp-aquario,
 #chart-container-temp-quarto {
     display: flex;
     flex-wrap: wrap;
@@ -94,25 +76,6 @@ tr:hover {
     align-items: center;
     z-index: 1;
 }
-
-#chart-container-temp-sala {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    width: 100%;
-    align-items: center;
-    z-index: 1;
-}
-
-#chart-container-temp-aquario {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    width: 100%;
-    align-items: center;
-    z-index: 1;
-}
-
 
 #chart-container-sun {
     display: flex;
@@ -132,7 +95,6 @@ tr:hover {
     max-height: 35vh;
     margin: 1em;
     background-color: var(--color-bg);
-    transition: transform 0.5s emphasized;
     padding: 10px;
     cursor: pointer;
 }
@@ -173,8 +135,9 @@ html {
 
 .tabcontent {
     display: none;
-    padding: 15px;
-    border-top: 1px solid #ccc;
+    width: 100%;
+    padding: 1px;
+    border-top: none;
 }
 
 .tab-links {
@@ -188,24 +151,98 @@ html {
 .tablink {
     padding: 10px 15px;
     cursor: pointer;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-border);
     border-bottom: none;
     border-radius: 5px 5px 0 0;
-    background: linear-gradient(white, #e2e2e2);
+    background-color: var(--color-bg-alt);
+    transition: background-color 0.3s;
 }
 
 .tablink:hover {
-    background: linear-gradient(#f1f1f1, #e2e2e2);
+    background-color: var(--color-hover);
 }
 
 .container {
+    flex: 1;
     display: flex;
+    flex-direction: column;
     justify-content: center;
 }
 
 .tablink.active {
-    background: lightblue;
+    background: var(--color-light-blue);
 }
+
+/* .slide-switch-container {
+    position: relative;
+    width: 90px;
+    height: 40px;
+    margin: 10px auto;
+}
+
+.slide-temp-switch {
+    display: none;
+}
+
+.slide-switch-label {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--color-bg-alt);
+    border: 0px solid var(--color-border);
+    border-radius: 45px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.slide-switch-label::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 36px;
+    height: 36px;
+    background-color: var(--color-bg);
+    border-radius: 50%;
+    transition: transform 0.3s;
+}
+
+.slide-temp-switch:checked+.slide-switch-label {
+    background-color: var(--color-light-blue);
+}
+
+.slide-temp-switch:not(:checked)+.slide-switch-label {
+    background-color: var(--color-active);
+}
+
+.slide-temp-switch:checked+.slide-switch-label::before {
+    transform: translateX(50px);
+}
+
+.slide-switch-text {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    z-index: 0;
+    padding: 0 10px;
+    pointer-events: none;
+}
+
+.slide-switch-text span:first-child {
+    margin-right: 0;
+}
+
+.slide-switch-text span:last-child {
+    margin-left: 0;
+} */
 
 * {
     margin: 0;
