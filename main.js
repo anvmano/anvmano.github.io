@@ -1,8 +1,9 @@
 // Variaveis globais
+var gasResistance = 0;
 // Nascer e por do sol
+var chartSol;
 var amanhecerTimes = [];
 var anoitecerTimes = [];
-var chartSol;
 var sunriseTimes = [];
 var sunsetTimes = [];
 
@@ -47,8 +48,8 @@ plotsPressaoSala = document.getElementById("plotsPressaoSala").getContext("2d");
 
 // Obtencao de dados
 // Obtencao de dados do Quarto
-const dbRef = firebase.database().ref("historico/Temperatura");
-dbRef.on("value", snapshot => {
+const dbRefQuarto = firebase.database().ref("historico/Temperatura");
+dbRefQuarto.on("value", snapshot => {
     const data = snapshot.val();
     const table = createTable(data);
     createTemperatureChart(data);
@@ -340,6 +341,51 @@ function extractData(data, keys, todasDatas) {
     return { hours, ...extractedData };
 }
 
+// Funcao para obter ultimo valor de uma determinada entrada
+function getLastValue(dbRef, key, callback) {
+    dbRef.once("value", snapshot => {
+        const allData = snapshot.val();
+
+        if (!allData) {
+            callback(null, "No data found.");
+            return;
+        }
+
+        const sortedDates = Object.keys(allData).sort((a, b) => {
+            const [dayB, monthB, yearB] = b.split('/').map(Number);
+            const [dayA, monthA, yearA] = a.split('/').map(Number);
+            return new Date(yearB, monthB - 1, dayB) - new Date(yearA, monthA - 1, dayA);
+        });
+
+        const latestDate = sortedDates[0];
+        const latestDateData = allData[latestDate];
+
+        const sortedTimes = Object.keys(latestDateData).sort((a, b) => {
+            const [hourB, minuteB] = b.split(':').map(Number);
+            const [hourA, minuteA] = a.split(':').map(Number);
+            return new Date(1970, 0, 1, hourB, minuteB) - new Date(1970, 0, 1, hourA, minuteA);
+        });
+
+        const latestTime = sortedTimes[0];
+        const latestTimeData = latestDateData[latestTime];
+
+        let latestValue;
+
+        for (const itemKey in latestTimeData) {
+            if (latestTimeData[itemKey][key] !== undefined) {
+                latestValue = latestTimeData[itemKey][key];
+                break;
+            }
+        }
+
+        if (latestValue !== undefined) {
+            callback(latestValue);
+        } else {
+            callback(null, `No ${key} value found.`);
+        }
+    });
+}
+
 function getSunriseSunsetData(data) {
     var dates = [];
 
@@ -517,22 +563,22 @@ function createTableAquario(dataAquario) {
 
 // função para criar o gráfico de temperatura da sala
 function createTemperatureChartSala(dataSala) {
-    return createChart(plotsTempSala, dataSala, "temperatura", "Temperatura", "blue", null, "°C", false);
+    return createChart(plotsTempSala, dataSala, "temperatura", "Temperatura", "blue", null, "°C", true);
 }
 
 // função para criar o gráfico de sensacao termica da sala
 function createSTChartSala(dataSala) {
-    return createChart(plotsSTSala, dataSala, "sensacaoTermica", "Sensacao termica", "green", null, "°C", false);
+    return createChart(plotsSTSala, dataSala, "sensacaoTermica", "Sensacao termica", "green", null, "°C", true);
 }
 
 // função para criar o gráfico de umidade da sala
 function createUmidadeChartSala(dataSala) {
-    return createChart(plotsUmidadeSala, dataSala, "umidade", "Umidade", "#36A2EB", null, "%", false);
+    return createChart(plotsUmidadeSala, dataSala, "umidade", "Umidade", "#36A2EB", null, "%", true);
 }
 
 // função para criar o gráfico de pressao da sala
 function createPressaoChartSala(dataSala) {
-    return createChart(plotsPressaoSala, dataSala, "pressao", "Pressao (hPa)", "#4B0082", null, null, false);
+    return createChart(plotsPressaoSala, dataSala, "pressao", "Pressao (hPa)", "#4B0082", null, null, true);
 }
 
 // função para criar o tabela com dados da sala
@@ -549,53 +595,6 @@ plots.forEach((plot, index) => {
     }
 });
 
-var gasResistance = 0;
-function getLastGasValue(callback) {
-    const dbRefSala = firebase.database().ref("historico/AirQuality");
-
-    dbRefSala.once("value", snapshot => {
-        const allData = snapshot.val();
-
-        if (!allData) {
-            callback(null, "No data found.");
-            return;
-        }
-
-        const sortedDates = Object.keys(allData).sort((a, b) => {
-            const [dayB, monthB, yearB] = b.split('/').map(Number);
-            const [dayA, monthA, yearA] = a.split('/').map(Number);
-            return new Date(yearB, monthB - 1, dayB) - new Date(yearA, monthA - 1, dayA);
-        });
-
-        const latestDate = sortedDates[0];
-        const latestDateData = allData[latestDate];
-
-        const sortedTimes = Object.keys(latestDateData).sort((a, b) => {
-            const [hourB, minuteB] = b.split(':').map(Number);
-            const [hourA, minuteA] = a.split(':').map(Number);
-            return new Date(1970, 0, 1, hourB, minuteB) - new Date(1970, 0, 1, hourA, minuteA);
-        });
-
-        const latestTime = sortedTimes[0];
-        const latestTimeData = latestDateData[latestTime];
-
-        let latestGasValue;
-
-        for (const key in latestTimeData) {
-            if (latestTimeData[key].gas !== undefined) {
-                latestGasValue = latestTimeData[key].gas;
-                break;
-            }
-        }
-
-        if (latestGasValue !== undefined) {
-            callback(latestGasValue);
-        } else {
-            callback(null, "No gas value found.");
-        }
-    });
-}
-
 // Chame a função para testar
 const gaugeChart = Highcharts.chart('gauge-chart', {
     chart: {
@@ -605,8 +604,10 @@ const gaugeChart = Highcharts.chart('gauge-chart', {
     title: {
         text: 'Qualidade do Ar',
         style: {
-            fontSize: '24px'
-        }
+            fontSize: '25px'
+        },
+        margin: 0, // Ajuste este valor conforme necessário
+        verticalAlign: 'top' // Escolha entre 'top', 'middle', e 'bottom' conforme necessário
     },
 
     pane: {
@@ -656,7 +657,6 @@ const gaugeChart = Highcharts.chart('gauge-chart', {
         }
     },
 
-
     series: [{
         name: 'Resistência',
         data: [], // Vazio por enquanto
@@ -666,21 +666,37 @@ const gaugeChart = Highcharts.chart('gauge-chart', {
         tooltip: {
             valueSuffix: ' Ohms'
         }
-    }]
+    }],
+
+    responsive: {
+        rules: [{
+            condition: {
+                maxWidth: 600 // Por exemplo, para telas menores que 500px de largura
+            },
+            chartOptions: {
+                chart: {
+                    width: 400 // Ajuste a largura para 300px se a condição acima for atendida
+                },
+                pane: {
+                    size: '110%', // Ajuste o tamanho do painel se necessário
+                }
+            }
+        }]
+    }
 });
 
-getLastGasValue((gasResistance, error) => {
+getLastValue(dbRefSala, "gas", (value, error) => {
     if (error) {
         console.error("Error:", error);
         return;
     }
 
     // Atualize o gráfico com o valor recuperado
-    gaugeChart.series[0].setData([gasResistance]);
+    gaugeChart.series[0].setData([value]);
     // Atualizar a exibição do valor de resistência no gráfico
     gaugeChart.series[0].update({
         dataLabels: {
-            format: '<div style="text-align:center"><span style="font-size:25px">' + getQualidadeAr(gasResistance) + '</span><br/><span style="font-size:12px;opacity:0.4">{y}</span></div>'
+            format: '<div style="text-align:center"><span style="font-size:25px">' + getQualidadeAr(value) + '</span><br/><span style="font-size:12px;opacity:0.4">{y}</span></div>'
         }
     });
 });
