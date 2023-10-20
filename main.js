@@ -1,5 +1,6 @@
 // Variaveis globais
 var gasResistance = 0;
+
 // Nascer e por do sol
 var chartSol;
 var amanhecerTimes = [];
