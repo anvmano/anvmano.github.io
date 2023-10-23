@@ -1,4 +1,5 @@
-ar gasResistance = 0;
+// Variaveis globais
+var gasResistance = 0;
 // Nascer e por do sol
 var chartSol;
 var amanhecerTimes = [];
@@ -140,8 +141,8 @@ function dataOntem() {
     return dataAnterior;
 }
 
-function mapRange(value, in_min, in_max, out_min, out_max) {
-    return (value - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+function mapRange(value, inmin, inmax, outmin, outmax) {
+    return (value - inmin) * (outmax - outmin) / (inmax - inmin) + outmin;
 }
 
 function formatTime(value) {
