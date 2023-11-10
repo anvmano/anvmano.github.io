@@ -16,6 +16,8 @@
 
 h1 {
     text-align: center;
+    font-size: 2em;
+    color: #333;
 }
 
 table {
@@ -87,6 +89,11 @@ tr:hover {
     z-index: 0;
 }
 
+.plot {
+    max-width: 100%;
+    height: auto;
+}
+
 #chart-container-temp-quarto .plot,
 #chart-container-temp-sala .plot,
 #chart-container-temp-aquario .plot {
@@ -145,7 +152,7 @@ html {
     justify-content: center;
     gap: 10px;
     border-bottom: 1px solid #ccc;
-    background: linear-gradient(white, #e2e2e2);
+    background: linear-gradient(#e2e2e2);
 }
 
 .tablink {
@@ -154,8 +161,9 @@ html {
     border: 1px solid var(--color-border);
     border-bottom: none;
     border-radius: 5px 5px 0 0;
-    background-color: var(--color-bg-alt);
+    background-color: #7ABDFF;
     transition: background-color 0.3s;
+    color: white;
 }
 
 .tablink:hover {
@@ -167,10 +175,14 @@ html {
     display: flex;
     flex-direction: column;
     justify-content: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 10px;
 }
 
 .tablink.active {
-    background: var(--color-light-blue);
+    background-color: #4CAF50;
+    color: white;
 }
 
 /* .slide-switch-container {
