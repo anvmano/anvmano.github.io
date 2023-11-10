@@ -629,12 +629,12 @@ const gaugeChart = Highcharts.chart('gauge-chart', {
     },
 
     pane: {
-        center: ['50%', '85%'],
+        center: ['50%', '65%'],
         size: '140%',
         startAngle: -90,
         endAngle: 90,
         background: {
-            backgroundColor: '#EEE',
+            backgroundColor: Highcharts.defaultOptions.legend.backgroundColor || '#EEE',
             innerRadius: '60%',
             outerRadius: '100%',
             shape: 'arc'
@@ -647,7 +647,7 @@ const gaugeChart = Highcharts.chart('gauge-chart', {
         reversed: false,
         title: {
             text: 'Resistência do Gás',
-            y: -70
+            y: -60
         },
         stops: [
             [0.25, '#8B0000'],        // Muito Ruim
