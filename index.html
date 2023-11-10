@@ -1,63 +1,76 @@
 <!DOCTYPE html>
+
 <html lang="pt-br">
 
 <head>
-    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta charset="utf-8" />
     <title>Realtime Database Example</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <link href="style.css" rel="stylesheet" />
 </head>
 
 <body>
-    <h1>Estação Climática ESP32</h1>
-    <div class="container">
-        <div class="tabs">
-            <div class="tab-links">
-                <div class="tablink active" onclick="openTab(event, 'Tab1')">Dados do quarto</div>
-                <div class="tablink" onclick="openTab(event, 'Tab2')">Dados da aquario</div>
-                <div class="tablink" onclick="openTab(event, 'Tab3')">Dados do sala</div>
+    <div class="tabs">
+        <h1>Estação Climática ESP32</h1>
+        <div class="tab-links">
+            <div class="tablink active" onclick="openTab(event, 'Tab1')">Dados do quarto</div>
+            <div class="tablink" onclick="openTab(event, 'Tab2')">Dados da aquario</div>
+            <div class="tablink" onclick="openTab(event, 'Tab3')">Dados do sala</div>
+        </div>
+        <hr>
+        <!-- <div class="slide-switch-container">
+            <input type="checkbox" class="slide-temp-switch" id="tempSwitch" onclick="updateChart()">
+            <label class="slide-switch-label" for="tempSwitch"></label>
+            <div class="slide-switch-text">
+                <span>°C</span>
+                <span>°F</span>
             </div>
-            <!-- <div class="slide-switch-container">
-                <input type="checkbox" class="slide-temp-switch" id="tempSwitch" onclick="updateChart()">
-                <label class="slide-switch-label" for="tempSwitch"></label>
-                <div class="slide-switch-text">
-                    <span>°C</span>
-                    <span>°F</span>
-                </div>
-            </div> -->
-            <div id="Tab1" class="tabcontent">
+        </div> -->
+        <div class="container">
+            <div class="tabcontent" id="Tab1">
                 <div class="divPai">
                     <div id="chart-container-temp-quarto">
-                        <canvas id="plotsTemp" class="plot" alt="Gráfico de Temperatura"></canvas>
-                        <canvas id="plotsST" class="plot" alt="Gráfico de Sensação Térmica"></canvas>
-                        <canvas id="plotsUmidade" class="plot" alt="Gráfico de Umidade"></canvas>
+                        <canvas alt="Gráfico de Temperatura" aria-label="Gráfico de dados climáticos" class="plot"
+                            id="plotsTemp" role="img"></canvas>
+                        <canvas alt="Gráfico de Sensação Térmica" aria-label="Gráfico de dados climáticos" class="plot"
+                            id="plotsST" role="img"></canvas>
+                        <canvas alt="Gráfico de Umidade" aria-label="Gráfico de dados climáticos" class="plot"
+                            id="plotsUmidade" role="img"></canvas>
                     </div>
                     <div id="chart-container-sun">
-                        <canvas id="plotSunriseSunset" class="plot" alt="Gráfico de Nascer e Pôr do Sol"></canvas>
+                        <canvas alt="Gráfico de Nascer e Pôr do Sol" aria-label="Gráfico de dados climáticos"
+                            class="plot" id="plotSunriseSunset" role="img"></canvas>
                     </div>
                     <div id="data"></div>
                 </div>
             </div>
-
-            <div id="Tab2" class="tabcontent">
+            <div class="tabcontent" id="Tab2">
                 <div class="divPai">
                     <div id="chart-container-temp-aquario">
-                        <canvas id="plotsTempAquario" class="plot" alt="Gráfico de Temperatura do Aquario"></canvas>
-                        <canvas id="plotsPH" class="plot" alt="Gráfico de PH do Aquario"></canvas>
-                        <canvas id="plotsTDS" class="plot" alt="Gráfico de TDS do Aquario"></canvas>
-                        <canvas id="plotsTurbidez" class="plot" alt="Gráfico de Turbidez do Aquario"></canvas>
+                        <canvas alt="Gráfico de Temperatura do Aquario" aria-label="Gráfico de dados climáticos"
+                            class="plot" id="plotsTempAquario" role="img"></canvas>
+                        <canvas alt="Gráfico de PH do Aquario" aria-label="Gráfico de dados climáticos" class="plot"
+                            id="plotsPH" role="img"></canvas>
+                        <canvas alt="Gráfico de TDS do Aquario" aria-label="Gráfico de dados climáticos" class="plot"
+                            id="plotsTDS" role="img"></canvas>
+                        <canvas alt="Gráfico de Turbidez do Aquario" aria-label="Gráfico de dados climáticos"
+                            class="plot" id="plotsTurbidez" role="img"></canvas>
                     </div>
                     <div id="dataAquario"></div>
                 </div>
             </div>
-
-            <div id="Tab3" class="tabcontent">
+            <div class="tabcontent" id="Tab3">
                 <div class="divPai">
                     <div id="chart-container-temp-sala">
-                        <canvas id="plotsTempSala" class="plot" alt="Gráfico de Temperatura"></canvas>
-                        <canvas id="plotsSTSala" class="plot" alt="Gráfico de Sensação Térmica"></canvas>
-                        <canvas id="plotsUmidadeSala" class="plot" alt="Gráfico de Umidade"></canvas>
-                        <canvas id="plotsPressaoSala" class="plot" alt="Gráfico de Pressao"></canvas>
+                        <canvas alt="Gráfico de Temperatura" aria-label="Gráfico de dados climáticos" class="plot"
+                            id="plotsTempSala" role="img"></canvas>
+                        <canvas alt="Gráfico de Sensação Térmica" aria-label="Gráfico de dados climáticos" class="plot"
+                            id="plotsSTSala" role="img"></canvas>
+                        <canvas alt="Gráfico de Umidade" aria-label="Gráfico de dados climáticos" class="plot"
+                            id="plotsUmidadeSala" role="img"></canvas>
+                        <canvas alt="Gráfico de Pressao" aria-label="Gráfico de dados climáticos" class="plot"
+                            id="plotsPressaoSala" role="img"></canvas>
                         <div id="gauge-chart"></div>
                     </div>
                     <div id="dataSala"></div>
@@ -65,7 +78,6 @@
             </div>
         </div>
     </div>
-
     <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -73,7 +85,6 @@
     <script src="https://code.highcharts.com/highcharts-more.js"></script>
     <script src="https://code.highcharts.com/modules/solid-gauge.js"></script>
     <script src="https://code.highcharts.com/modules/accessibility.js"></script>
-
     <script src="main.js"></script>
 </body>
 
