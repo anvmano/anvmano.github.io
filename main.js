@@ -250,6 +250,24 @@ function createTables(headers, data) {
     for (let i = 0; i < headers.length; i++) {
         const headerCell = document.createElement("th");
         headerCell.innerText = headers[i];
+        switch (headerCell.innerText) {
+            case "temperaturaDS18B20":
+                headerCell.innerText = "Temperatura";
+                break;
+            case "Aceton":
+                headerCell.innerText = "Acetona";
+                break;
+            case "Alcohol":
+                headerCell.innerText = "Álcool";
+                break;
+            case "NH4":
+                headerCell.innerText = "Amônia";
+                break;
+            // Adicione mais casos conforme necessário
+            default:
+                // Opcional: se nenhum caso corresponder, você pode deixar como está ou fazer outra ação
+                break;
+        }
         headerRow.appendChild(headerCell);
     }
 
