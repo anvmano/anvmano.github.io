@@ -601,7 +601,7 @@ function createPressaoChartSala(dataSala) {
 
 // função para criar o tabela com dados da sala
 function createTableSala(dataSala) {
-    const headersSala = ["Data", "Hora", "Aceton", "Alcohol", "CO", "CO2", "NH4"];
+    const headersSala = ["Data", "Hora", "CO", "CO2", "Aceton", "Alcohol", "NH4"];
     return createTables(headersSala, dataSala);
 }
 
