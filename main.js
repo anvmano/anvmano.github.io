@@ -581,22 +581,22 @@ function createTableAquario(dataAquario) {
 
 // função para criar o gráfico de temperatura da sala
 function createTemperatureChartSala(dataSala) {
-    return createChart(plotsTempSala, dataSala, "temperatura", "Temperatura", "blue", null, "°C", true);
+    return createChart(plotsTempSala, dataSala, "temperatura", "Temperatura", "blue", "(°C)", "°", false);
 }
 
 // função para criar o gráfico de sensacao termica da sala
 function createSTChartSala(dataSala) {
-    return createChart(plotsSTSala, dataSala, "sensacaoTermica", "Sensacao termica", "green", null, "°C", true);
+    return createChart(plotsSTSala, dataSala, "sensacaoTermica", "Sensacao termica", "green", "(°C)", "°", false);
 }
 
 // função para criar o gráfico de umidade da sala
 function createUmidadeChartSala(dataSala) {
-    return createChart(plotsUmidadeSala, dataSala, "umidade", "Umidade", "#36A2EB", null, "%", true);
+    return createChart(plotsUmidadeSala, dataSala, "umidade", "Umidade", "#36A2EB", null, "%", false);
 }
 
 // função para criar o gráfico de pressao da sala
 function createPressaoChartSala(dataSala) {
-    return createChart(plotsPressaoSala, dataSala, "pressao", "Pressao (hPa)", "#4B0082", null, null, true);
+    return createChart(plotsPressaoSala, dataSala, "pressao", "Pressao (hPa)", "#4B0082", null, null, false);
 }
 
 // função para criar o tabela com dados da sala
