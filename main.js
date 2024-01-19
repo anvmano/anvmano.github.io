@@ -16,7 +16,7 @@ const plots = document.querySelectorAll(".plot");
 
 // Configura o Firebase
 const firebaseConfig = {
-    apiKey: process.env.API_KEY_FIREBASE,
+    apiKey: "AIzaSyD5gYEvLzvZItMrXGRlNbhfOPgNMj756_I",
     authDomain: "estacaometereologicaesp32.firebaseapp.com",
     databaseURL: "https://estacaometereologicaesp32-default-rtdb.firebaseio.com",
     projectId: "estacaometereologicaesp32",
