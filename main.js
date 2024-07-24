@@ -51,7 +51,9 @@ plotsPressaoSala = document.getElementById("plotsPressaoSala").getContext("2d");
 const dbRefQuarto = firebase.database().ref("historico/Temperatura");
 dbRefQuarto.on("value", snapshot => {
     const data = snapshot.val();
-    const table = createTable(data);
+    const filteredData = filterDataForLastYear(data); // Filtra os dados para o último ano
+
+    const table = createTable(filteredData);
     createTemperatureChart(data);
     createSTChart(data);
     createUmidadeChart(data);
@@ -66,7 +68,8 @@ dbRefQuarto.on("value", snapshot => {
 const dbRefSunriseSunset = firebase.database().ref("historico/NascePorDoSol");
 dbRefSunriseSunset.on("value", snapshot => {
     const data = snapshot.val();
-    createSunriseSunsetChart(data);
+    const filteredData = filterDataForLastYear(data); // Filtra os dados para o último ano
+    createSunriseSunsetChart(filteredData);
 });
 
 // Obtencao de dados do Aquario
@@ -359,6 +362,37 @@ function extractData(data, keys, todasDatas) {
     return { hours, ...extractedData };
 }
 
+function filterDataForLastYear(data) {
+    const allDates = Object.keys(data).sort((a, b) => {
+        const [dayA, monthA, yearA] = a.split("-").map(Number);
+        const [dayB, monthB, yearB] = b.split("-").map(Number);
+
+        const dateA = new Date(yearA, monthA - 1, dayA);
+        const dateB = new Date(yearB, monthB - 1, dayB);
+
+        return dateA - dateB;
+    });
+
+    // Obtém a data de 365 dias atrás
+    const today = new Date();
+    const last365DaysDate = new Date();
+    last365DaysDate.setDate(today.getDate() - 365);
+
+    // Filtra as datas para incluir apenas os últimos 365 dias
+    const filteredData = {};
+    for (const date of allDates) {
+        const [day, month, year] = date.split("-").map(Number);
+        const currentDate = new Date(year, month - 1, day);
+
+        if (currentDate >= last365DaysDate) {
+            filteredData[date] = data[date];
+        }
+    }
+
+    return filteredData;
+}
+
+
 // Funcao para obter ultimo valor de uma determinada entrada
 function getLastValue(dbRef, key, callback) {
     dbRef.once("value", snapshot => {
@@ -436,9 +470,7 @@ function getSunriseSunsetData(data) {
 
     return { dates, sunriseTimes, sunsetTimes, amanhecerTimes, anoitecerTimes };
 }
-function loadChartsTab1() {
 
-}
 // função para criar o gráfico de temperatura
 function createTemperatureChart(data) {
     return createChart(plotsTemp, data, "Temperatura", "Temperatura", "blue", "(°C)", "°", false);
@@ -613,117 +645,117 @@ plots.forEach((plot, index) => {
     }
 });
 
-// Chame a função para testar
-const gaugeChart = Highcharts.chart('gauge-chart', {
-    chart: {
-        type: 'solidgauge'
-    },
+// Chame a função para testar qualidade do ar
+//const gaugeChart = Highcharts.chart('gauge-chart', {
+//    chart: {
+//        type: 'solidgauge'
+//    },
+//
+//    title: {
+//        text: 'Qualidade do Ar',
+//        style: {
+//            fontSize: '25px'
+//        },
+//        margin: 0, // Ajuste este valor conforme necessário
+//        verticalAlign: 'top' // Escolha entre 'top', 'middle', e 'bottom' conforme necessário
+//    },
+//
+//    pane: {
+//        center: ['50%', '65%'],
+//        size: '140%',
+//        startAngle: -90,
+//        endAngle: 90,
+//        background: {
+//            backgroundColor: Highcharts.defaultOptions.legend.backgroundColor || '#EEE',
+//            innerRadius: '60%',
+//            outerRadius: '100%',
+//            shape: 'arc'
+//        }
+//    },
+//
+//    yAxis: {
+//        min: 0,
+//        max: 40000,
+//        reversed: false,
+//        title: {
+//            text: 'Resistência do Gás',
+//            y: -60
+//        },
+//        stops: [
+//            [0.25, '#8B0000'],        // Muito Ruim
+//            [0.375, '#FF0000'],       // Ruim
+//            [0.5, '#FF4500'],         // Moderado
+//            [0.625, '#FF8C00'],       // Bom
+//            [0.75, '#DDDF0D'],        // Muito Bom
+//            [1.0, '#55BF3B']          // Excelente
+//        ],
+//        lineWidth: 0,
+//        tickWidth: 0,
+//        minorTickInterval: null,
+//        tickAmount: 2,
+//        labels: {
+y: 16
+//        }
+//    },
+//
+//    plotOptions: {
+//        solidgauge: {
+//            dataLabels: {
+//                borderWidth: 0,
+//                useHTML: true
+//            }
+//        }
+//    },
+//
+//    series: [{
+//        name: 'Resistência',
+//        data: [], // Vazio por enquanto
+//        dataLabels: {
+//            format: '<div style="text-align:center"><span style="font-size:25px">' + getQualidadeAr(gasResistance) + '</span><br/><span style="font-size:12px;opacity:0.4">{y}</span></div>'
+//        },
+//        tooltip: {
+//            valueSuffix: ' Ohms'
+//        }
+//    }],
+//
+//    responsive: {
+//        rules: [{
+//            condition: {
+//                maxWidth: 600 // Por exemplo, para telas menores que 500px de largura
+//            },
+//            chartOptions: {
+//                chart: {
+//                    width: 400 // Ajuste a largura para 300px se a condição acima for atendida
+//                },
+//                pane: {
+//                    size: '110%', // Ajuste o tamanho do painel se necessário
+//                }
+//            }
+//        }]
+//    }
+//});
 
-    title: {
-        text: 'Qualidade do Ar',
-        style: {
-            fontSize: '25px'
-        },
-        margin: 0, // Ajuste este valor conforme necessário
-        verticalAlign: 'top' // Escolha entre 'top', 'middle', e 'bottom' conforme necessário
-    },
-
-    pane: {
-        center: ['50%', '65%'],
-        size: '140%',
-        startAngle: -90,
-        endAngle: 90,
-        background: {
-            backgroundColor: Highcharts.defaultOptions.legend.backgroundColor || '#EEE',
-            innerRadius: '60%',
-            outerRadius: '100%',
-            shape: 'arc'
-        }
-    },
-
-    yAxis: {
-        min: 0,
-        max: 40000,
-        reversed: false,
-        title: {
-            text: 'Resistência do Gás',
-            y: -60
-        },
-        stops: [
-            [0.25, '#8B0000'],        // Muito Ruim
-            [0.375, '#FF0000'],       // Ruim
-            [0.5, '#FF4500'],         // Moderado
-            [0.625, '#FF8C00'],       // Bom
-            [0.75, '#DDDF0D'],        // Muito Bom
-            [1.0, '#55BF3B']          // Excelente
-        ],
-        lineWidth: 0,
-        tickWidth: 0,
-        minorTickInterval: null,
-        tickAmount: 2,
-        labels: {
-            y: 16
-        }
-    },
-
-    plotOptions: {
-        solidgauge: {
-            dataLabels: {
-                borderWidth: 0,
-                useHTML: true
-            }
-        }
-    },
-
-    series: [{
-        name: 'Resistência',
-        data: [], // Vazio por enquanto
-        dataLabels: {
-            format: '<div style="text-align:center"><span style="font-size:25px">' + getQualidadeAr(gasResistance) + '</span><br/><span style="font-size:12px;opacity:0.4">{y}</span></div>'
-        },
-        tooltip: {
-            valueSuffix: ' Ohms'
-        }
-    }],
-
-    responsive: {
-        rules: [{
-            condition: {
-                maxWidth: 600 // Por exemplo, para telas menores que 500px de largura
-            },
-            chartOptions: {
-                chart: {
-                    width: 400 // Ajuste a largura para 300px se a condição acima for atendida
-                },
-                pane: {
-                    size: '110%', // Ajuste o tamanho do painel se necessário
-                }
-            }
-        }]
-    }
-});
-
-getLastValue(dbRefSala, "gas", (value, error) => {
-    if (error) {
-        console.error("Error:", error);
-        return;
-    }
-
-    // Atualize o gráfico com o valor recuperado
-    gaugeChart.series[0].setData([value]);
-    // Atualizar a exibição do valor de resistência no gráfico
-    gaugeChart.series[0].update({
-        dataLabels: {
-            format: '<div style="text-align:center"><span style="font-size:25px">' + getQualidadeAr(value) + '</span><br/><span style="font-size:12px;opacity:0.4">{y}</span></div>'
-        }
-    });
-});
-
-function getQualidadeAr(gasResistance) {
-    if (gasResistance > 35000.0) return "Excelente";
-    else if (gasResistance > 30000.0) return "Muito Bom";
-    else if (gasResistance > 25000.0) return "Bom";
-    else if (gasResistance > 20000.0) return "Moderado";
-    else if (gasResistance > 15000.0) return "Ruim";
-    else return "Muito Ruim";
-}
+//getLastValue(dbRefSala, "gas", (value, error) => {
+//    if (error) {
+//        console.error("Error:", error);
+//        return;
+//    }
+//
+//    // Atualize o gráfico com o valor recuperado
+//    gaugeChart.series[0].setData([value]);
+//    // Atualizar a exibição do valor de resistência no gráfico
+//    gaugeChart.series[0].update({
+//        dataLabels: {
+//            format: '<div style="text-align:center"><span style="font-size:25px">' + getQualidadeAr(value) + '</span><br/><span style="font-size:12px;opacity:0.4">{y}</span></div>'
+//        }
+//    });
+//});
+//
+//function getQualidadeAr(gasResistance) {
+//    if (gasResistance > 35000.0) return "Excelente";
+//    else if (gasResistance > 30000.0) return "Muito Bom";
+//    else if (gasResistance > 25000.0) return "Bom";
+//    else if (gasResistance > 20000.0) return "Moderado";
+//    else if (gasResistance > 15000.0) return "Ruim";
+//    else return "Muito Ruim";
+//}
