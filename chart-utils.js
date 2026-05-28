@@ -112,7 +112,7 @@
         color,
         yAxisTitle,
         yAxisSuffix = "",
-        todasDatas,
+        includeAllDates,
         existingChart,
         defaults,
         colors,
@@ -120,7 +120,7 @@
     }) {
         if (existingChart) existingChart.destroy();
 
-        const { hours, [key]: chartData } = ClimateData.extractData(data, [key], todasDatas);
+        const { hours, [key]: chartData } = ClimateData.extractData(data, [key], includeAllDates);
 
         const gradient = canvasCtx.createLinearGradient(0, 0, 0, 220);
         gradient.addColorStop(0, color + '33');
