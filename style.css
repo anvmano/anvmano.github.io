@@ -112,12 +112,20 @@ h1 {
 /* =====================================================================
    Tab navigation
    ===================================================================== */
-.tab-nav {
+.tab-toolbar {
     display: flex;
-    gap: 4px;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.5rem;
     padding: 16px 0 0;
     border-bottom: 1px solid var(--border);
     margin-bottom: 1.5rem;
+}
+
+.tab-nav {
+    display: flex;
+    gap: 4px;
+    min-width: 0;
 }
 
 .tablink {
@@ -164,6 +172,61 @@ h1 {
 }
 
 .tablink.active svg { opacity: 1; }
+
+/* =====================================================================
+   Toolbar
+   ===================================================================== */
+.toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding-bottom: 8px;
+}
+
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.toolbar-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.date-picker {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 0.55rem 0.8rem;
+    border-radius: var(--radius-md);
+    font-family: var(--font);
+}
+
+.date-picker:focus {
+    outline: 2px solid var(--accent);
+    border-color: var(--accent);
+}
+
+.toolbar-button {
+    background: var(--accent-dim);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    padding: 0.55rem 0.9rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.2s;
+}
+
+.toolbar-button:hover {
+    background: rgba(56, 189, 248, 0.18);
+}
 
 /* =====================================================================
    Loading bar
@@ -218,6 +281,94 @@ h1 {
 /* =====================================================================
    Charts grid
    ===================================================================== */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.stats-card {
+    background: rgba(26, 34, 52, 0.76);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.85rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.24);
+}
+
+.stats-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.45rem;
+}
+
+.stats-card__label {
+    color: var(--text-secondary);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.stats-card__trend {
+    flex-shrink: 0;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.1);
+}
+
+.stats-card__trend--up {
+    color: #34d399;
+}
+
+.stats-card__trend--down {
+    color: #fb7185;
+}
+
+.stats-card__trend--stable {
+    color: #94a3b8;
+}
+
+.stats-card__value {
+    display: block;
+    color: var(--text-primary);
+    font-size: 1.25rem;
+    line-height: 1.2;
+    margin-bottom: 0.65rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.stats-card__details {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin: 0;
+}
+
+.stats-card__details div {
+    min-width: 0;
+}
+
+.stats-card__details dt {
+    color: var(--text-muted);
+    font-size: 0.63rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.stats-card__details dd {
+    color: var(--text-secondary);
+    margin: 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
 .charts-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -331,6 +482,179 @@ h1 {
 
 .chart-card--wide .plot {
     height: 240px !important;
+}
+
+/* =====================================================================
+   Advanced visualizations
+   ===================================================================== */
+.advanced-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    margin-bottom: 1rem;
+    padding: 1rem;
+}
+
+.collapsible-trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    font-family: var(--font);
+}
+
+.collapsible-trigger:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+    border-radius: var(--radius-sm);
+}
+
+.collapsible-trigger__icon {
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    background: var(--accent-dim);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.collapsible-section:not(.is-collapsed) .collapsible-trigger__icon {
+    font-size: 0;
+}
+
+.collapsible-section:not(.is-collapsed) .collapsible-trigger__icon::before {
+    content: '-';
+    font-size: 1rem;
+}
+
+.collapsible-section.is-collapsed .advanced-grid,
+.collapsible-section.is-collapsed .table-wrapper {
+    display: none;
+}
+
+.collapsible-section:not(.is-collapsed) .advanced-grid,
+.collapsible-section:not(.is-collapsed) .table-wrapper {
+    margin-top: 0.85rem;
+}
+
+.advanced-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.table-section {
+    margin-bottom: 1rem;
+}
+
+.advanced-panel {
+    min-width: 0;
+    background: rgba(15, 23, 42, 0.36);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.85rem;
+}
+
+.advanced-panel--wide {
+    grid-column: 1 / -1;
+}
+
+.advanced-panel__title {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+}
+
+.heatmap-cell {
+    min-width: 0;
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1px;
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 0.68rem;
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+}
+
+.heatmap-cell strong {
+    font-size: 0.72rem;
+}
+
+.heatmap-cell--empty {
+    background: transparent;
+    border-color: transparent;
+}
+
+.calendar-heatmap {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 5px;
+}
+
+.calendar-heatmap__weekday {
+    color: var(--text-muted);
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.calendar-heatmap__day.is-selected {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+.hourly-heatmap {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 5px;
+}
+
+.weekly-heatmap {
+    display: grid;
+    grid-template-columns: 44px repeat(24, minmax(24px, 1fr));
+    gap: 4px;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+}
+
+.weekly-heatmap__axis {
+    min-width: 24px;
+    color: var(--text-muted);
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-align: center;
+    align-self: center;
+}
+
+.weekly-heatmap__day {
+    text-align: left;
+}
+
+.weekly-heatmap__cell {
+    min-width: 24px;
+    min-height: 24px;
 }
 
 /* =====================================================================
@@ -468,11 +792,55 @@ h1 {
 
     .header-time { display: none; }
 
+    .tab-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 0.75rem;
+        padding-top: 12px;
+    }
+
+    .tab-nav {
+        width: 100%;
+    }
+
     .tablink { padding: 7px 12px; font-size: 0.8rem; }
     .tablink svg { display: none; }
 
+    .toolbar {
+        width: 100%;
+        padding-bottom: 12px;
+    }
+
+    .toolbar-group {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.5rem;
+    }
+
+    .toolbar-label {
+        grid-column: 1 / -1;
+    }
+
+    .date-picker {
+        width: 100%;
+        min-width: 0;
+    }
+
     .charts-grid {
         grid-template-columns: 1fr;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .advanced-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .hourly-heatmap {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
     .plot { height: 180px !important; }

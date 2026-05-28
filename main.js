@@ -1,5 +1,14 @@
 'use strict';
 
+const ClimateData = window.ClimateData;
+const ClimateAnalytics = window.ClimateAnalytics;
+const ClimateSolar = window.ClimateSolar;
+const ClimateCharts = window.ClimateCharts;
+
+if (!ClimateData || !ClimateAnalytics || !ClimateSolar || !ClimateCharts) {
+    throw new Error("Módulos auxiliares não foram carregados na ordem correta.");
+}
+
 // =====================================================================
 // Registro de instâncias de gráficos — evita memory leaks ao recriar
 // =====================================================================
@@ -9,6 +18,12 @@ let zoomOverlay = null;
 let firebaseDatabase = null;
 let firebaseRef = null;
 let firebaseOnValue = null;
+const latestData = {
+    temperatura: null,
+    solar: null,
+    aquario: null,
+    sala: null,
+};
 
 const FIREBASE_SDK_VERSION = "12.13.0";
 const FIREBASE_APP_URL = `https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-app.js`;
@@ -18,14 +33,11 @@ const FIREBASE_DATABASE_URL = `https://www.gstatic.com/firebasejs/${FIREBASE_SDK
 // Utilitários de data
 // =====================================================================
 function dataAtual() {
-    const d = new Date();
-    return `${String(d.getDate()).padStart(2,"0")}-${String(d.getMonth()+1).padStart(2,"0")}-${d.getFullYear()}`;
+    return ClimateData.dataAtual();
 }
 
 function dataOntem() {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    return `${String(d.getDate()).padStart(2,"0")}-${String(d.getMonth()+1).padStart(2,"0")}-${d.getFullYear()}`;
+    return ClimateData.dataOntem();
 }
 
 // =====================================================================
@@ -33,6 +45,7 @@ function dataOntem() {
 // =====================================================================
 const currentDate   = dataAtual();
 const yesterdayDate = dataOntem();
+let selectedDate = dataAtual();
 
 // Paleta de cores do tema dark
 const COLORS = {
@@ -45,6 +58,9 @@ const COLORS = {
     grid:   'rgba(99,132,200,0.1)',
     text:   '#94a3b8',
 };
+
+const COMFORT_BAND = { min: 20, max: 26, label: "Faixa de conforto" };
+const CHART_DEFAULTS = ClimateCharts.createDefaults(COLORS);
 
 // =====================================================================
 // Configuração do Firebase
@@ -148,57 +164,88 @@ async function setupFirebaseListeners() {
     }
 
     listenToPath("historico/Temperatura", data => {
+        latestData.temperatura = data;
         if (!data) {
             renderEmptyState("data", "Sem dados de temperatura.");
             return;
         }
-        const filtered = filterDataByDays(data, 2);
-        createTemperatureChart(filtered);
-        createSTChart(filtered);
-        createUmidadeChart(filtered);
-        renderTable("data", createTable(filtered), "Sem registros recentes de temperatura.");
+        renderTemperaturaData(data);
     }, () => renderEmptyState("data", "Falha ao carregar dados de temperatura.", "error"));
 
     listenToPath("historico/NascePorDoSol", data => {
+        latestData.solar = data;
         if (!data) {
             renderChartMessage("chart-container-sun", "Sem dados solares.");
             renderChartMessage("chart-container-sun-today", "Sem dados solares de hoje.");
             return;
         }
-        clearChartMessage("chart-container-sun");
-        clearChartMessage("chart-container-sun-today");
-        createSunriseSunsetChart(filterDataByDays(data, 365));
-        createSolarTodayChart(data);
+        renderSolarData(data);
     }, () => {
         renderChartMessage("chart-container-sun", "Falha ao carregar dados solares.", "error");
         renderChartMessage("chart-container-sun-today", "Falha ao carregar ciclo solar.", "error");
     });
 
     listenToPath("historico/Aquario", data => {
+        latestData.aquario = data;
         if (!data) {
             renderEmptyState("dataAquario", "Sem dados do aquário.");
             return;
         }
-        const filtered = filterDataByDays(data, 2);
-        createTemperatureChartAquario(filtered);
-        createPHChartAquario(filtered);
-        createTDSChartAquario(filtered);
-        createTurbidezChartAquario(filtered);
-        renderTable("dataAquario", createTableAquario(filtered), "Sem registros recentes do aquário.");
+        renderAquarioData(data);
     }, () => renderEmptyState("dataAquario", "Falha ao carregar dados do aquário.", "error"));
 
     listenToPath("historico/AirQuality", data => {
+        latestData.sala = data;
         if (!data) {
             renderEmptyState("dataSala", "Sem dados da sala.");
             return;
         }
-        const filtered = filterDataByDays(data, 2);
-        createTemperatureChartSala(filtered);
-        createSTChartSala(filtered);
-        createUmidadeChartSala(filtered);
-        createPressaoChartSala(filtered);
-        renderTable("dataSala", createTableSala(filtered), "Sem registros recentes da sala.");
+        renderSalaData(data);
     }, () => renderEmptyState("dataSala", "Falha ao carregar dados da sala.", "error"));
+}
+
+function renderTemperaturaData(data) {
+    const filtered = ClimateData.filterDataByDays(data, 2, selectedDate);
+    ClimateAnalytics.renderStats("quarto", filtered, selectedDate);
+    ClimateAnalytics.renderAdvancedClimateViews(data, selectedDate);
+    createTemperatureChart(filtered);
+    createSTChart(filtered);
+    createUmidadeChart(filtered);
+    renderTable("data", createTable(filtered), `Sem registros de temperatura em ${selectedDate.replace(/-/g, "/")}.`);
+}
+
+function renderSolarData(data) {
+    clearChartMessage("chart-container-sun");
+    clearChartMessage("chart-container-sun-today");
+    createSunriseSunsetChart(ClimateData.filterDataByDays(data, 365, selectedDate, false));
+    createSolarTodayChart(data);
+}
+
+function renderAquarioData(data) {
+    const filtered = ClimateData.filterDataByDays(data, 2, selectedDate);
+    ClimateAnalytics.renderStats("aquario", filtered, selectedDate);
+    createTemperatureChartAquario(filtered);
+    createPHChartAquario(filtered);
+    createTDSChartAquario(filtered);
+    createTurbidezChartAquario(filtered);
+    renderTable("dataAquario", createTableAquario(filtered), `Sem registros do aquário em ${selectedDate.replace(/-/g, "/")}.`);
+}
+
+function renderSalaData(data) {
+    const filtered = ClimateData.filterDataByDays(data, 2, selectedDate);
+    ClimateAnalytics.renderStats("sala", filtered, selectedDate);
+    createTemperatureChartSala(filtered);
+    createSTChartSala(filtered);
+    createUmidadeChartSala(filtered);
+    createPressaoChartSala(filtered);
+    renderTable("dataSala", createTableSala(filtered), `Sem registros da sala em ${selectedDate.replace(/-/g, "/")}.`);
+}
+
+function rerenderDashboardFromSelectedDate() {
+    if (latestData.temperatura) renderTemperaturaData(latestData.temperatura);
+    if (latestData.solar) renderSolarData(latestData.solar);
+    if (latestData.aquario) renderAquarioData(latestData.aquario);
+    if (latestData.sala) renderSalaData(latestData.sala);
 }
 
 function renderTable(id, table, emptyMessage = "Sem registros recentes.") {
@@ -351,12 +398,16 @@ function createZoomChart(sourceChart, targetCtx) {
         type: sourceChart.config.type || "line",
         data: cloneChartData(sourceChart),
         options: getZoomOptions(sourceId),
-        plugins: sourceId === "plotSolarToday" ? [solarDayBackgroundPlugin] : []
+        plugins: sourceId === "plotSolarToday" ? [ClimateSolar.solarDayBackgroundPlugin] : []
     };
 
     const zoomChart = new Chart(targetCtx, config);
     if (sourceId === "plotSolarToday") {
         zoomChart.$solarDayTimes = sourceChart.$solarDayTimes;
+    }
+    if (sourceChart.$comfortBand) {
+        zoomChart.$comfortBand = sourceChart.$comfortBand;
+        zoomChart.update();
     }
     zoomOverlay._chart = zoomChart;
     return zoomChart;
@@ -364,21 +415,25 @@ function createZoomChart(sourceChart, targetCtx) {
 
 function getZoomOptions(sourceId) {
     if (sourceId === "plotSunriseSunset") {
-        return getSunHistoryOptions({
+        return ClimateSolar.getSunHistoryOptions({
             legend: true,
             tickSize: 12,
-            labelSize: 12
+            labelSize: 12,
+            defaults: CHART_DEFAULTS,
+            colors: COLORS
         });
     }
 
     if (sourceId === "plotSolarToday") {
-        return getSolarTodayOptions({
+        return ClimateSolar.getSolarTodayOptions({
             tickSize: 12,
-            labelSize: 12
+            labelSize: 12,
+            defaults: CHART_DEFAULTS,
+            colors: COLORS
         });
     }
 
-    return mergeDeep(CHART_DEFAULTS, {
+    return ClimateCharts.mergeDeep(CHART_DEFAULTS, {
         animation: false,
         plugins: {
             tooltip: {
@@ -459,6 +514,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const storedTab = getStoredTab();
     const initialTab = storedTab && document.getElementById(storedTab) ? storedTab : "Tab1";
     openTab(initialTab);
+    setupDateControls();
+    setupCollapsibleSections();
 
     setupFirebaseListeners().catch(error => {
         handleFirebaseError("Firebase", error);
@@ -476,624 +533,98 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // =====================================================================
-// Opções padrão do Chart.js — tema dark
-// =====================================================================
-const CHART_DEFAULTS = {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: { duration: 600, easing: 'easeInOutQuart' },
-    interaction: {
-        mode: 'index',
-        intersect: false,
-        axis: 'x'
-    },
-    hover: {
-        mode: 'index',
-        intersect: false
-    },
-    plugins: {
-        legend: { display: false },
-        tooltip: {
-            mode: 'index',
-            intersect: false,
-            displayColors: false,
-            backgroundColor: '#1a2234',
-            borderColor: 'rgba(99,132,200,0.3)',
-            borderWidth: 1,
-            titleColor: '#94a3b8',
-            bodyColor: '#f1f5f9',
-            padding: 10,
-            cornerRadius: 8,
-        }
-    },
-    scales: {
-        x: {
-            grid:   { color: COLORS.grid, drawBorder: false },
-            ticks:  { color: COLORS.text, font: { size: 11 } },
-        },
-        y: {
-            grid:   { color: COLORS.grid, drawBorder: false },
-            ticks:  { color: COLORS.text, font: { size: 11 } },
-        }
-    }
-};
-
-function mergeDeep(target, source) {
-    const result = { ...target };
-    for (const key of Object.keys(source)) {
-        if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-            result[key] = mergeDeep(target[key] || {}, source[key]);
-        } else {
-            result[key] = source[key];
-        }
-    }
-    return result;
-}
-
-// =====================================================================
 // Criação de gráficos — reutilizável
 // =====================================================================
 function createChart(canvasCtx, data, key, label, color, yAxisTitle, yAxisSuffix = "", todasDatas) {
     const id = canvasCtx.canvas.id;
-    if (chartInstances[id]) chartInstances[id].destroy();
-
-    const { hours, [key]: chartData } = extractData(data, [key], todasDatas);
-
-    const gradient = canvasCtx.createLinearGradient(0, 0, 0, 220);
-    gradient.addColorStop(0, color + '33');
-    gradient.addColorStop(1, color + '00');
-
-    const options = mergeDeep(CHART_DEFAULTS, {
-        plugins: {
-            tooltip: {
-                callbacks: {
-                    label: context => {
-                        const value = context.parsed.y;
-                        const formatted = Number.isFinite(value) ? value.toFixed(2) : "--";
-                        return `${context.dataset.label || label}: ${formatted}${yAxisSuffix || ""}`;
-                    }
-                }
-            }
-        },
-        scales: {
-            y: {
-                title: {
-                    display: !!yAxisTitle,
-                    text: yAxisTitle,
-                    color: COLORS.text,
-                    font: { size: 11 }
-                },
-                ticks: {
-                    precision: 1,
-                    callback: v => v + (yAxisSuffix || "")
-                }
-            }
-        }
+    chartInstances[id] = ClimateCharts.createLineChart({
+        canvasCtx,
+        data,
+        key,
+        label,
+        color,
+        yAxisTitle,
+        yAxisSuffix,
+        todasDatas,
+        existingChart: chartInstances[id],
+        defaults: CHART_DEFAULTS,
+        colors: COLORS,
+        comfortBand: COMFORT_BAND
     });
-
-    chartInstances[id] = new Chart(canvasCtx, {
-        type: "line",
-        data: {
-            labels: formatHoursArray(hours),
-            datasets: [{
-                label,
-                data: chartData,
-                borderColor: color,
-                borderWidth: 2,
-                backgroundColor: gradient,
-                fill: true,
-                tension: 0.4,
-                pointRadius: 0,
-                pointHitRadius: 18,
-                pointHoverRadius: 6,
-                pointHoverBackgroundColor: color,
-                pointHoverBorderColor: '#0b1120',
-                pointHoverBorderWidth: 2,
-            }]
-        },
-        options
-    });
-
     return chartInstances[id];
 }
 
-// =====================================================================
-// Tabelas
-// =====================================================================
-const HEADER_LABELS = {
-    temperaturaDS18B20: "Temperatura",
-    Aceton:             "Acetona",
-    Alcohol:            "Álcool",
-    NH4:                "Amônia"
-};
+ClimateCharts.registerComfortBand();
 
-function createTables(headers, data) {
-    const table = document.createElement("table");
+function setupDateControls() {
+    const dateInput = document.getElementById("selectedDate");
+    const todayButton = document.getElementById("btnToday");
 
-    const headerRow = table.insertRow();
-    headers.forEach(key => {
-        const th = document.createElement("th");
-        th.innerText = HEADER_LABELS[key] || key;
-        headerRow.appendChild(th);
+    if (dateInput) {
+        dateInput.value = ClimateData.convertFirebaseDateToInput(selectedDate);
+        dateInput.addEventListener("change", () => {
+            selectedDate = ClimateData.convertInputDateToFirebase(dateInput.value);
+            rerenderDashboardFromSelectedDate();
+        });
+    }
+
+    if (todayButton) {
+        todayButton.addEventListener("click", () => {
+            selectedDate = dataAtual();
+            if (dateInput) dateInput.value = ClimateData.convertFirebaseDateToInput(selectedDate);
+            rerenderDashboardFromSelectedDate();
+        });
+    }
+}
+
+function setupCollapsibleSections() {
+    document.querySelectorAll(".collapsible-section").forEach(section => {
+        const trigger = section.querySelector(".collapsible-trigger");
+        if (!trigger) return;
+
+        trigger.addEventListener("click", () => {
+            const isCollapsed = section.classList.toggle("is-collapsed");
+            trigger.setAttribute("aria-expanded", String(!isCollapsed));
+        });
     });
-
-    const parseDate = str => {
-        const [d, m, y] = str.split("-").map(Number);
-        return new Date(y, m - 1, d);
-    };
-    const allDates = Object.keys(data).sort((a, b) => parseDate(b) - parseDate(a));
-
-    let lastDate = null;
-    let rowCount = 0;
-
-    for (const date of allDates) {
-        if (rowCount >= 24) break;
-        const dateData = data[date];
-        if (!dateData || typeof dateData !== "object") continue;
-        const allTimes = Object.keys(dateData).sort().reverse();
-
-        for (const time of allTimes) {
-            const timeData = dateData[time];
-            if (!timeData || typeof timeData !== "object") continue;
-            for (const key in timeData) {
-                if (rowCount >= 24) break;
-                const item = timeData[key];
-                if (!item || typeof item !== "object") continue;
-                const row = table.insertRow();
-
-                row.insertCell().innerText = date !== lastDate ? date.replace(/-/g, "/") : "";
-                const [hour, minute] = time.split("-");
-                row.insertCell().innerText = `${hour.padStart(2,"0")}:${minute.padStart(2,"0")}`;
-
-                for (let i = 2; i < headers.length; i++) {
-                    const val = item[headers[i]];
-                    const numericValue = Number(val);
-                    row.insertCell().innerText = Number.isFinite(numericValue) ? numericValue.toFixed(2) : "--";
-                }
-
-                rowCount++;
-                lastDate = date;
-            }
-        }
-    }
-
-    return table;
-}
-
-// =====================================================================
-// Extração de dados
-// =====================================================================
-function extractData(data, keys, todasDatas) {
-    const allDates = todasDatas
-        ? Object.keys(data)
-        : Object.keys(data).filter(d => d === currentDate || d === yesterdayDate);
-
-    const hours = [];
-    const extractedData = Object.fromEntries(keys.map(k => [k, []]));
-
-    const parseDate = str => {
-        const [d, m, y] = str.split("-").map(Number);
-        return new Date(y, m - 1, d);
-    };
-
-    for (const date of allDates.sort((a, b) => parseDate(a) - parseDate(b))) {
-        const dateData = data[date];
-        if (!dateData || typeof dateData !== "object") continue;
-        const allTimes = Object.keys(dateData).sort();
-        for (const time of allTimes) {
-            const timeData = dateData[time];
-            if (!timeData || typeof timeData !== "object") continue;
-            const [hourPart, minutePart = "0"] = time.split("-");
-            const hour = Number(hourPart);
-            const minute = Number(minutePart);
-            const decimalHour = hour + (Number.isFinite(minute) ? minute / 60 : 0);
-            for (const itemKey in timeData) {
-                const item = timeData[itemKey];
-                if (!item || typeof item !== "object") continue;
-                hours.push(decimalHour);
-                keys.forEach(dataKey => {
-                    const numericValue = Number(item[dataKey]);
-                    extractedData[dataKey].push(Number.isFinite(numericValue) ? numericValue : null);
-                });
-            }
-        }
-    }
-
-    return { hours, ...extractedData };
-}
-
-// =====================================================================
-// Filtro de datas
-// =====================================================================
-function filterDataByDays(data, days) {
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - days);
-    cutoff.setHours(0, 0, 0, 0);
-
-    const parseDate = str => {
-        const [d, m, y] = str.split("-").map(Number);
-        return new Date(y, m - 1, d);
-    };
-
-    const filtered = {};
-    for (const date of Object.keys(data).sort((a,b) => parseDate(a)-parseDate(b))) {
-        if (parseDate(date) >= cutoff) filtered[date] = data[date];
-    }
-    return filtered;
-}
-
-// =====================================================================
-// Utilidades de tempo (gráfico nascer/pôr do sol)
-// =====================================================================
-function mapRange(value, inMin, inMax, outMin, outMax) {
-    return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
-}
-
-function formatTime(value) {
-    const hours   = Math.floor(value);
-    const minutes = Math.floor((value - hours) * 60);
-    return `${hours}:${String(minutes).padStart(2, "0")}`;
-}
-
-function tooltipLabel(context) {
-    return `${context.dataset.label || ""}: ${formatTime(context.raw)}`;
-}
-
-function formatHoursArray(hours) {
-    return hours.map(h => formatTime(h));
-}
-
-function secondsToHours(seconds) {
-    return seconds / 3600;
-}
-
-function getNumberValue(item, names) {
-    for (const name of names) {
-        const value = Number(item[name]);
-        if (Number.isFinite(value)) return value;
-    }
-    return null;
-}
-
-function readTimeSeconds(item, hourNames, minuteNames) {
-    const hour = getNumberValue(item, hourNames);
-    const minute = getNumberValue(item, minuteNames) || 0;
-    if (hour == null) return null;
-    return hour * 3600 + minute * 60;
-}
-
-function getFirstItemForDate(data, date) {
-    const dateData = data[date];
-    if (!dateData || typeof dateData !== "object") return null;
-    for (const key of Object.keys(dateData).sort()) {
-        const item = dateData[key];
-        if (!item || typeof item !== "object") continue;
-        if (
-            item.HourNascerDoSol != null ||
-            item.HoraNascerDoSol != null ||
-            item.HoraAmanhecer != null ||
-            item.HourAmanhecer != null
-        ) {
-            return item;
-        }
-        for (const nestedKey of Object.keys(item)) {
-            const nestedItem = item[nestedKey];
-            if (nestedItem && typeof nestedItem === "object") return nestedItem;
-        }
-    }
-    return null;
-}
-
-function getLatestDate(data) {
-    const parseDate = str => {
-        const [d, m, y] = str.split("-").map(Number);
-        return new Date(y, m - 1, d);
-    };
-    return Object.keys(data).sort((a, b) => parseDate(b) - parseDate(a))[0];
-}
-
-function getSolarEventsForToday(data) {
-    const date = data[currentDate] ? currentDate : getLatestDate(data);
-    const item = date ? getFirstItemForDate(data, date) : null;
-    if (!item) return null;
-
-    const dawn = readTimeSeconds(item, ["HoraAmanhecer", "HourAmanhecer"], ["MinuteAmanhecer", "MinutoAmanhecer"]);
-    const sunrise = readTimeSeconds(item, ["HourNascerDoSol", "HoraNascerDoSol"], ["MinuteNascerDoSol", "MinutoNascerDoSol"]);
-    const sunset = readTimeSeconds(item, ["HoraPorDoSol", "HourPorDoSol"], ["MinutePorDoSol", "MinutoPorDoSol"]);
-    const dusk = readTimeSeconds(item, ["HourAnoitecer", "HoraAnoitecer"], ["MinuteAnoitecer", "MinutoAnoitecer"]);
-    const zenithFromData = readTimeSeconds(
-        item,
-        ["HoraZenite", "HourZenith", "HoraZenith", "HourZenite", "HoraZênite"],
-        ["MinuteZenite", "MinutoZenite", "MinuteZenith", "MinutoZenith", "MinutoZênite"]
-    );
-
-    if ([dawn, sunrise, sunset, dusk].some(value => value == null)) return null;
-
-    const zenith = zenithFromData != null ? zenithFromData : sunrise + ((sunset - sunrise) / 2);
-
-    return {
-        date,
-        dawn: secondsToHours(dawn),
-        sunrise: secondsToHours(sunrise),
-        zenith: secondsToHours(zenith),
-        sunset: secondsToHours(sunset),
-        dusk: secondsToHours(dusk)
-    };
 }
 
 // =====================================================================
 // Nascer / Pôr do sol
 // =====================================================================
-function getSunriseSunsetData(data) {
-    const dates = [], sunriseTimes = [], sunsetTimes = [], amanhecerTimes = [], anoitecerTimes = [];
-
-    const parseDate = str => {
-        const [d, m, y] = str.split("-").map(Number);
-        return new Date(y, m - 1, d);
-    };
-
-    for (const date of Object.keys(data).sort((a,b) => parseDate(a)-parseDate(b))) {
-        dates.push(date);
-        for (const key in data[date]) {
-            const item = data[date][key];
-            sunriseTimes.push(item.HourNascerDoSol  * 3600 + item.MinuteNascerDoSol  * 60);
-            sunsetTimes.push( item.HoraPorDoSol     * 3600 + item.MinutePorDoSol     * 60);
-            amanhecerTimes.push(item.HoraAmanhecer  * 3600 + item.MinuteAmanhecer    * 60);
-            anoitecerTimes.push(item.HourAnoitecer  * 3600 + item.MinuteAnoitecer    * 60);
-        }
-    }
-    return { dates, sunriseTimes, sunsetTimes, amanhecerTimes, anoitecerTimes };
-}
-
-function getSunHistoryOptions({ legend = true, tickSize = 11, labelSize = 11 } = {}) {
-    return {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: { duration: 600 },
-        interaction: {
-            mode: 'nearest',
-            intersect: false,
-            axis: 'x'
-        },
-        hover: {
-            mode: 'nearest',
-            intersect: false
-        },
-        plugins: {
-            legend: {
-                display: legend,
-                position: 'top',
-                labels: { color: COLORS.text, font: { size: labelSize }, boxWidth: 12, padding: 16 }
-            },
-            tooltip: {
-                ...CHART_DEFAULTS.plugins.tooltip,
-                callbacks: { label: tooltipLabel }
-            }
-        },
-        scales: {
-            x: {
-                grid:  { color: COLORS.grid, drawBorder: false },
-                ticks: { color: COLORS.text, font: { size: tickSize }, maxRotation: 45 }
-            },
-            yLeft: {
-                type: "linear", position: "right",
-                min: 4, max: 7,
-                grid: { color: COLORS.grid, drawBorder: false },
-                ticks: { callback: formatTime, color: COLORS.text, font: { size: tickSize } }
-            },
-            yRight: {
-                type: "linear", position: "left",
-                min: 17, max: 21,
-                grid: { drawOnChartArea: false },
-                ticks: { callback: formatTime, color: COLORS.text, font: { size: tickSize } }
-            }
-        }
-    };
-}
-
 function createSunriseSunsetChart(data, chartElement) {
-    const { dates, sunriseTimes, sunsetTimes, amanhecerTimes, anoitecerTimes } = getSunriseSunsetData(data);
-    const formattedDates = dates.map(d => d.replace(/-/g, "/"));
-    const remap = (arr, i1, i2, o1, o2) => arr.map(t => mapRange(t, i1, i2, o1, o2));
-
     const ctx = chartElement || plotSunriseSunset;
     const id  = ctx.canvas.id;
-    if (chartInstances[id]) chartInstances[id].destroy();
-
-    if (!dates.length) {
-        renderChartMessage("chart-container-sun", "Sem histórico solar recente.");
-        return;
-    }
-
-    chartInstances[id] = new Chart(ctx, {
-        type: "line",
-        data: {
-            labels: formattedDates,
-            datasets: [
-                { label: "Amanhecer",     yAxisID: "yLeft",  data: remap(amanhecerTimes,14400,25200,4,7),  borderColor: "#fde68a", backgroundColor: "transparent", tension: 0.4, borderWidth: 2, pointRadius: 0, pointHitRadius: 18, pointHoverRadius: 6, order: 1 },
-                { label: "Nascer do sol", yAxisID: "yLeft",  data: remap(sunriseTimes,  14400,25200,4,7),  borderColor: "#fb923c", backgroundColor: "transparent", tension: 0.4, borderWidth: 2, pointRadius: 0, pointHitRadius: 18, pointHoverRadius: 6, order: 2 },
-                { label: "Pôr do sol",    yAxisID: "yRight", data: remap(sunsetTimes,   61200,75600,17,21), borderColor: "#f87171", backgroundColor: "transparent", tension: 0.4, borderWidth: 2, pointRadius: 0, pointHitRadius: 18, pointHoverRadius: 6, order: 3 },
-                { label: "Anoitecer",     yAxisID: "yRight", data: remap(anoitecerTimes,61200,75600,17,21), borderColor: "#818cf8", backgroundColor: "transparent", tension: 0.4, borderWidth: 2, pointRadius: 0, pointHitRadius: 18, pointHoverRadius: 6, order: 4 }
-            ]
-        },
-        options: getSunHistoryOptions()
+    const chart = ClimateSolar.createSunriseSunsetChart({
+        data,
+        ctx,
+        existingChart: chartInstances[id],
+        defaults: CHART_DEFAULTS,
+        colors: COLORS,
+        onEmpty: () => renderChartMessage("chart-container-sun", "Sem histórico solar recente.")
     });
-}
-
-const solarDayBackgroundPlugin = {
-    id: "solarDayBackground",
-    beforeDatasetsDraw(chart) {
-        const times = chart.$solarDayTimes;
-        const xScale = chart.scales.x;
-        const area = chart.chartArea;
-        if (!times || !xScale || !area) return;
-
-        const ctx = chart.ctx;
-        const dawnX = xScale.getPixelForValue(times.dawn);
-        const sunriseX = xScale.getPixelForValue(times.sunrise);
-        const zenithX = xScale.getPixelForValue(times.zenith);
-        const sunsetX = xScale.getPixelForValue(times.sunset);
-        const duskX = xScale.getPixelForValue(times.dusk);
-
-        ctx.save();
-        ctx.fillStyle = "rgba(15, 23, 42, 0.72)";
-        ctx.fillRect(area.left, area.top, Math.max(0, dawnX - area.left), area.bottom - area.top);
-        ctx.fillRect(duskX, area.top, Math.max(0, area.right - duskX), area.bottom - area.top);
-
-        const twilight = ctx.createLinearGradient(dawnX, 0, sunriseX, 0);
-        twilight.addColorStop(0, "rgba(148, 163, 184, 0.24)");
-        twilight.addColorStop(1, "rgba(251, 191, 36, 0.22)");
-        ctx.fillStyle = twilight;
-        ctx.fillRect(dawnX, area.top, Math.max(0, sunriseX - dawnX), area.bottom - area.top);
-
-        const daylight = ctx.createLinearGradient(sunriseX, 0, sunsetX, 0);
-        daylight.addColorStop(0, "rgba(251, 191, 36, 0.20)");
-        daylight.addColorStop(0.5, "rgba(254, 240, 138, 0.38)");
-        daylight.addColorStop(1, "rgba(251, 191, 36, 0.20)");
-        ctx.fillStyle = daylight;
-        ctx.fillRect(sunriseX, area.top, Math.max(0, sunsetX - sunriseX), area.bottom - area.top);
-
-        const evening = ctx.createLinearGradient(sunsetX, 0, duskX, 0);
-        evening.addColorStop(0, "rgba(251, 146, 60, 0.24)");
-        evening.addColorStop(1, "rgba(129, 140, 248, 0.18)");
-        ctx.fillStyle = evening;
-        ctx.fillRect(sunsetX, area.top, Math.max(0, duskX - sunsetX), area.bottom - area.top);
-
-        ctx.strokeStyle = "rgba(251, 191, 36, 0.35)";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(zenithX, area.top);
-        ctx.lineTo(zenithX, area.bottom);
-        ctx.stroke();
-        ctx.restore();
-    }
-};
-
-function getSolarTodayOptions({ tickSize = 11, labelSize = 11 } = {}) {
-    return {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: { duration: 600 },
-        interaction: {
-            mode: "nearest",
-            intersect: false,
-            axis: "x"
-        },
-        hover: {
-            mode: "nearest",
-            intersect: false
-        },
-        plugins: {
-            legend: {
-                display: true,
-                position: "top",
-                labels: { color: COLORS.text, font: { size: labelSize }, boxWidth: 12, padding: 16 }
-            },
-            tooltip: {
-                ...CHART_DEFAULTS.plugins.tooltip,
-                filter: context => context.dataset.label === "Eventos solares",
-                callbacks: {
-                    title: items => items[0]?.raw?.label || "",
-                    label: context => {
-                        const raw = context.raw;
-                        return raw && raw.timeLabel ? raw.timeLabel : formatTime(context.parsed.x);
-                    }
-                }
-            }
-        },
-        scales: {
-            x: {
-                type: "linear",
-                min: 0,
-                max: 24,
-                grid: { color: "rgba(99,132,200,0.13)", drawBorder: false },
-                ticks: {
-                    stepSize: 2,
-                    color: COLORS.text,
-                    font: { size: tickSize },
-                    callback: value => `${value}h`
-                }
-            },
-            y: {
-                min: 0,
-                max: 1.12,
-                grid: { color: "rgba(99,132,200,0.10)", drawBorder: false },
-                ticks: { display: false }
-            }
-        }
-    };
+    if (chart) chartInstances[id] = chart;
 }
 
 function createSolarTodayChart(data, chartElement) {
-    const events = getSolarEventsForToday(data);
     const ctx = chartElement || plotSolarToday;
     const id = ctx.canvas.id;
-    if (chartInstances[id]) chartInstances[id].destroy();
-
-    if (!events) {
-        renderChartMessage("chart-container-sun-today", "Sem dados suficientes para o ciclo solar de hoje.");
-        return;
-    }
-
-    const daylightPoints = [
-        { x: 0, y: 0 },
-        { x: events.dawn, y: 0.08, label: "Amanhecer", timeLabel: formatTime(events.dawn) },
-        { x: events.sunrise, y: 0.52, label: "Nascer do sol", timeLabel: formatTime(events.sunrise) },
-        { x: events.zenith, y: 1, label: "Zenite", timeLabel: formatTime(events.zenith) },
-        { x: events.sunset, y: 0.52, label: "Pôr do sol", timeLabel: formatTime(events.sunset) },
-        { x: events.dusk, y: 0.08, label: "Anoitecer", timeLabel: formatTime(events.dusk) },
-        { x: 24, y: 0 }
-    ];
-    const eventPoints = [
-        daylightPoints[1],
-        daylightPoints[2],
-        daylightPoints[3],
-        daylightPoints[4],
-        daylightPoints[5]
-    ];
-
-    chartInstances[id] = new Chart(ctx, {
-        type: "line",
-        data: {
-            datasets: [
-                {
-                    label: "Luz do dia",
-                    data: daylightPoints,
-                    borderColor: "#facc15",
-                    backgroundColor: "rgba(250, 204, 21, 0.22)",
-                    fill: true,
-                    tension: 0.42,
-                    pointRadius: 0,
-                    pointHitRadius: 18,
-                    pointHoverRadius: 0,
-                    order: 2
-                },
-                {
-                    type: "scatter",
-                    label: "Eventos solares",
-                    data: eventPoints,
-                    borderColor: "#f8fafc",
-                    backgroundColor: ["#fde68a", "#fb923c", "#facc15", "#f87171", "#818cf8"],
-                    pointBorderColor: "#0b1120",
-                    pointBorderWidth: 2,
-                    pointRadius: 5,
-                    pointHitRadius: 18,
-                    pointHoverRadius: 7,
-                    order: 1
-                }
-            ]
-        },
-        options: getSolarTodayOptions(),
-        plugins: [solarDayBackgroundPlugin]
+    const chart = ClimateSolar.createSolarTodayChart({
+        data,
+        selectedDate,
+        ctx,
+        existingChart: chartInstances[id],
+        defaults: CHART_DEFAULTS,
+        colors: COLORS,
+        onEmpty: () => renderChartMessage("chart-container-sun-today", `Sem dados suficientes para o ciclo solar em ${selectedDate.replace(/-/g, "/")}.`)
     });
-
-    chartInstances[id].$solarDayTimes = events;
+    if (chart) chartInstances[id] = chart;
 }
 
 // =====================================================================
 // Quarto
 // =====================================================================
-function createTable(data)          { return createTables(["Data","Hora","Temperatura","Sensacao termica","Umidade"], data); }
+function createTable(data)          { return ClimateData.createTables(["Data","Hora","Temperatura","Sensacao termica","Umidade"], data); }
 function createTemperatureChart(d)  { return createChart(plotsTemp,    d, "Temperatura",      "Temperatura",      COLORS.blue,   "(°C)", "°",  false); }
 function createSTChart(d)           { return createChart(plotsST,      d, "Sensacao termica", "Sensação Térmica", COLORS.green,  "(°C)", "°",  false); }
 function createUmidadeChart(d)      { return createChart(plotsUmidade, d, "Umidade",          "Umidade",          COLORS.purple, null,   "%",  false); }
@@ -1101,7 +632,7 @@ function createUmidadeChart(d)      { return createChart(plotsUmidade, d, "Umida
 // =====================================================================
 // Aquário
 // =====================================================================
-function createTableAquario(d)             { return createTables(["Data","Hora","temperaturaDS18B20","PH","TDS","Turbidez"], d); }
+function createTableAquario(d)             { return ClimateData.createTables(["Data","Hora","temperaturaDS18B20","PH","TDS","Turbidez"], d); }
 function createTemperatureChartAquario(d)  { return createChart(plotsTempAquario, d, "temperaturaDS18B20", "Temperatura", COLORS.blue,  "(°C)", "°", false); }
 function createPHChartAquario(d)           { return createChart(plotsPH,          d, "PH",                "PH",          COLORS.teal,  null,   "",  false); }
 function createTDSChartAquario(d)          { return createChart(plotsTDS,         d, "TDS",               "TDS",         COLORS.amber, null,   "",  false); }
@@ -1110,7 +641,7 @@ function createTurbidezChartAquario(d)     { return createChart(plotsTurbidez,  
 // =====================================================================
 // Sala
 // =====================================================================
-function createTableSala(d)             { return createTables(["Data","Hora","CO","CO2","Aceton","Alcohol","NH4"], d); }
+function createTableSala(d)             { return ClimateData.createTables(["Data","Hora","CO","CO2","Aceton","Alcohol","NH4"], d); }
 function createTemperatureChartSala(d)  { return createChart(plotsTempSala,    d, "temperatura",    "Temperatura",      COLORS.blue,   "(°C)", "°", false); }
 function createSTChartSala(d)           { return createChart(plotsSTSala,      d, "sensacaoTermica","Sensação Térmica", COLORS.green,  "(°C)", "°", false); }
 function createUmidadeChartSala(d)      { return createChart(plotsUmidadeSala, d, "umidade",        "Umidade",          COLORS.purple, null,   "%", false); }
