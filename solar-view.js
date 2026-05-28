@@ -1,12 +1,13 @@
 'use strict';
 
 (function () {
-    const sunHistoryChart = document.getElementById("plotSunriseSunset").getContext("2d");
-    const solarTodayChart = document.getElementById("plotSolarToday").getContext("2d");
+    const { ids } = window.AppConfig;
+    const sunHistoryChart = document.getElementById(ids.charts.sunHistory).getContext("2d");
+    const solarTodayChart = document.getElementById(ids.charts.solarToday).getContext("2d");
 
     function render({ data, selectedDate, chartInstances, defaults, colors, ui }) {
-        ui.clearChartMessage("chart-container-sun");
-        ui.clearChartMessage("chart-container-sun-today");
+        ui.clearChartMessage(ids.chartContainers.sunHistory);
+        ui.clearChartMessage(ids.chartContainers.solarToday);
 
         const historyData = ClimateData.filterDataByDays(data, 365, selectedDate, false);
         createSunriseSunsetChart({ data: historyData, chartInstances, defaults, colors, ui });
@@ -21,7 +22,7 @@
             existingChart: chartInstances[id],
             defaults,
             colors,
-            onEmpty: () => ui.renderChartMessage("chart-container-sun", "Sem histórico solar recente.")
+            onEmpty: () => ui.renderChartMessage(ids.chartContainers.sunHistory, "Sem histórico solar recente.")
         });
         if (chart) chartInstances[id] = chart;
     }
@@ -35,7 +36,7 @@
             existingChart: chartInstances[id],
             defaults,
             colors,
-            onEmpty: () => ui.renderChartMessage("chart-container-sun-today", `Sem dados suficientes para o ciclo solar em ${selectedDate.replace(/-/g, "/")}.`)
+            onEmpty: () => ui.renderChartMessage(ids.chartContainers.solarToday, `Sem dados suficientes para o ciclo solar em ${selectedDate.replace(/-/g, "/")}.`)
         });
         if (chart) chartInstances[id] = chart;
     }

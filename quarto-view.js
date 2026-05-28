@@ -1,12 +1,20 @@
 'use strict';
 
 (function () {
-    const temperatureChart = document.getElementById("plotsTemp").getContext("2d");
-    const feelsLikeChart = document.getElementById("plotsST").getContext("2d");
-    const humidityChart = document.getElementById("plotsUmidade").getContext("2d");
+    const { ids, fields } = window.AppConfig;
+    const roomFields = fields.room;
+    const temperatureChart = document.getElementById(ids.charts.roomTemperature).getContext("2d");
+    const feelsLikeChart = document.getElementById(ids.charts.roomFeelsLike).getContext("2d");
+    const humidityChart = document.getElementById(ids.charts.roomHumidity).getContext("2d");
 
     function createTable(data) {
-        return ClimateData.createTables(["Data", "Hora", "Temperatura", "Sensacao termica", "Umidade"], data);
+        return ClimateData.createTables([
+            roomFields.date,
+            roomFields.time,
+            roomFields.temperature,
+            roomFields.feelsLike,
+            roomFields.humidity,
+        ], data);
     }
 
     function render({ data, selectedDate, createChart, colors, ui }) {
@@ -14,11 +22,40 @@
         ClimateAnalytics.renderStats("quarto", filteredData, selectedDate);
         ClimateAnalytics.renderAdvancedClimateViews(data, selectedDate);
 
-        createChart(temperatureChart, filteredData, "Temperatura", "Temperatura", colors.blue, "(°C)", "°", false);
-        createChart(feelsLikeChart, filteredData, "Sensacao termica", "Sensação Térmica", colors.green, "(°C)", "°", false);
-        createChart(humidityChart, filteredData, "Umidade", "Umidade", colors.purple, null, "%", false);
+        createChart({
+            canvasCtx: temperatureChart,
+            containerId: ids.chartContainers.roomTemperature,
+            data: filteredData,
+            key: roomFields.temperature,
+            label: "Temperatura",
+            color: colors.blue,
+            yAxisTitle: "(°C)",
+            yAxisSuffix: "°",
+            emptyMessage: `Sem dados de temperatura em ${selectedDate.replace(/-/g, "/")}.`
+        });
+        createChart({
+            canvasCtx: feelsLikeChart,
+            containerId: ids.chartContainers.roomFeelsLike,
+            data: filteredData,
+            key: roomFields.feelsLike,
+            label: "Sensação Térmica",
+            color: colors.green,
+            yAxisTitle: "(°C)",
+            yAxisSuffix: "°",
+            emptyMessage: `Sem dados de sensação térmica em ${selectedDate.replace(/-/g, "/")}.`
+        });
+        createChart({
+            canvasCtx: humidityChart,
+            containerId: ids.chartContainers.roomHumidity,
+            data: filteredData,
+            key: roomFields.humidity,
+            label: "Umidade",
+            color: colors.purple,
+            yAxisSuffix: "%",
+            emptyMessage: `Sem dados de umidade em ${selectedDate.replace(/-/g, "/")}.`
+        });
 
-        ui.renderTable("data", createTable(filteredData), `Sem registros de temperatura em ${selectedDate.replace(/-/g, "/")}.`);
+        ui.renderTable(ids.tables.room, createTable(filteredData), `Sem registros de temperatura em ${selectedDate.replace(/-/g, "/")}.`);
     }
 
     window.QuartoView = { render };

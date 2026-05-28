@@ -1,25 +1,68 @@
 'use strict';
 
 (function () {
-    const temperatureChart = document.getElementById("plotsTempAquario").getContext("2d");
-    const phChart = document.getElementById("plotsPH").getContext("2d");
-    const tdsChart = document.getElementById("plotsTDS").getContext("2d");
-    const turbidityChart = document.getElementById("plotsTurbidez").getContext("2d");
+    const { ids, fields } = window.AppConfig;
+    const aquariumFields = fields.aquarium;
+    const temperatureChart = document.getElementById(ids.charts.aquariumTemperature).getContext("2d");
+    const phChart = document.getElementById(ids.charts.aquariumPh).getContext("2d");
+    const tdsChart = document.getElementById(ids.charts.aquariumTds).getContext("2d");
+    const turbidityChart = document.getElementById(ids.charts.aquariumTurbidity).getContext("2d");
 
     function createTable(data) {
-        return ClimateData.createTables(["Data", "Hora", "temperaturaDS18B20", "PH", "TDS", "Turbidez"], data);
+        return ClimateData.createTables([
+            aquariumFields.date,
+            aquariumFields.time,
+            aquariumFields.temperature,
+            aquariumFields.ph,
+            aquariumFields.tds,
+            aquariumFields.turbidity,
+        ], data);
     }
 
     function render({ data, selectedDate, createChart, colors, ui }) {
         const filteredData = ClimateData.filterDataByDays(data, 2, selectedDate);
         ClimateAnalytics.renderStats("aquario", filteredData, selectedDate);
 
-        createChart(temperatureChart, filteredData, "temperaturaDS18B20", "Temperatura", colors.blue, "(°C)", "°", false);
-        createChart(phChart, filteredData, "PH", "PH", colors.teal, null, "", false);
-        createChart(tdsChart, filteredData, "TDS", "TDS", colors.amber, null, "", false);
-        createChart(turbidityChart, filteredData, "Turbidez", "Turbidez", colors.rose, null, "", false);
+        createChart({
+            canvasCtx: temperatureChart,
+            containerId: ids.chartContainers.aquariumTemperature,
+            data: filteredData,
+            key: aquariumFields.temperature,
+            label: "Temperatura",
+            color: colors.blue,
+            yAxisTitle: "(°C)",
+            yAxisSuffix: "°",
+            emptyMessage: `Sem dados de temperatura do aquário em ${selectedDate.replace(/-/g, "/")}.`
+        });
+        createChart({
+            canvasCtx: phChart,
+            containerId: ids.chartContainers.aquariumPh,
+            data: filteredData,
+            key: aquariumFields.ph,
+            label: "PH",
+            color: colors.teal,
+            emptyMessage: `Sem dados de PH em ${selectedDate.replace(/-/g, "/")}.`
+        });
+        createChart({
+            canvasCtx: tdsChart,
+            containerId: ids.chartContainers.aquariumTds,
+            data: filteredData,
+            key: aquariumFields.tds,
+            label: "TDS",
+            color: colors.amber,
+            emptyMessage: `Sem dados de TDS em ${selectedDate.replace(/-/g, "/")}.`
+        });
+        createChart({
+            canvasCtx: turbidityChart,
+            containerId: ids.chartContainers.aquariumTurbidity,
+            data: filteredData,
+            key: aquariumFields.turbidity,
+            label: "Turbidez",
+            color: colors.rose,
+            emptyMessage: `Sem dados de turbidez em ${selectedDate.replace(/-/g, "/")}.`
+        });
 
-        ui.renderTable("dataAquario", createTable(filteredData), `Sem registros do aquário em ${selectedDate.replace(/-/g, "/")}.`);
+        ui.renderTable(ids.tables.aquarium, createTable(filteredData), `Sem registros do aquário em ${selectedDate.replace(/-/g, "/")}.`);
     }
 
     window.AquarioView = { render };

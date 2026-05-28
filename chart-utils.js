@@ -116,11 +116,21 @@
         existingChart,
         defaults,
         colors,
-        comfortBand = DEFAULT_COMFORT_BAND
+        comfortBand = DEFAULT_COMFORT_BAND,
+        onEmpty,
+        onReady
     }) {
         if (existingChart) existingChart.destroy();
 
         const { hours, [key]: chartData } = ClimateData.extractData(data, [key], includeAllDates);
+
+        const hasPoints = Array.isArray(chartData) && chartData.some(value => Number.isFinite(Number(value)));
+        if (!hasPoints) {
+            if (onEmpty) onEmpty();
+            return null;
+        }
+
+        if (onReady) onReady();
 
         const gradient = canvasCtx.createLinearGradient(0, 0, 0, 220);
         gradient.addColorStop(0, color + '33');

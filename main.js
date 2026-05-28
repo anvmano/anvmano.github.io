@@ -7,6 +7,7 @@ const ClimateSolar = window.ClimateSolar;
 const ClimateCharts = window.ClimateCharts;
 const FirebaseService = window.FirebaseService;
 const ClimateUI = window.ClimateUI;
+const ClimateZoom = window.ClimateZoom;
 const QuartoView = window.QuartoView;
 const AquarioView = window.AquarioView;
 const SalaView = window.SalaView;
@@ -20,6 +21,7 @@ if (
     !ClimateCharts ||
     !FirebaseService ||
     !ClimateUI ||
+    !ClimateZoom ||
     !QuartoView ||
     !AquarioView ||
     !SalaView ||
@@ -39,6 +41,8 @@ const latestData = {
 const COLORS = AppConfig.colors;
 const COMFORT_BAND = AppConfig.comfortBand;
 const CHART_DEFAULTS = ClimateCharts.createDefaults(COLORS);
+const FIREBASE_PATHS = AppConfig.firebasePaths;
+const IDS = AppConfig.ids;
 
 let selectedDate = ClimateData.dataAtual();
 
@@ -52,9 +56,20 @@ function setSelectedDate(date) {
     selectedDate = date;
 }
 
-function createChart(canvasCtx, data, key, label, color, yAxisTitle, yAxisSuffix = "", includeAllDates = false) {
+function createChart({
+    canvasCtx,
+    containerId,
+    data,
+    key,
+    label,
+    color,
+    yAxisTitle,
+    yAxisSuffix = "",
+    includeAllDates = false,
+    emptyMessage = "Sem dados para esta data."
+}) {
     const id = canvasCtx.canvas.id;
-    chartInstances[id] = ClimateCharts.createLineChart({
+    const chart = ClimateCharts.createLineChart({
         canvasCtx,
         data,
         key,
@@ -66,13 +81,21 @@ function createChart(canvasCtx, data, key, label, color, yAxisTitle, yAxisSuffix
         existingChart: chartInstances[id],
         defaults: CHART_DEFAULTS,
         colors: COLORS,
-        comfortBand: COMFORT_BAND
+        comfortBand: COMFORT_BAND,
+        onEmpty: () => {
+            delete chartInstances[id];
+            if (containerId) ClimateUI.renderChartMessage(containerId, emptyMessage);
+        },
+        onReady: () => {
+            if (containerId) ClimateUI.clearChartMessage(containerId);
+        }
     });
+    if (chart) chartInstances[id] = chart;
     return chartInstances[id];
 }
 
 function getZoomOptions(sourceId) {
-    if (sourceId === "plotSunriseSunset") {
+    if (sourceId === IDS.charts.sunHistory) {
         return ClimateSolar.getSunHistoryOptions({
             legend: true,
             tickSize: 12,
@@ -82,7 +105,7 @@ function getZoomOptions(sourceId) {
         });
     }
 
-    if (sourceId === "plotSolarToday") {
+    if (sourceId === IDS.charts.solarToday) {
         return ClimateSolar.getSolarTodayOptions({
             tickSize: 12,
             labelSize: 12,
@@ -171,45 +194,45 @@ async function setupFirebaseListeners() {
         FirebaseService.trackLoadEnd();
     }
 
-    FirebaseService.listenToPath("historico/Temperatura", data => {
+    FirebaseService.listenToPath(FIREBASE_PATHS.room, data => {
         latestData.room = data;
         if (!data) {
-            ClimateUI.renderEmptyState("data", "Sem dados de temperatura.");
+            ClimateUI.renderEmptyState(IDS.tables.room, "Sem dados de temperatura.");
             return;
         }
         renderRoomData(data);
-    }, () => ClimateUI.renderEmptyState("data", "Falha ao carregar dados de temperatura.", "error"));
+    }, () => ClimateUI.renderEmptyState(IDS.tables.room, "Falha ao carregar dados de temperatura.", "error"));
 
-    FirebaseService.listenToPath("historico/NascePorDoSol", data => {
+    FirebaseService.listenToPath(FIREBASE_PATHS.solar, data => {
         latestData.solar = data;
         if (!data) {
-            ClimateUI.renderChartMessage("chart-container-sun", "Sem dados solares.");
-            ClimateUI.renderChartMessage("chart-container-sun-today", "Sem dados solares de hoje.");
+            ClimateUI.renderChartMessage(IDS.chartContainers.sunHistory, "Sem dados solares.");
+            ClimateUI.renderChartMessage(IDS.chartContainers.solarToday, "Sem dados solares de hoje.");
             return;
         }
         renderSolarData(data);
     }, () => {
-        ClimateUI.renderChartMessage("chart-container-sun", "Falha ao carregar dados solares.", "error");
-        ClimateUI.renderChartMessage("chart-container-sun-today", "Falha ao carregar ciclo solar.", "error");
+        ClimateUI.renderChartMessage(IDS.chartContainers.sunHistory, "Falha ao carregar dados solares.", "error");
+        ClimateUI.renderChartMessage(IDS.chartContainers.solarToday, "Falha ao carregar ciclo solar.", "error");
     });
 
-    FirebaseService.listenToPath("historico/Aquario", data => {
+    FirebaseService.listenToPath(FIREBASE_PATHS.aquarium, data => {
         latestData.aquarium = data;
         if (!data) {
-            ClimateUI.renderEmptyState("dataAquario", "Sem dados do aquário.");
+            ClimateUI.renderEmptyState(IDS.tables.aquarium, "Sem dados do aquário.");
             return;
         }
         renderAquariumData(data);
-    }, () => ClimateUI.renderEmptyState("dataAquario", "Falha ao carregar dados do aquário.", "error"));
+    }, () => ClimateUI.renderEmptyState(IDS.tables.aquarium, "Falha ao carregar dados do aquário.", "error"));
 
-    FirebaseService.listenToPath("historico/AirQuality", data => {
+    FirebaseService.listenToPath(FIREBASE_PATHS.livingRoom, data => {
         latestData.livingRoom = data;
         if (!data) {
-            ClimateUI.renderEmptyState("dataSala", "Sem dados da sala.");
+            ClimateUI.renderEmptyState(IDS.tables.livingRoom, "Sem dados da sala.");
             return;
         }
         renderLivingRoomData(data);
-    }, () => ClimateUI.renderEmptyState("dataSala", "Falha ao carregar dados da sala.", "error"));
+    }, () => ClimateUI.renderEmptyState(IDS.tables.livingRoom, "Falha ao carregar dados da sala.", "error"));
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -221,7 +244,7 @@ document.addEventListener("DOMContentLoaded", () => {
         onDateChange: rerenderDashboardFromSelectedDate
     });
     ClimateUI.setupCollapsibleSections();
-    ClimateUI.setupChartZoom({ chartInstances, getZoomOptions });
+    ClimateZoom.setup({ chartInstances, getZoomOptions });
 
     setupFirebaseListeners().catch(error => {
         FirebaseService.handleError("Firebase", error);
