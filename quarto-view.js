@@ -20,7 +20,10 @@
     function render({ data, selectedDate, createChart, colors, ui }) {
         const filteredData = ClimateData.filterDataByDays(data, 2, selectedDate);
         ClimateAnalytics.renderStats("quarto", filteredData, selectedDate);
-        ClimateAnalytics.renderAdvancedClimateViews(data, selectedDate);
+        ClimateAnalytics.renderAdvancedClimateViews(data, selectedDate, {
+            metricKey: roomFields.temperature,
+            containers: ids.advancedViews.room,
+        });
 
         createChart({
             canvasCtx: temperatureChart,

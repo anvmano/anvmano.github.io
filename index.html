@@ -86,7 +86,33 @@
                         <canvas aria-label="Pressão da sala" class="plot" id="plotsPressaoSala" role="img"></canvas>
                     </div>
                 </div>
-                <div class="table-wrapper" id="dataSala"></div>
+                <section class="advanced-section collapsible-section is-collapsed" aria-label="Visualizações climáticas avançadas da sala">
+                    <button class="collapsible-trigger" type="button" aria-expanded="false">
+                        <span class="chart-label">Visualizações Climáticas</span>
+                        <span class="collapsible-trigger__icon" aria-hidden="true">+</span>
+                    </button>
+                    <div class="advanced-grid">
+                        <div class="advanced-panel">
+                            <span class="advanced-panel__title">Calendário Climático Mensal</span>
+                            <div class="calendar-heatmap" id="monthlyClimateCalendarSala"></div>
+                        </div>
+                        <div class="advanced-panel">
+                            <span class="advanced-panel__title">Heatmap por Hora do Dia</span>
+                            <div class="hourly-heatmap" id="hourlyHeatmapSala"></div>
+                        </div>
+                        <div class="advanced-panel advanced-panel--wide">
+                            <span class="advanced-panel__title">Mapa Semanal por Dia/Hora</span>
+                            <div class="weekly-heatmap" id="weeklyHeatmapSala"></div>
+                        </div>
+                    </div>
+                </section>
+                <section class="advanced-section collapsible-section table-section is-collapsed">
+                    <button class="collapsible-trigger" type="button" aria-expanded="false">
+                        <span class="chart-label">Tabela</span>
+                        <span class="collapsible-trigger__icon" aria-hidden="true">+</span>
+                    </button>
+                    <div class="table-wrapper" id="dataSala"></div>
+                </section>
             </div>
 
             <!-- Quarto -->
@@ -164,7 +190,13 @@
                         <canvas aria-label="Turbidez do aquário" class="plot" id="plotsTurbidez" role="img"></canvas>
                     </div>
                 </div>
-                <div class="table-wrapper" id="dataAquario"></div>
+                <section class="advanced-section collapsible-section table-section is-collapsed">
+                    <button class="collapsible-trigger" type="button" aria-expanded="false">
+                        <span class="chart-label">Tabela</span>
+                        <span class="collapsible-trigger__icon" aria-hidden="true">+</span>
+                    </button>
+                    <div class="table-wrapper" id="dataAquario"></div>
+                </section>
             </div>
         </main>
     </div>
@@ -181,17 +213,17 @@
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
-    <script src="config.js?v=20260528-1"></script>
+    <script src="config.js?v=20260602-1"></script>
     <script src="data-utils.js?v=20260528-1"></script>
-    <script src="analytics.js?v=20260528-1"></script>
+    <script src="analytics.js?v=20260602-1"></script>
     <script src="solar.js?v=20260528-1"></script>
     <script src="chart-utils.js?v=20260528-1"></script>
     <script src="firebase-service.js?v=20260528-1"></script>
     <script src="ui.js?v=20260528-1"></script>
     <script src="zoom.js?v=20260528-1"></script>
-    <script src="quarto-view.js?v=20260528-1"></script>
+    <script src="quarto-view.js?v=20260602-1"></script>
     <script src="aquario-view.js?v=20260528-1"></script>
-    <script src="sala-view.js?v=20260528-1"></script>
+    <script src="sala-view.js?v=20260602-1"></script>
     <script src="solar-view.js?v=20260528-1"></script>
     <script src="main.js?v=20260528-14"></script>
 </body>

@@ -143,13 +143,24 @@
         return card;
     }
 
-    function renderAdvancedClimateViews(data, selectedDate) {
-        const monthRecords = extractClimateRecordsForSelectedMonth(data, "Temperatura", selectedDate);
+    const DEFAULT_ADVANCED_CONTAINERS = {
+        monthlyCalendar: "monthlyClimateCalendar",
+        hourlyHeatmap: "hourlyHeatmap",
+        weeklyHeatmap: "weeklyHeatmap",
+    };
+
+    function renderAdvancedClimateViews(data, selectedDate, options = {}) {
+        const metricKey = options.metricKey || "Temperatura";
+        const containers = {
+            ...DEFAULT_ADVANCED_CONTAINERS,
+            ...(options.containers || {}),
+        };
+        const monthRecords = extractClimateRecordsForSelectedMonth(data, metricKey, selectedDate);
         const dayRecords = monthRecords.filter(record => record.firebaseDate === selectedDate);
 
-        renderMonthlyClimateCalendar(monthRecords, selectedDate);
-        renderHourlyHeatmap(dayRecords);
-        renderWeeklyHeatmap(monthRecords);
+        renderMonthlyClimateCalendar(monthRecords, selectedDate, containers.monthlyCalendar);
+        renderHourlyHeatmap(dayRecords, containers.hourlyHeatmap);
+        renderWeeklyHeatmap(monthRecords, containers.weeklyHeatmap);
     }
 
     function extractClimateRecordsForSelectedMonth(data, metricKey, selectedDate) {
@@ -195,8 +206,8 @@
         return records;
     }
 
-    function renderMonthlyClimateCalendar(records, selectedDate) {
-        const el = document.getElementById("monthlyClimateCalendar");
+    function renderMonthlyClimateCalendar(records, selectedDate, containerId) {
+        const el = document.getElementById(containerId);
         if (!el) return;
 
         el.innerHTML = "";
@@ -227,8 +238,8 @@
         }
     }
 
-    function renderHourlyHeatmap(records) {
-        const el = document.getElementById("hourlyHeatmap");
+    function renderHourlyHeatmap(records, containerId) {
+        const el = document.getElementById(containerId);
         if (!el) return;
 
         el.innerHTML = "";
@@ -246,8 +257,8 @@
         }
     }
 
-    function renderWeeklyHeatmap(records) {
-        const el = document.getElementById("weeklyHeatmap");
+    function renderWeeklyHeatmap(records, containerId) {
+        const el = document.getElementById(containerId);
         if (!el) return;
 
         el.innerHTML = "";

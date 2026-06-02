@@ -16,30 +16,18 @@
         return hour * 3600 + minute * 60;
     }
 
-    function getFirstItemForDate(data, date) {
-        const dateData = data[date];
-        if (!dateData || typeof dateData !== "object") return null;
-        for (const key of Object.keys(dateData).sort()) {
-            const item = dateData[key];
-            if (!item || typeof item !== "object") continue;
-            if (
+    function hasSolarFields(item) {
+        return item &&
+            typeof item === "object" &&
+            (
                 item.HourNascerDoSol != null ||
                 item.HoraNascerDoSol != null ||
                 item.HoraAmanhecer != null ||
                 item.HourAmanhecer != null
-            ) {
-                return item;
-            }
-            for (const nestedKey of Object.keys(item)) {
-                const nestedItem = item[nestedKey];
-                if (nestedItem && typeof nestedItem === "object") return nestedItem;
-            }
-        }
-        return null;
+            );
     }
 
-    function getSolarEventsForSelectedDate(data, selectedDate) {
-        const item = selectedDate ? getFirstItemForDate(data, selectedDate) : null;
+    function readSolarEventSeconds(item) {
         if (!item) return null;
 
         const dawn = readTimeSeconds(item, ["HoraAmanhecer", "HourAmanhecer"], ["MinuteAmanhecer", "MinutoAmanhecer"]);
@@ -54,15 +42,44 @@
 
         if ([dawn, sunrise, sunset, dusk].some(value => value == null)) return null;
 
-        const zenith = zenithFromData != null ? zenithFromData : sunrise + ((sunset - sunrise) / 2);
+        return {
+            dawn,
+            sunrise,
+            zenith: zenithFromData != null ? zenithFromData : sunrise + ((sunset - sunrise) / 2),
+            sunset,
+            dusk,
+        };
+    }
+
+    function getFirstItemForDate(data, date) {
+        const dateData = data[date];
+        if (!dateData || typeof dateData !== "object") return null;
+        for (const key of Object.keys(dateData).sort().reverse()) {
+            const item = dateData[key];
+            if (!item || typeof item !== "object") continue;
+            if (hasSolarFields(item)) {
+                return item;
+            }
+            for (const nestedKey of Object.keys(item).sort().reverse()) {
+                const nestedItem = item[nestedKey];
+                if (hasSolarFields(nestedItem)) return nestedItem;
+            }
+        }
+        return null;
+    }
+
+    function getSolarEventsForSelectedDate(data, selectedDate) {
+        const item = selectedDate ? getFirstItemForDate(data, selectedDate) : null;
+        const eventSeconds = readSolarEventSeconds(item);
+        if (!eventSeconds) return null;
 
         return {
             date: selectedDate,
-            dawn: ClimateData.secondsToHours(dawn),
-            sunrise: ClimateData.secondsToHours(sunrise),
-            zenith: ClimateData.secondsToHours(zenith),
-            sunset: ClimateData.secondsToHours(sunset),
-            dusk: ClimateData.secondsToHours(dusk)
+            dawn: ClimateData.secondsToHours(eventSeconds.dawn),
+            sunrise: ClimateData.secondsToHours(eventSeconds.sunrise),
+            zenith: ClimateData.secondsToHours(eventSeconds.zenith),
+            sunset: ClimateData.secondsToHours(eventSeconds.sunset),
+            dusk: ClimateData.secondsToHours(eventSeconds.dusk)
         };
     }
 
@@ -70,14 +87,15 @@
         const dates = [], sunriseTimes = [], sunsetTimes = [], amanhecerTimes = [], anoitecerTimes = [];
 
         for (const date of Object.keys(data).sort((a,b) => ClimateData.parseFirebaseDate(a)-ClimateData.parseFirebaseDate(b))) {
+            const item = getFirstItemForDate(data, date);
+            const eventSeconds = readSolarEventSeconds(item);
+            if (!eventSeconds) continue;
+
             dates.push(date);
-            for (const key in data[date]) {
-                const item = data[date][key];
-                sunriseTimes.push(item.HourNascerDoSol  * 3600 + item.MinuteNascerDoSol  * 60);
-                sunsetTimes.push( item.HoraPorDoSol     * 3600 + item.MinutePorDoSol     * 60);
-                amanhecerTimes.push(item.HoraAmanhecer  * 3600 + item.MinuteAmanhecer    * 60);
-                anoitecerTimes.push(item.HourAnoitecer  * 3600 + item.MinuteAnoitecer    * 60);
-            }
+            sunriseTimes.push(eventSeconds.sunrise);
+            sunsetTimes.push(eventSeconds.sunset);
+            amanhecerTimes.push(eventSeconds.dawn);
+            anoitecerTimes.push(eventSeconds.dusk);
         }
         return { dates, sunriseTimes, sunsetTimes, amanhecerTimes, anoitecerTimes };
     }

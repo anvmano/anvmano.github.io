@@ -23,6 +23,10 @@
     function render({ data, selectedDate, createChart, colors, ui }) {
         const filteredData = ClimateData.filterDataByDays(data, 2, selectedDate);
         ClimateAnalytics.renderStats("sala", filteredData, selectedDate);
+        ClimateAnalytics.renderAdvancedClimateViews(data, selectedDate, {
+            metricKey: livingRoomFields.temperature,
+            containers: ids.advancedViews.livingRoom,
+        });
 
         createChart({
             canvasCtx: temperatureChart,

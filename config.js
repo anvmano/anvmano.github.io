@@ -75,6 +75,18 @@
                 livingRoomFeelsLike: "plotsSTSala",
                 livingRoomHumidity: "plotsUmidadeSala",
                 livingRoomPressure: "plotsPressaoSala",
+            },
+            advancedViews: {
+                room: {
+                    monthlyCalendar: "monthlyClimateCalendar",
+                    hourlyHeatmap: "hourlyHeatmap",
+                    weeklyHeatmap: "weeklyHeatmap",
+                },
+                livingRoom: {
+                    monthlyCalendar: "monthlyClimateCalendarSala",
+                    hourlyHeatmap: "hourlyHeatmapSala",
+                    weeklyHeatmap: "weeklyHeatmapSala",
+                },
             }
         },
         fields: {
