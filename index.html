@@ -8,8 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link href="style.css?v=20260603-3" rel="stylesheet" />
-    <link href="pdf-report.css?v=20260603-3" rel="stylesheet" />
+    <link href="style.css?v=20260603-5" rel="stylesheet" />
+    <link href="pdf-report.css?v=20260603-4" rel="stylesheet" />
 </head>
 
 <body>
@@ -69,10 +69,18 @@
                         Hoje
                     </button>
 
+                    <div class="export-format-toggle" role="radiogroup" aria-label="Formato de exportação">
+                        <input type="radio" id="exportFormatPdf" name="exportFormat" value="pdf" checked />
+                        <label for="exportFormatPdf">PDF</label>
+
+                        <input type="radio" id="exportFormatJson" name="exportFormat" value="json" />
+                        <label for="exportFormatJson">JSON</label>
+                    </div>
+
                     <button
                         type="button"
-                        id="btnExportPdf"
-                        class="toolbar-button toolbar-button--pdf"
+                        id="btnExportData"
+                        class="toolbar-button toolbar-button--export"
                     >
                         Exportar PDF
                     </button>
@@ -85,20 +93,20 @@
             <!-- Sala -->
             <div class="tabcontent" id="Tab1" role="tabpanel">
                 <div class="stats-grid" id="statsSala" aria-label="Resumo dos dados da sala"></div>
-                <div class="charts-grid" id="chart-container-temp-sala">
-                    <div class="chart-card">
+                <div class="charts-grid">
+                    <div class="chart-card" id="chart-container-temp-sala">
                         <span class="chart-label">Temperatura</span>
                         <canvas aria-label="Temperatura da sala" class="plot" id="plotsTempSala" role="img"></canvas>
                     </div>
-                    <div class="chart-card">
+                    <div class="chart-card" id="chart-container-st-sala">
                         <span class="chart-label">Sensação Térmica</span>
                         <canvas aria-label="Sensação térmica da sala" class="plot" id="plotsSTSala" role="img"></canvas>
                     </div>
-                    <div class="chart-card">
+                    <div class="chart-card" id="chart-container-umidade-sala">
                         <span class="chart-label">Umidade</span>
                         <canvas aria-label="Umidade da sala" class="plot" id="plotsUmidadeSala" role="img"></canvas>
                     </div>
-                    <div class="chart-card">
+                    <div class="chart-card" id="chart-container-pressao-sala">
                         <span class="chart-label">Pressão</span>
                         <canvas aria-label="Pressão da sala" class="plot" id="plotsPressaoSala" role="img"></canvas>
                     </div>
@@ -135,16 +143,16 @@
             <!-- Quarto -->
             <div class="tabcontent" id="Tab2" role="tabpanel">
                 <div class="stats-grid" id="statsQuarto" aria-label="Resumo dos dados do quarto"></div>
-                <div class="charts-grid" id="chart-container-temp-quarto">
-                    <div class="chart-card">
+                <div class="charts-grid">
+                    <div class="chart-card" id="chart-container-temp">
                         <span class="chart-label">Temperatura</span>
                         <canvas aria-label="Temperatura do quarto" class="plot" id="plotsTemp" role="img"></canvas>
                     </div>
-                    <div class="chart-card">
+                    <div class="chart-card" id="chart-container-st">
                         <span class="chart-label">Sensação Térmica</span>
                         <canvas aria-label="Sensação térmica do quarto" class="plot" id="plotsST" role="img"></canvas>
                     </div>
-                    <div class="chart-card">
+                    <div class="chart-card" id="chart-container-umidade">
                         <span class="chart-label">Umidade</span>
                         <canvas aria-label="Umidade do quarto" class="plot" id="plotsUmidade" role="img"></canvas>
                     </div>
@@ -189,20 +197,20 @@
             <!-- Aquário -->
             <div class="tabcontent" id="Tab3" role="tabpanel">
                 <div class="stats-grid" id="statsAquario" aria-label="Resumo dos dados do aquário"></div>
-                <div class="charts-grid" id="chart-container-temp-aquario">
-                    <div class="chart-card">
+                <div class="charts-grid">
+                    <div class="chart-card" id="chart-container-temp-aquario">
                         <span class="chart-label">Temperatura</span>
                         <canvas aria-label="Temperatura do aquário" class="plot" id="plotsTempAquario" role="img"></canvas>
                     </div>
-                    <div class="chart-card">
+                    <div class="chart-card" id="chart-container-ph">
                         <span class="chart-label">PH</span>
                         <canvas aria-label="PH do aquário" class="plot" id="plotsPH" role="img"></canvas>
                     </div>
-                    <div class="chart-card">
+                    <div class="chart-card" id="chart-container-tds">
                         <span class="chart-label">TDS</span>
                         <canvas aria-label="TDS do aquário" class="plot" id="plotsTDS" role="img"></canvas>
                     </div>
-                    <div class="chart-card">
+                    <div class="chart-card" id="chart-container-turbidez">
                         <span class="chart-label">Turbidez</span>
                         <canvas aria-label="Turbidez do aquário" class="plot" id="plotsTurbidez" role="img"></canvas>
                     </div>
@@ -232,20 +240,20 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-    <script src="config.js?v=20260602-1"></script>
-    <script src="data-utils.js?v=20260528-1"></script>
-    <script src="analytics.js?v=20260602-1"></script>
-    <script src="solar.js?v=20260603-1"></script>
-    <script src="chart-utils.js?v=20260528-1"></script>
-    <script src="firebase-service.js?v=20260528-1"></script>
-    <script src="ui.js?v=20260602-1"></script>
-    <script src="zoom.js?v=20260528-1"></script>
-    <script src="pdf-report.js?v=20260603-4"></script>
-    <script src="quarto-view.js?v=20260602-1"></script>
-    <script src="aquario-view.js?v=20260528-1"></script>
-    <script src="sala-view.js?v=20260602-1"></script>
-    <script src="solar-view.js?v=20260528-1"></script>
-    <script src="main.js?v=20260603-3"></script>
+    <script src="scripts/config.js?v=20260602-1"></script>
+    <script src="scripts/data-utils.js?v=20260603-1"></script>
+    <script src="scripts/analytics.js?v=20260603-1"></script>
+    <script src="scripts/solar.js?v=20260603-2"></script>
+    <script src="scripts/chart-utils.js?v=20260603-1"></script>
+    <script src="scripts/firebase-service.js?v=20260528-1"></script>
+    <script src="scripts/ui.js?v=20260602-1"></script>
+    <script src="scripts/zoom.js?v=20260528-1"></script>
+    <script src="scripts/pdf-report.js?v=20260603-5"></script>
+    <script src="scripts/views/quarto-view.js?v=20260602-1"></script>
+    <script src="scripts/views/aquario-view.js?v=20260528-1"></script>
+    <script src="scripts/views/sala-view.js?v=20260602-1"></script>
+    <script src="scripts/views/solar-view.js?v=20260528-1"></script>
+    <script src="scripts/main.js?v=20260603-5"></script>
 </body>
 
 </html>

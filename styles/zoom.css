@@ -1,0 +1,44 @@
+/* =====================================================================
+   Zoom overlay
+   ===================================================================== */
+.plot-zoom-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(11, 17, 32, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+    animation: fadeIn 0.2s ease;
+}
+
+.plot-zoom-overlay .chart-card {
+    width: min(90vw, 860px);
+    cursor: default;
+    transform: none;
+    pointer-events: auto;
+}
+
+.plot-zoom-overlay .chart-card:hover {
+    transform: none;
+}
+
+.plot-zoom-overlay .chart-zoom-button {
+    display: none;
+}
+
+.plot-zoom-overlay .plot {
+    height: 420px !important;
+}
+
+.plot--zoom {
+    width: 100%;
+    height: min(62vh, 520px);
+    display: block;
+}
+
+.plot--solar-day {
+    height: 260px !important;
+}

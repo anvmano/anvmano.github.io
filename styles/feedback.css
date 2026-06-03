@@ -1,0 +1,65 @@
+/* =====================================================================
+   Loading bar
+   ===================================================================== */
+.loading-bar {
+    height: 2px;
+    width: 100%;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    border-radius: 2px;
+    background: transparent;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.loading-bar.is-active {
+    opacity: 1;
+}
+
+.loading-bar::after {
+    content: '';
+    display: block;
+    height: 100%;
+    width: 40%;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: shimmer 1.4s infinite;
+    animation-play-state: paused;
+}
+
+.loading-bar.is-active::after {
+    animation-play-state: running;
+}
+
+@keyframes shimmer {
+    0%   { transform: translateX(-150%); }
+    100% { transform: translateX(350%); }
+}
+
+/* =====================================================================
+   Tab content
+   ===================================================================== */
+.tabcontent {
+    display: none;
+    animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.state-message {
+    padding: 1rem;
+    color: var(--text-secondary);
+    text-align: center;
+    font-size: 0.875rem;
+}
+
+.state-message--error {
+    color: #fca5a5;
+}
+
+.chart-message {
+    margin-top: -0.25rem;
+    padding: 0.5rem 0 0.25rem;
+}

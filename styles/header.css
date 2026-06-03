@@ -1,0 +1,159 @@
+/* =====================================================================
+   Header
+   ===================================================================== */
+.app-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: var(--header-h);
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+}
+
+.header-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.header-icon {
+    width: 22px;
+    height: 22px;
+    color: var(--accent);
+    flex-shrink: 0;
+}
+
+h1 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+}
+
+.header-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.astro-indicator {
+    --astro-progress: 0.5;
+    --astro-x: 50%;
+    --astro-y: 14px;
+    --orb-color: #facc15;
+    --orb-glow: rgba(250, 204, 21, 0.45);
+    --track-color: rgba(56, 189, 248, 0.18);
+    position: relative;
+    width: 108px;
+    height: 36px;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.025));
+    overflow: hidden;
+}
+
+.astro-indicator__track {
+    position: absolute;
+    left: 10px;
+    right: 44px;
+    bottom: 8px;
+    height: 25px;
+    border-top: 1px solid var(--track-color);
+    border-radius: 999px 999px 0 0;
+}
+
+.astro-indicator__orb {
+    position: absolute;
+    left: var(--astro-x);
+    bottom: var(--astro-y);
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: var(--orb-color);
+    box-shadow: 0 0 15px var(--orb-glow);
+    transform: translateX(-50%);
+    animation: astroPulse 2.6s ease-in-out infinite;
+}
+
+.astro-indicator__label {
+    position: absolute;
+    right: 9px;
+    top: 50%;
+    transform: translateY(-50%);
+    max-width: 38px;
+    color: var(--text-secondary);
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
+    text-align: right;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.astro-indicator--day {
+    --orb-color: #facc15;
+    --orb-glow: rgba(250, 204, 21, 0.58);
+    --track-color: rgba(250, 204, 21, 0.34);
+}
+
+.astro-indicator--twilight {
+    --orb-color: #fb923c;
+    --orb-glow: rgba(251, 146, 60, 0.55);
+    --track-color: rgba(251, 146, 60, 0.32);
+}
+
+.astro-indicator--night {
+    --orb-color: #c4b5fd;
+    --orb-glow: rgba(196, 181, 253, 0.48);
+    --track-color: rgba(129, 140, 248, 0.25);
+}
+
+.astro-indicator--night .astro-indicator__orb::after {
+    content: "";
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    top: -2px;
+    left: 5px;
+    border-radius: 50%;
+    background: var(--bg-surface);
+}
+
+@keyframes astroPulse {
+    0%, 100% {
+        opacity: 0.82;
+        transform: translateX(-50%) scale(0.94);
+    }
+    50% {
+        opacity: 1;
+        transform: translateX(-50%) scale(1.08);
+    }
+}
+
+.header-time {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    padding: 0 12px;
+    border-radius: var(--radius-md);
+}

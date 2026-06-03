@@ -311,7 +311,3 @@
 .pdf-report__footer {
     display: none;
 }
-
-.toolbar-button--pdf {
-    min-width: 122px;
-}

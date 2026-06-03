@@ -1,0 +1,63 @@
+/* =====================================================================
+   Tabela de dados
+   ===================================================================== */
+.table-wrapper {
+    margin-top: 1.5rem;
+    overflow-x: auto;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-card);
+}
+
+.table-wrapper table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.825rem;
+}
+
+.table-wrapper th,
+.table-wrapper td {
+    padding: 10px 16px;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+}
+
+.table-wrapper th {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-secondary);
+    background: rgba(255,255,255,0.03);
+    position: sticky;
+    top: 0;
+}
+
+.table-wrapper td {
+    color: var(--text-primary);
+}
+
+.table-wrapper tr:last-child td {
+    border-bottom: none;
+}
+
+.table-wrapper tr:hover td {
+    background: rgba(56,189,248,0.04);
+}
+
+/* primeira coluna (data) discreto */
+.table-wrapper td:first-child {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+}
+
+/* segunda coluna (hora) em destaque */
+.table-wrapper td:nth-child(2) {
+    color: var(--accent);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}

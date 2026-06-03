@@ -1,0 +1,528 @@
+# ARCHITECTURE_AI
+
+Base de conhecimento gerada a partir dos arquivos reais do projeto em `D:\Documentos\estacao climatica web\atualizacao claude`.
+
+## Visao Geral
+
+Sistema web estatico para exibir dados de uma estacao climatica. O codigo existente carrega dados do Firebase Realtime Database, filtra por data selecionada, calcula estatisticas, renderiza graficos com Chart.js, mostra heatmaps climaticos e tabelas por ambiente.
+
+Usuarios nao sao definidos no codigo. O problema de negocio nao e declarado em README ou arquivo equivalente. Pelo codigo, o fluxo principal e visualizar dados de Sala, Quarto e Aquario em abas, com selecao global de data.
+
+## Tecnologias
+
+- HTML estatico: `index.html`.
+- CSS puro: `style.css` como manifesto e arquivos modulares em `styles/`.
+- JavaScript em scripts classicos, sem `type="module"`.
+- Modulos globais expostos em `window.*`.
+- Chart.js via CDN: `https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js`.
+- Firebase SDK modular dinamico: versao `12.13.0`, carregado por `import()` a partir de `https://www.gstatic.com/firebasejs/...`.
+- Firebase Realtime Database.
+- Sem React, Angular, Vue, C#, .NET, banco SQL ou codigo Arduino no projeto analisado.
+- Sem testes funcionais automatizados e sem build tooling local completo.
+
+## Estrutura Fisica
+
+```text
+.
+├── index.html
+├── style.css
+├── styles/
+│   ├── tokens.css
+│   ├── base.css
+│   ├── header.css
+│   ├── layout.css
+│   ├── tabs-toolbar.css
+│   ├── feedback.css
+│   ├── stats.css
+│   ├── charts.css
+│   ├── advanced-views.css
+│   ├── zoom.css
+│   ├── tables.css
+│   └── responsive.css
+├── scripts/
+│   ├── config.js
+│   ├── main.js
+│   ├── firebase-service.js
+│   ├── data-utils.js
+│   ├── chart-utils.js
+│   ├── analytics.js
+│   ├── solar.js
+│   ├── ui.js
+│   ├── zoom.js
+│   ├── pdf-report.js
+│   └── views/
+│       ├── quarto-view.js
+│       ├── sala-view.js
+│       ├── aquario-view.js
+│       └── solar-view.js
+├── pdf-report.css
+├── package.json
+├── tools/
+│   └── validate-project.mjs
+```
+
+Responsabilidades:
+
+- `index.html`: estrutura DOM, abas, canvases, containers, toolbar de data, scripts.
+- `style.css`: manifesto de imports dos estilos modulares.
+- `styles/`: tema visual, layout, tabs, graficos, cards, tabelas, estados, heatmaps, zoom e responsividade.
+- `scripts/config.js`: configuracao Firebase, cores, ids DOM, paths Firebase, nomes de campos.
+- `scripts/main.js`: orquestracao da aplicacao, listeners Firebase, cache de dados, renderizacao por view, contrato de criacao de graficos, opcoes de zoom e indicador astronomico do header.
+- `scripts/firebase-service.js`: inicializacao Firebase, listeners `onValue`, loading bar e erros.
+- `scripts/data-utils.js`: datas, filtros, tabelas, extracao de series, conversoes e formatacao.
+- `scripts/chart-utils.js`: defaults Chart.js, criacao de graficos de linha, fallback de grafico vazio, faixa de conforto.
+- `scripts/analytics.js`: estatisticas, cards de resumo, calendario climatico, heatmap horario e heatmap semanal.
+- `scripts/solar.js`: leitura e renderizacao dos eventos solares, historico nascer/por do sol, ciclo solar do dia, aliases solares centralizados e exposicao de eventos solares para o header.
+- `scripts/ui.js`: estados vazios, mensagens em graficos, tabelas, tabs, swipe touch entre abas, colapsaveis, date picker.
+- `scripts/zoom.js`: ampliacao de graficos por botao/duplo clique.
+- `scripts/pdf-report.js`: exportacao PDF/JSON da aba ativa usando dados e canvases ja carregados.
+- `pdf-report.css`: layout visual do relatorio PDF em tema escuro.
+- `scripts/views/quarto-view.js`: renderizacao da aba Quarto.
+- `scripts/views/sala-view.js`: renderizacao da aba Sala.
+- `scripts/views/aquario-view.js`: renderizacao da aba Aquario.
+- `scripts/views/solar-view.js`: renderizacao dos graficos solares dentro da aba Quarto.
+- `tools/validate-project.mjs`: validacao estrutural local de sintaxe, referencias, imports CSS e ids.
+- `package.json`: comando `npm run validate`.
+
+## Fluxo de Execucao
+
+1. `index.html` carrega Chart.js, html2canvas e jsPDF via CDN.
+2. Scripts sao carregados em ordem:
+   - Chart.js CDN
+   - html2canvas CDN
+   - jsPDF CDN
+   - `scripts/config.js`
+   - `scripts/data-utils.js`
+   - `scripts/analytics.js`
+   - `scripts/solar.js`
+   - `scripts/chart-utils.js`
+   - `scripts/firebase-service.js`
+   - `scripts/ui.js`
+   - `scripts/zoom.js`
+   - `scripts/pdf-report.js`
+   - `scripts/views/quarto-view.js`
+   - `scripts/views/aquario-view.js`
+   - `scripts/views/sala-view.js`
+   - `scripts/views/solar-view.js`
+   - `scripts/main.js`
+3. Cada modulo registra um objeto global em `window`.
+4. `scripts/main.js` valida a existencia dos modulos.
+5. `DOMContentLoaded` executa:
+- `ClimateUI.setupTabs("Tab1")`
+   - `ClimateUI.setupTabSwipe(...)`
+   - `ClimateUI.setupDateControls(...)`
+   - `ClimateUI.setupCollapsibleSections()`
+   - `ClimateZoom.setup(...)`
+   - `ClimatePdfReport.setup(...)`
+   - `setupFirebaseListeners()`
+6. `FirebaseService.initialize()` importa SDK Firebase e conecta ao Realtime Database.
+7. `FirebaseService.listenToPath()` cria listeners para quatro paths.
+8. Cada snapshot atualiza `latestData` e chama a view correspondente.
+
+## Componentes
+
+### AppConfig
+
+Arquivo: `scripts/config.js`.
+
+Responsabilidade: concentrar configuracoes compartilhadas.
+
+Entradas: nenhuma.
+
+Saidas: `window.AppConfig`.
+
+Contem:
+
+- `firebase.sdkVersion`
+- URLs do SDK Firebase
+- credenciais/configuracao do app Firebase
+- `colors`
+- `comfortBand`
+- `firebasePaths`
+- `ids`
+- `fields`
+
+Dependencias: nenhuma.
+
+### FirebaseService
+
+Arquivo: `scripts/firebase-service.js`.
+
+Responsabilidade: inicializar Firebase e expor leitura do Realtime Database.
+
+Entradas:
+
+- `window.AppConfig.firebase`
+- path Firebase
+- callback `onData`
+- callback opcional `onError`
+
+Saidas:
+
+- `window.FirebaseService`
+- dados de snapshot via callback
+- loading bar em `#loadingBar`
+- logs de erro no console
+
+Dependencias diretas:
+
+- Firebase SDK via import dinamico
+- DOM `loadingBar`
+- `AppConfig.firebase`
+
+### ClimateData
+
+Arquivo: `scripts/data-utils.js`.
+
+Responsabilidade: manipulacao de datas, filtro de dados, criacao de tabelas e extracao de series.
+
+Funcoes:
+
+- `dataAtual()`
+- `parseFirebaseDate(str)`
+- `filterDataByDays(data, days, selectedDate, useSelectedDate = true)`
+- `convertInputDateToFirebase(dateString)`
+- `convertFirebaseDateToInput(dateString)`
+- `createTables(headers, data)`
+- `extractData(data, keys)`
+- `mapRange(value, inMin, inMax, outMin, outMax)`
+- `formatTime(value)`
+- `formatHoursArray(hours)`
+- `secondsToHours(seconds)`
+
+Dependencias: DOM para criar tabelas.
+
+### ClimateCharts
+
+Arquivo: `scripts/chart-utils.js`.
+
+Responsabilidade: configuracao Chart.js e grafico de linha generico.
+
+Funcoes:
+
+- `createDefaults(colors)`
+- `mergeDeep(target, source)`
+- `registerComfortBand()`
+- `createLineChart({...})`
+
+Regras:
+
+- Destroi grafico anterior se `existingChart` for passado.
+- Extrai dados com `ClimateData.extractData`.
+- Se nao houver pontos numericos, chama `onEmpty` e retorna `null`.
+- Se houver dados, chama `onReady`, cria Chart.js e aplica faixa de conforto em metricas de temperatura/sensacao com sufixo `°`.
+
+Dependencias:
+
+- `Chart`
+- `ClimateData`
+
+### ClimateAnalytics
+
+Arquivo: `scripts/analytics.js`.
+
+Responsabilidade: estatisticas e heatmaps.
+
+Funcoes exportadas:
+
+- `renderStats(type, data, selectedDate)`
+- `renderAdvancedClimateViews(data, selectedDate, options = {})`
+
+Config interna:
+
+- `quarto`: Temperatura, Sensacao termica, Umidade.
+- `sala`: temperatura, sensacaoTermica, umidade, pressao.
+- `aquario`: temperaturaDS18B20, PH, TDS, Turbidez.
+
+Heatmaps:
+
+- calendario mensal
+- heatmap por hora do dia
+- mapa semanal por dia/hora
+
+### ClimateSolar
+
+Arquivo: `scripts/solar.js`.
+
+Responsabilidade: eventos solares e graficos de nascer/por do sol.
+
+Leitura de eventos:
+
+- amanhecer: `HoraAmanhecer`/`HourAmanhecer` + minutos.
+- nascer do sol: `HourNascerDoSol`/`HoraNascerDoSol` + minutos.
+- por do sol: `HoraPorDoSol`/`HourPorDoSol` + minutos.
+- anoitecer: `HourAnoitecer`/`HoraAnoitecer` + minutos.
+- zenite: `HoraZenite`, `HourZenith`, `HoraZenith`, `HourZenite`, `HoraZenite` com acento quando presente; minutos `MinuteZenite`, `MinutoZenite`, `MinuteZenith`, `MinutoZenith`, `MinutoZenite` com acento quando presente.
+
+Se zenite nao existir, calcula `sunrise + ((sunset - sunrise) / 2)`.
+
+Exporta:
+
+- `createSunriseSunsetChart`
+- `createSolarTodayChart`
+- `getSunHistoryOptions`
+- `getSolarTodayOptions`
+- `solarDayBackgroundPlugin`
+
+### ClimateUI
+
+Arquivo: `scripts/ui.js`.
+
+Responsabilidade: DOM generico.
+
+Funcoes:
+
+- `renderEmptyState`
+- `renderTable`
+- `clearChartMessage`
+- `renderChartMessage`
+- `renderStartupError`
+- `setupTabs`
+- `setupCollapsibleSections`
+- `setupDateControls`
+- `setupTabSwipe`
+
+Persistencia:
+
+- `localStorage.activeTab`
+
+Navegacao por touch:
+
+- ordem configurada em `scripts/main.js`: `["Tab1", "Tab2", "Tab3"]`
+- `Tab1` representa Sala
+- `Tab2` representa Quarto
+- `Tab3` representa Aquario
+- gesto para esquerda avanca uma aba quando existe proxima aba
+- gesto para direita volta uma aba quando existe aba anterior
+- nas extremidades, Sala para direita e Aquario para esquerda nao fazem nada
+
+### ClimateZoom
+
+Arquivo: `scripts/zoom.js`.
+
+Responsabilidade: zoom de graficos.
+
+Fluxo:
+
+- adiciona botao em `.chart-card`
+- adiciona duplo clique
+- cria overlay `.plot-zoom-overlay`
+- clona dados do Chart.js
+- aplica opcoes de zoom por tipo de grafico
+- fecha com Escape ou clique no card ampliado
+
+### ClimatePdfReport
+
+Arquivo: `scripts/pdf-report.js`.
+
+Responsabilidade: gerar relatorio PDF ou JSON da aba ativa sem reconsultar Firebase.
+
+Entradas:
+
+- `activeTab`
+- `selectedDate`
+- `latestData`
+- `chartInstances`
+- canvases existentes
+
+Saidas:
+
+- download automatico de PDF A4 retrato ou JSON.
+
+Dependencias diretas:
+
+- `html2canvas`
+- `jsPDF`
+- `ClimateData`
+- `AppConfig`
+- `ClimateUI.getActiveTabName`
+- `chartInstances`
+
+Fluxo:
+
+- botao `#btnExportData` chama `exportActiveTab`
+- controle `name="exportFormat"` define PDF ou JSON e atualiza a label do botao
+- coleta dados da aba ativa
+- filtra dados pela data selecionada
+- cria capa compacta com cabecalho e indice
+- gera cards de resumo
+- captura graficos existentes via `canvas.toDataURL`
+- monta tabela detalhada com `Horario`, `Indicador`, `Valor` e `Status`
+- junta a unidade no valor e mostra o horario apenas na primeira linha de cada grupo de indicadores
+- renderiza os graficos em coluna unica compacta para caber pelo menos 3 por pagina
+- usa html2canvas para capturar cabecalho, resumo, graficos e tabela
+- usa jsPDF para montar paginas A4 manualmente
+- inicia resumo, graficos e tabela em paginas proprias
+- mantem graficos como blocos inteiros e permite quebra apenas na tabela longa
+- adiciona rodape com pagina atual/total
+- quando formato e JSON, baixa metadados, resumo, tabela e dados brutos filtrados via Blob
+
+### Views
+
+Arquivos:
+
+- `scripts/views/quarto-view.js`
+- `scripts/views/sala-view.js`
+- `scripts/views/aquario-view.js`
+- `scripts/views/solar-view.js`
+
+Responsabilidade: conectar dados filtrados, graficos, tabelas e analytics aos elementos da aba.
+
+## Fluxo de Dados
+
+```text
+Firebase Realtime Database
+↓
+FirebaseService.listenToPath
+↓
+scripts/main.js latestData
+↓
+View especifica
+↓
+ClimateData filtro/extracao/tabela
+↓
+ClimateAnalytics estatisticas/heatmaps
+↓
+ClimateCharts ou ClimateSolar
+↓
+DOM, Chart.js, tabelas e mensagens
+```
+
+## Firebase
+
+Banco: Firebase Realtime Database.
+
+Config em `scripts/config.js`:
+
+- `databaseURL`: `https://estacaometereologicaesp32-default-rtdb.firebaseio.com`
+- `projectId`: `estacaometereologicaesp32`
+
+Paths lidos:
+
+- `historico/Temperatura`
+- `historico/NascePorDoSol`
+- `historico/Aquario`
+- `historico/AirQuality`
+
+Formato observado pelo codigo:
+
+```text
+historico/<tipo>/<DD-MM-AAAA>/<HH-MM>/<id>/<campos>
+```
+
+Para dados solares, `scripts/solar.js` tambem aceita item direto ou aninhado, procurando campos de evento solar no primeiro item encontrado em ordem reversa das chaves.
+
+Escrita no Firebase: nao existe no codigo analisado.
+
+Consultas filtradas no servidor: nao existem. O codigo usa `onValue(ref(database, path))`, recebe o path completo e filtra em JavaScript.
+
+Indices Firebase: nao existem no projeto.
+
+## APIs Externas
+
+- Chart.js UMD por CDN jsDelivr.
+- html2canvas por CDN jsDelivr para captura do relatorio.
+- jsPDF por CDN jsDelivr para montagem manual das paginas A4.
+- Firebase SDK por CDN Google.
+- Google Fonts (`Inter`) no HTML.
+
+Nao ha endpoints HTTP proprios.
+
+## Graficos
+
+Chart.js cria:
+
+- Sala: temperatura, sensacao termica, umidade, pressao.
+- Quarto: temperatura, sensacao termica, umidade.
+- Aquario: temperatura, PH, TDS, turbidez.
+- Solar: ciclo solar do dia; historico nascer/por do sol.
+
+Graficos comuns:
+
+- tipo `line`
+- gradiente vertical
+- tooltip customizado
+- fallback visual se nao ha pontos numericos
+- faixa de conforto entre 20 e 26 em graficos com sufixo `°` e chave contendo `temperatura` ou `sensacao`
+
+## Eventos
+
+- `DOMContentLoaded`: inicializa aplicacao.
+- `click` nos tabs: troca aba.
+- `touchstart`/`touchend` no container principal: troca aba por swipe horizontal no fluxo Sala ⇄ Quarto ⇄ Aquario.
+- `change` no input `#selectedDate`: converte data e rerenderiza.
+- `click` no botao `#btnToday`: volta para data atual.
+- `click` em `.collapsible-trigger`: expande/recolhe secao.
+- `click` no botao de zoom: abre grafico ampliado.
+- `click` no botao `#btnExportData`: gera e baixa PDF ou JSON da aba ativa.
+- `dblclick` em `.chart-card`: abre grafico ampliado.
+- `keydown Escape`: fecha zoom.
+- `setInterval(updateClock, 1000)`: atualiza relogio do header.
+- `setupAstroIndicator`: atualiza a cada minuto o indicador de dia/noite/transicao ao lado do relogio.
+
+## Fluxos Criticos
+
+1. Ordem de scripts: `scripts/main.js` depende de todos os modulos anteriores.
+2. Leitura Firebase: sem dados no path, a view exibe estado vazio.
+3. Data selecionada: formato HTML `YYYY-MM-DD`, formato Firebase `DD-MM-AAAA`.
+4. Filtro por data: para Sala, Quarto e Aquario, `filterDataByDays` retorna apenas a data selecionada quando `useSelectedDate` e verdadeiro.
+5. Grafico vazio: `ClimateCharts.createLineChart` retorna `null`.
+6. Solar: `SolarView` usa historico de 365 dias e ciclo solar da data selecionada.
+7. Tabelas: exibem no maximo 24 linhas.
+8. Swipe de abas: usa limite minimo horizontal de 60px e rejeita gesto com desvio vertical maior que 80px.
+9. Exportacao PDF/JSON: usa dados ja carregados em `latestData` e graficos existentes em `chartInstances`; nao reconsulta Firebase.
+
+## Arquivos Mais Importantes
+
+1. `index.html`: DOM e ordem dos scripts.
+2. `scripts/main.js`: orquestracao geral.
+3. `scripts/config.js`: paths, ids, campos, Firebase.
+4. `scripts/firebase-service.js`: conexao Firebase.
+5. `scripts/data-utils.js`: data, filtro, tabela e series.
+6. `scripts/chart-utils.js`: graficos comuns.
+7. `scripts/analytics.js`: estatisticas e heatmaps.
+8. `scripts/solar.js`: regras solares.
+9. `scripts/views/solar-view.js`: conecta solar ao DOM.
+10. `scripts/views/quarto-view.js`: view Quarto.
+11. `scripts/views/sala-view.js`: view Sala.
+12. `scripts/views/aquario-view.js`: view Aquario.
+13. `scripts/ui.js`: UI generica.
+14. `scripts/zoom.js`: zoom dos graficos.
+15. `scripts/pdf-report.js`: exportacao PDF/JSON.
+16. `pdf-report.css`: estilo do PDF.
+17. `style.css` e `styles/`: apresentacao visual.
+
+Nao existem 20 arquivos de codigo no projeto; a lista acima inclui todos os arquivos relevantes encontrados.
+
+## Arquivos Complexos
+
+- `scripts/analytics.js`: agrega estatisticas, heatmaps mensais, horarios e semanais.
+- `scripts/solar.js`: suporta multiplos nomes de campos solares, fallback de zenite e plugin visual.
+- `styles/advanced-views.css`: concentra colapsaveis, visualizacoes climaticas e heatmaps.
+- `styles/responsive.css`: concentra responsividade.
+- `scripts/main.js`: orquestra dependencias e listeners.
+
+## Mapa para IA
+
+Para entender rapidamente:
+
+1. Leia `scripts/config.js` para paths, ids e campos.
+2. Leia `scripts/main.js` para fluxo principal.
+3. Leia a view desejada (`scripts/views/sala-view.js`, `scripts/views/quarto-view.js`, `scripts/views/aquario-view.js`, `scripts/views/solar-view.js`).
+4. Leia `scripts/data-utils.js` para formato dos dados Firebase.
+5. Leia `scripts/chart-utils.js`, `scripts/analytics.js` ou `scripts/solar.js` conforme o tipo de visualizacao.
+
+## Riscos Tecnicos
+
+- Dependencia forte da ordem de scripts globais.
+- Sem testes funcionais automatizados.
+- Sem build tooling ou linting completos.
+- Existe validacao estrutural local via `npm run validate`.
+- Firebase carrega paths inteiros via `onValue`; pode crescer em custo/memoria.
+- Variacoes de nomes de campos exigem mapeamento cuidadoso.
+- Credenciais Firebase estao no cliente, como esperado para app Firebase web, mas qualquer alteracao de regras Firebase deve considerar exposicao publica do config.
+- Tabelas limitadas a 24 linhas de forma fixa.
+
+## Resumo Executivo
+
+Projeto e um dashboard estatico para dados de estacao climatica. Ele usa Firebase Realtime Database como fonte, Chart.js como motor de graficos e modulos JavaScript globais para organizar configuracao, dados, graficos, analytics, UI, zoom e views por aba. Nao ha backend local, framework frontend, testes ou build. A principal area de risco e a dependencia de estrutura/nome dos dados no Firebase e a leitura completa dos paths monitorados.

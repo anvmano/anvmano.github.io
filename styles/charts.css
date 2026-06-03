@@ -1,0 +1,114 @@
+/* =====================================================================
+   Charts
+   ===================================================================== */
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.chart-card {
+    position: relative;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1rem 0.75rem;
+    box-shadow: var(--shadow-card);
+    cursor: default;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+}
+
+.chart-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(56,189,248,0.04) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+.chart-card:hover {
+    border-color: var(--border-hover);
+    background: var(--bg-card-hover);
+    box-shadow: var(--shadow-hover);
+}
+
+.chart-card--zoomable {
+    cursor: zoom-in;
+}
+
+.chart-card--zoomable:focus-within {
+    border-color: var(--border-hover);
+}
+
+.chart-card--wide {
+    margin-bottom: 1rem;
+}
+
+.chart-card--wide:hover {
+    transform: none;
+}
+
+.chart-card--wide.chart-card--zoomable {
+    cursor: zoom-in;
+}
+
+.chart-zoom-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 2;
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    background: rgba(15, 23, 42, 0.72);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: zoom-in;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.chart-zoom-button svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.chart-zoom-button:hover,
+.chart-zoom-button:focus-visible {
+    color: var(--accent);
+    background: rgba(15, 23, 42, 0.95);
+    border-color: var(--border-hover);
+    outline: none;
+}
+
+.chart-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+}
+
+.plot {
+    width: 100% !important;
+    height: 220px !important;
+    display: block;
+    cursor: crosshair;
+}
+
+.chart-card--wide .plot {
+    height: 240px !important;
+}
