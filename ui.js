@@ -99,6 +99,52 @@
         openTab(initialTab);
     }
 
+    function getActiveTabName() {
+        const activeButton = document.querySelector(".tablink.active[data-tab-target]");
+        if (activeButton) return activeButton.dataset.tabTarget;
+
+        const visibleTab = Array.from(document.querySelectorAll(".tabcontent")).find(tab => !tab.hasAttribute("hidden"));
+        return visibleTab ? visibleTab.id : null;
+    }
+
+    function setupTabSwipe({ tabOrder, minDistance = 60, maxVerticalDrift = 80 } = {}) {
+        if (!Array.isArray(tabOrder) || tabOrder.length < 2) return;
+
+        const container = document.querySelector(".container");
+        if (!container) return;
+
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        container.addEventListener("touchstart", event => {
+            const touch = event.touches[0];
+            if (!touch) return;
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+        }, { passive: true });
+
+        container.addEventListener("touchend", event => {
+            const touch = event.changedTouches[0];
+            if (!touch) return;
+
+            const deltaX = touch.clientX - touchStartX;
+            const deltaY = touch.clientY - touchStartY;
+
+            if (Math.abs(deltaX) < minDistance) return;
+            if (Math.abs(deltaY) > maxVerticalDrift) return;
+
+            const currentTab = getActiveTabName();
+            const currentIndex = tabOrder.indexOf(currentTab);
+            if (currentIndex === -1) return;
+
+            const nextIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1;
+            const nextTab = tabOrder[nextIndex];
+            if (!nextTab) return;
+
+            openTab(nextTab);
+        }, { passive: true });
+    }
+
     function setupCollapsibleSections() {
         document.querySelectorAll(".collapsible-section").forEach(section => {
             const trigger = section.querySelector(".collapsible-trigger");
@@ -138,8 +184,10 @@
         renderEmptyState,
         renderStartupError,
         renderTable,
+        getActiveTabName,
         setupCollapsibleSections,
         setupDateControls,
+        setupTabSwipe,
         setupTabs,
     };
 })();

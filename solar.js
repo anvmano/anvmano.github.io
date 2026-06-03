@@ -349,6 +349,7 @@
     window.ClimateSolar = {
         createSunriseSunsetChart,
         createSolarTodayChart,
+        getSolarEventsForSelectedDate,
         getSunHistoryOptions,
         getSolarTodayOptions,
         solarDayBackgroundPlugin,

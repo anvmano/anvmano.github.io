@@ -8,7 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link href="style.css?v=20260528-5" rel="stylesheet" />
+    <link href="style.css?v=20260603-3" rel="stylesheet" />
+    <link href="pdf-report.css?v=20260603-3" rel="stylesheet" />
 </head>
 
 <body>
@@ -21,7 +22,15 @@
                 </svg>
                 <h1>Estação Climática</h1>
             </div>
-            <div class="header-time" id="headerTime"></div>
+            <div class="header-status">
+                <div class="astro-indicator astro-indicator--day" id="astroIndicator" title="Ciclo atual do dia" aria-label="Ciclo atual do dia">
+                    <span class="astro-indicator__track" aria-hidden="true">
+                        <span class="astro-indicator__orb"></span>
+                    </span>
+                    <span class="astro-indicator__label">Dia</span>
+                </div>
+                <div class="header-time" id="headerTime"></div>
+            </div>
         </div>
     </header>
 
@@ -58,6 +67,14 @@
                         class="toolbar-button"
                     >
                         Hoje
+                    </button>
+
+                    <button
+                        type="button"
+                        id="btnExportPdf"
+                        class="toolbar-button toolbar-button--pdf"
+                    >
+                        Exportar PDF
                     </button>
                 </div>
             </div>
@@ -213,19 +230,22 @@
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
     <script src="config.js?v=20260602-1"></script>
     <script src="data-utils.js?v=20260528-1"></script>
     <script src="analytics.js?v=20260602-1"></script>
-    <script src="solar.js?v=20260528-1"></script>
+    <script src="solar.js?v=20260603-1"></script>
     <script src="chart-utils.js?v=20260528-1"></script>
     <script src="firebase-service.js?v=20260528-1"></script>
-    <script src="ui.js?v=20260528-1"></script>
+    <script src="ui.js?v=20260602-1"></script>
     <script src="zoom.js?v=20260528-1"></script>
+    <script src="pdf-report.js?v=20260603-4"></script>
     <script src="quarto-view.js?v=20260602-1"></script>
     <script src="aquario-view.js?v=20260528-1"></script>
     <script src="sala-view.js?v=20260602-1"></script>
     <script src="solar-view.js?v=20260528-1"></script>
-    <script src="main.js?v=20260528-14"></script>
+    <script src="main.js?v=20260603-3"></script>
 </body>
 
 </html>
