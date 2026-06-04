@@ -149,7 +149,7 @@ A validação verifica:
 - Histórico de nascer e pôr do sol.
 - Zoom dos gráficos.
 - Tabelas colapsáveis.
-- Tabelas com unidades nos valores, sem espaco antes da unidade, como `26.40°C`, `57.50%`, `8.66ppm` e `930.60hPa`.
+- Tabelas com unidades nos valores, sem espaco antes da unidade, como `26.40°C`, `57.50%`, `8.66ppm`, `1.20NTU` e `930.60hPa`.
 - Indicador astronômico no cabeçalho com estado de dia/noite e tooltip com nascer/pôr do sol.
 - Exportação da aba ativa em PDF ou JSON.
 

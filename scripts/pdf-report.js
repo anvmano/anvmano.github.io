@@ -33,8 +33,8 @@
             metrics: [
                 { key: "temperature", label: "Temperatura", unit: "°C", chart: "aquariumTemperature", comfortBand: AppConfig.aquariumComfortBand },
                 { key: "ph", label: "pH", unit: "", chart: "aquariumPh" },
-                { key: "tds", label: "TDS", unit: "", chart: "aquariumTds" },
-                { key: "turbidity", label: "Turbidez", unit: "", chart: "aquariumTurbidity" },
+                { key: "tds", label: "TDS", unit: "ppm", chart: "aquariumTds" },
+                { key: "turbidity", label: "Turbidez", unit: "NTU", chart: "aquariumTurbidity" },
             ],
         },
     };

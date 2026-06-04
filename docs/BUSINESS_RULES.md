@@ -132,7 +132,7 @@ Objetivo: exibir valores numericos das tabelas com a unidade configurada para ca
 
 Entradas: campos da tabela e `AppConfig.measurementUnits`.
 
-Saidas: valores como `26.10°C`, `45.80%`, `400.00ppm` ou `1013.00hPa`.
+Saidas: valores como `26.10°C`, `45.80%`, `400.00ppm`, `1.20NTU` ou `1013.00hPa`.
 
 Impacto: tabelas de Sala, Quarto e Aquario.
 

@@ -51,6 +51,8 @@
             key: aquariumFields.tds,
             label: "TDS",
             color: colors.amber,
+            yAxisTitle: "ppm",
+            yAxisSuffix: "ppm",
             emptyMessage: `Sem dados de TDS em ${selectedDate.replace(/-/g, "/")}.`
         });
         createChart({
@@ -60,6 +62,8 @@
             key: aquariumFields.turbidity,
             label: "Turbidez",
             color: colors.rose,
+            yAxisTitle: "NTU",
+            yAxisSuffix: "NTU",
             emptyMessage: `Sem dados de turbidez em ${selectedDate.replace(/-/g, "/")}.`
         });
 

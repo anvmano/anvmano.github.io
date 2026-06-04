@@ -24,8 +24,8 @@
             metrics: [
                 { key: "temperaturaDS18B20", label: "Temperatura", suffix: "°C" },
                 { key: "PH", label: "PH", suffix: "" },
-                { key: "TDS", label: "TDS", suffix: "" },
-                { key: "Turbidez", label: "Turbidez", suffix: "" },
+                { key: "TDS", label: "TDS", suffix: "ppm" },
+                { key: "Turbidez", label: "Turbidez", suffix: "NTU" },
             ],
         },
     };

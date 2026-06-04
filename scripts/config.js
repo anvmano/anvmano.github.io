@@ -59,6 +59,7 @@
             Alcohol: "ppm",
             NH4: "ppm",
             TDS: "ppm",
+            Turbidez: "NTU",
         },
         firebasePaths: {
             room: "historico/Temperatura",
