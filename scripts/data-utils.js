@@ -8,6 +8,18 @@
         NH4: "Amônia"
     };
 
+    function getMeasurementUnit(key) {
+        return window.AppConfig?.measurementUnits?.[key] || "";
+    }
+
+    function formatTableValue(key, value) {
+        const numericValue = Number(value);
+        if (!Number.isFinite(numericValue)) return "--";
+
+        const unit = getMeasurementUnit(key);
+        return unit ? `${numericValue.toFixed(2)} ${unit}` : numericValue.toFixed(2);
+    }
+
     function dataAtual() {
         const d = new Date();
         return `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
@@ -94,8 +106,7 @@
 
                     for (let i = 2; i < headers.length; i++) {
                         const val = item[headers[i]];
-                        const numericValue = Number(val);
-                        row.insertCell().innerText = Number.isFinite(numericValue) ? numericValue.toFixed(2) : "--";
+                        row.insertCell().innerText = formatTableValue(headers[i], val);
                     }
 
                     rowCount++;
@@ -143,9 +154,13 @@
     }
 
     function formatTime(value) {
-        const hours = Math.floor(value);
-        const minutes = Math.floor((value - hours) * 60);
-        return `${hours}:${String(minutes).padStart(2, "0")}`;
+        const numericValue = Number(value);
+        if (!Number.isFinite(numericValue)) return "--";
+
+        const totalMinutes = Math.round(numericValue * 60);
+        const hours = Math.floor(totalMinutes / 60) % 24;
+        const minutes = ((totalMinutes % 60) + 60) % 60;
+        return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
     }
 
     function formatHoursArray(hours) {

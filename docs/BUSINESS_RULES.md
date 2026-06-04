@@ -122,6 +122,26 @@ Se alterada: nomes podem ficar tecnicos ou inconsistentes.
 
 Criticidade: Baixa.
 
+## Regra: unidades nas tabelas
+
+Arquivo: `scripts/data-utils.js`
+
+Metodo: `createTables`
+
+Objetivo: exibir valores numericos das tabelas com a unidade configurada para cada campo.
+
+Entradas: campos da tabela e `AppConfig.measurementUnits`.
+
+Saidas: valores como `26.10 °C`, `45.80 %`, `400.00 ppm` ou `1013.00 hPa`.
+
+Impacto: tabelas de Sala, Quarto e Aquario.
+
+Dependencias: nomes de campos em `scripts/config.js`.
+
+Se alterada: tabelas podem voltar a mostrar numeros sem unidade ou unidade incorreta.
+
+Criticidade: Media.
+
 ## Regra: estatisticas por metrica
 
 Arquivo: `scripts/analytics.js`
@@ -241,15 +261,23 @@ Arquivo: `scripts/chart-utils.js`
 
 Metodo: `shouldShowComfortBand`, `comfortBandPlugin`
 
-Objetivo: desenhar faixa de 20 a 26 em graficos de temperatura/sensacao.
+Objetivo: desenhar faixa de conforto em graficos de temperatura/sensacao/umidade sem perder foco na variacao medida.
 
 Entradas: chave da metrica, sufixo.
 
 Saidas: `chart.$comfortBand` e desenho no canvas.
 
-Impacto: graficos de temperatura e sensacao.
+Impacto: graficos de temperatura, sensacao e umidade; PDF tambem usa faixas para status e desenho do grafico.
 
-Dependencias: `AppConfig.comfortBand`.
+Regra de escala: graficos comuns usam `min/max` derivados somente dos dados medidos validos. `null`, `undefined` e string vazia nao podem virar zero. A faixa de conforto nao participa da escala e so desenha o trecho que cruza a area visivel.
+
+Dependencias: `AppConfig.comfortBand`, `AppConfig.humidityComfortBand` e, para Aquario, `AppConfig.aquariumComfortBand`.
+
+Faixas:
+
+- Ambientes: 20°C a 26°C.
+- Umidade: 40% a 60%.
+- Aquario: 25°C a 27°C.
 
 Se alterada: referencia visual de conforto muda ou some.
 
@@ -290,6 +318,8 @@ Entradas:
 - fallback 06:00-18:00 quando dados solares ainda nao carregaram
 
 Saidas: estado visual em `#astroIndicator` com classes `astro-indicator--day`, `astro-indicator--twilight` ou `astro-indicator--night`.
+
+Tooltip: mostra o periodo atual, origem usada e horarios solares, por exemplo `Noite atual (dados solares). Nascer 6:40, pôr 17:48.`.
 
 Impacto: leitura rapida do ciclo atual no topo da pagina.
 
@@ -417,24 +447,26 @@ Saidas:
 - arquivo PDF A4 retrato baixado automaticamente
 - arquivo JSON baixado automaticamente com metadados, resumo, tabela e dados brutos filtrados
 - cabecalho com aba, data consultada e data/hora de geracao
-- indice logo apos o cabecalho com `Resumo geral`, `Graficos` e `Tabela`
-- cards de resumo
-- graficos capturados dos canvases existentes
-- tabela detalhada com colunas `Horario`, `Indicador`, `Valor` e `Status`
+- resumo executivo na primeira pagina com cards principais e alertas do dia
+- graficos otimizados para PDF, juntando Temperatura e Sensacao termica quando possivel
+- ciclo solar compacto
+- tabela resumida com uma linha por horario e status geral
 - rodape com Estacao Climatica, pagina atual/total e data/hora
 
 Regras da tabela:
 
-- unidade fica junto ao valor, por exemplo `26.08°C` ou `45.06%`
-- quando ha mais de um indicador para o mesmo registro, o horario aparece apenas na primeira linha do grupo
+- PDF usa tabela resumida com uma linha por horario
+- status geral e `Alerta` se qualquer indicador daquele horario estiver em alerta
+- status geral e `Estavel` se todos os indicadores daquele horario estiverem estaveis
+- JSON preserva a tabela detalhada com `Horario`, `Indicador`, `Valor` e `Status`
 
 Regras de layout:
 
 - relatorio deve usar largura menor que a pagina A4 util para evitar cortes laterais
-- primeira pagina deve conter apenas cabecalho e indice
-- resumo, graficos e tabela devem iniciar em paginas proprias
+- primeira pagina deve conter resumo executivo util, sem area vazia grande
+- graficos e tabela devem iniciar em paginas proprias
 - graficos devem ser renderizados em uma coluna compacta no PDF A4 retrato
-- pagina de graficos deve comportar pelo menos 3 graficos comuns por pagina
+- pagina de graficos deve comportar Temperatura x Sensacao, Umidade e Ciclo Solar compacto quando houver dados
 - html2canvas deve usar as dimensoes reais do relatorio renderizado
 - jsPDF deve montar as paginas manualmente, adicionando cabecalho, resumo e graficos como blocos inteiros
 - somente a tabela longa pode ser fatiada entre paginas
@@ -457,7 +489,7 @@ Objetivo: manter a geracao da exportacao mesmo sem dados, sem sensor ou sem graf
 
 Entradas: valores ausentes, canvas ausente ou data sem registros.
 
-Saidas: texto `Sem dados disponíveis` ou `Sem dados` nos cards/tabelas/graficos.
+Saidas: texto `Sem dados de <tipo_grafico> em <data>` nos graficos e `Sem dados`/`Sem dados disponíveis` nos resumos e tabelas.
 
 Impacto: robustez do relatorio.
 

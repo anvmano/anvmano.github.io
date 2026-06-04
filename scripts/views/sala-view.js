@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-    const { ids, fields } = window.AppConfig;
+    const { ids, fields, humidityComfortBand } = window.AppConfig;
     const livingRoomFields = fields.livingRoom;
     const temperatureChart = document.getElementById(ids.charts.livingRoomTemperature).getContext("2d");
     const feelsLikeChart = document.getElementById(ids.charts.livingRoomFeelsLike).getContext("2d");
@@ -57,7 +57,9 @@
             key: livingRoomFields.humidity,
             label: "Umidade",
             color: colors.purple,
+            yAxisTitle: "%",
             yAxisSuffix: "%",
+            comfortBand: humidityComfortBand,
             emptyMessage: `Sem dados de umidade da sala em ${selectedDate.replace(/-/g, "/")}.`
         });
         createChart({
@@ -67,6 +69,8 @@
             key: livingRoomFields.pressure,
             label: "Pressão (hPa)",
             color: colors.amber,
+            yAxisTitle: "hPa",
+            yAxisSuffix: "hPa",
             emptyMessage: `Sem dados de pressão em ${selectedDate.replace(/-/g, "/")}.`
         });
 

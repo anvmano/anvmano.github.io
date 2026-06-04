@@ -68,6 +68,7 @@ function createChart({
     color,
     yAxisTitle,
     yAxisSuffix = "",
+    comfortBand = COMFORT_BAND,
     emptyMessage = "Sem dados para esta data."
 }) {
     const id = canvasCtx.canvas.id;
@@ -82,7 +83,7 @@ function createChart({
         existingChart: chartInstances[id],
         defaults: CHART_DEFAULTS,
         colors: COLORS,
-        comfortBand: COMFORT_BAND,
+        comfortBand,
         onEmpty: () => {
             delete chartInstances[id];
             if (containerId) ClimateUI.renderChartMessage(containerId, emptyMessage);
@@ -206,8 +207,22 @@ function getFallbackSolarEvents() {
     };
 }
 
+function formatAstroHour(value) {
+    if (!Number.isFinite(value)) return "--";
+    const totalMinutes = Math.round(value * 60);
+    const hour = Math.floor(totalMinutes / 60) % 24;
+    const minute = totalMinutes % 60;
+    return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function getAstroDescription(state) {
+    const label = state.mode === "night" ? "Noite" : state.mode === "twilight" ? "Transição" : "Dia";
+    return `${label} atual (${state.source}). Nascer ${formatAstroHour(state.events.sunrise)}, pôr ${formatAstroHour(state.events.sunset)}.`;
+}
+
 function getAstroState(now = new Date()) {
-    const events = getTodaySolarEvents() || getFallbackSolarEvents();
+    const solarEvents = getTodaySolarEvents();
+    const events = solarEvents || getFallbackSolarEvents();
     const hour = getCurrentHourValue(now);
     const isTwilight = (hour >= events.dawn && hour < events.sunrise) || (hour > events.sunset && hour <= events.dusk);
     const isDay = hour >= events.sunrise && hour <= events.sunset;
@@ -224,6 +239,8 @@ function getAstroState(now = new Date()) {
         progress,
         x: `${(progress * 100).toFixed(1)}%`,
         y: `${y.toFixed(1)}px`,
+        events,
+        source: solarEvents ? "dados solares" : "fallback 06:00-18:00",
     };
 }
 
@@ -233,7 +250,6 @@ function updateAstroIndicator() {
 
     const state = getAstroState();
     const label = state.mode === "night" ? "Noite" : state.mode === "twilight" ? "Solar" : "Dia";
-    const description = state.mode === "night" ? "Noite" : state.mode === "twilight" ? "Transição solar" : "Dia";
     const labelElement = indicator.querySelector(".astro-indicator__label");
 
     indicator.classList.remove("astro-indicator--day", "astro-indicator--twilight", "astro-indicator--night");
@@ -243,7 +259,7 @@ function updateAstroIndicator() {
     if (track) track.style.setProperty("--astro-x", state.x);
     indicator.style.setProperty("--astro-y", state.y);
     if (labelElement) labelElement.textContent = label;
-    indicator.title = description;
+    indicator.title = getAstroDescription(state);
     indicator.setAttribute("aria-label", indicator.title);
 }
 
@@ -273,8 +289,9 @@ async function setupFirebaseListeners() {
     FirebaseService.listenToPath(FIREBASE_PATHS.solar, data => {
         latestData.solar = data;
         if (!data) {
-            ClimateUI.renderChartMessage(IDS.chartContainers.sunHistory, "Sem dados solares.");
-            ClimateUI.renderChartMessage(IDS.chartContainers.solarToday, "Sem dados solares de hoje.");
+            const formattedDate = selectedDate.replace(/-/g, "/");
+            ClimateUI.renderChartMessage(IDS.chartContainers.sunHistory, `Sem dados de nascer e pôr do sol em ${formattedDate}.`);
+            ClimateUI.renderChartMessage(IDS.chartContainers.solarToday, `Sem dados de ciclo solar em ${formattedDate}.`);
             updateAstroIndicator();
             return;
         }

@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-    const { ids, fields } = window.AppConfig;
+    const { ids, fields, humidityComfortBand } = window.AppConfig;
     const roomFields = fields.room;
     const temperatureChart = document.getElementById(ids.charts.roomTemperature).getContext("2d");
     const feelsLikeChart = document.getElementById(ids.charts.roomFeelsLike).getContext("2d");
@@ -54,7 +54,9 @@
             key: roomFields.humidity,
             label: "Umidade",
             color: colors.purple,
+            yAxisTitle: "%",
             yAxisSuffix: "%",
+            comfortBand: humidityComfortBand,
             emptyMessage: `Sem dados de umidade em ${selectedDate.replace(/-/g, "/")}.`
         });
 

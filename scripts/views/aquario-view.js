@@ -32,6 +32,7 @@
             color: colors.blue,
             yAxisTitle: "(°C)",
             yAxisSuffix: "°",
+            comfortBand: AppConfig.aquariumComfortBand,
             emptyMessage: `Sem dados de temperatura do aquário em ${selectedDate.replace(/-/g, "/")}.`
         });
         createChart({

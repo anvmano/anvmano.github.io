@@ -24,7 +24,7 @@ O codigo nao define usuarios, autenticacao, permissoes ou backend local.
 Arquivos principais:
 
 - `index.html`: estrutura DOM e ordem dos scripts.
-- `scripts/config.js`: Firebase, paths, ids, cores, campos.
+- `scripts/config.js`: Firebase, paths, ids, cores, campos e unidades.
 - `scripts/main.js`: orquestrador da aplicacao.
 - `scripts/firebase-service.js`: conexao e listeners Firebase.
 - `scripts/data-utils.js`: datas, filtros, tabelas e series.
@@ -65,6 +65,7 @@ Arquivos principais:
 
 - Firebase config e paths: `scripts/config.js`.
 - Campos dos sensores: `scripts/config.js` em `fields`.
+- Unidades das tabelas: `scripts/config.js` em `measurementUnits`.
 - Sala: `scripts/views/sala-view.js`.
 - Quarto: `scripts/views/quarto-view.js`.
 - Aquario: `scripts/views/aquario-view.js`.
@@ -82,17 +83,26 @@ Arquivos principais:
 - Data Firebase: `DD-MM-AAAA`.
 - Dados por data/hora: `historico/<tipo>/<DD-MM-AAAA>/<HH-MM>/<id>/<campos>`.
 - Graficos comuns usam `ClimateData.extractData`.
-- Se grafico comum nao tem pontos numericos, `ClimateCharts.createLineChart` retorna `null` e o caller mostra mensagem no card.
+- Se grafico comum nao tem pontos numericos, `ClimateCharts.createLineChart` limpa o canvas, retorna `null` e o caller mostra mensagem no card.
 - Cada id em `AppConfig.ids.chartContainers` deve existir no `.chart-card` individual correspondente.
 - Tabelas mostram ate 24 linhas.
+- Valores das tabelas exibem unidades quando configuradas, como `°C`, `%`, `ppm` e `hPa`.
+- Faixa de conforto geral: 20°C a 26°C; umidade usa 40% a 60%; Aquario usa faixa propria de 25°C a 27°C.
+- Graficos com faixa de conforto devem priorizar a variacao medida na escala Y com `min/max` derivados dos dados validos; `null`/vazio nao pode virar zero na escala.
+- Horarios exibidos em graficos, tabelas e tooltips seguem formato digital com dois digitos (`HH:mm`).
+- Eixo Y dos graficos deve exibir a unidade da metrica quando houver: `°C`, `%`, `hPa`, `ppm`.
+- Graficos comuns de series temporais usam horarios no eixo X em diagonal; graficos solares e heatmaps preservam seu layout especifico.
+- Mensagens de graficos vazios devem seguir `Sem dados de <tipo_grafico> em <DD/MM/AAAA>`.
 - Aba ativa e persistida em `localStorage.activeTab`.
 - Swipe touch segue o fluxo Sala ⇄ Quarto ⇄ Aquario. Arrastar para esquerda avanca; arrastar para direita volta; extremidades nao mudam de aba.
+- Indicador astronomico do header mostra tooltip com periodo atual, origem dos dados e horarios de nascer/por do sol.
 - Solar usa data selecionada para ciclo do dia e filtro de 365 dias para historico.
 - Exportacao PDF/JSON usa automaticamente aba ativa, data selecionada, `latestData` e `chartInstances`; nao reconsulta Firebase.
 - Controle `PDF/JSON` em `name="exportFormat"` altera a label do botao `#btnExportData`.
-- Tabela do PDF usa `Horario`, `Indicador`, `Valor` e `Status`; unidade fica junto ao valor e o horario nao repete dentro do mesmo grupo de indicadores.
-- PDF tem capa compacta com indice; resumo, graficos e tabela iniciam em paginas proprias.
-- PDF e montado manualmente em paginas A4; graficos ficam inteiros e compactos, e apenas tabela longa pode ser fatiada.
+- PDF usa primeira pagina como resumo executivo, com metadados, cards principais e alertas do dia.
+- PDF junta Temperatura e Sensacao termica no mesmo grafico quando a aba possui as duas metricas.
+- PDF usa tabela resumida por horario, com status geral por linha; JSON preserva a tabela detalhada antiga.
+- PDF e montado manualmente em paginas A4; resumo, graficos e tabela iniciam em paginas proprias, com rodape em todas as paginas.
 
 ## Arquivos Mais Importantes
 

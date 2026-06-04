@@ -7,9 +7,9 @@
             dataKey: "livingRoom",
             tableType: "livingRoom",
             metrics: [
-                { key: "temperature", label: "Temperatura", unit: "°C", chart: "livingRoomTemperature" },
-                { key: "feelsLike", label: "Sensação térmica", unit: "°C", chart: "livingRoomFeelsLike" },
-                { key: "humidity", label: "Umidade", unit: "%", chart: "livingRoomHumidity" },
+                { key: "temperature", label: "Temperatura", unit: "°C", chart: "livingRoomTemperature", comfortBand: AppConfig.comfortBand },
+                { key: "feelsLike", label: "Sensação térmica", unit: "°C", chart: "livingRoomFeelsLike", comfortBand: AppConfig.comfortBand },
+                { key: "humidity", label: "Umidade", unit: "%", chart: "livingRoomHumidity", comfortBand: AppConfig.humidityComfortBand },
                 { key: "pressure", label: "Pressão", unit: "hPa", chart: "livingRoomPressure" },
             ],
         },
@@ -18,9 +18,9 @@
             dataKey: "room",
             tableType: "room",
             metrics: [
-                { key: "temperature", label: "Temperatura", unit: "°C", chart: "roomTemperature" },
-                { key: "feelsLike", label: "Sensação térmica", unit: "°C", chart: "roomFeelsLike" },
-                { key: "humidity", label: "Umidade", unit: "%", chart: "roomHumidity" },
+                { key: "temperature", label: "Temperatura", unit: "°C", chart: "roomTemperature", comfortBand: AppConfig.comfortBand },
+                { key: "feelsLike", label: "Sensação térmica", unit: "°C", chart: "roomFeelsLike", comfortBand: AppConfig.comfortBand },
+                { key: "humidity", label: "Umidade", unit: "%", chart: "roomHumidity", comfortBand: AppConfig.humidityComfortBand },
             ],
             solarCharts: [
                 { label: "Ciclo solar", unit: "h", chart: "solarToday" },
@@ -31,7 +31,7 @@
             dataKey: "aquarium",
             tableType: "aquarium",
             metrics: [
-                { key: "temperature", label: "Temperatura", unit: "°C", chart: "aquariumTemperature" },
+                { key: "temperature", label: "Temperatura", unit: "°C", chart: "aquariumTemperature", comfortBand: AppConfig.aquariumComfortBand },
                 { key: "ph", label: "pH", unit: "", chart: "aquariumPh" },
                 { key: "tds", label: "TDS", unit: "", chart: "aquariumTds" },
                 { key: "turbidity", label: "Turbidez", unit: "", chart: "aquariumTurbidity" },
@@ -67,7 +67,7 @@
 
         try {
             const context = getContext ? getContext() : {};
-            const report = buildReport(context);
+            const report = await buildReport(context);
 
             if (format === "json") {
                 exportJsonReport(report);
@@ -152,7 +152,7 @@
         URL.revokeObjectURL(url);
     }
 
-    function buildReport(context) {
+    async function buildReport(context) {
         const tabConfig = TAB_CONFIG[context.activeTab] || TAB_CONFIG.Tab1;
         const selectedDate = context.selectedDate || ClimateData.dataAtual();
         const generatedAt = new Date();
@@ -161,16 +161,18 @@
         const selectedData = ClimateData.filterDataByDays(data, 2, selectedDate);
         const fields = getFields(tabConfig);
         const rows = extractReportRows(selectedData, tabConfig.metrics, fields);
-        const chartCards = collectChartCards(tabConfig, context.chartInstances || {});
+        const tableMetrics = getPdfTableMetrics(tabConfig);
+        const tableRows = buildCompactTableRows(rows, tableMetrics);
         const summaryCards = buildSummaryCards(tabConfig, rows, context.chartInstances || {});
+        const alerts = buildDailyAlerts(rows, tabConfig.metrics);
+        const chartCards = await collectChartCards(tabConfig, context.chartInstances || {}, selectedDate);
 
         const report = document.createElement("article");
         report.className = "pdf-report";
         report.appendChild(createHeader(tabConfig.label, selectedDate, generatedAt));
-        report.appendChild(createIndexSection());
-        report.appendChild(createSummarySection(summaryCards));
+        report.appendChild(createSummarySection(summaryCards, alerts));
         report.appendChild(createChartsSection(chartCards));
-        report.appendChild(createTableSection(rows));
+        report.appendChild(createTableSection(tableRows, tableMetrics));
 
         return {
             element: report,
@@ -181,6 +183,7 @@
             generatedAt,
             summaryCards,
             rows,
+            tableRows,
             selectedData,
         };
     }
@@ -191,14 +194,69 @@
         return AppConfig.fields.aquarium;
     }
 
+    function getPdfTableMetrics(tabConfig) {
+        const preferredKeys = ["temperature", "feelsLike", "humidity"];
+        const preferredMetrics = preferredKeys
+            .map(key => tabConfig.metrics.find(metric => metric.key === key))
+            .filter(Boolean);
+
+        return preferredMetrics.length >= 2 ? preferredMetrics : tabConfig.metrics;
+    }
+
+    function buildCompactTableRows(rows, metrics) {
+        const grouped = new Map();
+        rows.forEach(row => {
+            if (!row.fullTime || !metrics.some(metric => metric.key === row.metricKey)) return;
+
+            if (!grouped.has(row.fullTime)) {
+                grouped.set(row.fullTime, {
+                    time: row.fullTime,
+                    values: {},
+                    statuses: [],
+                });
+            }
+
+            const group = grouped.get(row.fullTime);
+            group.values[row.metricKey] = row.value;
+            group.statuses.push(row.status);
+        });
+
+        return Array.from(grouped.values())
+            .sort((a, b) => a.time.localeCompare(b.time))
+            .map(group => ({
+                time: group.time,
+                values: group.values,
+                status: group.statuses.includes("Alerta") ? "Alerta" : "Estável",
+            }));
+    }
+
+    function buildDailyAlerts(rows, metrics) {
+        const alertMetrics = metrics.filter(metric => ["temperature", "feelsLike"].includes(metric.key));
+        const alerts = [];
+
+        alertMetrics.forEach(metric => {
+            const alertRows = rows
+                .filter(row => row.metricKey === metric.key && row.status === "Alerta" && row.fullTime)
+                .sort((a, b) => a.fullTime.localeCompare(b.fullTime));
+
+            if (!alertRows.length) return;
+
+            const first = alertRows[0].fullTime;
+            const last = alertRows[alertRows.length - 1].fullTime;
+            alerts.push(`${metric.label} fora da faixa ideal entre ${first} e ${last}.`);
+        });
+
+        return alerts.slice(0, 4);
+    }
+
     function createHeader(tabLabel, selectedDate, generatedAt) {
         const header = document.createElement("header");
         header.className = "pdf-report__header";
         header.innerHTML = `
             <div>
-                <span class="pdf-report__eyebrow">Relatório</span>
+                <span class="pdf-report__eyebrow">Resumo executivo</span>
                 <h2 class="pdf-report__title">Relatório da Estação Climática</h2>
-                <div class="pdf-report__badge">Gerado pelo sistema</div>
+                <p class="pdf-report__subtitle">Leitura consolidada da aba ativa e da data selecionada.</p>
             </div>
             <div class="pdf-report__meta">
                 <div class="pdf-report__meta-item">
@@ -218,30 +276,34 @@
         return header;
     }
 
-    function createIndexSection() {
+    function createSummarySection(cards, alerts) {
         const section = document.createElement("section");
-        section.className = "pdf-report__index";
-        section.innerHTML = `
-            <span class="pdf-report__section-title">Índice</span>
-            <ol class="pdf-index-list">
-                <li><span>Resumo geral</span><strong>1</strong></li>
-                <li><span>Gráficos</span><strong>2</strong></li>
-                <li><span>Tabela</span><strong>3</strong></li>
-            </ol>
-        `;
-        return section;
-    }
-
-    function createSummarySection(cards) {
-        const section = document.createElement("section");
-        section.className = "pdf-report__section";
-        section.innerHTML = `<span class="pdf-report__section-title">Resumo geral</span>`;
+        section.className = "pdf-report__section pdf-report__summary-section";
+        section.innerHTML = `<span class="pdf-report__section-title">Indicadores principais</span>`;
 
         const grid = document.createElement("div");
         grid.className = "pdf-summary-grid";
         cards.forEach(card => grid.appendChild(createSummaryCard(card)));
         section.appendChild(grid);
+        section.appendChild(createAlertsPanel(alerts));
         return section;
+    }
+
+    function createAlertsPanel(alerts) {
+        const panel = document.createElement("article");
+        panel.className = "pdf-alert-panel";
+        const items = alerts.length
+            ? alerts.map(alert => `<li>${escapeHtml(alert)}</li>`).join("")
+            : "<li>Nenhum alerta relevante encontrado para o período.</li>";
+
+        panel.innerHTML = `
+            <div class="pdf-alert-panel__heading">
+                <span class="pdf-report__section-title">Alertas do dia</span>
+                <span class="pdf-status pdf-status--${alerts.length ? "alert" : "stable"}">${alerts.length ? "Atenção" : "Estável"}</span>
+            </div>
+            <ul class="pdf-alert-list">${items}</ul>
+        `;
+        return panel;
     }
 
     function createSummaryCard(card) {
@@ -265,7 +327,7 @@
 
     function createChartsSection(cards) {
         const section = document.createElement("section");
-        section.className = "pdf-report__section";
+        section.className = "pdf-report__section pdf-report__charts-section";
         section.innerHTML = `<span class="pdf-report__section-title">Gráficos</span>`;
 
         const grid = document.createElement("div");
@@ -277,7 +339,11 @@
 
     function createChartCard(card) {
         const el = document.createElement("article");
-        el.className = card.wide ? "pdf-chart-card pdf-chart-card--wide" : "pdf-chart-card";
+        el.className = [
+            "pdf-chart-card",
+            card.wide ? "pdf-chart-card--wide" : "",
+            card.compact ? "pdf-chart-card--compact" : "",
+        ].filter(Boolean).join(" ");
         el.innerHTML = `
             <div class="pdf-chart-card__title">
                 <span class="pdf-chart-card__name">${escapeHtml(card.label)}</span>
@@ -293,17 +359,24 @@
         } else {
             const empty = document.createElement("div");
             empty.className = "pdf-empty";
-            empty.innerText = "Sem dados disponíveis";
+            empty.innerText = card.emptyMessage || "Sem dados disponíveis";
             el.appendChild(empty);
+        }
+
+        if (card.stats?.length) {
+            const stats = document.createElement("div");
+            stats.className = "pdf-chart-stats";
+            stats.innerHTML = card.stats.map(item => `<span>${escapeHtml(item)}</span>`).join("");
+            el.appendChild(stats);
         }
 
         return el;
     }
 
-    function createTableSection(rows) {
+    function createTableSection(rows, metrics) {
         const section = document.createElement("section");
-        section.className = "pdf-report__section";
-        section.innerHTML = `<span class="pdf-report__section-title">Tabela detalhada</span>`;
+        section.className = "pdf-report__section pdf-report__table-section";
+        section.innerHTML = `<span class="pdf-report__section-title">Tabela resumida</span>`;
 
         if (!rows.length) {
             const empty = document.createElement("div");
@@ -319,9 +392,8 @@
             <thead>
                 <tr>
                     <th>Horário</th>
-                    <th>Indicador</th>
-                    <th>Valor</th>
-                    <th>Status</th>
+                    ${metrics.map(metric => `<th>${escapeHtml(metric.label)}</th>`).join("")}
+                    <th>Status geral</th>
                 </tr>
             </thead>
         `;
@@ -330,9 +402,8 @@
             const tr = document.createElement("tr");
             tr.innerHTML = `
                 <td>${escapeHtml(row.time)}</td>
-                <td>${escapeHtml(row.label)}</td>
-                <td>${escapeHtml(row.value)}</td>
-                <td>${escapeHtml(row.status)}</td>
+                ${metrics.map(metric => `<td>${escapeHtml(row.values[metric.key] || "--")}</td>`).join("")}
+                <td><span class="pdf-status pdf-status--${getStatusClass(row.status)}">${escapeHtml(row.status)}</span></td>
             `;
             tbody.appendChild(tr);
         });
@@ -342,17 +413,15 @@
     }
 
     function buildSummaryCards(tabConfig, rows, chartInstances) {
-        const cards = tabConfig.metrics.map(metric => {
+        const cards = getPdfTableMetrics(tabConfig).map(metric => {
             const values = rows
                 .filter(row => row.metricKey === metric.key && Number.isFinite(row.numericValue))
                 .map(row => row.numericValue);
             return buildMetricSummary(metric, values);
         });
 
-        if (tabConfig.solarCharts) {
-            const solarChart = chartInstances[AppConfig.ids.charts.solarToday];
-            cards.push(buildSolarSummary(solarChart));
-        }
+        const solarChart = chartInstances[AppConfig.ids.charts.solarToday];
+        cards.push(buildSolarSummary(solarChart));
 
         return cards;
     }
@@ -405,32 +474,340 @@
         };
     }
 
-    function collectChartCards(tabConfig, chartInstances) {
-        const cards = tabConfig.metrics.map(metric => {
-            const chartId = AppConfig.ids.charts[metric.chart];
-            return {
-                label: metric.label,
-                unit: metric.unit,
-                image: captureChartImage(chartId, chartInstances),
-            };
-        });
+    async function collectChartCards(tabConfig, chartInstances, selectedDate) {
+        const cards = [];
+        const temperatureMetric = tabConfig.metrics.find(metric => metric.key === "temperature");
+        const feelsLikeMetric = tabConfig.metrics.find(metric => metric.key === "feelsLike");
+        const humidityMetric = tabConfig.metrics.find(metric => metric.key === "humidity");
 
-        (tabConfig.solarCharts || []).forEach(metric => {
-            const chartId = AppConfig.ids.charts[metric.chart];
-            cards.push({
-                label: metric.label,
-                unit: metric.unit,
-                image: captureChartImage(chartId, chartInstances),
-                wide: true,
-            });
+        if (temperatureMetric && feelsLikeMetric) {
+            cards.push(await createMetricChartCard(
+                "Temperatura x Sensação Térmica",
+                "°C",
+                [temperatureMetric, feelsLikeMetric],
+                chartInstances,
+                selectedDate
+            ));
+        } else if (temperatureMetric) {
+            cards.push(await createMetricChartCard(temperatureMetric.label, temperatureMetric.unit, [temperatureMetric], chartInstances, selectedDate));
+        }
+
+        if (humidityMetric) {
+            cards.push(await createMetricChartCard(humidityMetric.label, humidityMetric.unit, [humidityMetric], chartInstances, selectedDate));
+        } else {
+            const fallbackMetrics = tabConfig.metrics
+                .filter(metric => metric.key !== "temperature" && metric.key !== "feelsLike")
+                .slice(0, Math.max(0, 2 - cards.length));
+
+            for (const metric of fallbackMetrics) {
+                cards.push(await createMetricChartCard(metric.label, metric.unit, [metric], chartInstances, selectedDate));
+            }
+        }
+
+        const solarChartId = AppConfig.ids.charts.solarToday;
+        cards.push({
+            label: "Ciclo solar compacto",
+            unit: "h",
+            image: captureChartImage(solarChartId, chartInstances),
+            compact: true,
+            emptyMessage: buildNoDataMessage("ciclo solar", selectedDate),
+            stats: buildSolarChartStats(chartInstances[solarChartId]),
         });
 
         return cards;
     }
 
+    async function createMetricChartCard(label, unit, metrics, chartInstances, selectedDate) {
+        const image = createMetricChartImage(label, unit, metrics, chartInstances);
+        return {
+            label,
+            unit,
+            image,
+            emptyMessage: buildNoDataMessage(label, selectedDate),
+            stats: metrics.flatMap(metric => {
+                const chart = chartInstances[AppConfig.ids.charts[metric.chart]];
+                return buildChartStats(metric.label, getChartValues(chart), metric.unit);
+            }),
+        };
+    }
+
+    function createMetricChartImage(title, unit, metrics, chartInstances) {
+        if (typeof Chart !== "function") return captureFirstMetricImage(metrics, chartInstances);
+
+        const series = metrics
+            .map((metric, index) => {
+                const chart = chartInstances[AppConfig.ids.charts[metric.chart]];
+                const labels = getChartLabels(chart);
+                const values = getChartValues(chart);
+                return {
+                    metric,
+                    labels,
+                    values,
+                    color: getPdfChartColor(index),
+                };
+            })
+            .filter(item => item.labels.length && item.values.some(Number.isFinite));
+
+        if (!series.length) return captureFirstMetricImage(metrics, chartInstances);
+
+        const labels = series[0].labels;
+        const canvas = document.createElement("canvas");
+        canvas.width = 1200;
+        canvas.height = 520;
+
+        const datasets = series.flatMap(item => {
+            const stats = calculateSeriesStats(item.values);
+            const normalizedValues = labels.map((_, index) => item.values[index] ?? null);
+            return [
+                {
+                    label: item.metric.label,
+                    data: normalizedValues,
+                    borderColor: item.color,
+                    backgroundColor: item.color,
+                    borderWidth: 4,
+                    tension: 0.32,
+                    pointRadius: normalizedValues.map((_, index) => index === stats.minIndex || index === stats.maxIndex ? 6 : 0),
+                    pointHoverRadius: 0,
+                    fill: false,
+                },
+                {
+                    label: `${item.metric.label} média`,
+                    data: labels.map(() => stats.avg),
+                    borderColor: withAlpha(item.color, 0.45),
+                    borderDash: [10, 8],
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: false,
+                },
+            ];
+        });
+
+        const comfortBand = getPdfComfortBand(metrics);
+        const yBounds = calculatePdfYBounds(series);
+        const chart = new Chart(canvas.getContext("2d"), {
+            type: "line",
+            data: { labels, datasets },
+            options: createPdfChartOptions(title, unit, datasets.length > 2, yBounds),
+            plugins: [pdfChartBackgroundPlugin(), pdfComfortBandPlugin()],
+        });
+
+        chart.$pdfComfortBand = comfortBand;
+        chart.update("none");
+        const image = canvas.toDataURL("image/png", 1);
+        chart.destroy();
+        return image;
+    }
+
+    function captureFirstMetricImage(metrics, chartInstances) {
+        const metric = metrics.find(item => item?.chart);
+        return metric ? captureChartImage(AppConfig.ids.charts[metric.chart], chartInstances) : null;
+    }
+
+    function createPdfChartOptions(title, unit, showLegend, yBounds = {}) {
+        return {
+            responsive: false,
+            animation: false,
+            maintainAspectRatio: false,
+            layout: {
+                padding: { top: 24, right: 28, bottom: 12, left: 16 },
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: title,
+                    color: "#f8fafc",
+                    font: { size: 26, weight: "700" },
+                    padding: { bottom: 18 },
+                },
+                legend: {
+                    display: showLegend,
+                    labels: {
+                        color: "#cbd5e1",
+                        boxWidth: 22,
+                        boxHeight: 10,
+                        font: { size: 18, weight: "600" },
+                        filter: item => !item.text.includes("média"),
+                    },
+                },
+                tooltip: { enabled: false },
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: "#94a3b8",
+                        maxRotation: 0,
+                        minRotation: 0,
+                        autoSkip: true,
+                        maxTicksLimit: 8,
+                        font: { size: 17 },
+                    },
+                    grid: { color: "rgba(99, 132, 200, 0.16)" },
+                },
+                y: {
+                    suggestedMin: yBounds.suggestedMin,
+                    suggestedMax: yBounds.suggestedMax,
+                    title: {
+                        display: Boolean(unit),
+                        text: unit,
+                        color: "#94a3b8",
+                        font: { size: 17, weight: "700" },
+                    },
+                    ticks: {
+                        color: "#94a3b8",
+                        font: { size: 17 },
+                    },
+                    grid: { color: "rgba(99, 132, 200, 0.18)" },
+                },
+            },
+        };
+    }
+
+    function pdfChartBackgroundPlugin() {
+        return {
+            id: "pdfChartBackground",
+            beforeDraw(chart) {
+                const { ctx, width, height } = chart;
+                ctx.save();
+                ctx.fillStyle = "#111827";
+                ctx.fillRect(0, 0, width, height);
+                ctx.restore();
+            },
+        };
+    }
+
+    function pdfComfortBandPlugin() {
+        return {
+            id: "pdfComfortBand",
+            beforeDatasetsDraw(chart) {
+                const band = chart.$pdfComfortBand;
+                const yScale = chart.scales.y;
+                const area = chart.chartArea;
+                if (!band || !yScale || !area) return;
+
+                const yMin = clamp(yScale.getPixelForValue(band.min), area.top, area.bottom);
+                const yMax = clamp(yScale.getPixelForValue(band.max), area.top, area.bottom);
+                const top = Math.min(yMin, yMax);
+                const height = Math.abs(yMax - yMin);
+                const ctx = chart.ctx;
+
+                ctx.save();
+                ctx.fillStyle = "rgba(52, 211, 153, 0.10)";
+                ctx.fillRect(area.left, top, area.right - area.left, height);
+                ctx.strokeStyle = "rgba(52, 211, 153, 0.35)";
+                ctx.setLineDash([8, 6]);
+                ctx.beginPath();
+                ctx.moveTo(area.left, yMin);
+                ctx.lineTo(area.right, yMin);
+                ctx.moveTo(area.left, yMax);
+                ctx.lineTo(area.right, yMax);
+                ctx.stroke();
+                ctx.restore();
+            },
+        };
+    }
+
+    function getPdfComfortBand(metrics) {
+        const metricWithBand = metrics.find(metric => metric.comfortBand);
+        return metricWithBand?.comfortBand || null;
+    }
+
+    function calculatePdfYBounds(series) {
+        const values = series
+            .flatMap(item => item.values)
+            .filter(Number.isFinite);
+
+        if (!values.length) return {};
+
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const range = max - min;
+        const padding = range > 0 ? Math.max(range * 0.12, 0.1) : 1;
+
+        return {
+            suggestedMin: min - padding,
+            suggestedMax: max + padding,
+        };
+    }
+
+    function buildNoDataMessage(label, selectedDate) {
+        return `Sem dados de ${label.toLowerCase()} em ${formatFirebaseDate(selectedDate)}.`;
+    }
+
+    function clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+    }
+
+    function getPdfChartColor(index) {
+        return ["#38bdf8", "#34d399", "#a78bfa", "#fb7185"][index] || "#facc15";
+    }
+
+    function withAlpha(hex, alpha) {
+        const value = hex.replace("#", "");
+        const r = parseInt(value.slice(0, 2), 16);
+        const g = parseInt(value.slice(2, 4), 16);
+        const b = parseInt(value.slice(4, 6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function getChartLabels(chart) {
+        return (chart?.data?.labels || []).map(label => String(label));
+    }
+
+    function getChartValues(chart) {
+        const data = chart?.data?.datasets?.[0]?.data || [];
+        return data.map(point => {
+            const value = typeof point === "object" && point !== null ? point.y : point;
+            const number = Number(value);
+            return Number.isFinite(number) ? number : null;
+        });
+    }
+
+    function calculateSeriesStats(values) {
+        const numeric = values
+            .map((value, index) => ({ value, index }))
+            .filter(item => Number.isFinite(item.value));
+
+        if (!numeric.length) {
+            return { min: null, max: null, avg: null, minIndex: -1, maxIndex: -1 };
+        }
+
+        const minItem = numeric.reduce((lowest, item) => item.value < lowest.value ? item : lowest, numeric[0]);
+        const maxItem = numeric.reduce((highest, item) => item.value > highest.value ? item : highest, numeric[0]);
+        const avg = numeric.reduce((sum, item) => sum + item.value, 0) / numeric.length;
+        return {
+            min: minItem.value,
+            max: maxItem.value,
+            avg,
+            minIndex: minItem.index,
+            maxIndex: maxItem.index,
+        };
+    }
+
+    function buildChartStats(label, values, unit) {
+        const stats = calculateSeriesStats(values);
+        if (!Number.isFinite(stats.avg)) return [];
+
+        return [
+            `${label}: mín ${formatValue(stats.min, unit)} · máx ${formatValue(stats.max, unit)} · média ${formatValue(stats.avg, unit)}`,
+        ];
+    }
+
+    function buildSolarChartStats(chart) {
+        const times = chart?.$solarDayTimes;
+        if (!times) return [];
+
+        return [
+            `Amanhecer ${ClimateData.formatTime(times.dawn)}`,
+            `Nascer ${ClimateData.formatTime(times.sunrise)}`,
+            `Zênite ${ClimateData.formatTime(times.zenith)}`,
+            `Pôr ${ClimateData.formatTime(times.sunset)}`,
+            `Anoitecer ${ClimateData.formatTime(times.dusk)}`,
+        ];
+    }
+
     function captureChartImage(chartId, chartInstances) {
         const chart = chartInstances[chartId];
-        const canvas = chart?.canvas || document.getElementById(chartId);
+        const canvas = chart?.canvas;
         if (!canvas || typeof canvas.toDataURL !== "function") return null;
 
         try {
@@ -464,6 +841,7 @@
                         const hasValue = Number.isFinite(numericValue);
                         rows.push({
                             time: metricIndex === 0 ? `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}` : "",
+                            fullTime: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
                             metricKey: metric.key,
                             label: metric.label,
                             numericValue: hasValue ? numericValue : null,
@@ -496,20 +874,15 @@
 
     async function addReportBlocks(pdf, element) {
         const layout = createPdfLayout();
-        const sections = Array.from(element.querySelectorAll(".pdf-report__section"));
         const header = element.querySelector(".pdf-report__header");
-        const indexSection = element.querySelector(".pdf-report__index");
-        const summarySection = sections[0];
-        const chartsSection = sections[1];
-        const tableSection = sections[2];
+        const summarySection = element.querySelector(".pdf-report__summary-section");
+        const chartsSection = element.querySelector(".pdf-report__charts-section");
+        const tableSection = element.querySelector(".pdf-report__table-section");
         let cursorY = layout.margin.top;
 
         paintPdfPage(pdf, layout);
 
-        cursorY = await addElementBlock(pdf, header, layout, cursorY, { gap: 8 });
-        await addElementBlock(pdf, indexSection, layout, cursorY, { gap: 0 });
-
-        cursorY = addPdfPage(pdf, layout);
+        cursorY = await addElementBlock(pdf, header, layout, cursorY, { gap: 6 });
         await addElementBlock(pdf, summarySection, layout, cursorY, { gap: 0 });
 
         cursorY = addPdfPage(pdf, layout);
@@ -519,7 +892,7 @@
         }
 
         cursorY = addPdfPage(pdf, layout);
-        cursorY = addSectionHeading(pdf, "Tabela detalhada", layout, cursorY);
+        cursorY = addSectionHeading(pdf, "Tabela resumida", layout, cursorY);
         const tableContent = tableSection.querySelector(".pdf-table, .pdf-empty");
         await addElementBlock(pdf, tableContent, layout, cursorY, { allowSplit: true, gap: 0 });
     }
@@ -693,8 +1066,8 @@
 
     function getMetricStatus(metric, value) {
         if (!Number.isFinite(value)) return "Sem dados";
-        if (["temperature", "feelsLike"].includes(metric.key)) {
-            const band = AppConfig.comfortBand;
+        if (["temperature", "feelsLike", "humidity"].includes(metric.key)) {
+            const band = metric.comfortBand || AppConfig.comfortBand;
             return value < band.min || value > band.max ? "Alerta" : "Estável";
         }
         return "Estável";

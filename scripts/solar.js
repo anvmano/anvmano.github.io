@@ -293,7 +293,7 @@
                         stepSize: 2,
                         color: colors.text,
                         font: { size: tickSize },
-                        callback: value => `${value}h`
+                        callback: ClimateData.formatTime
                     }
                 },
                 y: {

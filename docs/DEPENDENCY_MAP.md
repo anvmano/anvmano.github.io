@@ -129,7 +129,7 @@ Impacto da alteracao: Medio a Alto, dependendo do arquivo e seletor.
 
 ## scripts/config.js
 
-Responsabilidade: centralizar Firebase, paths, ids, campos, cores e faixa de conforto.
+Responsabilidade: centralizar Firebase, paths, ids, campos, unidades, cores e faixas de conforto.
 
 Dependencias diretas: nenhuma.
 
@@ -139,7 +139,7 @@ Quem chama: `scripts/main.js`, `scripts/firebase-service.js`, `scripts/ui.js`, `
 
 Quem e chamado: nenhum.
 
-Impacto da alteracao: Critico. Qualquer erro em ids/paths/campos quebra leitura ou renderizacao.
+Impacto da alteracao: Critico. Qualquer erro em ids/paths/campos quebra leitura ou renderizacao; erro em unidades ou faixas de conforto afeta tabelas, graficos, status e PDF.
 
 ## scripts/main.js
 
@@ -295,9 +295,10 @@ Responsabilidade: exportar PDF A4 ou JSON da aba ativa usando dados e graficos j
 
 Observacoes:
 
-- tabela exportada usa `Horario`, `Indicador`, `Valor` e `Status`
-- unidade e formatada junto ao valor
-- layout do PDF prioriza graficos em coluna unica para reduzir cortes em A4 retrato
+- PDF usa resumo executivo, alertas, graficos otimizados e tabela resumida por horario
+- PDF junta Temperatura e Sensacao termica no mesmo grafico quando possivel
+- JSON preserva tabela detalhada com `Horario`, `Indicador`, `Valor` e `Status`
+- layout do PDF prioriza blocos compactos em coluna unica para reduzir cortes em A4 retrato
 - exportacao JSON inclui metadados, resumo, tabela e dados brutos filtrados
 
 Dependencias diretas:

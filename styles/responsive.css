@@ -78,7 +78,7 @@
     .toolbar-group {
         width: 100%;
         display: grid;
-        grid-template-columns: 1fr auto;
+        grid-template-columns: minmax(0, 1fr) clamp(124px, 36vw, 142px);
         gap: 0.5rem;
     }
 
@@ -89,6 +89,12 @@
     .date-picker {
         width: 100%;
         min-width: 0;
+    }
+
+    .toolbar-button {
+        width: 100%;
+        min-width: 0;
+        white-space: nowrap;
     }
 
     .export-format-toggle,
@@ -102,7 +108,6 @@
 
     .toolbar-button--export {
         grid-column: 2;
-        min-width: 118px;
     }
 
     .charts-grid {

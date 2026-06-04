@@ -138,6 +138,8 @@ Contem:
 - credenciais/configuracao do app Firebase
 - `colors`
 - `comfortBand`
+- `humidityComfortBand`
+- `aquariumComfortBand`
 - `firebasePaths`
 - `ids`
 - `fields`
@@ -344,15 +346,17 @@ Fluxo:
 - controle `name="exportFormat"` define PDF ou JSON e atualiza a label do botao
 - coleta dados da aba ativa
 - filtra dados pela data selecionada
-- cria capa compacta com cabecalho e indice
-- gera cards de resumo
-- captura graficos existentes via `canvas.toDataURL`
-- monta tabela detalhada com `Horario`, `Indicador`, `Valor` e `Status`
-- junta a unidade no valor e mostra o horario apenas na primeira linha de cada grupo de indicadores
-- renderiza os graficos em coluna unica compacta para caber pelo menos 3 por pagina
+- cria resumo executivo com cabecalho, metadados, cards principais e alertas do dia
+- gera cards de resumo para as metricas principais e ciclo solar
+- gera graficos temporarios otimizados para PDF quando precisa juntar metricas
+- junta Temperatura e Sensacao termica no mesmo grafico quando ambas existem
+- captura ciclo solar existente via `canvas.toDataURL`
+- monta tabela resumida com uma linha por horario e status geral
+- mantem tabela detalhada original no JSON
+- renderiza os graficos em coluna unica compacta, com legenda e estatisticas de min/max/media quando possivel
 - usa html2canvas para capturar cabecalho, resumo, graficos e tabela
 - usa jsPDF para montar paginas A4 manualmente
-- inicia resumo, graficos e tabela em paginas proprias
+- usa pagina 1 para resumo executivo, pagina 2 para graficos e pagina 3 para tabela resumida
 - mantem graficos como blocos inteiros e permite quebra apenas na tabela longa
 - adiciona rodape com pagina atual/total
 - quando formato e JSON, baixa metadados, resumo, tabela e dados brutos filtrados via Blob

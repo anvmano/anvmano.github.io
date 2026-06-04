@@ -39,7 +39,12 @@
             scales: {
                 x: {
                     grid: { color: colors.grid, drawBorder: false },
-                    ticks: { color: colors.text, font: { size: 11 } },
+                    ticks: {
+                        color: colors.text,
+                        font: { size: 11 },
+                        minRotation: 45,
+                        maxRotation: 45,
+                    },
                 },
                 y: {
                     grid: { color: colors.grid, drawBorder: false },
@@ -63,10 +68,58 @@
 
     function shouldShowComfortBand(key, suffix) {
         const normalizedKey = key.toLowerCase();
+        if (suffix === "%" && (
+            normalizedKey.includes("umidade") ||
+            normalizedKey.includes("humidity")
+        )) {
+            return true;
+        }
+
         return suffix === "°" && (
             normalizedKey.includes("temperatura") ||
             normalizedKey.includes("sensacao")
         );
+    }
+
+    function getNumericValue(value) {
+        if (value === null || value === undefined || value === "") return null;
+        const number = Number(value);
+        return Number.isFinite(number) ? number : null;
+    }
+
+    function getDataScaleBounds(values) {
+        const numericValues = (values || [])
+            .map(getNumericValue)
+            .filter(value => value !== null);
+
+        if (!numericValues.length) return {};
+
+        const min = Math.min(...numericValues);
+        const max = Math.max(...numericValues);
+        const range = max - min;
+        const padding = range > 0 ? Math.max(range * 0.12, 0.1) : 1;
+
+        return {
+            min: min - padding,
+            max: max + padding,
+        };
+    }
+
+    function clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+    }
+
+    function formatAxisTick(value, suffix) {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return value;
+
+        const absolute = Math.abs(number);
+        const decimals = absolute < 10 ? 2 : 1;
+        const formatted = number
+            .toFixed(decimals)
+            .replace(/\.?0+$/, "");
+
+        return `${formatted}${suffix || ""}`;
     }
 
     const comfortBandPlugin = {
@@ -77,10 +130,17 @@
             const area = chart.chartArea;
             if (!band || !yScale || !area) return;
 
-            const yMin = yScale.getPixelForValue(band.min);
-            const yMax = yScale.getPixelForValue(band.max);
+            const visibleMin = Math.min(yScale.min, yScale.max);
+            const visibleMax = Math.max(yScale.min, yScale.max);
+            const bandMin = Math.max(band.min, visibleMin);
+            const bandMax = Math.min(band.max, visibleMax);
+            if (bandMin >= bandMax) return;
+
+            const yMin = yScale.getPixelForValue(bandMin);
+            const yMax = yScale.getPixelForValue(bandMax);
             const top = Math.min(yMin, yMax);
             const height = Math.abs(yMax - yMin);
+            if (height <= 0) return;
 
             const ctx = chart.ctx;
             ctx.save();
@@ -89,10 +149,16 @@
             ctx.strokeStyle = "rgba(52, 211, 153, 0.20)";
             ctx.setLineDash([4, 4]);
             ctx.beginPath();
-            ctx.moveTo(area.left, yMin);
-            ctx.lineTo(area.right, yMin);
-            ctx.moveTo(area.left, yMax);
-            ctx.lineTo(area.right, yMax);
+            if (band.min >= visibleMin && band.min <= visibleMax) {
+                const lineMin = yScale.getPixelForValue(band.min);
+                ctx.moveTo(area.left, lineMin);
+                ctx.lineTo(area.right, lineMin);
+            }
+            if (band.max >= visibleMin && band.max <= visibleMax) {
+                const lineMax = yScale.getPixelForValue(band.max);
+                ctx.moveTo(area.left, lineMax);
+                ctx.lineTo(area.right, lineMax);
+            }
             ctx.stroke();
             ctx.restore();
         }
@@ -123,8 +189,9 @@
 
         const { hours, [key]: chartData } = ClimateData.extractData(data, [key]);
 
-        const hasPoints = Array.isArray(chartData) && chartData.some(value => Number.isFinite(Number(value)));
+        const hasPoints = Array.isArray(chartData) && chartData.some(value => getNumericValue(value) !== null);
         if (!hasPoints) {
+            canvasCtx.clearRect(0, 0, canvasCtx.canvas.width, canvasCtx.canvas.height);
             if (onEmpty) onEmpty();
             return null;
         }
@@ -134,6 +201,8 @@
         const gradient = canvasCtx.createLinearGradient(0, 0, 0, 220);
         gradient.addColorStop(0, color + '33');
         gradient.addColorStop(1, color + '00');
+        const showComfortBand = shouldShowComfortBand(key, yAxisSuffix);
+        const dataBounds = getDataScaleBounds(chartData);
 
         const options = mergeDeep(defaults, {
             plugins: {
@@ -149,6 +218,8 @@
             },
             scales: {
                 y: {
+                    min: dataBounds.min,
+                    max: dataBounds.max,
                     title: {
                         display: !!yAxisTitle,
                         text: yAxisTitle,
@@ -157,7 +228,7 @@
                     },
                     ticks: {
                         precision: 1,
-                        callback: v => v + (yAxisSuffix || "")
+                        callback: v => formatAxisTick(v, yAxisSuffix)
                     }
                 }
             }
@@ -186,7 +257,7 @@
             options
         });
 
-        if (shouldShowComfortBand(key, yAxisSuffix)) {
+        if (showComfortBand) {
             chart.$comfortBand = comfortBand;
             chart.update();
         }

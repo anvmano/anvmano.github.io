@@ -64,6 +64,7 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Swipe touch entre abas segue `Sala ⇄ Quarto ⇄ Aquario`; esquerda avanca, direita volta, extremidades nao mudam.
 - Exportacao PDF/JSON deve reutilizar `latestData`, `selectedDate`, aba ativa e `chartInstances`; nao deve reconsultar Firebase.
 - Exportacao PDF deve montar paginas A4 manualmente com html2canvas + jsPDF, evitando paginacao automatica que pode cortar conteudo.
+- PDF deve manter tema escuro, usar resumo executivo na primeira pagina, juntar temperatura e sensacao quando possivel, e usar tabela resumida por horario.
 - Aliases solares devem permanecer centralizados em `SOLAR_FIELD_ALIASES`.
 
 ## Nunca altere sem revisar

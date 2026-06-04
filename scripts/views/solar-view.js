@@ -10,11 +10,11 @@
         ui.clearChartMessage(ids.chartContainers.solarToday);
 
         const historyData = ClimateData.filterDataByDays(data, 365, selectedDate, false);
-        createSunriseSunsetChart({ data: historyData, chartInstances, defaults, colors, ui });
+        createSunriseSunsetChart({ data: historyData, selectedDate, chartInstances, defaults, colors, ui });
         createSolarTodayChart({ data, selectedDate, chartInstances, defaults, colors, ui });
     }
 
-    function createSunriseSunsetChart({ data, chartInstances, defaults, colors, ui }) {
+    function createSunriseSunsetChart({ data, selectedDate, chartInstances, defaults, colors, ui }) {
         const id = sunHistoryChart.canvas.id;
         const chart = ClimateSolar.createSunriseSunsetChart({
             data,
@@ -22,7 +22,7 @@
             existingChart: chartInstances[id],
             defaults,
             colors,
-            onEmpty: () => ui.renderChartMessage(ids.chartContainers.sunHistory, "Sem histórico solar recente.")
+            onEmpty: () => ui.renderChartMessage(ids.chartContainers.sunHistory, `Sem dados de nascer e pôr do sol em ${selectedDate.replace(/-/g, "/")}.`)
         });
         if (chart) chartInstances[id] = chart;
     }
@@ -36,7 +36,7 @@
             existingChart: chartInstances[id],
             defaults,
             colors,
-            onEmpty: () => ui.renderChartMessage(ids.chartContainers.solarToday, `Sem dados suficientes para o ciclo solar em ${selectedDate.replace(/-/g, "/")}.`)
+            onEmpty: () => ui.renderChartMessage(ids.chartContainers.solarToday, `Sem dados de ciclo solar em ${selectedDate.replace(/-/g, "/")}.`)
         });
         if (chart) chartInstances[id] = chart;
     }
