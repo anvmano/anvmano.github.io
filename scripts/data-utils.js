@@ -17,7 +17,7 @@
         if (!Number.isFinite(numericValue)) return "--";
 
         const unit = getMeasurementUnit(key);
-        return unit ? `${numericValue.toFixed(2)} ${unit}` : numericValue.toFixed(2);
+        return unit ? `${numericValue.toFixed(2)}${unit}` : numericValue.toFixed(2);
     }
 
     function dataAtual() {
