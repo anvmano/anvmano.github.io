@@ -115,15 +115,22 @@
 
         let touchStartX = 0;
         let touchStartY = 0;
+        let ignoreSwipe = false;
 
         container.addEventListener("touchstart", event => {
             const touch = event.touches[0];
             if (!touch) return;
+            ignoreSwipe = shouldIgnoreTabSwipe(event.target);
             touchStartX = touch.clientX;
             touchStartY = touch.clientY;
         }, { passive: true });
 
         container.addEventListener("touchend", event => {
+            if (ignoreSwipe) {
+                ignoreSwipe = false;
+                return;
+            }
+
             const touch = event.changedTouches[0];
             if (!touch) return;
 
@@ -143,6 +150,21 @@
 
             openTab(nextTab);
         }, { passive: true });
+    }
+
+    function shouldIgnoreTabSwipe(target) {
+        const explicitInteractiveArea = target?.closest?.(".table-wrapper, .weekly-heatmap, .hourly-heatmap, .calendar-heatmap");
+        if (explicitInteractiveArea) return true;
+
+        let element = target instanceof Element ? target : null;
+        while (element && !element.classList.contains("container")) {
+            const style = window.getComputedStyle(element);
+            const canScrollHorizontally = /(auto|scroll)/.test(style.overflowX) && element.scrollWidth > element.clientWidth;
+            if (canScrollHorizontally) return true;
+            element = element.parentElement;
+        }
+
+        return false;
     }
 
     function setupCollapsibleSections() {

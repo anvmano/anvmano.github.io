@@ -12,9 +12,18 @@
         return window.AppConfig?.measurementUnits?.[key] || "";
     }
 
-    function formatTableValue(key, value) {
+    function normalizeMeasurementValue(key, value) {
         const numericValue = Number(value);
-        if (!Number.isFinite(numericValue)) return "--";
+        if (!Number.isFinite(numericValue)) return null;
+
+        if (key === "TDS") return numericValue / 10;
+        if (key === "Turbidez") return numericValue / 1000;
+        return numericValue;
+    }
+
+    function formatTableValue(key, value) {
+        const numericValue = normalizeMeasurementValue(key, value);
+        if (numericValue === null) return "--";
 
         const unit = getMeasurementUnit(key);
         return unit ? `${numericValue.toFixed(2)}${unit}` : numericValue.toFixed(2);
@@ -139,8 +148,7 @@
                     if (!item || typeof item !== "object") continue;
                     hours.push(decimalHour);
                     keys.forEach(dataKey => {
-                        const numericValue = Number(item[dataKey]);
-                        extractedData[dataKey].push(Number.isFinite(numericValue) ? numericValue : null);
+                        extractedData[dataKey].push(normalizeMeasurementValue(dataKey, item[dataKey]));
                     });
                 }
             }
@@ -179,6 +187,7 @@
         convertFirebaseDateToInput,
         createTables,
         extractData,
+        normalizeMeasurementValue,
         mapRange,
         formatTime,
         formatHoursArray,

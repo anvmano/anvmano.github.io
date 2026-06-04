@@ -137,7 +137,7 @@ A validação verifica:
 ## Funcionalidades
 
 - Abas para Sala, Quarto e Aquário.
-- Navegação por clique e swipe touch horizontal.
+- Navegação por clique e swipe touch horizontal, sem capturar a rolagem lateral de tabelas e heatmaps.
 - Seletor global de data.
 - Persistência da aba ativa em `localStorage`.
 - Gráficos de temperatura, sensação térmica, umidade, qualidade do ar e aquário.
@@ -150,7 +150,8 @@ A validação verifica:
 - Zoom dos gráficos.
 - Tabelas colapsáveis.
 - Tabelas com unidades nos valores, sem espaco antes da unidade, como `26.40°C`, `57.50%`, `8.66ppm`, `1.20NTU` e `930.60hPa`.
-- Indicador astronômico no cabeçalho com estado de dia/noite e tooltip com nascer/pôr do sol.
+- Leituras do Aquário normalizadas antes da exibição: TDS dividido por 10 e Turbidez dividido por 1000.
+- Indicador astronômico no cabeçalho, alinhado ao tamanho do relógio, com estado de dia/noite e tooltip com nascer/pôr do sol.
 - Exportação da aba ativa em PDF ou JSON.
 
 ## Exportação

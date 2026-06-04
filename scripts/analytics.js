@@ -70,8 +70,8 @@
                     const item = timeData[itemKey];
                     if (!item || typeof item !== "object") continue;
 
-                    const value = Number(item[metricKey]);
-                    if (Number.isFinite(value)) values.push(value);
+                    const value = ClimateData.normalizeMeasurementValue(metricKey, item[metricKey]);
+                    if (value !== null) values.push(value);
                 }
             }
         }
@@ -187,8 +187,8 @@
                     const item = timeData[itemKey];
                     if (!item || typeof item !== "object") continue;
 
-                    const value = Number(item[metricKey]);
-                    if (!Number.isFinite(value)) continue;
+                    const value = ClimateData.normalizeMeasurementValue(metricKey, item[metricKey]);
+                    if (value === null) continue;
 
                     records.push({
                         firebaseDate,

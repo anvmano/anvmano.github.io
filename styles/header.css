@@ -42,6 +42,8 @@ h1 {
 }
 
 .header-status {
+    --header-status-chip-width: 86px;
+    --header-status-chip-height: 36px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -50,13 +52,13 @@ h1 {
 .astro-indicator {
     --astro-progress: 0.5;
     --astro-x: 50%;
-    --astro-y: 14px;
+    --astro-y: 3px;
     --orb-color: #facc15;
     --orb-glow: rgba(250, 204, 21, 0.45);
     --track-color: rgba(56, 189, 248, 0.18);
     position: relative;
-    width: 108px;
-    height: 36px;
+    width: var(--header-status-chip-width);
+    height: var(--header-status-chip-height);
     flex-shrink: 0;
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
@@ -67,9 +69,9 @@ h1 {
 .astro-indicator__track {
     position: absolute;
     left: 10px;
-    right: 44px;
-    bottom: 8px;
-    height: 25px;
+    right: 10px;
+    bottom: 4px;
+    height: 28px;
     border-top: 1px solid var(--track-color);
     border-radius: 999px 999px 0 0;
 }
@@ -88,18 +90,7 @@ h1 {
 }
 
 .astro-indicator__label {
-    position: absolute;
-    right: 9px;
-    top: 50%;
-    transform: translateY(-50%);
-    max-width: 38px;
-    color: var(--text-secondary);
-    font-size: 0.68rem;
-    font-weight: 700;
-    line-height: 1;
-    text-align: right;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    display: none;
 }
 
 .astro-indicator--day {
@@ -146,7 +137,8 @@ h1 {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 36px;
+    min-width: var(--header-status-chip-width);
+    height: var(--header-status-chip-height);
     font-size: 0.8rem;
     font-weight: 500;
     color: var(--text-secondary);

@@ -232,7 +232,7 @@ function getAstroState(now = new Date()) {
     const rangeEnd = isSolarPath ? events.dusk : events.sunrise + 24;
     const adjustedHour = !isSolarPath && hour < events.sunrise ? hour + 24 : hour;
     const progress = Math.min(1, Math.max(0, (adjustedHour - rangeStart) / (rangeEnd - rangeStart || 1)));
-    const y = 5 + Math.sin(progress * Math.PI) * 11;
+    const y = 3 + Math.sin(progress * Math.PI) * 12;
 
     return {
         mode,
@@ -249,7 +249,6 @@ function updateAstroIndicator() {
     if (!indicator) return;
 
     const state = getAstroState();
-    const label = state.mode === "night" ? "Noite" : state.mode === "twilight" ? "Solar" : "Dia";
     const labelElement = indicator.querySelector(".astro-indicator__label");
 
     indicator.classList.remove("astro-indicator--day", "astro-indicator--twilight", "astro-indicator--night");
@@ -258,7 +257,7 @@ function updateAstroIndicator() {
     const track = indicator.querySelector(".astro-indicator__track");
     if (track) track.style.setProperty("--astro-x", state.x);
     indicator.style.setProperty("--astro-y", state.y);
-    if (labelElement) labelElement.textContent = label;
+    if (labelElement) labelElement.textContent = "";
     indicator.title = getAstroDescription(state);
     indicator.setAttribute("aria-label", indicator.title);
 }

@@ -61,7 +61,7 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Faixa de conforto: 20 a 26 em graficos de temperatura/sensacao com sufixo `°`.
 - Zênite solar usa campos enviados pelo Firebase quando existem; caso contrario usa meio entre nascer e por do sol.
 - Aba ativa e salva em `localStorage.activeTab`.
-- Swipe touch entre abas segue `Sala ⇄ Quarto ⇄ Aquario`; esquerda avanca, direita volta, extremidades nao mudam.
+- Swipe touch entre abas segue `Sala ⇄ Quarto ⇄ Aquario`; esquerda avanca, direita volta, extremidades nao mudam, e gestos iniciados em tabelas/heatmaps/areas com rolagem horizontal nao trocam aba.
 - Exportacao PDF/JSON deve reutilizar `latestData`, `selectedDate`, aba ativa e `chartInstances`; nao deve reconsultar Firebase.
 - Exportacao PDF deve montar paginas A4 manualmente com html2canvas + jsPDF, evitando paginacao automatica que pode cortar conteudo.
 - PDF deve manter tema escuro, usar resumo executivo na primeira pagina, juntar temperatura e sensacao quando possivel, e usar tabela resumida por horario.

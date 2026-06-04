@@ -87,6 +87,7 @@ Arquivos principais:
 - Cada id em `AppConfig.ids.chartContainers` deve existir no `.chart-card` individual correspondente.
 - Tabelas mostram ate 24 linhas.
 - Valores das tabelas exibem unidades sem espaco antes da unidade, como `26.40°C`, `57.50%`, `8.66ppm`, `1.20NTU` e `930.60hPa`.
+- Leituras do Aquario sao normalizadas em `ClimateData.normalizeMeasurementValue`: TDS divide por 10 e Turbidez divide por 1000 antes de tabelas, cards, graficos e PDF.
 - Faixa de conforto geral: 20°C a 26°C; umidade usa 40% a 60%; Aquario usa faixa propria de 25°C a 27°C.
 - Graficos com faixa de conforto devem priorizar a variacao medida na escala Y com `min/max` derivados dos dados validos; `null`/vazio nao pode virar zero na escala.
 - Horarios exibidos em graficos comuns, tabelas e tooltips seguem formato digital com dois digitos (`HH:mm`).
@@ -95,8 +96,8 @@ Arquivos principais:
 - Graficos comuns de series temporais usam horarios no eixo X em diagonal; graficos solares e heatmaps preservam seu layout especifico.
 - Mensagens de graficos vazios devem seguir `Sem dados de <tipo_grafico> em <DD/MM/AAAA>`.
 - Aba ativa e persistida em `localStorage.activeTab`.
-- Swipe touch segue o fluxo Sala ⇄ Quarto ⇄ Aquario. Arrastar para esquerda avanca; arrastar para direita volta; extremidades nao mudam de aba.
-- Indicador astronomico do header mostra tooltip com periodo atual, origem dos dados e horarios de nascer/por do sol.
+- Swipe touch segue o fluxo Sala ⇄ Quarto ⇄ Aquario. Arrastar para esquerda avanca; arrastar para direita volta; extremidades nao mudam de aba. Gestos iniciados em tabelas, heatmaps ou qualquer area com rolagem horizontal nao trocam de aba.
+- Indicador astronomico do header e um chip visual no tamanho aproximado do relogio, sem texto interno; a descricao fica no tooltip/`aria-label` com periodo atual, origem dos dados e horarios de nascer/por do sol.
 - Solar usa data selecionada para ciclo do dia e filtro de 365 dias para historico.
 - Exportacao PDF/JSON usa automaticamente aba ativa, data selecionada, `latestData` e `chartInstances`; nao reconsulta Firebase.
 - Controle `PDF/JSON` em `name="exportFormat"` altera a label do botao `#btnExportData`.

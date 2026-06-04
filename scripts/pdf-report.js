@@ -837,8 +837,8 @@
                     metrics.forEach((metric, metricIndex) => {
                         const fieldName = fields[metric.key];
                         const rawValue = item[fieldName];
-                        const numericValue = Number(rawValue);
-                        const hasValue = Number.isFinite(numericValue);
+                        const numericValue = ClimateData.normalizeMeasurementValue(fieldName, rawValue);
+                        const hasValue = numericValue !== null;
                         rows.push({
                             time: metricIndex === 0 ? `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}` : "",
                             fullTime: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,

@@ -142,6 +142,30 @@ Se alterada: tabelas podem voltar a mostrar numeros sem unidade ou unidade incor
 
 Criticidade: Media.
 
+## Regra: normalizacao de leitura do Aquario
+
+Arquivo: `scripts/data-utils.js`
+
+Metodo: `normalizeMeasurementValue`
+
+Objetivo: converter leituras brutas do Firebase para o valor exibido ao usuario.
+
+Entradas: campo e valor bruto.
+
+Saidas:
+
+- `TDS`: valor bruto dividido por 10, exibido em `ppm`.
+- `Turbidez`: valor bruto dividido por 1000, exibido em `NTU`.
+- Demais campos: valor numerico sem divisor.
+
+Impacto: tabelas, cards de estatisticas, graficos e exportacao PDF.
+
+Dependencias: nomes dos campos em `scripts/config.js`.
+
+Se alterada: TDS e Turbidez podem aparecer com escala incorreta.
+
+Criticidade: Alta.
+
 ## Regra: estatisticas por metrica
 
 Arquivo: `scripts/analytics.js`
@@ -319,6 +343,8 @@ Entradas:
 
 Saidas: estado visual em `#astroIndicator` com classes `astro-indicator--day`, `astro-indicator--twilight` ou `astro-indicator--night`.
 
+Rotulo visivel: nenhum texto interno; o pill fica apenas visual, com tamanho aproximado do relogio.
+
 Tooltip: mostra o periodo atual, origem usada e horarios solares, por exemplo `Noite atual (dados solares). Nascer 6:40, pôr 17:48.`.
 
 Impacto: leitura rapida do ciclo atual no topo da pagina.
@@ -396,6 +422,7 @@ Saidas:
 - swipe para direita em Aquario abre Quarto
 - swipe para direita em Quarto abre Sala
 - swipe para direita em Sala nao faz nada
+- gestos iniciados em tabelas, heatmaps ou areas com rolagem horizontal nao trocam de aba
 
 Impacto: navegacao mobile por touch.
 

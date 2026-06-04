@@ -187,6 +187,7 @@ Funcoes:
 - `convertFirebaseDateToInput(dateString)`
 - `createTables(headers, data)`
 - `extractData(data, keys)`
+- `normalizeMeasurementValue(key, value)`
 - `mapRange(value, inMin, inMax, outMin, outMax)`
 - `formatTime(value)`
 - `formatHoursArray(hours)`
@@ -297,6 +298,7 @@ Navegacao por touch:
 - gesto para esquerda avanca uma aba quando existe proxima aba
 - gesto para direita volta uma aba quando existe aba anterior
 - nas extremidades, Sala para direita e Aquario para esquerda nao fazem nada
+- gestos iniciados em tabelas, heatmaps ou areas com rolagem horizontal sao ignorados pelo swipe de abas
 
 ### ClimateZoom
 
@@ -453,7 +455,7 @@ Graficos comuns:
 
 - `DOMContentLoaded`: inicializa aplicacao.
 - `click` nos tabs: troca aba.
-- `touchstart`/`touchend` no container principal: troca aba por swipe horizontal no fluxo Sala ⇄ Quarto ⇄ Aquario.
+- `touchstart`/`touchend` no container principal: troca aba por swipe horizontal no fluxo Sala ⇄ Quarto ⇄ Aquario, exceto quando o gesto inicia em tabela, heatmap ou area rolavel horizontal.
 - `change` no input `#selectedDate`: converte data e rerenderiza.
 - `click` no botao `#btnToday`: volta para data atual.
 - `click` em `.collapsible-trigger`: expande/recolhe secao.
