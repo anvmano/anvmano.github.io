@@ -1,10 +1,12 @@
 'use strict';
 
 (function () {
+    let app = null;
     let database = null;
     let refFn = null;
     let onValueFn = null;
     let pendingLoads = 0;
+    let appCheckInitialized = false;
 
     function setLoading(isLoading) {
         const el = document.getElementById("loadingBar");
@@ -38,10 +40,28 @@
             import(config.databaseUrl)
         ]);
 
-        const app = initializeApp(config.options);
+        app = initializeApp(config.options);
+        await initializeAppCheckIfConfigured();
+
         database = getDatabase(app);
         refFn = ref;
         onValueFn = onValue;
+    }
+
+    async function initializeAppCheckIfConfigured() {
+        const config = window.AppConfig.firebase;
+        if (appCheckInitialized || !config.recaptchaEnterpriseSiteKey || !config.appCheckUrl) return;
+
+        try {
+            const { initializeAppCheck, ReCaptchaEnterpriseProvider } = await import(config.appCheckUrl);
+            initializeAppCheck(app, {
+                provider: new ReCaptchaEnterpriseProvider(config.recaptchaEnterpriseSiteKey),
+                isTokenAutoRefreshEnabled: true,
+            });
+            appCheckInitialized = true;
+        } catch (error) {
+            console.warn("App Check não foi inicializado.", error);
+        }
     }
 
     function listenToPath(path, onData, onError) {
@@ -67,6 +87,7 @@
     window.FirebaseService = {
         initialize,
         listenToPath,
+        getApp: () => app,
         setLoading,
         trackLoadStart,
         trackLoadEnd,

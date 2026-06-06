@@ -150,4 +150,38 @@
 
     .table-wrapper th,
     .table-wrapper td { padding: 8px 10px; font-size: 0.75rem; }
+
+    .ai-chat {
+        right: 12px;
+        bottom: 12px;
+    }
+
+    .ai-chat__toggle {
+        min-height: 40px;
+        padding: 0 14px 0 10px;
+    }
+
+    .ai-chat__panel {
+        right: -4px;
+        bottom: 52px;
+        width: calc(100vw - 24px);
+        max-height: calc(100vh - 100px);
+    }
+
+    .ai-chat__quick-actions {
+        grid-template-columns: 1fr 1fr;
+        padding-inline: 12px;
+    }
+
+    .ai-chat__quick-actions button {
+        font-size: 0.72rem;
+    }
+
+    .ai-chat__messages {
+        min-height: 190px;
+    }
+
+    .ai-chat__form {
+        align-items: stretch;
+    }
 }

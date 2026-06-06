@@ -10,6 +10,8 @@ graph TD
     HTML --> Solar[ClimateSolar]
     HTML --> Charts[ClimateCharts]
     HTML --> Firebase[FirebaseService]
+    HTML --> AI[ClimateAIService]
+    HTML --> Chat[ClimateChat]
     HTML --> UI[ClimateUI]
     HTML --> Zoom[ClimateZoom]
     HTML --> Pdf[ClimatePdfReport]
@@ -25,6 +27,7 @@ graph TD
     Main --> Solar
     Main --> Charts
     Main --> Firebase
+    Main --> Chat
     Main --> UI
     Main --> Zoom
     Main --> Pdf
@@ -34,6 +37,12 @@ graph TD
     Main --> SolarView
 
     Firebase --> FirebaseSDK[Firebase SDK CDN]
+    Firebase --> AppCheck[Firebase App Check]
+    AI --> Firebase
+    AI --> FirebaseAI[Firebase AI Logic]
+    Chat --> AI
+    Chat --> Data
+    Chat --> Solar
     Quarto --> Data
     Quarto --> Analytics
     Quarto --> Charts
@@ -123,6 +132,7 @@ Arquivos:
 - `advanced-views.css`: colapsaveis, visualizacoes climaticas e heatmaps.
 - `zoom.css`: overlay de zoom.
 - `tables.css`: tabelas.
+- `chat.css`: painel, botao flutuante, mensagens e atalhos do chat com IA.
 - `responsive.css`: regras mobile.
 
 Impacto da alteracao: Medio a Alto, dependendo do arquivo e seletor.
@@ -153,6 +163,8 @@ Dependencias diretas:
 - `ClimateSolar`
 - `ClimateCharts`
 - `FirebaseService`
+- `ClimateAIService`
+- `ClimateChat`
 - `ClimateUI`
 - `ClimateZoom`
 - `QuartoView`
@@ -174,6 +186,7 @@ Quem e chamado:
 - `ClimateUI.setupCollapsibleSections`
 - `ClimateZoom.setup`
 - `ClimatePdfReport.setup`
+- `ClimateChat.setup`
 - `ClimateSolar.getSolarEventsForSelectedDate`
 - views.
 
@@ -181,7 +194,7 @@ Impacto da alteracao: Critico.
 
 ## scripts/firebase-service.js
 
-Responsabilidade: carregar SDK Firebase, conectar database, criar listeners, controlar loading.
+Responsabilidade: carregar SDK Firebase, conectar database, inicializar App Check quando configurado, criar listeners e controlar loading.
 
 Dependencias diretas:
 
@@ -189,13 +202,52 @@ Dependencias diretas:
 - Firebase SDK CDN
 - DOM `#loadingBar`
 
-Dependencias indiretas: Realtime Database.
+Dependencias indiretas: Realtime Database e Firebase App Check.
+
+Quem chama: `scripts/main.js`, `scripts/ai-service.js`.
+
+Quem e chamado: Firebase SDK (`initializeApp`, `getDatabase`, `ref`, `onValue`) e Firebase App Check (`initializeAppCheck`, `ReCaptchaEnterpriseProvider`).
+
+Impacto da alteracao: Critico.
+
+## scripts/ai-service.js
+
+Responsabilidade: inicializar Firebase AI Logic e enviar prompts ao modelo configurado.
+
+Dependencias diretas:
+
+- `FirebaseService.getApp`
+- `AppConfig.firebase.aiUrl`
+- `AppConfig.firebase.aiModel`
+
+Dependencias indiretas: Firebase AI Logic, Gemini Developer API e Firebase App Check.
+
+Quem chama: `scripts/chat.js`.
+
+Quem e chamado: Firebase AI Logic (`getAI`, `getGenerativeModel`, `GoogleAIBackend`).
+
+Impacto da alteracao: Alto. Pode quebrar o chat ou gerar falhas relacionadas a modelo, App Check ou API Gemini.
+
+## scripts/chat.js
+
+Responsabilidade: renderizar painel do chat, controlar mensagens, classificar intencao com IA, validar periodo/ambiente/metrica, calcular resultados em JavaScript e pedir ao Gemini apenas a redacao final.
+
+Dependencias diretas:
+
+- DOM `#aiChat*`
+- botoes `data-chat-question`
+- `ClimateAIService`
+- `ClimateData`
+- `ClimateSolar`
+- contexto recebido de `scripts/main.js`
+
+Dependencias indiretas: `latestData`, aba ativa, data selecionada, data/periodo mencionados na pergunta, ambiente mencionado na pergunta, classificacao curta do Gemini e eventos solares carregados.
 
 Quem chama: `scripts/main.js`.
 
-Quem e chamado: Firebase SDK (`initializeApp`, `getDatabase`, `ref`, `onValue`).
+Quem e chamado: `ClimateAIService.generateText`.
 
-Impacto da alteracao: Critico.
+Impacto da alteracao: Alto. Pode afetar consumo de tokens, privacidade dos dados enviados ao modelo, ambiente/data/periodo usados na resposta, calculos de media/maxima/minima/comparacao e respostas do chat.
 
 ## scripts/data-utils.js
 
@@ -297,6 +349,7 @@ Observacoes:
 
 - PDF usa resumo executivo, alertas, graficos otimizados e tabela resumida por horario
 - PDF junta Temperatura e Sensacao termica no mesmo grafico quando possivel
+- PDF tem contrato por aba: Sala e Quarto incluem ciclo solar; Aquario nao inclui ciclo solar; Sala usa tabela MQ135.
 - JSON preserva tabela detalhada com `Horario`, `Indicador`, `Valor` e `Status`
 - layout do PDF prioriza blocos compactos em coluna unica para reduzir cortes em A4 retrato
 - exportacao JSON inclui metadados, resumo, tabela e dados brutos filtrados
@@ -396,6 +449,7 @@ graph TD
     DOMContentLoaded --> SetupCollapsible
     DOMContentLoaded --> SetupZoom
     DOMContentLoaded --> SetupPdfReport
+    DOMContentLoaded --> SetupChat
     DOMContentLoaded --> SetupFirebase
     SetupFirebase --> FirebaseInitialize
     SetupFirebase --> ListenRoom
@@ -431,6 +485,10 @@ graph TD
     PdfReport --> Html2Canvas
     PdfReport --> JsPDF
     PdfReport --> JsonDownload[Blob URL]
+    SetupChat --> ClimateChat
+    ClimateChat --> LatestData
+    ClimateChat --> ClimateAIService
+    ClimateAIService --> FirebaseAI
 ```
 
 ## Mapa de Impacto

@@ -4,7 +4,7 @@ Voce esta trabalhando no projeto Estacao Climática.
 
 ## Objetivo do sistema
 
-Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no Firebase Realtime Database. O sistema mostra abas para Sala, Quarto e Aquario, alem de graficos solares dentro da aba Quarto e indicador astronomico no header. A pagina permite selecionar data, navegar por abas com click ou swipe touch, ver graficos, estatisticas, heatmaps, tabelas, ampliar graficos e exportar dados em PDF ou JSON da aba ativa.
+Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no Firebase Realtime Database. O sistema mostra abas para Sala, Quarto e Aquario, alem de graficos solares dentro da aba Quarto, indicador astronomico no header e chat com Firebase AI Logic. A pagina permite selecionar data, navegar por abas com click ou swipe touch, ver graficos, estatisticas, heatmaps, tabelas, ampliar graficos, perguntar sobre dados carregados e exportar dados em PDF ou JSON da aba ativa.
 
 ## Tecnologias
 
@@ -14,6 +14,8 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - html2canvas e jsPDF via CDN.
 - Firebase SDK modular via import dinamico.
 - Firebase Realtime Database.
+- Firebase App Check com reCAPTCHA Enterprise.
+- Firebase AI Logic com Gemini Developer API.
 - Sem framework frontend, sem backend local, sem testes automatizados e sem build tooling.
 
 ## Arquivos importantes
@@ -22,6 +24,8 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - `scripts/config.js`: Firebase, paths, ids, campos e cores.
 - `scripts/main.js`: orquestracao, listeners Firebase e renderizacao das views.
 - `scripts/firebase-service.js`: inicializacao Firebase e `onValue`.
+- `scripts/ai-service.js`: Firebase AI Logic.
+- `scripts/chat.js`: UI do chat, classificacao de intencao, calculos de consulta e redacao final com IA.
 - `scripts/data-utils.js`: datas, filtros, tabelas e extracao de series.
 - `scripts/chart-utils.js`: graficos comuns e fallback.
 - `scripts/analytics.js`: estatisticas e heatmaps.
@@ -40,7 +44,7 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 
 1. Scripts carregam em ordem no final de `index.html`.
 2. `scripts/main.js` valida todos os modulos globais.
-3. `DOMContentLoaded` inicializa UI, zoom e Firebase.
+3. `DOMContentLoaded` inicializa UI, zoom, chat e Firebase.
    Tambem inicializa `ClimatePdfReport.setup` para o botao `#btnExportData` e controle `name="exportFormat"`.
 4. Firebase escuta quatro paths:
    - `historico/Temperatura`
@@ -63,8 +67,11 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Aba ativa e salva em `localStorage.activeTab`.
 - Swipe touch entre abas segue `Sala ⇄ Quarto ⇄ Aquario`; esquerda avanca, direita volta, extremidades nao mudam, e gestos iniciados em tabelas/heatmaps/areas com rolagem horizontal nao trocam aba.
 - Exportacao PDF/JSON deve reutilizar `latestData`, `selectedDate`, aba ativa e `chartInstances`; nao deve reconsultar Firebase.
+- Chat com IA deve reutilizar `latestData`, `selectedDate` e aba ativa; nao deve enviar historicos completos ao modelo.
+- Chat deve usar Gemini para classificar a pergunta em JSON, JavaScript para validar/calcular resultados e Gemini apenas para redigir a resposta final.
+- Consultas de periodo no chat devem limitar no maximo 30 dias; `ultimos dias` usa 7 dias por padrao.
 - Exportacao PDF deve montar paginas A4 manualmente com html2canvas + jsPDF, evitando paginacao automatica que pode cortar conteudo.
-- PDF deve manter tema escuro, usar resumo executivo na primeira pagina, juntar temperatura e sensacao quando possivel, e usar tabela resumida por horario.
+- PDF deve manter tema escuro, usar resumo executivo na primeira pagina, juntar temperatura e sensacao quando possivel, usar tabela resumida por horario e respeitar o contrato por aba: Sala/Quarto com ciclo solar, Aquario sem ciclo solar, Sala com tabela MQ135.
 - Aliases solares devem permanecer centralizados em `SOLAR_FIELD_ALIASES`.
 
 ## Nunca altere sem revisar
@@ -77,6 +84,7 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Contrato de `ClimateCharts.createLineChart`.
 - Conversoes de data em `scripts/data-utils.js`.
 - Contrato de `ClimatePdfReport.setup` com `getContext`.
+- Contrato de `ClimateChat.setup` com `getContext`.
 
 ## Pontos de atencao
 

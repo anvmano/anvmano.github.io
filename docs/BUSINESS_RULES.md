@@ -112,7 +112,7 @@ Objetivo: traduzir alguns headers por `HEADER_LABELS`.
 
 Entradas: nomes de campo.
 
-Saidas: cabecalhos como Temperatura, Acetona, Alcool, Amonia.
+Saidas: cabecalhos como Temperatura, Acetona, Alcool, Amonia, Tolueno.
 
 Impacto: exibicao de tabelas.
 
@@ -345,7 +345,7 @@ Saidas: estado visual em `#astroIndicator` com classes `astro-indicator--day`, `
 
 Rotulo visivel: nenhum texto interno; o pill fica apenas visual, com tamanho aproximado do relogio.
 
-Tooltip: mostra o periodo atual, origem usada e horarios solares, por exemplo `Noite atual (dados solares). Nascer 6:40, pôr 17:48.`.
+Tooltip: mostra apenas os horarios solares principais, por exemplo `Nascer do sol: 06:40 · Pôr do sol: 17:50`.
 
 Impacto: leitura rapida do ciclo atual no topo da pagina.
 
@@ -476,9 +476,15 @@ Saidas:
 - cabecalho com aba, data consultada e data/hora de geracao
 - resumo executivo na primeira pagina com cards principais e alertas do dia
 - graficos otimizados para PDF, juntando Temperatura e Sensacao termica quando possivel
-- ciclo solar compacto
+- ciclo solar compacto apenas para Sala e Quarto
 - tabela resumida com uma linha por horario e status geral
 - rodape com Estacao Climatica, pagina atual/total e data/hora
+
+Contrato por aba:
+
+- Sala: cards de temperatura, sensacao termica, umidade, pressao e ciclo solar; graficos de Temperatura x Sensacao, Umidade, Pressao e Ciclo solar; tabela MQ135 com CO, CO2, Acetona, Alcool, Amonia e Tolueno.
+- Quarto: cards de temperatura, sensacao termica, umidade e ciclo solar; graficos de Temperatura x Sensacao, Umidade e Ciclo solar; tabela com Temperatura, Sensacao termica e Umidade.
+- Aquario: cards, graficos e tabela de Temperatura, PH, TDS e Turbidez; nao deve incluir card ou grafico de ciclo solar.
 
 Regras da tabela:
 
@@ -493,7 +499,7 @@ Regras de layout:
 - primeira pagina deve conter resumo executivo util, sem area vazia grande
 - graficos e tabela devem iniciar em paginas proprias
 - graficos devem ser renderizados em uma coluna compacta no PDF A4 retrato
-- pagina de graficos deve comportar Temperatura x Sensacao, Umidade e Ciclo Solar compacto quando houver dados
+- pagina de graficos deve respeitar o contrato da aba ativa
 - html2canvas deve usar as dimensoes reais do relatorio renderizado
 - jsPDF deve montar as paginas manualmente, adicionando cabecalho, resumo e graficos como blocos inteiros
 - somente a tabela longa pode ser fatiada entre paginas
@@ -526,6 +532,52 @@ Se alterada: exportacao pode quebrar quando houver sensor offline ou grafico vaz
 
 Criticidade: Alta.
 
+## Regra: chat com Firebase AI Logic
+
+Arquivos: `index.html`, `scripts/config.js`, `scripts/firebase-service.js`, `scripts/ai-service.js`, `scripts/chat.js`, `scripts/main.js`, `styles/chat.css`.
+
+Objetivo: permitir perguntas em linguagem natural sobre os dados ja carregados da estacao.
+
+Entradas:
+
+- pergunta digitada pelo usuario
+- atalho de pergunta em `data-chat-question`
+- aba ativa
+- data selecionada
+- intencao classificada em JSON pelo Gemini
+- `latestData`
+- eventos solares da data selecionada
+
+Saidas:
+
+- resposta textual do Gemini no painel de chat baseada em resultado ja calculado
+- mensagem de erro visivel quando Firebase AI Logic, App Check ou o modelo configurado nao estiverem disponiveis
+- envio da pergunta predefinida quando o usuario aciona um atalho
+
+Regra de contexto:
+
+- o chat deve usar a IA primeiro para classificar a intencao em JSON e depois usar JavaScript para buscar e calcular os dados
+- a IA nao deve calcular media, maxima, minima, delta, tendencia, dia mais frio/quente ou comparacoes; esses valores devem ser calculados no codigo
+- a resposta final da IA deve receber apenas o resultado estruturado calculado pelo JavaScript
+- o chat deve enviar ao modelo apenas uma classificacao curta ou o resultado calculado, nunca o historico completo do Firebase
+- nao enviar historicos completos, paths inteiros do Firebase, credenciais ou dados que nao sejam necessarios para responder
+- quando nao houver dado suficiente, a resposta deve informar que nao ha dados carregados para a pergunta
+- se a pergunta nao mencionar Sala, Quarto ou Aquario, usar a aba ativa como ambiente alvo
+- se a pergunta mencionar Sala, Quarto ou Aquario, usar o ambiente mencionado como alvo, mesmo que a aba ativa seja outra
+- se a pergunta nao mencionar data, usar a data selecionada no calendario da pagina
+- se a pergunta mencionar data em `DD/MM/AAAA`, `DD-MM-AAAA`, `hoje`, `ontem` ou `anteontem`, usar essa data como alvo sem alterar o calendario da pagina
+- periodos como `ultimos dias` devem usar 7 dias por padrao; periodos devem ser limitados a 30 dias
+- a classificacao de intencao pode retornar `ambientes`, `metricas`, `operacao`, `periodo`, `criterio`, `confianca`, `precisa_esclarecimento` e `solar`, mas nao deve receber historico completo nem responder a pergunta do usuario
+- as regras de ambiente e data valem para media, maxima, minima, delta, tendencia e qualquer parametro carregado no ambiente alvo
+
+Impacto: perguntas sobre media, maxima, minima, tendencia e eventos solares.
+
+Dependencias: Firebase App Check com reCAPTCHA Enterprise, Firebase AI Logic, `ClimateAIService`, `ClimateData`, `ClimateSolar`, `latestData`.
+
+Se alterada: chat pode consumir tokens demais, expor dados desnecessarios, responder sem base nos dados carregados ou falhar quando o App Check estiver com enforcement ativo.
+
+Criticidade: Alta.
+
 # REGRAS QUE NAO DEVEM SER ALTERADAS
 
 - Conversao de data HTML/Firebase sem revisar todos os filtros.
@@ -535,6 +587,7 @@ Criticidade: Alta.
 - Ordem de scripts em `index.html`.
 - Contrato de fallback em `ClimateCharts.createLineChart`.
 - Exportacao PDF/JSON deve reutilizar `latestData` e `chartInstances`, sem reconsultar Firebase.
+- Chat com IA deve reutilizar `latestData`, aba ativa e data selecionada, sem reconsultar Firebase nem enviar historico completo ao modelo.
 
 # MAPA DE IMPACTO
 
@@ -622,7 +675,8 @@ DOM + Chart.js
 - TDS: metrica do aquario.
 - PH: metrica do aquario.
 - Turbidez: metrica do aquario.
-- CO, CO2, Aceton, Alcohol, NH4: metricas da sala.
+- CO, CO2, Aceton, Alcohol, NH4, Toluen: metricas da sala/MQ135.
+- Toluen: campo Firebase exibido como Tolueno.
 - Sensacao termica: metrica de conforto termico.
 - Faixa de conforto: banda de 20 a 26 usada em graficos de temperatura/sensacao.
 
@@ -664,6 +718,18 @@ Leia:
 - `scripts/firebase-service.js`
 - `scripts/main.js`
 - `scripts/data-utils.js`
+
+## Alterar chat com IA
+
+Leia:
+
+- `scripts/chat.js`
+- `scripts/ai-service.js`
+- `scripts/firebase-service.js`
+- `scripts/config.js`
+- `scripts/main.js`
+- `index.html`
+- `styles/chat.css`
 
 ## Alterar campos dos sensores
 

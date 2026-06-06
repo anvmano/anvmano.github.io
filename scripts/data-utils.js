@@ -5,7 +5,8 @@
         temperaturaDS18B20: "Temperatura",
         Aceton: "Acetona",
         Alcohol: "Álcool",
-        NH4: "Amônia"
+        NH4: "Amônia",
+        Toluen: "Tolueno"
     };
 
     function getMeasurementUnit(key) {

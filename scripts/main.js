@@ -9,6 +9,8 @@ const FirebaseService = window.FirebaseService;
 const ClimateUI = window.ClimateUI;
 const ClimateZoom = window.ClimateZoom;
 const ClimatePdfReport = window.ClimatePdfReport;
+const ClimateAIService = window.ClimateAIService;
+const ClimateChat = window.ClimateChat;
 const QuartoView = window.QuartoView;
 const AquarioView = window.AquarioView;
 const SalaView = window.SalaView;
@@ -24,6 +26,8 @@ if (
     !ClimateUI ||
     !ClimateZoom ||
     !ClimatePdfReport ||
+    !ClimateAIService ||
+    !ClimateChat ||
     !QuartoView ||
     !AquarioView ||
     !SalaView ||
@@ -216,8 +220,7 @@ function formatAstroHour(value) {
 }
 
 function getAstroDescription(state) {
-    const label = state.mode === "night" ? "Noite" : state.mode === "twilight" ? "Transição" : "Dia";
-    return `${label} atual (${state.source}). Nascer ${formatAstroHour(state.events.sunrise)}, pôr ${formatAstroHour(state.events.sunset)}.`;
+    return `Nascer do sol: ${formatAstroHour(state.events.sunrise)} · Pôr do sol: ${formatAstroHour(state.events.sunset)}`;
 }
 
 function getAstroState(now = new Date()) {
@@ -342,6 +345,13 @@ document.addEventListener("DOMContentLoaded", () => {
             selectedDate,
             latestData,
             chartInstances,
+        })
+    });
+    ClimateChat.setup({
+        getContext: () => ({
+            activeTab: ClimateUI.getActiveTabName(),
+            selectedDate,
+            latestData,
         })
     });
     setupAstroIndicator();

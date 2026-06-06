@@ -226,6 +226,36 @@
         </main>
     </div>
 
+    <aside class="ai-chat" id="aiChat" aria-label="Chat da estação climática">
+        <button class="ai-chat__toggle" id="aiChatToggle" type="button" aria-expanded="false" aria-controls="aiChatPanel">
+            <span class="ai-chat__toggle-icon" aria-hidden="true"></span>
+            <span>Assistente</span>
+        </button>
+        <section class="ai-chat__panel" id="aiChatPanel" hidden>
+            <header class="ai-chat__header">
+                <div class="ai-chat__identity">
+                    <span class="ai-chat__avatar" aria-hidden="true"></span>
+                    <div>
+                        <span class="ai-chat__title">Assistente climático</span>
+                        <span class="ai-chat__subtitle">Dados da aba e data selecionadas</span>
+                    </div>
+                </div>
+                <button class="ai-chat__close" id="aiChatClose" type="button" aria-label="Fechar chat">×</button>
+            </header>
+            <div class="ai-chat__quick-actions" aria-label="Perguntas rápidas">
+                <button type="button" data-chat-question="Faça um resumo da data selecionada.">Resumo da data</button>
+                <button type="button" data-chat-question="Qual foi a temperatura média da data selecionada?">Temperatura média</button>
+                <button type="button" data-chat-question="Qual foi a máxima da data selecionada?">Máxima do dia</button>
+                <button type="button" data-chat-question="Quais indicadores ficaram fora da faixa ideal?">Alertas</button>
+            </div>
+            <div class="ai-chat__messages" id="aiChatMessages" role="log" aria-live="polite"></div>
+            <form class="ai-chat__form" id="aiChatForm">
+                <input class="ai-chat__input" id="aiChatInput" type="text" maxlength="240" placeholder="Ex: temperatura média hoje" autocomplete="off" />
+                <button class="ai-chat__submit" id="aiChatSubmit" type="submit">Enviar</button>
+            </form>
+        </section>
+    </aside>
+
     <script>
         function updateClock() {
             const el = document.getElementById('headerTime');
@@ -249,6 +279,8 @@
     <script src="scripts/ui.js?v=20260602-1"></script>
     <script src="scripts/zoom.js?v=20260528-1"></script>
     <script src="scripts/pdf-report.js?v=20260603-5"></script>
+    <script src="scripts/ai-service.js?v=20260605-1"></script>
+    <script src="scripts/chat.js?v=20260605-1"></script>
     <script src="scripts/views/quarto-view.js?v=20260602-1"></script>
     <script src="scripts/views/aquario-view.js?v=20260528-1"></script>
     <script src="scripts/views/sala-view.js?v=20260602-1"></script>

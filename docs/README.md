@@ -14,6 +14,8 @@ Bibliotecas carregadas via CDN:
 - html2canvas `1.4.1`
 - jsPDF `2.5.2`
 - Firebase SDK modular `12.13.0`
+- Firebase App Check
+- Firebase AI Logic
 
 ## Estrutura
 
@@ -27,6 +29,8 @@ Bibliotecas carregadas via CDN:
 │   ├── config.js               Firebase, paths, ids, campos, cores e limites
 │   ├── main.js                 Orquestração geral da aplicação
 │   ├── firebase-service.js     Inicialização Firebase e listeners
+│   ├── ai-service.js           Firebase AI Logic
+│   ├── chat.js                 Interface do chat com IA
 │   ├── data-utils.js           Datas, filtros, tabelas e séries
 │   ├── chart-utils.js          Gráficos comuns e faixa de conforto
 │   ├── analytics.js            Estatísticas e heatmaps
@@ -51,6 +55,7 @@ Bibliotecas carregadas via CDN:
 │   ├── advanced-views.css      Heatmaps e visualizações climáticas
 │   ├── zoom.css                Overlay de zoom
 │   ├── tables.css              Tabelas
+│   ├── chat.css                Chat com IA
 │   └── responsive.css          Ajustes mobile
 ├── tools/
 │   └── validate-project.mjs    Validação estrutural local
@@ -74,10 +79,12 @@ scripts/config.js
 Pontos configuráveis:
 
 - `firebase`: configuração do Firebase.
+- `firebase.appCheckUrl`, `firebase.aiUrl`, `firebase.recaptchaEnterpriseSiteKey` e `firebase.aiModel`: App Check e Firebase AI Logic.
 - `firebasePaths`: caminhos do Realtime Database.
 - `ids`: ids DOM usados por gráficos, tabelas, estados e controles.
 - `fields`: nomes dos campos esperados nos sensores.
 - `measurementUnits`: unidades exibidas nos valores das tabelas.
+- Sala/MQ135: `CO`, `CO2`, `Aceton`, `Alcohol`, `NH4` e `Toluen`; `Toluen` aparece como Tolueno.
 - `colors`: cores usadas pelos gráficos.
 - `comfortBand`: faixa de conforto térmico geral.
 - `humidityComfortBand`: faixa de conforto da umidade.
@@ -151,7 +158,8 @@ A validação verifica:
 - Tabelas colapsáveis.
 - Tabelas com unidades nos valores, sem espaco antes da unidade, como `26.40°C`, `57.50%`, `8.66ppm`, `1.20NTU` e `930.60hPa`.
 - Leituras do Aquário normalizadas antes da exibição: TDS dividido por 10 e Turbidez dividido por 1000.
-- Indicador astronômico no cabeçalho, alinhado ao tamanho do relógio, com estado de dia/noite e tooltip com nascer/pôr do sol.
+- Indicador astronômico no cabeçalho, alinhado ao tamanho do relógio, com estado de dia/noite e tooltip com horários de nascer e pôr do sol.
+- Chat com Firebase AI Logic para perguntas sobre os dados carregados da data selecionada, com atalhos para resumo, media, maxima e alertas.
 - Exportação da aba ativa em PDF ou JSON.
 
 ## Exportação
@@ -163,7 +171,9 @@ PDF:
 - Usa resumo executivo na primeira página, com metadados, cards principais e alertas do dia.
 - Monta páginas A4 manualmente para evitar cortes.
 - Junta temperatura e sensação térmica no mesmo gráfico quando a aba possui as duas métricas.
-- Mostra umidade em gráfico separado e ciclo solar em gráfico compacto.
+- Sala e Quarto incluem ciclo solar; Aquário não inclui ciclo solar no PDF.
+- Sala usa tabela MQ135 com CO, CO2, Acetona, Álcool, Amônia e Tolueno.
+- Aquário usa cards, gráficos e tabela de Temperatura, pH, TDS e Turbidez.
 - Usa tabela resumida com uma linha por horário e status geral.
 - Mantém tema escuro com cards, bordas azuladas e destaques ciano.
 
@@ -180,6 +190,12 @@ JSON:
 - Os módulos são scripts clássicos e expõem objetos em `window.*`.
 - A ordem dos scripts em `index.html` é parte do contrato da aplicação.
 - O Firebase é lido no cliente com listeners `onValue`.
+- O App Check usa reCAPTCHA Enterprise e deve ser validado antes de ativar enforcement.
+- O chat envia ao Gemini apenas resumo compacto de dados carregados, nunca o histórico inteiro.
+- Atalhos do chat usam `data-chat-question` e reutilizam o mesmo fluxo de envio da pergunta digitada.
+- O chat usa duas etapas: Gemini classifica a intenção em JSON; JavaScript calcula os dados; Gemini apenas redige a resposta final.
+- Quando ambiente, data, periodo ou operação aparecem de forma informal, a classificação em JSON ajuda a entender erros de digitação e fala natural.
+- Consultas de período usam limite de 30 dias; `últimos dias` usa 7 dias por padrão.
 - O CSS foi dividido em arquivos por responsabilidade dentro de `styles/`.
 - Os renderizadores por aba ficam separados em `scripts/views/`.
 - A documentação técnica fica centralizada em `docs/`.

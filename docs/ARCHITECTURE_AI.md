@@ -17,6 +17,8 @@ Usuarios nao sao definidos no codigo. O problema de negocio nao e declarado em R
 - Chart.js via CDN: `https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js`.
 - Firebase SDK modular dinamico: versao `12.13.0`, carregado por `import()` a partir de `https://www.gstatic.com/firebasejs/...`.
 - Firebase Realtime Database.
+- Firebase App Check com reCAPTCHA Enterprise.
+- Firebase AI Logic com Gemini Developer API para o chat.
 - Sem React, Angular, Vue, C#, .NET, banco SQL ou codigo Arduino no projeto analisado.
 - Sem testes funcionais automatizados e sem build tooling local completo.
 
@@ -38,11 +40,14 @@ Usuarios nao sao definidos no codigo. O problema de negocio nao e declarado em R
 │   ├── advanced-views.css
 │   ├── zoom.css
 │   ├── tables.css
+│   ├── chat.css
 │   └── responsive.css
 ├── scripts/
 │   ├── config.js
 │   ├── main.js
 │   ├── firebase-service.js
+│   ├── ai-service.js
+│   ├── chat.js
 │   ├── data-utils.js
 │   ├── chart-utils.js
 │   ├── analytics.js
@@ -69,6 +74,8 @@ Responsabilidades:
 - `scripts/config.js`: configuracao Firebase, cores, ids DOM, paths Firebase, nomes de campos.
 - `scripts/main.js`: orquestracao da aplicacao, listeners Firebase, cache de dados, renderizacao por view, contrato de criacao de graficos, opcoes de zoom e indicador astronomico do header.
 - `scripts/firebase-service.js`: inicializacao Firebase, listeners `onValue`, loading bar e erros.
+- `scripts/ai-service.js`: inicializacao do Firebase AI Logic e envio de prompts ao Gemini.
+- `scripts/chat.js`: painel do chat, atalhos de perguntas, mensagens, classificacao de intencao em JSON, calculos em JavaScript e redacao final com resultado estruturado.
 - `scripts/data-utils.js`: datas, filtros, tabelas, extracao de series, conversoes e formatacao.
 - `scripts/chart-utils.js`: defaults Chart.js, criacao de graficos de linha, fallback de grafico vazio, faixa de conforto.
 - `scripts/analytics.js`: estatisticas, cards de resumo, calendario climatico, heatmap horario e heatmap semanal.
@@ -100,6 +107,8 @@ Responsabilidades:
    - `scripts/ui.js`
    - `scripts/zoom.js`
    - `scripts/pdf-report.js`
+   - `scripts/ai-service.js`
+   - `scripts/chat.js`
    - `scripts/views/quarto-view.js`
    - `scripts/views/aquario-view.js`
    - `scripts/views/sala-view.js`
@@ -114,8 +123,9 @@ Responsabilidades:
    - `ClimateUI.setupCollapsibleSections()`
    - `ClimateZoom.setup(...)`
    - `ClimatePdfReport.setup(...)`
+   - `ClimateChat.setup(...)`
    - `setupFirebaseListeners()`
-6. `FirebaseService.initialize()` importa SDK Firebase e conecta ao Realtime Database.
+6. `FirebaseService.initialize()` importa SDK Firebase, conecta ao Realtime Database e tenta inicializar App Check.
 7. `FirebaseService.listenToPath()` cria listeners para quatro paths.
 8. Cada snapshot atualiza `latestData` e chama a view correspondente.
 
@@ -235,6 +245,7 @@ Config interna:
 
 - `quarto`: Temperatura, Sensacao termica, Umidade.
 - `sala`: temperatura, sensacaoTermica, umidade, pressao.
+- Sala/MQ135 na tabela/chat: CO, CO2, Aceton, Alcohol, NH4, Toluen.
 - `aquario`: temperaturaDS18B20, PH, TDS, Turbidez.
 
 Heatmaps:
@@ -349,11 +360,12 @@ Fluxo:
 - coleta dados da aba ativa
 - filtra dados pela data selecionada
 - cria resumo executivo com cabecalho, metadados, cards principais e alertas do dia
-- gera cards de resumo para as metricas principais e ciclo solar
+- gera cards de resumo conforme contrato da aba ativa
 - gera graficos temporarios otimizados para PDF quando precisa juntar metricas
 - junta Temperatura e Sensacao termica no mesmo grafico quando ambas existem
-- captura ciclo solar existente via `canvas.toDataURL`
+- renderiza ciclo solar compacto em Chart.js offscreen a partir de `$solarDayTimes` apenas para Sala e Quarto, reutilizando `ClimateSolar.getSolarTodayOptions` e `solarDayBackgroundPlugin`
 - monta tabela resumida com uma linha por horario e status geral
+- usa tabela MQ135 na Sala e tabela ambiental nas demais abas
 - mantem tabela detalhada original no JSON
 - renderiza os graficos em coluna unica compacta, com legenda e estatisticas de min/max/media quando possivel
 - usa html2canvas para capturar cabecalho, resumo, graficos e tabela
@@ -439,6 +451,7 @@ Nao ha endpoints HTTP proprios.
 Chart.js cria:
 
 - Sala: temperatura, sensacao termica, umidade, pressao.
+- Sala/MQ135 em tabela/chat: CO, CO2, Acetona, Alcool, Amonia, Tolueno.
 - Quarto: temperatura, sensacao termica, umidade.
 - Aquario: temperatura, PH, TDS, turbidez.
 - Solar: ciclo solar do dia; historico nascer/por do sol.

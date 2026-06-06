@@ -12,6 +12,15 @@
                 { key: "humidity", label: "Umidade", unit: "%", chart: "livingRoomHumidity", comfortBand: AppConfig.humidityComfortBand },
                 { key: "pressure", label: "Pressão", unit: "hPa", chart: "livingRoomPressure" },
             ],
+            tableMetrics: [
+                { key: "co", label: "CO", unit: "ppm" },
+                { key: "co2", label: "CO2", unit: "ppm" },
+                { key: "acetone", label: "Acetona", unit: "ppm" },
+                { key: "alcohol", label: "Álcool", unit: "ppm" },
+                { key: "nh4", label: "Amônia", unit: "ppm" },
+                { key: "toluene", label: "Tolueno", unit: "ppm" },
+            ],
+            includeSolar: true,
         },
         Tab2: {
             label: "Quarto",
@@ -25,6 +34,7 @@
             solarCharts: [
                 { label: "Ciclo solar", unit: "h", chart: "solarToday" },
             ],
+            includeSolar: true,
         },
         Tab3: {
             label: "Aquário",
@@ -36,6 +46,7 @@
                 { key: "tds", label: "TDS", unit: "ppm", chart: "aquariumTds" },
                 { key: "turbidity", label: "Turbidez", unit: "NTU", chart: "aquariumTurbidity" },
             ],
+            includeSolar: false,
         },
     };
 
@@ -160,7 +171,7 @@
         const data = context.latestData?.[tabConfig.dataKey] || {};
         const selectedData = ClimateData.filterDataByDays(data, 2, selectedDate);
         const fields = getFields(tabConfig);
-        const rows = extractReportRows(selectedData, tabConfig.metrics, fields);
+        const rows = extractReportRows(selectedData, getAllReportMetrics(tabConfig), fields);
         const tableMetrics = getPdfTableMetrics(tabConfig);
         const tableRows = buildCompactTableRows(rows, tableMetrics);
         const summaryCards = buildSummaryCards(tabConfig, rows, context.chartInstances || {});
@@ -195,12 +206,17 @@
     }
 
     function getPdfTableMetrics(tabConfig) {
-        const preferredKeys = ["temperature", "feelsLike", "humidity"];
-        const preferredMetrics = preferredKeys
-            .map(key => tabConfig.metrics.find(metric => metric.key === key))
-            .filter(Boolean);
+        return tabConfig.tableMetrics || tabConfig.metrics;
+    }
 
-        return preferredMetrics.length >= 2 ? preferredMetrics : tabConfig.metrics;
+    function getAllReportMetrics(tabConfig) {
+        const merged = [...tabConfig.metrics, ...getPdfTableMetrics(tabConfig)];
+        const seen = new Set();
+        return merged.filter(metric => {
+            if (seen.has(metric.key)) return false;
+            seen.add(metric.key);
+            return true;
+        });
     }
 
     function buildCompactTableRows(rows, metrics) {
@@ -413,15 +429,17 @@
     }
 
     function buildSummaryCards(tabConfig, rows, chartInstances) {
-        const cards = getPdfTableMetrics(tabConfig).map(metric => {
+        const cards = tabConfig.metrics.map(metric => {
             const values = rows
                 .filter(row => row.metricKey === metric.key && Number.isFinite(row.numericValue))
                 .map(row => row.numericValue);
             return buildMetricSummary(metric, values);
         });
 
-        const solarChart = chartInstances[AppConfig.ids.charts.solarToday];
-        cards.push(buildSolarSummary(solarChart));
+        if (tabConfig.includeSolar) {
+            const solarChart = chartInstances[AppConfig.ids.charts.solarToday];
+            cards.push(buildSolarSummary(solarChart));
+        }
 
         return cards;
     }
@@ -494,25 +512,30 @@
 
         if (humidityMetric) {
             cards.push(await createMetricChartCard(humidityMetric.label, humidityMetric.unit, [humidityMetric], chartInstances, selectedDate));
-        } else {
-            const fallbackMetrics = tabConfig.metrics
-                .filter(metric => metric.key !== "temperature" && metric.key !== "feelsLike")
-                .slice(0, Math.max(0, 2 - cards.length));
-
-            for (const metric of fallbackMetrics) {
-                cards.push(await createMetricChartCard(metric.label, metric.unit, [metric], chartInstances, selectedDate));
-            }
         }
 
-        const solarChartId = AppConfig.ids.charts.solarToday;
-        cards.push({
-            label: "Ciclo solar compacto",
-            unit: "h",
-            image: captureChartImage(solarChartId, chartInstances),
-            compact: true,
-            emptyMessage: buildNoDataMessage("ciclo solar", selectedDate),
-            stats: buildSolarChartStats(chartInstances[solarChartId]),
-        });
+        const individualMetrics = tabConfig.metrics.filter(metric => (
+            metric.key !== "temperature" &&
+            metric.key !== "feelsLike" &&
+            metric.key !== "humidity"
+        ));
+
+        for (const metric of individualMetrics) {
+            cards.push(await createMetricChartCard(metric.label, metric.unit, [metric], chartInstances, selectedDate));
+        }
+
+        if (tabConfig.includeSolar) {
+            const solarChartId = AppConfig.ids.charts.solarToday;
+            const solarChart = chartInstances[solarChartId];
+            cards.push({
+                label: "Ciclo solar compacto",
+                unit: "h",
+                image: createSolarCompactImage(solarChart),
+                compact: true,
+                emptyMessage: buildNoDataMessage("ciclo solar", selectedDate),
+                stats: buildSolarChartStats(solarChart),
+            });
+        }
 
         return cards;
     }
@@ -727,6 +750,79 @@
             suggestedMin: min - padding,
             suggestedMax: max + padding,
         };
+    }
+
+    function createSolarCompactImage(chart) {
+        const times = chart?.$solarDayTimes;
+        if (!times || typeof Chart !== "function" || !window.ClimateSolar || !window.ClimateCharts) return null;
+
+        const canvas = document.createElement("canvas");
+        canvas.width = 1200;
+        canvas.height = 520;
+
+        const daylightPoints = [
+            { x: 0, y: 0 },
+            { x: times.dawn, y: 0.08, label: "Amanhecer", timeLabel: ClimateData.formatTime(times.dawn) },
+            { x: times.sunrise, y: 0.52, label: "Nascer do sol", timeLabel: ClimateData.formatTime(times.sunrise) },
+            { x: times.zenith, y: 1, label: "Zenite", timeLabel: ClimateData.formatTime(times.zenith) },
+            { x: times.sunset, y: 0.52, label: "Pôr do sol", timeLabel: ClimateData.formatTime(times.sunset) },
+            { x: times.dusk, y: 0.08, label: "Anoitecer", timeLabel: ClimateData.formatTime(times.dusk) },
+            { x: 24, y: 0 },
+        ];
+
+        const eventPoints = daylightPoints.slice(1, 6);
+        const defaults = window.ClimateCharts.createDefaults(AppConfig.colors);
+        const options = window.ClimateSolar.getSolarTodayOptions({
+            defaults,
+            colors: AppConfig.colors,
+            tickSize: 17,
+            labelSize: 17,
+        });
+        options.responsive = false;
+        options.animation = false;
+        options.layout = { padding: { top: 20, right: 24, bottom: 8, left: 10 } };
+        options.plugins.tooltip.enabled = false;
+
+        const pdfSolarChart = new Chart(canvas.getContext("2d"), {
+            type: "line",
+            data: {
+                datasets: [
+                    {
+                        label: "Luz do dia",
+                        data: daylightPoints,
+                        borderColor: "#facc15",
+                        backgroundColor: "rgba(250, 204, 21, 0.22)",
+                        fill: true,
+                        tension: 0.42,
+                        pointRadius: 0,
+                        pointHitRadius: 18,
+                        pointHoverRadius: 0,
+                        order: 2,
+                    },
+                    {
+                        type: "scatter",
+                        label: "Eventos solares",
+                        data: eventPoints,
+                        borderColor: "#f8fafc",
+                        backgroundColor: ["#fde68a", "#fb923c", "#facc15", "#f87171", "#818cf8"],
+                        pointBorderColor: "#0b1120",
+                        pointBorderWidth: 3,
+                        pointRadius: 7,
+                        pointHitRadius: 18,
+                        pointHoverRadius: 7,
+                        order: 1,
+                    },
+                ],
+            },
+            options,
+            plugins: [pdfChartBackgroundPlugin(), window.ClimateSolar.solarDayBackgroundPlugin],
+        });
+
+        pdfSolarChart.$solarDayTimes = times;
+        pdfSolarChart.update("none");
+        const image = canvas.toDataURL("image/png", 1);
+        pdfSolarChart.destroy();
+        return image;
     }
 
     function buildNoDataMessage(label, selectedDate) {
