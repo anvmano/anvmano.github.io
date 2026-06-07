@@ -17,6 +17,7 @@
         Umidade: ["umidade", "humidade", "humidad"],
         umidade: ["umidade", "humidade", "humidad"],
         pressao: ["pressao", "pressão", "hpa"],
+        cicloSolar: ["ciclo solar", "solar", "sol", "nascer do sol", "por do sol", "pôr do sol", "zenite", "zênite", "amanhecer", "anoitecer", "dia solar", "fotoperiodo", "fotoperíodo"],
         Toluen: ["tolueno", "toluen"],
         PH: ["ph"],
         TDS: ["tds", "solidos", "sólidos"],
@@ -33,6 +34,7 @@
                 ["Sensação térmica", "sensacaoTermica", "°C"],
                 ["Umidade", "umidade", "%"],
                 ["Pressão", "pressao", "hPa"],
+                ["Ciclo solar", "cicloSolar", ""],
                 ["CO", "CO", "ppm"],
                 ["CO2", "CO2", "ppm"],
                 ["Acetona", "Aceton", "ppm"],
@@ -50,6 +52,7 @@
                 ["Temperatura", "Temperatura", "°C"],
                 ["Sensação térmica", "Sensacao termica", "°C"],
                 ["Umidade", "Umidade", "%"],
+                ["Ciclo solar", "cicloSolar", ""],
             ],
         },
         aquario: {
@@ -62,6 +65,7 @@
                 ["pH", "PH", ""],
                 ["TDS", "TDS", "ppm"],
                 ["Turbidez", "Turbidez", "NTU"],
+                ["Ciclo solar", "cicloSolar", ""],
             ],
         },
     };
@@ -204,16 +208,19 @@
         const fallbackEnvironment = getEnvironmentByActiveTab(context.activeTab);
         const classifiedIntent = await classifyQuestionIntent(question, context);
         const classifiedEnvironments = getEnvironmentsFromIntent(classifiedIntent);
+        const hour = classifiedIntent?.periodo?.hora || classifiedIntent?.hora || extractQuestionHour(normalizedQuestion);
         const period = normalizePeriod(classifiedIntent?.periodo, normalizedQuestion, context.selectedDate);
         const metrics = normalizeMetrics(classifiedIntent?.metricas || classifiedIntent?.metrica);
         const operation = normalizeOperation(classifiedIntent?.operacao, normalizedQuestion);
         const solarIntent = hasSolarIntent(normalizedQuestion) || Boolean(classifiedIntent?.solar);
+        const finalMetrics = solarIntent && !metrics.length ? ["ciclo_solar"] : metrics;
 
         return {
             environments: mentionedEnvironments.length ? mentionedEnvironments : (classifiedEnvironments.length ? classifiedEnvironments : [fallbackEnvironment]),
-            metrics,
+            metrics: finalMetrics,
             operation,
             period,
+            hour,
             criterion: normalizeText(classifiedIntent?.criterio),
             confidence: Number(classifiedIntent?.confianca) || null,
             needsClarification: Boolean(classifiedIntent?.precisa_esclarecimento),
@@ -224,41 +231,44 @@
 
     async function classifyQuestionIntent(question, context) {
         const prompt = `
-Interprete a pergunta abaixo para um dashboard de estação climática. Ela pode conter erros de digitação, gírias, fala informal e português não padrão.
-Responda somente JSON válido, sem markdown.
+            Interprete a pergunta abaixo para um dashboard de estação climática. Ela pode conter erros de digitação, gírias, fala informal e português não padrão.
+            Responda somente JSON válido, sem markdown.
 
-Schema obrigatório:
-{
-  "ambientes": ["sala" | "quarto" | "aquario"] ou [],
-  "metricas": ["temperatura" | "sensacao_termica" | "umidade" | "pressao" | "ph" | "tds" | "turbidez" | "co" | "co2" | "acetona" | "alcool" | "amonia" | "tolueno"] ou [],
-  "operacao": "media" | "maxima" | "minima" | "delta" | "tendencia" | "resumo" | "valor" | "comparar_dias" | "dia_mais_frio" | "dia_mais_quente" ou null,
-  "periodo": {
-    "tipo": "data_especifica" | "datas_relativas" | "ultimos_dias" | "intervalo" | "calendario" ou null,
-    "data": "DD-MM-AAAA" | "hoje" | "ontem" | "anteontem" ou null,
-    "datas": ["DD-MM-AAAA" | "hoje" | "ontem" | "anteontem"] ou [],
-    "quantidade": número ou null,
-    "inicio": "DD-MM-AAAA" ou null,
-    "fim": "DD-MM-AAAA" ou null
-  },
-  "criterio": "media_diaria" | "maxima_registrada" | "minima_registrada" | "mais_quente" | "mais_frio" ou null,
-  "confianca": número de 0 a 1,
-  "precisa_esclarecimento": true ou false,
-  "pergunta_esclarecimento": string ou null,
-  "solar": true ou false
-}
+            Schema obrigatório:
+            {
+            "ambientes": ["sala" | "quarto" | "aquario"] ou [],
+            "metricas": ["temperatura" | "sensacao_termica" | "umidade" | "pressao" | "ciclo_solar" | "ph" | "tds" | "turbidez" | "co" | "co2" | "acetona" | "alcool" | "amonia" | "tolueno"] ou [],
+            "operacao": "media" | "maxima" | "minima" | "delta" | "tendencia" | "resumo" | "valor" | "comparar_dias" | "dia_mais_frio" | "dia_mais_quente" ou null,
+            "periodo": {
+                "tipo": "data_especifica" | "datas_relativas" | "ultimos_dias" | "intervalo" | "calendario" ou null,
+                "data": "DD-MM-AAAA" | "hoje" | "ontem" | "anteontem" ou null,
+                "datas": ["DD-MM-AAAA" | "hoje" | "ontem" | "anteontem"] ou [],
+                "hora": "HH:mm" | "HH" | null,
+                "quantidade": número ou null,
+                "inicio": "DD-MM-AAAA" ou null,
+                "fim": "DD-MM-AAAA" ou null
+            },
+            "criterio": "media_diaria" | "maxima_registrada" | "minima_registrada" | "mais_quente" | "mais_frio" ou null,
+            "confianca": número de 0 a 1,
+            "precisa_esclarecimento": true ou false,
+            "pergunta_esclarecimento": string ou null,
+            "solar": true ou false
+            }
 
-Regras:
-- "últimos dias", "esses últimos dias" ou frase parecida significa últimos ${DEFAULT_RECENT_DAYS} dias.
-- "dia mais frio" usa menor média diária, exceto se pedir explicitamente menor registro.
-- "dia mais quente" usa maior média diária, exceto se pedir explicitamente maior registro.
-- "ontem ou anteontem foi mais quente que hoje" deve usar operação "comparar_dias" e datas ["ontem", "anteontem", "hoje"].
-- Se ambiente não aparecer, deixe "ambientes" vazio. O código usará a aba ativa.
-- Se métrica não aparecer mas a pergunta falar frio/quente, use "temperatura".
-- Não responda a pergunta do usuário, apenas classifique.
+            Regras:
+            - "últimos dias", "esses últimos dias" ou frase parecida significa últimos ${DEFAULT_RECENT_DAYS} dias.
+            - "dia mais frio" usa menor média diária, exceto se pedir explicitamente menor registro.
+            - "dia mais quente" usa maior média diária, exceto se pedir explicitamente maior registro.
+            - "ontem ou anteontem foi mais quente que hoje" deve usar operação "comparar_dias" e datas ["ontem", "anteontem", "hoje"].
+            - Se ambiente não aparecer, deixe "ambientes" vazio. O código usará a aba ativa.
+            - Se métrica não aparecer mas a pergunta falar frio/quente, use "temperatura".
+            - Se a pergunta tiver "às 14h", "14:00", "as 14", preencha "hora": "14".
+            - Se a pergunta mencionar nascer do sol, pôr do sol, zênite, amanhecer, anoitecer, sol ou ciclo solar, use métrica "ciclo_solar" e solar true.
+            - Não responda a pergunta do usuário, apenas classifique.
 
-Data selecionada na página: ${formatDate(context.selectedDate)}
-Aba ativa: ${getTabLabel(context.activeTab)}
-Pergunta: ${question}
+            Data selecionada na página: ${formatDate(context.selectedDate)}
+            Aba ativa: ${getTabLabel(context.activeTab)}
+            Pergunta: ${question}
         `.trim();
 
         try {
@@ -318,9 +328,13 @@ Pergunta: ${question}
     function executeEnvironmentQuery(context, environment, requestedMetrics, periodDates, intent) {
         const data = context.latestData?.[environment.dataKey] || {};
         const metrics = requestedMetrics.length ? requestedMetrics : [getDefaultMetric(environment)];
+
         const metricResults = metrics.map(metric => {
-            const dailyStats = periodDates.map(date => buildDailyStats(data?.[date], metric, date)).filter(Boolean);
-            return buildMetricResult(environment, metric, dailyStats, periodDates, intent);
+            const dailyStats = metric.key === "cicloSolar"
+                ? []
+                : periodDates.map(date => buildDailyStats(data?.[date], metric, date, intent.hour)).filter(Boolean);
+
+            return buildMetricResult(environment, metric, dailyStats, periodDates, intent, data, context);
         });
 
         return {
@@ -329,7 +343,10 @@ Pergunta: ${question}
         };
     }
 
-    function buildMetricResult(environment, metric, dailyStats, periodDates, intent) {
+    function buildMetricResult(environment, metric, dailyStats, periodDates, intent, data, context) {
+        if (metric.key === "cicloSolar") {
+            return buildSolarCycleResult(environment, context, periodDates, intent);
+        }
         const allValues = dailyStats.flatMap(day => day.values);
         const base = {
             ambiente: environment.label,
@@ -377,8 +394,8 @@ Pergunta: ${question}
         };
     }
 
-    function buildDailyStats(dayData, metric, date) {
-        const values = extractMetricValues(dayData, metric.key);
+    function buildDailyStats(dayData, metric, date, hour) {
+        const values = extractMetricValues(dayData, metric.key, hour);
         if (!values.length) return null;
 
         return {
@@ -392,18 +409,27 @@ Pergunta: ${question}
     function buildAnswerPrompt(question, result) {
         const payload = JSON.stringify(result, null, 2);
         const prompt = `
-Você é o assistente da página "Estação Climática".
-Responda em português do Brasil, de forma curta, natural e objetiva.
-Use somente o resultado calculado pelo JavaScript abaixo.
-Não recalcule, não invente medições e não use conhecimento externo.
-Quando relevante, cite o período usado, o critério usado e a quantidade de amostras.
-Se houver comparação, explique quem venceu e por quê.
+            Você é o assistente da página "Estação Climática".
 
-Pergunta do usuário:
-${question}
+            Responda em português do Brasil.
+            Use linguagem natural, simples e objetiva.
+            Use somente o resultado calculado pelo JavaScript abaixo.
+            Não recalcule, não invente medições e não use conhecimento externo.
 
-Resultado calculado:
-${payload}
+            Formato:
+            - Responda primeiro a informação principal.
+            - Pule linha entre blocos.
+            - Use bullets curtos quando houver várias informações.
+            - Se o resultado for de ciclo solar, informe amanhecer, nascer do sol, zênite, pôr do sol, anoitecer e duração do dia quando esses dados existirem.
+            - Se algum campo solar estiver ausente, simplesmente não mencione esse campo.
+            - Quando útil, informe o período consultado.
+            - Se não houver dados, diga isso diretamente.
+
+            Pergunta do usuário:
+            ${question}
+
+            Resultado calculado:
+            ${payload}
         `.trim();
 
         return prompt.length > MAX_PROMPT_CHARS ? prompt.slice(0, MAX_PROMPT_CHARS) : prompt;
@@ -414,6 +440,32 @@ ${payload}
         if (!firstMetric) return "Não encontrei dados suficientes para responder.";
         if (firstMetric.sem_dados) return firstMetric.mensagem;
 
+        if (firstMetric.tipo_resultado === "ciclo_solar") {
+            const firstDay = firstMetric.por_dia?.[0];
+
+            if (!firstDay) {
+                return firstMetric.mensagem || "Não encontrei dados de ciclo solar para o período consultado.";
+            }
+
+            const lines = [
+                `Ciclo solar em ${firstMetric.ambiente} no dia ${firstDay.data}:`,
+                "",
+            ];
+
+            if (firstDay.amanhecer) lines.push(`Amanhecer: ${firstDay.amanhecer}`);
+            if (firstDay.nascer_do_sol) lines.push(`Nascer do sol: ${firstDay.nascer_do_sol}`);
+            if (firstDay.zenite) lines.push(`Zênite: ${firstDay.zenite}`);
+            if (firstDay.por_do_sol) lines.push(`Pôr do sol: ${firstDay.por_do_sol}`);
+            if (firstDay.anoitecer) lines.push(`Anoitecer: ${firstDay.anoitecer}`);
+            if (firstDay.duracao_dia) lines.push(`Duração do dia: ${firstDay.duracao_dia}`);
+            if (firstDay.periodo_luz_total) lines.push(`Período total de luz: ${firstDay.periodo_luz_total}`);
+
+            lines.push("");
+            lines.push(`Período consultado: ${firstMetric.periodo}`);
+
+            return lines.join("\n");
+        }
+
         if (firstMetric.operacao === "dia_mais_frio") {
             return `No período ${firstMetric.periodo}, o dia mais frio em ${firstMetric.ambiente} foi ${firstMetric.dia_mais_frio.data}, com média de ${formatNumber(firstMetric.dia_mais_frio.valor)}${firstMetric.unidade}.`;
         }
@@ -422,7 +474,16 @@ ${payload}
             return `No período ${firstMetric.periodo}, o dia mais quente em ${firstMetric.ambiente} foi ${firstMetric.dia_mais_quente.data}, com média de ${formatNumber(firstMetric.dia_mais_quente.valor)}${firstMetric.unidade}.`;
         }
 
-        return `${firstMetric.metrica} em ${firstMetric.ambiente}: média ${formatNumber(firstMetric.media)}${firstMetric.unidade}, mínima ${formatNumber(firstMetric.minima)}${firstMetric.unidade}, máxima ${formatNumber(firstMetric.maxima)}${firstMetric.unidade}, com ${firstMetric.amostras} amostra(s).`;
+        return [
+                `${firstMetric.metrica} em ${firstMetric.ambiente}:`,
+                "",
+                `Média: ${formatNumber(firstMetric.media)}${firstMetric.unidade}`,
+                `Mínima: ${formatNumber(firstMetric.minima)}${firstMetric.unidade}`,
+                `Máxima: ${formatNumber(firstMetric.maxima)}${firstMetric.unidade}`,
+                `Amostras: ${firstMetric.amostras}`,
+                "",
+                `Período: ${firstMetric.periodo}`
+            ].join("\n");
     }
 
     function parseIntentJson(answer) {
@@ -542,6 +603,321 @@ ${payload}
         return dates;
     }
 
+    function buildSolarCycleResult(environment, context, periodDates, intent) {
+        const solarSource =
+            context.latestData?.historico?.NascerPorDoSol ||
+            context.historico?.NascerPorDoSol ||
+            context.latestData?.NascerPorDoSol ||
+            {};
+
+        const dailySolarData = periodDates
+            .map(date => buildDailySolarCycleFromHistorico(solarSource?.[date], date))
+            .filter(Boolean);
+
+        const base = {
+            ambiente: environment.label,
+            metrica: "Ciclo solar",
+            unidade: "",
+            operacao: intent.operation,
+            criterio: "dados_solares_registrados",
+            periodo: formatPeriodLabel(periodDates),
+            datas_consultadas: periodDates.map(formatDate),
+            dias_com_dados: dailySolarData.map(day => day.data),
+            amostras: dailySolarData.length,
+        };
+
+        if (!dailySolarData.length) {
+            return {
+                ...base,
+                sem_dados: true,
+                mensagem: `Sem dados de ciclo solar para ${formatPeriodLabel(periodDates)}.`,
+            };
+        }
+
+        return {
+            ...base,
+            tipo_resultado: "ciclo_solar",
+            por_dia: dailySolarData,
+        };
+    }
+
+    function buildDailySolarCycleFromHistorico(daySolarData, date) {
+        if (!daySolarData || typeof daySolarData !== "object") {
+            return null;
+        }
+
+        const records = Object.keys(daySolarData)
+            .sort()
+            .map(key => daySolarData[key])
+            .filter(item => item && typeof item === "object");
+
+        if (!records.length) {
+            return null;
+        }
+
+        const record = records[records.length - 1];
+
+        const amanhecer = buildTimeFromHourMinute(
+            record.HoraAmanhecer,
+            record.MinuteAmanhecer
+        );
+
+        const nascerDoSol = buildTimeFromHourMinute(
+            record.HourNascerDoSol,
+            record.MinuteNascerDoSol
+        );
+
+        const zenite = buildTimeFromHourMinute(
+            record.HoraZenite,
+            record.MinuteZenite
+        );
+
+        const porDoSol = buildTimeFromHourMinute(
+            record.HoraPorDoSol,
+            record.MinutePorDoSol
+        );
+
+        const anoitecer = buildTimeFromHourMinute(
+            record.HourAnoitecer,
+            record.MinuteAnoitecer
+        );
+
+        if (!amanhecer && !nascerDoSol && !zenite && !porDoSol && !anoitecer) {
+            return null;
+        }
+
+        return {
+            data: formatDate(date),
+            amanhecer,
+            nascer_do_sol: nascerDoSol,
+            zenite,
+            por_do_sol: porDoSol,
+            anoitecer,
+            duracao_dia: calculateDurationLabel(nascerDoSol, porDoSol),
+            periodo_luz_total: calculateDurationLabel(amanhecer, anoitecer),
+        };
+    }
+
+    function buildTimeFromHourMinute(hour, minute) {
+        const parsedHour = Number(hour);
+        const parsedMinute = Number(minute);
+
+        if (!Number.isFinite(parsedHour) || !Number.isFinite(parsedMinute)) {
+            return null;
+        }
+
+        if (parsedHour < 0 || parsedHour > 23) {
+            return null;
+        }
+
+        if (parsedMinute < 0 || parsedMinute > 59) {
+            return null;
+        }
+
+        return `${String(parsedHour).padStart(2, "0")}:${String(parsedMinute).padStart(2, "0")}`;
+    }
+
+    function buildDailySolarCycle(dayData, date) {
+        const records = extractDayRecords(dayData);
+
+        if (!records.length) return null;
+
+        const solarValues = records
+            .map(record => normalizeSolarRecord(record))
+            .filter(Boolean);
+
+        if (!solarValues.length) return null;
+
+        const merged = mergeSolarValues(solarValues);
+
+        return {
+            data: formatDate(date),
+            amanhecer: merged.amanhecer,
+            nascer_do_sol: merged.nascer_do_sol,
+            zenite: merged.zenite,
+            por_do_sol: merged.por_do_sol,
+            anoitecer: merged.anoitecer,
+            duracao_dia: calculateDurationLabel(merged.nascer_do_sol, merged.por_do_sol),
+            periodo_luz_total: calculateDurationLabel(merged.amanhecer, merged.anoitecer),
+        };
+    }
+
+    function extractDayRecords(dayData) {
+        const records = [];
+
+        for (const time of Object.keys(dayData || {}).sort()) {
+            const timeData = dayData[time];
+
+            if (!timeData || typeof timeData !== "object") continue;
+
+            for (const itemKey of Object.keys(timeData).sort()) {
+                const item = timeData[itemKey];
+
+                if (!item || typeof item !== "object") continue;
+
+                records.push(item);
+            }
+        }
+
+        return records;
+    }
+
+    function normalizeSolarRecord(record) {
+        const amanhecer = getFirstStringValue(record, [
+            "amanhecer",
+            "Amanhecer",
+            "dawn",
+            "civilDawn",
+            "inicioAmanhecer"
+        ]);
+
+        const nascerDoSol = getFirstStringValue(record, [
+            "nascerDoSol",
+            "nascer_do_sol",
+            "NascerDoSol",
+            "sunrise",
+            "solNascer"
+        ]);
+
+        const zenite = getFirstStringValue(record, [
+            "zenite",
+            "zênite",
+            "Zenite",
+            "solarNoon",
+            "meioDiaSolar"
+        ]);
+
+        const porDoSol = getFirstStringValue(record, [
+            "porDoSol",
+            "pôrDoSol",
+            "por_do_sol",
+            "PorDoSol",
+            "sunset",
+            "solPor"
+        ]);
+
+        const anoitecer = getFirstStringValue(record, [
+            "anoitecer",
+            "Anoitecer",
+            "dusk",
+            "civilDusk",
+            "fimAnoitecer"
+        ]);
+
+        if (!amanhecer && !nascerDoSol && !zenite && !porDoSol && !anoitecer) {
+            return null;
+        }
+
+        return {
+            amanhecer: normalizeHourLabel(amanhecer),
+            nascer_do_sol: normalizeHourLabel(nascerDoSol),
+            zenite: normalizeHourLabel(zenite),
+            por_do_sol: normalizeHourLabel(porDoSol),
+            anoitecer: normalizeHourLabel(anoitecer),
+        };
+    }
+
+    function mergeSolarValues(values) {
+        return {
+            amanhecer: firstDefined(values.map(value => value.amanhecer)),
+            nascer_do_sol: firstDefined(values.map(value => value.nascer_do_sol)),
+            zenite: firstDefined(values.map(value => value.zenite)),
+            por_do_sol: firstDefined(values.map(value => value.por_do_sol)),
+            anoitecer: firstDefined(values.map(value => value.anoitecer)),
+        };
+    }
+
+    function getFirstStringValue(source, keys) {
+        for (const key of keys) {
+            const value = source?.[key];
+
+            if (typeof value === "string" && value.trim()) {
+                return value.trim();
+            }
+
+            if (typeof value === "number" && Number.isFinite(value)) {
+                return String(value);
+            }
+        }
+
+        return null;
+    }
+
+    function firstDefined(values) {
+        return values.find(value => value !== null && value !== undefined && value !== "") || null;
+    }
+
+    function normalizeHourLabel(value) {
+        if (!value) return null;
+
+        const text = String(value).trim();
+
+        const isoMatch = text.match(/T(\d{2}):(\d{2})/);
+        if (isoMatch) {
+            return `${isoMatch[1]}:${isoMatch[2]}`;
+        }
+
+        const hourMinuteMatch = text.match(/\b(\d{1,2}):(\d{2})\b/);
+        if (hourMinuteMatch) {
+            const hour = Number(hourMinuteMatch[1]);
+            const minute = Number(hourMinuteMatch[2]);
+
+            if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+                return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+            }
+        }
+
+        const hourOnlyMatch = text.match(/\b(\d{1,2})h?\b/);
+        if (hourOnlyMatch) {
+            const hour = Number(hourOnlyMatch[1]);
+
+            if (hour >= 0 && hour <= 23) {
+                return `${String(hour).padStart(2, "0")}:00`;
+            }
+        }
+
+        return text;
+    }
+
+    function calculateDurationLabel(start, end) {
+        const startMinutes = hourToMinutes(start);
+        const endMinutes = hourToMinutes(end);
+
+        if (startMinutes === null || endMinutes === null) {
+            return null;
+        }
+
+        let diff = endMinutes - startMinutes;
+
+        if (diff < 0) {
+            diff += 24 * 60;
+        }
+
+        const hours = Math.floor(diff / 60);
+        const minutes = diff % 60;
+
+        if (minutes === 0) {
+            return `${hours}h`;
+        }
+
+        return `${hours}h${String(minutes).padStart(2, "0")}`;
+    }
+
+    function hourToMinutes(value) {
+        if (!value) return null;
+
+        const match = String(value).match(/^(\d{2}):(\d{2})$/);
+        if (!match) return null;
+
+        const hour = Number(match[1]);
+        const minute = Number(match[2]);
+
+        if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+        if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+
+        return hour * 60 + minute;
+    }
+
     function extractQuestionDates(normalizedQuestion) {
         const dates = [];
         const matches = normalizedQuestion.matchAll(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b/g);
@@ -595,6 +971,7 @@ ${payload}
             return ["temperatura"];
         }
 
+        if (hasSolarIntent(normalizedQuestion)) return ["ciclo_solar"];
         if (normalizedQuestion.includes("umid") || normalizedQuestion.includes("humid")) return ["umidade"];
         if (normalizedQuestion.includes("press")) return ["pressao"];
         if (normalizedQuestion.includes("toluen")) return ["tolueno"];
@@ -609,8 +986,13 @@ ${payload}
         const aliases = [
             metric.label,
             metric.key,
+            normalizeText(metric.key).replace(/([a-z])([A-Z])/g, "$1 $2"),
             ...(METRIC_ALIASES[metric.key] || []),
         ].map(value => normalizeText(value).replace(/_/g, " "));
+
+        if (requested === "ciclo solar" && metric.key === "cicloSolar") {
+            return true;
+        }
 
         return aliases.some(alias => alias === requested || alias.includes(requested) || requested.includes(alias));
     }
@@ -748,19 +1130,31 @@ ${payload}
         return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     }
 
-    function extractMetricValues(dayData, key) {
+    function extractMetricValues(dayData, key, hour) {
         const values = [];
         for (const time of Object.keys(dayData || {}).sort()) {
+            if (hour && !time.startsWith(`${hour}:`)) continue;
+
             const timeData = dayData[time];
             if (!timeData || typeof timeData !== "object") continue;
+
             for (const itemKey of Object.keys(timeData).sort()) {
                 const item = timeData[itemKey];
                 if (!item || typeof item !== "object") continue;
+
                 const value = window.ClimateData.normalizeMeasurementValue(key, item[key]);
                 if (value !== null) values.push(value);
             }
         }
         return values;
+    }
+
+    function extractQuestionHour(normalizedQuestion) {
+        const match = normalizedQuestion.match(/\b(?:as|às)\s*(\d{1,2})(?:h|:00)?\b|\b(\d{1,2})(?:h|:00)\b/);
+        if (!match) return null;
+        const hour = Number(match[1] || match[2]);
+        if (!Number.isFinite(hour) || hour < 0 || hour > 23) return null;
+        return String(hour).padStart(2, "0");
     }
 
     function calculateStats(values) {
