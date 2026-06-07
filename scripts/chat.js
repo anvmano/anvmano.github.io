@@ -208,7 +208,7 @@
         const fallbackEnvironment = getEnvironmentByActiveTab(context.activeTab);
         const classifiedIntent = await classifyQuestionIntent(question, context);
         const classifiedEnvironments = getEnvironmentsFromIntent(classifiedIntent);
-        const hour = classifiedIntent?.periodo?.hora || classifiedIntent?.hora || extractQuestionHour(normalizedQuestion);
+        const hour = normalizeHourFilter(classifiedIntent?.periodo?.hora || classifiedIntent?.hora || extractQuestionHour(normalizedQuestion));
         const period = normalizePeriod(classifiedIntent?.periodo, normalizedQuestion, context.selectedDate);
         const metrics = normalizeMetrics(classifiedIntent?.metricas || classifiedIntent?.metrica);
         const operation = normalizeOperation(classifiedIntent?.operacao, normalizedQuestion);
@@ -847,6 +847,23 @@
         return values.find(value => value !== null && value !== undefined && value !== "") || null;
     }
 
+    function normalizeHourFilter(value) {
+        if (!value) return null;
+
+        const text = String(value).trim();
+
+        const match = text.match(/^(\d{1,2})(?::\d{2})?$/);
+        if (!match) return null;
+
+        const hour = Number(match[1]);
+
+        if (!Number.isFinite(hour) || hour < 0 || hour > 23) {
+            return null;
+        }
+
+        return String(hour).padStart(2, "0");
+    }
+
     function normalizeHourLabel(value) {
         if (!value) return null;
 
@@ -1133,7 +1150,8 @@
     function extractMetricValues(dayData, key, hour) {
         const values = [];
         for (const time of Object.keys(dayData || {}).sort()) {
-            if (hour && !time.startsWith(`${hour}:`)) continue;
+            const normalizedTimeHour = normalizeHourFilter(time);
+            if (hour && normalizedTimeHour !== hour) continue;
 
             const timeData = dayData[time];
             if (!timeData || typeof timeData !== "object") continue;
