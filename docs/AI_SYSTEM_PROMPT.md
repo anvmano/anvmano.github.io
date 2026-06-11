@@ -69,6 +69,7 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Exportacao PDF/JSON deve reutilizar `latestData`, `selectedDate`, aba ativa e `chartInstances`; nao deve reconsultar Firebase.
 - Chat com IA deve reutilizar `latestData`, `selectedDate` e aba ativa; nao deve enviar historicos completos ao modelo.
 - Chat deve usar Gemini para classificar a pergunta em JSON, JavaScript para validar/calcular resultados e Gemini apenas para redigir a resposta final.
+- Perguntas de ciclo solar no chat devem reutilizar `ClimateSolar.getSolarEventsForSelectedDate` sobre `latestData.solar`.
 - Consultas de periodo no chat devem limitar no maximo 30 dias; `ultimos dias` usa 7 dias por padrao.
 - Exportacao PDF deve montar paginas A4 manualmente com html2canvas + jsPDF, evitando paginacao automatica que pode cortar conteudo.
 - PDF deve manter tema escuro, usar resumo executivo na primeira pagina, juntar temperatura e sensacao quando possivel, usar tabela resumida por horario e respeitar o contrato por aba: Sala/Quarto com ciclo solar, Aquario sem ciclo solar, Sala com tabela MQ135.

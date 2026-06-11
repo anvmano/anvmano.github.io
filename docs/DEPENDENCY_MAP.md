@@ -9,6 +9,7 @@ graph TD
     HTML --> Analytics[ClimateAnalytics]
     HTML --> Solar[ClimateSolar]
     HTML --> Charts[ClimateCharts]
+    HTML --> Aqi[ClimateAqi]
     HTML --> Firebase[FirebaseService]
     HTML --> AI[ClimateAIService]
     HTML --> Chat[ClimateChat]
@@ -26,6 +27,7 @@ graph TD
     Main --> Analytics
     Main --> Solar
     Main --> Charts
+    Main --> Aqi
     Main --> Firebase
     Main --> Chat
     Main --> UI
@@ -55,6 +57,7 @@ graph TD
     SolarView --> Data
     SolarView --> Solar
     Charts --> ChartJS[Chart.js]
+    Aqi --> LivingRoomData[historico/AirQuality]
     Solar --> ChartJS
     Zoom --> ChartJS
     Pdf --> Html2Canvas[html2canvas]
@@ -123,7 +126,7 @@ Arquivos:
 
 - `tokens.css`: variaveis visuais.
 - `base.css`: reset e base.
-- `header.css`: header, relogio e indicador astronomico.
+- `header.css`: header, AQI estimado, relogio e indicador astronomico.
 - `layout.css`: wrapper principal.
 - `tabs-toolbar.css`: abas, toolbar, seletor de data e exportacao.
 - `feedback.css`: loading, transicoes, mensagens.
@@ -245,7 +248,7 @@ Dependencias indiretas: `latestData`, aba ativa, data selecionada, data/periodo 
 
 Quem chama: `scripts/main.js`.
 
-Quem e chamado: `ClimateAIService.generateText`.
+Quem e chamado: `ClimateAIService.generateText`, `ClimateSolar.getSolarEventsForSelectedDate`.
 
 Impacto da alteracao: Alto. Pode afetar consumo de tokens, privacidade dos dados enviados ao modelo, ambiente/data/periodo usados na resposta, calculos de media/maxima/minima/comparacao e respostas do chat.
 
@@ -277,6 +280,23 @@ Quem chama: `scripts/main.js`.
 Quem e chamado: Chart.js.
 
 Impacto da alteracao: Alto.
+
+## scripts/aqi.js
+
+Responsabilidade: calcular o AQI estimado da Sala a partir dos dados do MQ135 e renderizar o chip/popover do header.
+
+Dependencias diretas:
+
+- DOM `#aqiIndicator` e `#aqiPopover`
+- dados recebidos de `latestData.livingRoom`
+
+Dependencias indiretas: estrutura de `historico/AirQuality` e campos `CO`, `CO2`, `Toluen`, `NH4`, `Aceton` e `Alcohol`.
+
+Quem chama: `scripts/main.js`.
+
+Quem e chamado: nenhum modulo externo.
+
+Impacto da alteracao: Medio. Pode afetar o header e a leitura rapida da qualidade do ar estimada da Sala.
 
 ## scripts/analytics.js
 

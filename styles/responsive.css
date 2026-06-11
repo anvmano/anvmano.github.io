@@ -22,10 +22,42 @@
     }
 
     .header-status {
-        --header-status-chip-width: 84px;
+        --header-status-chip-width: 74px;
         --header-status-chip-height: 36px;
-        gap: 6px;
+        gap: 4px;
         flex-shrink: 0;
+    }
+
+    .aqi-indicator {
+        min-width: 70px;
+        max-width: 70px;
+        padding: 0 7px;
+        gap: 4px;
+    }
+
+    .aqi-indicator__value {
+        font-size: 0.76rem;
+    }
+
+    .aqi-indicator__prefix {
+        font-size: 0.78rem;
+    }
+
+    .aqi-indicator__status {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+
+    .aqi-popover {
+        right: 0;
+    }
+
+    .astro-popover {
+        right: 0;
     }
 
     .astro-indicator {

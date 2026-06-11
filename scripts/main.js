@@ -5,6 +5,7 @@ const ClimateData = window.ClimateData;
 const ClimateAnalytics = window.ClimateAnalytics;
 const ClimateSolar = window.ClimateSolar;
 const ClimateCharts = window.ClimateCharts;
+const ClimateAqi = window.ClimateAqi;
 const FirebaseService = window.FirebaseService;
 const ClimateUI = window.ClimateUI;
 const ClimateZoom = window.ClimateZoom;
@@ -22,6 +23,7 @@ if (
     !ClimateAnalytics ||
     !ClimateSolar ||
     !ClimateCharts ||
+    !ClimateAqi ||
     !FirebaseService ||
     !ClimateUI ||
     !ClimateZoom ||
@@ -52,6 +54,7 @@ const IDS = AppConfig.ids;
 
 let selectedDate = ClimateData.dataAtual();
 let astroIndicatorTimer = null;
+let lastAstroState = null;
 
 ClimateCharts.registerComfortBand();
 
@@ -176,6 +179,7 @@ function renderAquariumData(data) {
 }
 
 function renderLivingRoomData(data) {
+    ClimateAqi.update(data);
     SalaView.render({
         data,
         selectedDate,
@@ -223,6 +227,20 @@ function getAstroDescription(state) {
     return `Nascer do sol: ${formatAstroHour(state.events.sunrise)} · Pôr do sol: ${formatAstroHour(state.events.sunset)}`;
 }
 
+function getAstroModeLabel(mode) {
+    if (mode === "day") return "Dia";
+    if (mode === "twilight") return "Transição";
+    return "Noite";
+}
+
+function formatAstroDuration(start, end) {
+    if (!Number.isFinite(start) || !Number.isFinite(end)) return "--";
+    const totalMinutes = Math.max(0, Math.round((end - start) * 60));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours}h${String(minutes).padStart(2, "0")}`;
+}
+
 function getAstroState(now = new Date()) {
     const solarEvents = getTodaySolarEvents();
     const events = solarEvents || getFallbackSolarEvents();
@@ -252,6 +270,7 @@ function updateAstroIndicator() {
     if (!indicator) return;
 
     const state = getAstroState();
+    lastAstroState = state;
     const labelElement = indicator.querySelector(".astro-indicator__label");
 
     indicator.classList.remove("astro-indicator--day", "astro-indicator--twilight", "astro-indicator--night");
@@ -263,12 +282,86 @@ function updateAstroIndicator() {
     if (labelElement) labelElement.textContent = "";
     indicator.title = getAstroDescription(state);
     indicator.setAttribute("aria-label", indicator.title);
+    updateAstroPopover(state);
 }
 
 function setupAstroIndicator() {
+    const indicator = document.getElementById("astroIndicator");
+    const popover = document.getElementById("astroPopover");
+
+    if (indicator && popover) {
+        indicator.setAttribute("role", "button");
+        indicator.setAttribute("tabindex", "0");
+        indicator.setAttribute("aria-controls", "astroPopover");
+        indicator.setAttribute("aria-expanded", "false");
+        indicator.addEventListener("click", event => {
+            event.stopPropagation();
+            toggleAstroPopover();
+        });
+        indicator.addEventListener("keydown", event => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            toggleAstroPopover();
+        });
+        document.addEventListener("click", event => {
+            if (popover.hidden) return;
+            if (popover.contains(event.target) || indicator.contains(event.target)) return;
+            closeAstroPopover();
+        });
+        document.addEventListener("keydown", event => {
+            if (event.key === "Escape") closeAstroPopover();
+        });
+        window.addEventListener("header-popover-open", event => {
+            if (event.detail?.source !== "astro") closeAstroPopover();
+        });
+    }
+
     updateAstroIndicator();
     if (astroIndicatorTimer) clearInterval(astroIndicatorTimer);
     astroIndicatorTimer = setInterval(updateAstroIndicator, 60000);
+}
+
+function toggleAstroPopover() {
+    const indicator = document.getElementById("astroIndicator");
+    const popover = document.getElementById("astroPopover");
+    if (!indicator || !popover) return;
+
+    if (popover.hidden) {
+        window.dispatchEvent(new CustomEvent("header-popover-open", { detail: { source: "astro" } }));
+        updateAstroPopover(lastAstroState || getAstroState());
+        popover.hidden = false;
+        indicator.setAttribute("aria-expanded", "true");
+    } else {
+        closeAstroPopover();
+    }
+}
+
+function closeAstroPopover() {
+    const indicator = document.getElementById("astroIndicator");
+    const popover = document.getElementById("astroPopover");
+    if (!indicator || !popover) return;
+
+    popover.hidden = true;
+    indicator.setAttribute("aria-expanded", "false");
+}
+
+function updateAstroPopover(state) {
+    const popover = document.getElementById("astroPopover");
+    if (!popover || !state) return;
+
+    const headerValue = popover.querySelector(".astro-popover__header strong");
+    const list = popover.querySelector(".astro-popover__list");
+    if (!headerValue || !list) return;
+
+    headerValue.textContent = getAstroModeLabel(state.mode);
+    list.innerHTML = [
+        ["Amanhecer", formatAstroHour(state.events.dawn)],
+        ["Nascer do sol", formatAstroHour(state.events.sunrise)],
+        ["Zênite", formatAstroHour(state.events.zenith)],
+        ["Pôr do sol", formatAstroHour(state.events.sunset)],
+        ["Anoitecer", formatAstroHour(state.events.dusk)],
+        ["Duração do dia", formatAstroDuration(state.events.sunrise, state.events.sunset)],
+    ].map(([label, value]) => `<div><dt>${label}</dt><dd>${value}</dd></div>`).join("");
 }
 
 async function setupFirebaseListeners() {
@@ -317,6 +410,7 @@ async function setupFirebaseListeners() {
     FirebaseService.listenToPath(FIREBASE_PATHS.livingRoom, data => {
         latestData.livingRoom = data;
         if (!data) {
+            ClimateAqi.update(null);
             ClimateUI.renderEmptyState(IDS.tables.livingRoom, "Sem dados da sala.");
             return;
         }
@@ -354,6 +448,7 @@ document.addEventListener("DOMContentLoaded", () => {
             latestData,
         })
     });
+    ClimateAqi.setup();
     setupAstroIndicator();
 
     setupFirebaseListeners().catch(error => {

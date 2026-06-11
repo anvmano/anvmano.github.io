@@ -23,6 +23,7 @@
 
     function render({ data, selectedDate, createChart, colors, ui }) {
         const filteredData = ClimateData.filterDataByDays(data, 2, selectedDate);
+        const chartData = ClimateData.filterDataByRollingHours(data, selectedDate, 24);
         ClimateAnalytics.renderStats("sala", filteredData, selectedDate);
         ClimateAnalytics.renderAdvancedClimateViews(data, selectedDate, {
             metricKey: livingRoomFields.temperature,
@@ -32,7 +33,7 @@
         createChart({
             canvasCtx: temperatureChart,
             containerId: ids.chartContainers.livingRoomTemperature,
-            data: filteredData,
+            data: chartData,
             key: livingRoomFields.temperature,
             label: "Temperatura",
             color: colors.blue,
@@ -43,7 +44,7 @@
         createChart({
             canvasCtx: feelsLikeChart,
             containerId: ids.chartContainers.livingRoomFeelsLike,
-            data: filteredData,
+            data: chartData,
             key: livingRoomFields.feelsLike,
             label: "Sensação Térmica",
             color: colors.green,
@@ -54,7 +55,7 @@
         createChart({
             canvasCtx: humidityChart,
             containerId: ids.chartContainers.livingRoomHumidity,
-            data: filteredData,
+            data: chartData,
             key: livingRoomFields.humidity,
             label: "Umidade",
             color: colors.purple,
@@ -66,7 +67,7 @@
         createChart({
             canvasCtx: pressureChart,
             containerId: ids.chartContainers.livingRoomPressure,
-            data: filteredData,
+            data: chartData,
             key: livingRoomFields.pressure,
             label: "Pressão (hPa)",
             color: colors.amber,

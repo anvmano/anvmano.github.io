@@ -2,7 +2,7 @@
 
 ## O que e o sistema
 
-Dashboard web estatico de estacao climatica. Exibe dados de Sala, Quarto, Aquario e eventos solares. A interface tem abas, navegacao por swipe touch entre abas, seletor global de data, graficos, estatisticas, heatmaps, tabelas colapsaveis, zoom de graficos, indicador astronomico no header, chat com Firebase AI Logic e atalhos de perguntas, alem de exportacao PDF/JSON da aba ativa.
+Dashboard web estatico de estacao climatica. Exibe dados de Sala, Quarto, Aquario e eventos solares. A interface tem abas, navegacao por swipe touch entre abas, seletor global de data, graficos, estatisticas, heatmaps, tabelas colapsaveis, zoom de graficos, indicador AQI estimado da Sala, indicador astronomico no header, chat com Firebase AI Logic e atalhos de perguntas, alem de exportacao PDF/JSON da aba ativa.
 
 O codigo nao define usuarios, autenticacao, permissoes ou backend local.
 
@@ -33,6 +33,7 @@ Arquivos principais:
 - `scripts/chat.js`: UI e contexto compacto do chat com IA.
 - `scripts/data-utils.js`: datas, filtros, tabelas e series.
 - `scripts/chart-utils.js`: Chart.js comum e faixa de conforto.
+- `scripts/aqi.js`: AQI estimado da Sala/MQ135, chip do header e popover.
 - `scripts/analytics.js`: estatisticas e heatmaps.
 - `scripts/solar.js`: regras e graficos solares.
 - `scripts/ui.js`: tabs, swipe touch entre abas, date picker, mensagens, colapsaveis.
@@ -88,9 +89,11 @@ Arquivos principais:
 - Data Firebase: `DD-MM-AAAA`.
 - Dados por data/hora: `historico/<tipo>/<DD-MM-AAAA>/<HH-MM>/<id>/<campos>`.
 - Graficos comuns usam `ClimateData.extractData`.
+- Graficos comuns de Sala, Quarto e Aquario usam janela movel das ultimas 24h pela hora atual do navegador. Se a data selecionada for `DD-MM-AAAA` e agora for 15h, a janela vai de 15h do dia anterior ate 15h da data selecionada.
 - Se grafico comum nao tem pontos numericos, `ClimateCharts.createLineChart` limpa o canvas, retorna `null` e o caller mostra mensagem no card.
 - Cada id em `AppConfig.ids.chartContainers` deve existir no `.chart-card` individual correspondente.
 - Tabelas mostram ate 24 linhas.
+- Cards e tabelas continuam filtrados pela data selecionada, mesmo quando os graficos usam a janela movel de 24h.
 - Valores das tabelas exibem unidades sem espaco antes da unidade, como `26.40°C`, `57.50%`, `8.66ppm`, `1.20NTU` e `930.60hPa`.
 - Leituras do Aquario sao normalizadas em `ClimateData.normalizeMeasurementValue`: TDS divide por 10 e Turbidez divide por 1000 antes de tabelas, cards, graficos e PDF.
 - Faixa de conforto geral: 20°C a 26°C; umidade usa 40% a 60%; Aquario usa faixa propria de 25°C a 27°C.
@@ -102,7 +105,10 @@ Arquivos principais:
 - Mensagens de graficos vazios devem seguir `Sem dados de <tipo_grafico> em <DD/MM/AAAA>`.
 - Aba ativa e persistida em `localStorage.activeTab`.
 - Swipe touch segue o fluxo Sala ⇄ Quarto ⇄ Aquario. Arrastar para esquerda avanca; arrastar para direita volta; extremidades nao mudam de aba. Gestos iniciados em tabelas, heatmaps ou qualquer area com rolagem horizontal nao trocam de aba.
-- Indicador astronomico do header e um chip visual no tamanho aproximado do relogio, sem texto interno; o tooltip/`aria-label` mostra apenas os horarios de nascer e por do sol.
+- Indicador astronomico do header e um chip visual no tamanho aproximado do relogio, sem texto interno; o tooltip/`aria-label` mostra nascer e por do sol. Clique/toque abre popover com amanhecer, nascer do sol, zenite, por do sol, anoitecer, estado atual e duracao do dia.
+- Indicador AQI do header usa dados mais recentes da Sala/MQ135 em `historico/AirQuality` e mostra apenas `AQI <valor>` no chip. A classificacao completa fica no tooltip/`aria-label` e no popover aberto por clique/toque.
+- Popovers do header sao mutuamente exclusivos: abrir AQI fecha o solar, abrir solar fecha o AQI.
+- AQI do header e uma estimativa local: usa categorias oficiais AQI (`0-50`, `51-100`, `101-150`, `151-200`, `201-300`, `301+`), mas o calculo vem dos gases disponiveis no MQ135 e deve ser exibido como `AQI estimado da Sala`.
 - Solar usa data selecionada para ciclo do dia e filtro de 365 dias para historico.
 - Exportacao PDF/JSON usa automaticamente aba ativa, data selecionada, `latestData` e `chartInstances`; nao reconsulta Firebase.
 - Controle `PDF/JSON` em `name="exportFormat"` altera a label do botao `#btnExportData`.
@@ -116,8 +122,13 @@ Arquivos principais:
 - Chat tem atalhos em `data-chat-question`; eles reutilizam o mesmo fluxo de envio da pergunta digitada.
 - Chat abre e fecha com transicao gradual em `styles/chat.css`; `scripts/chat.js` so aplica `hidden` depois da animacao de fechamento.
 - Chat resolve intencao antes de responder: ambiente mencionado vence a aba ativa; data/periodo mencionado vence o calendario sem alterar a pagina; se ambiente/data nao forem mencionados, usa aba ativa e calendario.
+- Chat aceita filtro por hora em perguntas como `14h`, `14:00`, `14` e tambem compara corretamente com chaves Firebase no formato `14-00`.
 - Chat usa arquitetura em duas etapas: Gemini classifica a pergunta em JSON com schema fixo; JavaScript valida, limita periodo, seleciona dados e calcula media/maxima/minima/delta/tendencia/comparacoes; Gemini redige a resposta usando apenas o resultado calculado.
+- Chat responde perguntas de ciclo solar usando `ClimateSolar.getSolarEventsForSelectedDate` sobre `latestData.solar`, reutilizando aliases solares e fallback de zenite do modulo solar.
 - Periodos suportados incluem data unica, hoje, ontem, anteontem, datas relativas, intervalo e ultimos dias. `Ultimos dias` usa 7 dias por padrao e consultas de periodo sao limitadas a 30 dias.
+- Heatmaps destacam contexto temporal com `.is-selected`: calendario mensal destaca o dia selecionado, heatmap horario destaca a hora atual quando a data selecionada e hoje, e mapa semanal destaca dia da semana/hora atual quando a data selecionada e hoje.
+- O mapa semanal reinicia no domingo e considera apenas registros da semana da data selecionada, do domingo ate a data selecionada. Ele nao agrega semanas anteriores do mes.
+- Heatmaps normalizam a data recebida para `DD-MM-AAAA` antes de filtrar registros. Falhas nas visualizacoes climaticas avancadas nao devem bloquear os graficos principais da aba.
 
 ## Arquivos Mais Importantes
 
@@ -128,11 +139,12 @@ Arquivos principais:
 5. `scripts/chat.js`
 6. `scripts/data-utils.js`
 7. `scripts/chart-utils.js`
-8. `scripts/analytics.js`
-9. `scripts/solar.js`
-10. `index.html`
-11. `style.css` e `styles/`
-12. Views por aba
+8. `scripts/aqi.js`
+9. `scripts/analytics.js`
+10. `scripts/solar.js`
+11. `index.html`
+12. `style.css` e `styles/`
+13. Views por aba
 
 ## Regras Importantes
 

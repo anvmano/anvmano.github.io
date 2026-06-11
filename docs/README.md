@@ -33,6 +33,7 @@ Bibliotecas carregadas via CDN:
 │   ├── chat.js                 Interface do chat com IA
 │   ├── data-utils.js           Datas, filtros, tabelas e séries
 │   ├── chart-utils.js          Gráficos comuns e faixa de conforto
+│   ├── aqi.js                  AQI estimado da Sala no header
 │   ├── analytics.js            Estatísticas e heatmaps
 │   ├── solar.js                Eventos e gráficos solares
 │   ├── ui.js                   Abas, swipe, data picker, mensagens e colapsáveis
@@ -46,7 +47,7 @@ Bibliotecas carregadas via CDN:
 ├── styles/
 │   ├── tokens.css              Variáveis visuais
 │   ├── base.css                Base e reset
-│   ├── header.css              Cabeçalho, relógio e indicador astronômico
+│   ├── header.css              Cabeçalho, AQI, relógio e indicador astronômico
 │   ├── layout.css              Layout principal
 │   ├── tabs-toolbar.css        Abas, seletor de data e exportação
 │   ├── feedback.css            Loading, mensagens e transições
@@ -85,6 +86,7 @@ Pontos configuráveis:
 - `fields`: nomes dos campos esperados nos sensores.
 - `measurementUnits`: unidades exibidas nos valores das tabelas.
 - Sala/MQ135: `CO`, `CO2`, `Aceton`, `Alcohol`, `NH4` e `Toluen`; `Toluen` aparece como Tolueno.
+- AQI estimado: usa dados da Sala/MQ135 para exibir um chip no header. As categorias visuais seguem as faixas AQI, mas o cálculo é estimado e local.
 - `colors`: cores usadas pelos gráficos.
 - `comfortBand`: faixa de conforto térmico geral.
 - `humidityComfortBand`: faixa de conforto da umidade.
@@ -152,6 +154,7 @@ A validação verifica:
 - Faixa de conforto térmico nos gráficos de temperatura e sensação.
 - Faixa de conforto do Aquário entre 25°C e 27°C.
 - Heatmaps e visualizações climáticas avançadas para Sala e Quarto.
+- Destaque temporal nos heatmaps: dia selecionado no calendário, hora atual no heatmap horário de hoje e dia/hora atual no mapa semanal do mês atual.
 - Ciclo solar do dia com amanhecer, nascer do sol, zênite, pôr do sol e anoitecer.
 - Histórico de nascer e pôr do sol.
 - Zoom dos gráficos.
@@ -194,6 +197,7 @@ JSON:
 - O chat envia ao Gemini apenas resumo compacto de dados carregados, nunca o histórico inteiro.
 - Atalhos do chat usam `data-chat-question` e reutilizam o mesmo fluxo de envio da pergunta digitada.
 - O chat usa duas etapas: Gemini classifica a intenção em JSON; JavaScript calcula os dados; Gemini apenas redige a resposta final.
+- Perguntas sobre ciclo solar no chat reutilizam o parser solar central do app, evitando leitura duplicada dos campos solares.
 - Quando ambiente, data, periodo ou operação aparecem de forma informal, a classificação em JSON ajuda a entender erros de digitação e fala natural.
 - Consultas de período usam limite de 30 dias; `últimos dias` usa 7 dias por padrão.
 - O CSS foi dividido em arquivos por responsabilidade dentro de `styles/`.

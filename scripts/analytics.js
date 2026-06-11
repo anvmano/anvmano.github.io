@@ -150,21 +150,33 @@
     };
 
     function renderAdvancedClimateViews(data, selectedDate, options = {}) {
+        const dateParts = parseSelectedDate(selectedDate);
+        if (!dateParts) return;
+
         const metricKey = options.metricKey || "Temperatura";
         const containers = {
             ...DEFAULT_ADVANCED_CONTAINERS,
             ...(options.containers || {}),
         };
-        const monthRecords = extractClimateRecordsForSelectedMonth(data, metricKey, selectedDate);
-        const dayRecords = monthRecords.filter(record => record.firebaseDate === selectedDate);
+        const normalizedDate = dateParts.firebaseDate;
+        const monthRecords = extractClimateRecordsForSelectedMonth(data, metricKey, normalizedDate);
+        const dayRecords = monthRecords.filter(record => record.firebaseDate === normalizedDate);
 
-        renderMonthlyClimateCalendar(monthRecords, selectedDate, containers.monthlyCalendar);
-        renderHourlyHeatmap(dayRecords, containers.hourlyHeatmap);
-        renderWeeklyHeatmap(monthRecords, containers.weeklyHeatmap);
+        try {
+            renderMonthlyClimateCalendar(monthRecords, normalizedDate, containers.monthlyCalendar);
+            renderHourlyHeatmap(dayRecords, normalizedDate, containers.hourlyHeatmap);
+            renderWeeklyHeatmap(monthRecords, normalizedDate, containers.weeklyHeatmap);
+        } catch (error) {
+            console.warn("Falha ao renderizar visualizações climáticas avançadas.", error);
+        }
     }
 
     function extractClimateRecordsForSelectedMonth(data, metricKey, selectedDate) {
-        const [, selectedMonth, selectedYear] = selectedDate.split("-");
+        const dateParts = parseSelectedDate(selectedDate);
+        if (!dateParts) return [];
+
+        const selectedMonth = pad(dateParts.month);
+        const selectedYear = String(dateParts.year);
         const records = [];
 
         for (const firebaseDate of Object.keys(data || {})) {
@@ -212,7 +224,10 @@
 
         el.innerHTML = "";
 
-        const [selectedDay, selectedMonth, selectedYear] = selectedDate.split("-").map(Number);
+        const dateParts = parseSelectedDate(selectedDate);
+        if (!dateParts) return;
+
+        const { day: selectedDay, month: selectedMonth, year: selectedYear } = dateParts;
         const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
         const firstWeekday = new Date(selectedYear, selectedMonth - 1, 1).getDay();
         const valuesByDay = groupAverage(records, record => record.day);
@@ -238,18 +253,22 @@
         }
     }
 
-    function renderHourlyHeatmap(records, containerId) {
+    function renderHourlyHeatmap(records, selectedDate, containerId) {
         const el = document.getElementById(containerId);
         if (!el) return;
 
         el.innerHTML = "";
         const valuesByHour = groupAverage(records, record => record.hour);
         const scale = getValueScale(Object.values(valuesByHour));
+        const today = new Date();
+        const shouldHighlightCurrentHour = parseSelectedDate(selectedDate)?.firebaseDate === ClimateData.dataAtual();
+        const currentHour = today.getHours();
 
         for (let hour = 0; hour < 24; hour++) {
             const value = valuesByHour[hour];
             const cell = document.createElement("span");
             cell.className = "heatmap-cell hourly-heatmap__cell";
+            if (shouldHighlightCurrentHour && hour === currentHour) cell.classList.add("is-selected");
             cell.style.backgroundColor = getHeatColor(value, scale);
             cell.innerHTML = `<span>${pad(hour)}h</span><strong>${formatHeatValue(value)}</strong>`;
             cell.title = value == null ? `${pad(hour)}h sem dados` : `${pad(hour)}h média ${value.toFixed(1)}°C`;
@@ -257,13 +276,17 @@
         }
     }
 
-    function renderWeeklyHeatmap(records, containerId) {
+    function renderWeeklyHeatmap(records, selectedDate, containerId) {
         const el = document.getElementById(containerId);
         if (!el) return;
 
         el.innerHTML = "";
+        const dateParts = parseSelectedDate(selectedDate);
+        if (!dateParts) return;
+
+        const weekRecords = filterRecordsFromWeekStart(records, dateParts);
         const values = {};
-        records.forEach(record => {
+        weekRecords.forEach(record => {
             const weekday = new Date(record.year, record.month - 1, record.day).getDay();
             const key = `${weekday}-${record.hour}`;
             if (!values[key]) values[key] = [];
@@ -275,6 +298,10 @@
         );
         const scale = getValueScale(Object.values(averaged));
         const weekLabels = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+        const today = new Date();
+        const shouldHighlightCurrentSlot = dateParts.firebaseDate === ClimateData.dataAtual();
+        const currentWeekday = today.getDay();
+        const currentHour = today.getHours();
 
         const corner = document.createElement("span");
         corner.className = "weekly-heatmap__axis weekly-heatmap__axis--corner";
@@ -297,11 +324,58 @@
                 const value = averaged[`${weekday}-${hour}`];
                 const cell = document.createElement("span");
                 cell.className = "heatmap-cell weekly-heatmap__cell";
+                if (shouldHighlightCurrentSlot && weekday === currentWeekday && hour === currentHour) {
+                    cell.classList.add("is-selected");
+                }
                 cell.style.backgroundColor = getHeatColor(value, scale);
                 cell.title = value == null ? `${weekLabels[weekday]} ${hour}h sem dados` : `${weekLabels[weekday]} ${hour}h média ${value.toFixed(1)}°C`;
                 el.appendChild(cell);
             }
         }
+    }
+
+    function filterRecordsFromWeekStart(records, dateParts) {
+        const weekStart = new Date(dateParts.year, dateParts.month - 1, dateParts.day);
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+
+        const selectedDateEnd = new Date(dateParts.year, dateParts.month - 1, dateParts.day);
+        selectedDateEnd.setHours(23, 59, 59, 999);
+
+        return records.filter(record => {
+            const recordDate = new Date(record.year, record.month - 1, record.day);
+            recordDate.setHours(12, 0, 0, 0);
+            return recordDate >= weekStart && recordDate <= selectedDateEnd;
+        });
+    }
+
+    function parseSelectedDate(value) {
+        const text = String(value || "").trim();
+        let match = text.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+        if (match) return buildDateParts(match[1], match[2], match[3]);
+
+        match = text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (match) return buildDateParts(match[1], match[2], match[3]);
+
+        match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (match) return buildDateParts(match[3], match[2], match[1]);
+
+        return null;
+    }
+
+    function buildDateParts(dayText, monthText, yearText) {
+        const day = Number(dayText);
+        const month = Number(monthText);
+        const year = Number(yearText);
+        if (!Number.isInteger(day) || !Number.isInteger(month) || !Number.isInteger(year)) return null;
+        if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+        return {
+            day,
+            month,
+            year,
+            firebaseDate: `${pad(day)}-${pad(month)}-${year}`,
+        };
     }
 
     function addWeekdayHeaders(el) {

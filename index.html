@@ -23,11 +23,30 @@
                 <h1>Estação Climática</h1>
             </div>
             <div class="header-status">
+                <button class="aqi-indicator aqi-indicator--unknown" id="aqiIndicator" type="button" aria-expanded="false" aria-controls="aqiPopover" title="AQI estimado indisponível">
+                    <span class="aqi-indicator__prefix">AQI</span>
+                    <strong class="aqi-indicator__value">--</strong>
+                    <span class="aqi-indicator__status">--</span>
+                </button>
+                <div class="aqi-popover" id="aqiPopover" hidden>
+                    <div class="aqi-popover__header">
+                        <span>AQI estimado da Sala</span>
+                        <strong>--</strong>
+                    </div>
+                    <p class="aqi-popover__text">Sem dados suficientes do MQ135.</p>
+                </div>
                 <div class="astro-indicator astro-indicator--day" id="astroIndicator" title="Ciclo atual do dia" aria-label="Ciclo atual do dia">
                     <span class="astro-indicator__track" aria-hidden="true">
                         <span class="astro-indicator__orb"></span>
                     </span>
                     <span class="astro-indicator__label" aria-hidden="true"></span>
+                </div>
+                <div class="astro-popover" id="astroPopover" hidden>
+                    <div class="astro-popover__header">
+                        <span>Ciclo solar de hoje</span>
+                        <strong>--</strong>
+                    </div>
+                    <dl class="astro-popover__list"></dl>
                 </div>
                 <div class="header-time" id="headerTime"></div>
             </div>
@@ -275,6 +294,7 @@
     <script src="scripts/analytics.js?v=20260603-1"></script>
     <script src="scripts/solar.js?v=20260603-2"></script>
     <script src="scripts/chart-utils.js?v=20260603-1"></script>
+    <script src="scripts/aqi.js?v=20260611-1"></script>
     <script src="scripts/firebase-service.js?v=20260528-1"></script>
     <script src="scripts/ui.js?v=20260602-1"></script>
     <script src="scripts/zoom.js?v=20260528-1"></script>

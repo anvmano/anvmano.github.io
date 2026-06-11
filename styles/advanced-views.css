@@ -134,7 +134,7 @@
     text-align: center;
 }
 
-.calendar-heatmap__day.is-selected {
+.heatmap-cell.is-selected {
     outline: 2px solid var(--accent);
     outline-offset: 1px;
 }

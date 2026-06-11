@@ -21,12 +21,13 @@
 
     function render({ data, selectedDate, createChart, colors, ui }) {
         const filteredData = ClimateData.filterDataByDays(data, 2, selectedDate);
+        const chartData = ClimateData.filterDataByRollingHours(data, selectedDate, 24);
         ClimateAnalytics.renderStats("aquario", filteredData, selectedDate);
 
         createChart({
             canvasCtx: temperatureChart,
             containerId: ids.chartContainers.aquariumTemperature,
-            data: filteredData,
+            data: chartData,
             key: aquariumFields.temperature,
             label: "Temperatura",
             color: colors.blue,
@@ -38,7 +39,7 @@
         createChart({
             canvasCtx: phChart,
             containerId: ids.chartContainers.aquariumPh,
-            data: filteredData,
+            data: chartData,
             key: aquariumFields.ph,
             label: "PH",
             color: colors.teal,
@@ -47,7 +48,7 @@
         createChart({
             canvasCtx: tdsChart,
             containerId: ids.chartContainers.aquariumTds,
-            data: filteredData,
+            data: chartData,
             key: aquariumFields.tds,
             label: "TDS",
             color: colors.amber,
@@ -58,7 +59,7 @@
         createChart({
             canvasCtx: turbidityChart,
             containerId: ids.chartContainers.aquariumTurbidity,
-            data: filteredData,
+            data: chartData,
             key: aquariumFields.turbidity,
             label: "Turbidez",
             color: colors.rose,

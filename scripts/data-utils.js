@@ -66,6 +66,60 @@
         return filtered;
     }
 
+    function filterDataByRollingHours(data, selectedDate, hours = 24, referenceDate = new Date()) {
+        const selectedDateParts = parseFirebaseDateParts(selectedDate || dataAtual());
+        if (!selectedDateParts) return {};
+
+        const windowEnd = new Date(
+            selectedDateParts.year,
+            selectedDateParts.month - 1,
+            selectedDateParts.day,
+            referenceDate.getHours(),
+            referenceDate.getMinutes(),
+            referenceDate.getSeconds(),
+            referenceDate.getMilliseconds()
+        );
+        const windowStart = new Date(windowEnd);
+        windowStart.setHours(windowStart.getHours() - hours);
+
+        const filtered = {};
+
+        for (const date of Object.keys(data || {}).sort((a, b) => parseFirebaseDate(a) - parseFirebaseDate(b))) {
+            const dateData = data[date];
+            if (!dateData || typeof dateData !== "object") continue;
+
+            for (const time of Object.keys(dateData).sort()) {
+                const timestamp = parseFirebaseDateTime(date, time);
+                if (!timestamp || timestamp < windowStart || timestamp > windowEnd) continue;
+
+                filtered[date] ||= {};
+                filtered[date][time] = dateData[time];
+            }
+        }
+
+        return filtered;
+    }
+
+    function parseFirebaseDateTime(date, time) {
+        const dateParts = parseFirebaseDateParts(date);
+        if (!dateParts) return null;
+
+        const [hourText, minuteText = "0"] = String(time || "").split("-");
+        const hour = Number(hourText);
+        const minute = Number(minuteText);
+        if (!Number.isInteger(hour) || !Number.isInteger(minute)) return null;
+        if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+
+        return new Date(dateParts.year, dateParts.month - 1, dateParts.day, hour, minute, 0, 0);
+    }
+
+    function parseFirebaseDateParts(date) {
+        const [day, month, year] = String(date || "").split("-").map(Number);
+        if (!Number.isInteger(day) || !Number.isInteger(month) || !Number.isInteger(year)) return null;
+        if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+        return { day, month, year };
+    }
+
     function convertInputDateToFirebase(dateString) {
         if (!dateString) return dataAtual();
 
@@ -184,6 +238,7 @@
         dataAtual,
         parseFirebaseDate,
         filterDataByDays,
+        filterDataByRollingHours,
         convertInputDateToFirebase,
         convertFirebaseDateToInput,
         createTables,

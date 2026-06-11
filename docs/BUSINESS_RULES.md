@@ -54,11 +54,31 @@ Entradas: dados Firebase, dias, data selecionada.
 
 Saidas: objeto contendo apenas a data selecionada ou `{}`.
 
-Impacto: graficos/tabelas de Sala, Quarto e Aquario.
+Impacto: cards e tabelas de Sala, Quarto e Aquario.
 
 Dependencias: formato `DD-MM-AAAA`.
 
-Se alterada: graficos podem voltar a mostrar multiplos dias ou nao mostrar nada.
+Se alterada: cards e tabelas podem voltar a mostrar multiplos dias ou nao mostrar nada.
+
+Criticidade: Alta.
+
+## Regra: janela movel de 24h para graficos comuns
+
+Arquivo: `scripts/data-utils.js`
+
+Metodo: `filterDataByRollingHours(data, selectedDate, hours = 24, referenceDate = new Date())`
+
+Objetivo: filtrar os dados dos graficos comuns em uma janela movel de 24h, sem zerar na meia-noite.
+
+Entradas: dados Firebase, data selecionada, quantidade de horas e hora atual do navegador.
+
+Saidas: objeto contendo registros entre o mesmo horario do dia anterior e o horario atual da data selecionada. Exemplo: se agora sao 15h e a data selecionada e `11-06-2026`, a janela vai de 15h de `10-06-2026` ate 15h de `11-06-2026`.
+
+Impacto: graficos comuns de Sala, Quarto e Aquario.
+
+Dependencias: formato `DD-MM-AAAA` para data e `HH-MM` para horario.
+
+Se alterada: graficos podem voltar a zerar na meia-noite ou misturar periodos incorretos.
 
 Criticidade: Alta.
 
@@ -222,6 +242,18 @@ Entradas: dados, data selecionada, `metricKey`, containers.
 
 Saidas: celulas DOM nos containers.
 
+Regra de data:
+
+- aceitar a data selecionada e normalizar para `DD-MM-AAAA` antes de filtrar registros
+- mapa semanal reinicia no domingo e usa apenas registros da semana da data selecionada, do domingo ate a data selecionada
+- uma falha nas visualizacoes climaticas avancadas nao pode interromper os graficos principais da aba
+
+Regra de destaque:
+
+- calendario mensal destaca o dia selecionado
+- heatmap por hora destaca a hora atual apenas quando a data selecionada e hoje
+- mapa semanal destaca a celula do dia da semana atual e hora atual apenas quando a data selecionada e hoje
+
 Impacto: visualizacoes climaticas de Quarto e Sala.
 
 Dependencias: ids de `scripts/config.js`.
@@ -347,11 +379,55 @@ Rotulo visivel: nenhum texto interno; o pill fica apenas visual, com tamanho apr
 
 Tooltip: mostra apenas os horarios solares principais, por exemplo `Nascer do sol: 06:40 · Pôr do sol: 17:50`.
 
+Popover: clique/toque no indicador abre um popover compacto com amanhecer, nascer do sol, zênite, pôr do sol, anoitecer, estado atual e duração do dia. Clique fora ou `Esc` fecha.
+
+Exclusividade: ao abrir este popover, outros popovers do header devem fechar.
+
 Impacto: leitura rapida do ciclo atual no topo da pagina.
 
-Dependencias: `ClimateSolar.getSolarEventsForSelectedDate`, dados solares carregados pelo Firebase.
+Dependencias: `ClimateSolar.getSolarEventsForSelectedDate`, dados solares carregados pelo Firebase, ids `astroIndicator` e `astroPopover`.
 
-Se alterada: indicador pode mostrar dia/noite incorreto ou perder fallback antes do Firebase carregar.
+Se alterada: indicador pode mostrar dia/noite incorreto, perder fallback antes do Firebase carregar ou quebrar o popover solar.
+
+Criticidade: Media.
+
+## Regra: AQI estimado no header
+
+Arquivos: `index.html`, `styles/header.css`, `styles/responsive.css`, `scripts/aqi.js`, `scripts/main.js`
+
+Metodos: `ClimateAqi.setup`, `ClimateAqi.update`, `ClimateAqi.calculate`
+
+Objetivo: mostrar no header um chip de AQI estimado da Sala usando os dados mais recentes do MQ135.
+
+Entradas:
+
+- dados de `historico/AirQuality`
+- campos `CO`, `CO2`, `Toluen`, `NH4`, `Aceton` e `Alcohol`
+- faixas de classificacao AQI
+
+Saidas:
+
+- desktop e mobile: chip compacto com `AQI` e valor
+- tooltip/`aria-label`: valor, classificacao e dominante
+- clique/toque: popover com valor, classificacao, impacto, dominante, horario e principais subindices
+- exclusividade: ao abrir este popover, outros popovers do header devem fechar
+
+Regra de classificacao:
+
+- `0-50`: Boa
+- `51-100`: Moderado
+- `101-150`: Insalubre para grupos sensiveis
+- `151-200`: Insalubre
+- `201-300`: Muito insalubre
+- `301+`: Perigoso
+
+Observacao: o valor e uma estimativa local calculada pelos gases disponiveis do MQ135. A classificacao visual segue as faixas AQI, mas o projeto nao deve apresentar isso como AQI oficial certificado.
+
+Impacto: leitura rapida da qualidade do ar estimada da Sala em todas as abas.
+
+Dependencias: dados de Sala carregados pelo Firebase, ids `aqiIndicator` e `aqiPopover`.
+
+Se alterada: o header pode mostrar AQI indisponivel, classificacao incorreta ou popover quebrado.
 
 Criticidade: Media.
 
@@ -566,9 +642,11 @@ Regra de contexto:
 - se a pergunta mencionar Sala, Quarto ou Aquario, usar o ambiente mencionado como alvo, mesmo que a aba ativa seja outra
 - se a pergunta nao mencionar data, usar a data selecionada no calendario da pagina
 - se a pergunta mencionar data em `DD/MM/AAAA`, `DD-MM-AAAA`, `hoje`, `ontem` ou `anteontem`, usar essa data como alvo sem alterar o calendario da pagina
+- se a pergunta mencionar hora como `14h`, `14:00` ou `14`, o chat deve filtrar a hora correspondente e comparar corretamente com chaves Firebase no formato `14-00`
 - periodos como `ultimos dias` devem usar 7 dias por padrao; periodos devem ser limitados a 30 dias
 - a classificacao de intencao pode retornar `ambientes`, `metricas`, `operacao`, `periodo`, `criterio`, `confianca`, `precisa_esclarecimento` e `solar`, mas nao deve receber historico completo nem responder a pergunta do usuario
 - as regras de ambiente e data valem para media, maxima, minima, delta, tendencia e qualquer parametro carregado no ambiente alvo
+- perguntas de ciclo solar devem usar `latestData.solar` e `ClimateSolar.getSolarEventsForSelectedDate`, sem duplicar leitura manual dos campos solares no chat
 
 Impacto: perguntas sobre media, maxima, minima, tendencia e eventos solares.
 

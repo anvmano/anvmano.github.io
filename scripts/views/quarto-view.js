@@ -19,6 +19,7 @@
 
     function render({ data, selectedDate, createChart, colors, ui }) {
         const filteredData = ClimateData.filterDataByDays(data, 2, selectedDate);
+        const chartData = ClimateData.filterDataByRollingHours(data, selectedDate, 24);
         ClimateAnalytics.renderStats("quarto", filteredData, selectedDate);
         ClimateAnalytics.renderAdvancedClimateViews(data, selectedDate, {
             metricKey: roomFields.temperature,
@@ -28,7 +29,7 @@
         createChart({
             canvasCtx: temperatureChart,
             containerId: ids.chartContainers.roomTemperature,
-            data: filteredData,
+            data: chartData,
             key: roomFields.temperature,
             label: "Temperatura",
             color: colors.blue,
@@ -39,7 +40,7 @@
         createChart({
             canvasCtx: feelsLikeChart,
             containerId: ids.chartContainers.roomFeelsLike,
-            data: filteredData,
+            data: chartData,
             key: roomFields.feelsLike,
             label: "Sensação Térmica",
             color: colors.green,
@@ -50,7 +51,7 @@
         createChart({
             canvasCtx: humidityChart,
             containerId: ids.chartContainers.roomHumidity,
-            data: filteredData,
+            data: chartData,
             key: roomFields.humidity,
             label: "Umidade",
             color: colors.purple,

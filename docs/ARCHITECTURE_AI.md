@@ -75,7 +75,7 @@ Responsabilidades:
 - `scripts/main.js`: orquestracao da aplicacao, listeners Firebase, cache de dados, renderizacao por view, contrato de criacao de graficos, opcoes de zoom e indicador astronomico do header.
 - `scripts/firebase-service.js`: inicializacao Firebase, listeners `onValue`, loading bar e erros.
 - `scripts/ai-service.js`: inicializacao do Firebase AI Logic e envio de prompts ao Gemini.
-- `scripts/chat.js`: painel do chat, atalhos de perguntas, mensagens, classificacao de intencao em JSON, calculos em JavaScript e redacao final com resultado estruturado.
+- `scripts/chat.js`: painel do chat, atalhos de perguntas, mensagens, classificacao de intencao em JSON, calculos em JavaScript, consultas solares via `ClimateSolar.getSolarEventsForSelectedDate` e redacao final com resultado estruturado.
 - `scripts/data-utils.js`: datas, filtros, tabelas, extracao de series, conversoes e formatacao.
 - `scripts/chart-utils.js`: defaults Chart.js, criacao de graficos de linha, fallback de grafico vazio, faixa de conforto.
 - `scripts/analytics.js`: estatisticas, cards de resumo, calendario climatico, heatmap horario e heatmap semanal.
@@ -253,6 +253,7 @@ Heatmaps:
 - calendario mensal
 - heatmap por hora do dia
 - mapa semanal por dia/hora
+- destaque visual `.is-selected` para dia selecionado, hora atual de hoje e dia/hora atual do mes exibido
 
 ### ClimateSolar
 

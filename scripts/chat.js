@@ -225,7 +225,6 @@
             confidence: Number(classifiedIntent?.confianca) || null,
             needsClarification: Boolean(classifiedIntent?.precisa_esclarecimento),
             clarificationQuestion: classifiedIntent?.pergunta_esclarecimento || null,
-            includeSolar: solarIntent,
         };
     }
 
@@ -605,13 +604,14 @@
 
     function buildSolarCycleResult(environment, context, periodDates, intent) {
         const solarSource =
+            context.latestData?.solar ||
             context.latestData?.historico?.NascerPorDoSol ||
             context.historico?.NascerPorDoSol ||
             context.latestData?.NascerPorDoSol ||
             {};
 
         const dailySolarData = periodDates
-            .map(date => buildDailySolarCycleFromHistorico(solarSource?.[date], date))
+            .map(date => buildDailySolarCycleFromEvents(solarSource, date))
             .filter(Boolean);
 
         const base = {
@@ -641,50 +641,17 @@
         };
     }
 
-    function buildDailySolarCycleFromHistorico(daySolarData, date) {
-        if (!daySolarData || typeof daySolarData !== "object") {
+    function buildDailySolarCycleFromEvents(solarSource, date) {
+        const events = window.ClimateSolar?.getSolarEventsForSelectedDate?.(solarSource, date);
+        if (!events) {
             return null;
         }
 
-        const records = Object.keys(daySolarData)
-            .sort()
-            .map(key => daySolarData[key])
-            .filter(item => item && typeof item === "object");
-
-        if (!records.length) {
-            return null;
-        }
-
-        const record = records[records.length - 1];
-
-        const amanhecer = buildTimeFromHourMinute(
-            record.HoraAmanhecer,
-            record.MinuteAmanhecer
-        );
-
-        const nascerDoSol = buildTimeFromHourMinute(
-            record.HourNascerDoSol,
-            record.MinuteNascerDoSol
-        );
-
-        const zenite = buildTimeFromHourMinute(
-            record.HoraZenite,
-            record.MinuteZenite
-        );
-
-        const porDoSol = buildTimeFromHourMinute(
-            record.HoraPorDoSol,
-            record.MinutePorDoSol
-        );
-
-        const anoitecer = buildTimeFromHourMinute(
-            record.HourAnoitecer,
-            record.MinuteAnoitecer
-        );
-
-        if (!amanhecer && !nascerDoSol && !zenite && !porDoSol && !anoitecer) {
-            return null;
-        }
+        const amanhecer = window.ClimateData.formatTime(events.dawn);
+        const nascerDoSol = window.ClimateData.formatTime(events.sunrise);
+        const zenite = window.ClimateData.formatTime(events.zenith);
+        const porDoSol = window.ClimateData.formatTime(events.sunset);
+        const anoitecer = window.ClimateData.formatTime(events.dusk);
 
         return {
             data: formatDate(date),
@@ -698,161 +665,12 @@
         };
     }
 
-    function buildTimeFromHourMinute(hour, minute) {
-        const parsedHour = Number(hour);
-        const parsedMinute = Number(minute);
-
-        if (!Number.isFinite(parsedHour) || !Number.isFinite(parsedMinute)) {
-            return null;
-        }
-
-        if (parsedHour < 0 || parsedHour > 23) {
-            return null;
-        }
-
-        if (parsedMinute < 0 || parsedMinute > 59) {
-            return null;
-        }
-
-        return `${String(parsedHour).padStart(2, "0")}:${String(parsedMinute).padStart(2, "0")}`;
-    }
-
-    function buildDailySolarCycle(dayData, date) {
-        const records = extractDayRecords(dayData);
-
-        if (!records.length) return null;
-
-        const solarValues = records
-            .map(record => normalizeSolarRecord(record))
-            .filter(Boolean);
-
-        if (!solarValues.length) return null;
-
-        const merged = mergeSolarValues(solarValues);
-
-        return {
-            data: formatDate(date),
-            amanhecer: merged.amanhecer,
-            nascer_do_sol: merged.nascer_do_sol,
-            zenite: merged.zenite,
-            por_do_sol: merged.por_do_sol,
-            anoitecer: merged.anoitecer,
-            duracao_dia: calculateDurationLabel(merged.nascer_do_sol, merged.por_do_sol),
-            periodo_luz_total: calculateDurationLabel(merged.amanhecer, merged.anoitecer),
-        };
-    }
-
-    function extractDayRecords(dayData) {
-        const records = [];
-
-        for (const time of Object.keys(dayData || {}).sort()) {
-            const timeData = dayData[time];
-
-            if (!timeData || typeof timeData !== "object") continue;
-
-            for (const itemKey of Object.keys(timeData).sort()) {
-                const item = timeData[itemKey];
-
-                if (!item || typeof item !== "object") continue;
-
-                records.push(item);
-            }
-        }
-
-        return records;
-    }
-
-    function normalizeSolarRecord(record) {
-        const amanhecer = getFirstStringValue(record, [
-            "amanhecer",
-            "Amanhecer",
-            "dawn",
-            "civilDawn",
-            "inicioAmanhecer"
-        ]);
-
-        const nascerDoSol = getFirstStringValue(record, [
-            "nascerDoSol",
-            "nascer_do_sol",
-            "NascerDoSol",
-            "sunrise",
-            "solNascer"
-        ]);
-
-        const zenite = getFirstStringValue(record, [
-            "zenite",
-            "zênite",
-            "Zenite",
-            "solarNoon",
-            "meioDiaSolar"
-        ]);
-
-        const porDoSol = getFirstStringValue(record, [
-            "porDoSol",
-            "pôrDoSol",
-            "por_do_sol",
-            "PorDoSol",
-            "sunset",
-            "solPor"
-        ]);
-
-        const anoitecer = getFirstStringValue(record, [
-            "anoitecer",
-            "Anoitecer",
-            "dusk",
-            "civilDusk",
-            "fimAnoitecer"
-        ]);
-
-        if (!amanhecer && !nascerDoSol && !zenite && !porDoSol && !anoitecer) {
-            return null;
-        }
-
-        return {
-            amanhecer: normalizeHourLabel(amanhecer),
-            nascer_do_sol: normalizeHourLabel(nascerDoSol),
-            zenite: normalizeHourLabel(zenite),
-            por_do_sol: normalizeHourLabel(porDoSol),
-            anoitecer: normalizeHourLabel(anoitecer),
-        };
-    }
-
-    function mergeSolarValues(values) {
-        return {
-            amanhecer: firstDefined(values.map(value => value.amanhecer)),
-            nascer_do_sol: firstDefined(values.map(value => value.nascer_do_sol)),
-            zenite: firstDefined(values.map(value => value.zenite)),
-            por_do_sol: firstDefined(values.map(value => value.por_do_sol)),
-            anoitecer: firstDefined(values.map(value => value.anoitecer)),
-        };
-    }
-
-    function getFirstStringValue(source, keys) {
-        for (const key of keys) {
-            const value = source?.[key];
-
-            if (typeof value === "string" && value.trim()) {
-                return value.trim();
-            }
-
-            if (typeof value === "number" && Number.isFinite(value)) {
-                return String(value);
-            }
-        }
-
-        return null;
-    }
-
-    function firstDefined(values) {
-        return values.find(value => value !== null && value !== undefined && value !== "") || null;
-    }
-
     function normalizeHourFilter(value) {
         if (!value) return null;
 
         const text = String(value).trim();
 
-        const match = text.match(/^(\d{1,2})(?::\d{2})?$/);
+        const match = text.match(/^(\d{1,2})(?:(?::|-)\d{2}|h)?$/i);
         if (!match) return null;
 
         const hour = Number(match[1]);
@@ -862,38 +680,6 @@
         }
 
         return String(hour).padStart(2, "0");
-    }
-
-    function normalizeHourLabel(value) {
-        if (!value) return null;
-
-        const text = String(value).trim();
-
-        const isoMatch = text.match(/T(\d{2}):(\d{2})/);
-        if (isoMatch) {
-            return `${isoMatch[1]}:${isoMatch[2]}`;
-        }
-
-        const hourMinuteMatch = text.match(/\b(\d{1,2}):(\d{2})\b/);
-        if (hourMinuteMatch) {
-            const hour = Number(hourMinuteMatch[1]);
-            const minute = Number(hourMinuteMatch[2]);
-
-            if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
-                return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-            }
-        }
-
-        const hourOnlyMatch = text.match(/\b(\d{1,2})h?\b/);
-        if (hourOnlyMatch) {
-            const hour = Number(hourOnlyMatch[1]);
-
-            if (hour >= 0 && hour <= 23) {
-                return `${String(hour).padStart(2, "0")}:00`;
-            }
-        }
-
-        return text;
     }
 
     function calculateDurationLabel(start, end) {

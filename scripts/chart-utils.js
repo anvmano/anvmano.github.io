@@ -105,10 +105,6 @@
         };
     }
 
-    function clamp(value, min, max) {
-        return Math.min(Math.max(value, min), max);
-    }
-
     function formatAxisTick(value, suffix) {
         const number = Number(value);
         if (!Number.isFinite(number)) return value;
