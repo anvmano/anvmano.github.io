@@ -45,6 +45,7 @@ graph TD
     Chat --> AI
     Chat --> Data
     Chat --> Solar
+    Chat --> Aqi
     Quarto --> Data
     Quarto --> Analytics
     Quarto --> Charts
@@ -148,7 +149,7 @@ Dependencias diretas: nenhuma.
 
 Dependencias indiretas: Firebase, DOM e views que usam seus valores.
 
-Quem chama: `scripts/main.js`, `scripts/firebase-service.js`, `scripts/ui.js`, `scripts/zoom.js`, views, `scripts/views/solar-view.js`.
+Quem chama: `scripts/main.js`, `scripts/firebase-service.js`, `scripts/ui/ui.js`, `scripts/charts/zoom.js`, views, `scripts/views/solar-view.js`.
 
 Quem e chamado: nenhum.
 
@@ -207,13 +208,13 @@ Dependencias diretas:
 
 Dependencias indiretas: Realtime Database e Firebase App Check.
 
-Quem chama: `scripts/main.js`, `scripts/ai-service.js`.
+Quem chama: `scripts/main.js`, `scripts/assistant/ai-service.js`.
 
 Quem e chamado: Firebase SDK (`initializeApp`, `getDatabase`, `ref`, `onValue`) e Firebase App Check (`initializeAppCheck`, `ReCaptchaEnterpriseProvider`).
 
 Impacto da alteracao: Critico.
 
-## scripts/ai-service.js
+## scripts/assistant/ai-service.js
 
 Responsabilidade: inicializar Firebase AI Logic e enviar prompts ao modelo configurado.
 
@@ -225,7 +226,7 @@ Dependencias diretas:
 
 Dependencias indiretas: Firebase AI Logic, Gemini Developer API e Firebase App Check.
 
-Quem chama: `scripts/chat.js`.
+Quem chama: `scripts/assistant/assistant-intent.js` e `scripts/assistant/assistant-query.js` por meio de `ClimateAIService`.
 
 Quem e chamado: Firebase AI Logic (`getAI`, `getGenerativeModel`, `GoogleAIBackend`).
 
@@ -233,7 +234,35 @@ Impacto da alteracao: Alto. Pode quebrar o chat ou gerar falhas relacionadas a m
 
 ## scripts/chat.js
 
-Responsabilidade: renderizar painel do chat, controlar mensagens, classificar intencao com IA, validar periodo/ambiente/metrica, calcular resultados em JavaScript e pedir ao Gemini apenas a redacao final.
+Responsabilidade: fachada publica do chat. Mantem `window.ClimateChat.setup` para preservar o contrato com `scripts/main.js` e delega a implementacao para `scripts/assistant/assistant-ui.js`.
+
+Dependencias diretas:
+
+- `ClimateAssistant.ui`
+
+Dependencias indiretas: todos os modulos de `scripts/assistant/`.
+
+Quem chama: `scripts/main.js`.
+
+Quem e chamado: `ClimateAssistant.ui.setup`.
+
+Impacto da alteracao: Medio. Quebrar este arquivo impede o chat de inicializar, mesmo que os modulos internos estejam corretos.
+
+## scripts/assistant/*.js
+
+Responsabilidade: implementar a assistente com IA em modulos separados.
+
+Arquivos:
+
+- `assistant-config.js`: constantes, exemplos, ambientes, metricas e aliases.
+- `assistant-format.js`: normalizacao e formatacao compartilhadas.
+- `assistant-ui.js`: painel, mensagens, abertura/fechamento, submit e atalhos.
+- `assistant-intent.js`: classificacao de intencao, ambiente, data, hora e periodo.
+- `assistant-query.js`: execucao da consulta, prompt final e fallback textual.
+- `assistant-metrics.js`: estatisticas numericas, aliases, comparacoes, faixa de conforto e roteamento de metricas.
+- `assistant-solar.js`: consulta de ciclo solar para respostas do chat.
+- `assistant-aqi.js`: consulta de AQI/IAQ/qualidade do ar reutilizando `ClimateAqi.calculate`.
+- `ai-service.js`: inicializacao e chamada do Firebase AI Logic.
 
 Dependencias diretas:
 
@@ -242,17 +271,23 @@ Dependencias diretas:
 - `ClimateAIService`
 - `ClimateData`
 - `ClimateSolar`
+- `ClimateAqi`
 - contexto recebido de `scripts/main.js`
 
-Dependencias indiretas: `latestData`, aba ativa, data selecionada, data/periodo mencionados na pergunta, ambiente mencionado na pergunta, classificacao curta do Gemini e eventos solares carregados.
+Dependencias indiretas: `latestData`, aba ativa, data selecionada, data/periodo mencionados na pergunta, ambiente mencionado na pergunta, classificacao curta do Gemini, eventos solares carregados e dados de Sala/MQ135 para AQI estimado.
 
-Quem chama: `scripts/main.js`.
+Observacao: perguntas sobre `ultimas 24h` reutilizam `ClimateData.filterDataByRollingHours` para consultar a mesma janela movel usada pelos graficos comuns.
+Observacao: perguntas com faixa horaria ou maior/menor horario sao classificadas em `assistant-intent.js`, filtradas em `assistant-query.js` e calculadas em `assistant-metrics.js` sem deixar o modelo recalcular os dados.
+Observacao: perguntas equivalentes aos heatmaps usam a mesma estrutura de dados, mas calculam localmente em `assistant-metrics.js`: calendario mensal por dia, heatmap por hora do dia e mapa semanal por dia/hora.
+Observacao: comparacoes solares sao classificadas em `assistant-intent.js` e calculadas em `assistant-solar.js`, sempre reutilizando `ClimateSolar.getSolarEventsForSelectedDate`.
 
-Quem e chamado: `ClimateAIService.generateText`, `ClimateSolar.getSolarEventsForSelectedDate`.
+Quem chama: `scripts/chat.js` e outros modulos da propria pasta.
+
+Quem e chamado: `ClimateAIService.generateText`, `ClimateSolar.getSolarEventsForSelectedDate`, `ClimateAqi.calculate`.
 
 Impacto da alteracao: Alto. Pode afetar consumo de tokens, privacidade dos dados enviados ao modelo, ambiente/data/periodo usados na resposta, calculos de media/maxima/minima/comparacao e respostas do chat.
 
-## scripts/data-utils.js
+## scripts/data/data-utils.js
 
 Responsabilidade: utilitarios de data, filtro, tabela e extracao de series.
 
@@ -260,13 +295,13 @@ Dependencias diretas: DOM para tabelas.
 
 Dependencias indiretas: formato de dados Firebase.
 
-Quem chama: `scripts/main.js`, views, `scripts/chart-utils.js`, `scripts/analytics.js`, `scripts/solar.js`, `scripts/views/solar-view.js`, `scripts/ui.js`.
+Quem chama: `scripts/main.js`, views, `scripts/charts/chart-utils.js`, `scripts/data/analytics.js`, `scripts/charts/solar.js`, `scripts/views/solar-view.js`, `scripts/ui/ui.js`.
 
 Quem e chamado: nenhum modulo externo.
 
 Impacto da alteracao: Alto.
 
-## scripts/chart-utils.js
+## scripts/charts/chart-utils.js
 
 Responsabilidade: defaults Chart.js, grafico de linha, faixa de conforto, merge de opcoes.
 
@@ -281,7 +316,7 @@ Quem e chamado: Chart.js.
 
 Impacto da alteracao: Alto.
 
-## scripts/aqi.js
+## scripts/charts/aqi.js
 
 Responsabilidade: calcular o AQI estimado da Sala a partir dos dados do MQ135 e renderizar o chip/popover do header.
 
@@ -298,7 +333,7 @@ Quem e chamado: nenhum modulo externo.
 
 Impacto da alteracao: Medio. Pode afetar o header e a leitura rapida da qualidade do ar estimada da Sala.
 
-## scripts/analytics.js
+## scripts/data/analytics.js
 
 Responsabilidade: estatisticas e heatmaps.
 
@@ -312,7 +347,7 @@ Quem e chamado: nenhum modulo local.
 
 Impacto da alteracao: Alto para cards e visualizacoes climaticas.
 
-## scripts/solar.js
+## scripts/charts/solar.js
 
 Responsabilidade: extrair eventos solares e criar graficos solares.
 
@@ -321,13 +356,13 @@ Dependencias diretas:
 - `ClimateData`
 - `Chart`
 
-Quem chama: `scripts/main.js`, `scripts/views/solar-view.js`, `scripts/zoom.js`.
+Quem chama: `scripts/main.js`, `scripts/views/solar-view.js`, `scripts/charts/zoom.js`.
 
 Quem e chamado: Chart.js.
 
 Impacto da alteracao: Alto.
 
-## scripts/ui.js
+## scripts/ui/ui.js
 
 Responsabilidade: estados vazios, mensagens, tabelas, tabs, swipe touch entre abas, colapsaveis, date picker.
 
@@ -344,7 +379,7 @@ Quem e chamado: nenhum modulo externo.
 
 Impacto da alteracao: Medio a Alto.
 
-## scripts/zoom.js
+## scripts/charts/zoom.js
 
 Responsabilidade: zoom dos graficos.
 
@@ -361,9 +396,20 @@ Quem e chamado: Chart.js.
 
 Impacto da alteracao: Medio.
 
-## scripts/pdf-report.js
+## scripts/reports/pdf-report.js e scripts/reports/pdf-report-*.js
 
 Responsabilidade: exportar PDF A4 ou JSON da aba ativa usando dados e graficos ja carregados.
+
+Organizacao:
+
+- `pdf-report.js`: fachada publica `window.ClimatePdfReport.setup`.
+- `pdf-report-config.js`: contrato das abas e metricas do relatorio.
+- `pdf-report-format.js`: valores, datas, status, slug e HTML seguro.
+- `pdf-report-data.js`: coleta, linhas, cards, alertas e tabela compacta.
+- `pdf-report-dom.js`: HTML temporario do relatorio.
+- `pdf-report-charts.js`: imagens dos graficos e ciclo solar compacto.
+- `pdf-report-pdf.js`: captura, paginacao A4, rodapes e jsPDF.
+- `pdf-report-export.js`: setup do botao, seletor PDF/JSON, build e download.
 
 Observacoes:
 
@@ -388,7 +434,7 @@ Dependencias diretas:
 
 Quem chama: `scripts/main.js`.
 
-Quem e chamado: html2canvas para captura do relatorio, jsPDF para montagem manual das paginas e Blob/URL para download JSON.
+Quem e chamado: modulos internos em `window.ClimatePdfReportModules`, html2canvas para captura do relatorio, jsPDF para montagem manual das paginas e Blob/URL para download JSON.
 
 Impacto da alteracao: Medio a Alto. Pode afetar exportacao PDF/JSON, captura de graficos e download.
 
@@ -523,7 +569,7 @@ Dependencias afetadas: praticamente todos os modulos.
 
 Nivel: Critico.
 
-### `scripts/data-utils.js`
+### `scripts/data/data-utils.js`
 
 Responsabilidade: formato dos dados.
 
@@ -531,7 +577,7 @@ Pode quebrar: graficos, tabelas, filtros, datas.
 
 Nivel: Alto.
 
-### `scripts/analytics.js`
+### `scripts/data/analytics.js`
 
 Responsabilidade: estatisticas e heatmaps.
 
@@ -539,7 +585,7 @@ Pode quebrar: cards, heatmaps de Sala/Quarto.
 
 Nivel: Alto.
 
-### `scripts/solar.js`
+### `scripts/charts/solar.js`
 
 Responsabilidade: graficos solares.
 

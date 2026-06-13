@@ -23,22 +23,41 @@ Bibliotecas carregadas via CDN:
 .
 ├── index.html                  Estrutura DOM, abas, canvases e ordem dos scripts
 ├── style.css                   Manifesto de imports CSS
-├── pdf-report.css              Estilo usado na exportação PDF
 ├── package.json                Comando de validação local
 ├── scripts/
 │   ├── config.js               Firebase, paths, ids, campos, cores e limites
 │   ├── main.js                 Orquestração geral da aplicação
 │   ├── firebase-service.js     Inicialização Firebase e listeners
-│   ├── ai-service.js           Firebase AI Logic
-│   ├── chat.js                 Interface do chat com IA
-│   ├── data-utils.js           Datas, filtros, tabelas e séries
-│   ├── chart-utils.js          Gráficos comuns e faixa de conforto
-│   ├── aqi.js                  AQI estimado da Sala no header
-│   ├── analytics.js            Estatísticas e heatmaps
-│   ├── solar.js                Eventos e gráficos solares
-│   ├── ui.js                   Abas, swipe, data picker, mensagens e colapsáveis
-│   ├── zoom.js                 Zoom dos gráficos
-│   ├── pdf-report.js           Exportação PDF/JSON
+│   ├── chat.js                 Fachada pública do chat com IA
+│   ├── assistant/
+│   │   ├── ai-service.js       Firebase AI Logic
+│   │   ├── assistant-config.js Constantes, ambientes e aliases
+│   │   ├── assistant-format.js Formatação e normalização
+│   │   ├── assistant-ui.js     Painel e mensagens do chat
+│   │   ├── assistant-intent.js Classificação de intenção
+│   │   ├── assistant-query.js  Execução das consultas
+│   │   ├── assistant-metrics.js Estatísticas e métricas
+│   │   ├── assistant-solar.js  Consultas solares do chat
+│   │   └── assistant-aqi.js    Consultas AQI/qualidade do ar
+│   ├── data/
+│   │   ├── data-utils.js       Datas, filtros, tabelas e séries
+│   │   └── analytics.js        Estatísticas e heatmaps
+│   ├── charts/
+│   │   ├── chart-utils.js      Gráficos comuns e faixa de conforto
+│   │   ├── aqi.js              AQI estimado da Sala no header
+│   │   ├── solar.js            Eventos e gráficos solares
+│   │   └── zoom.js             Zoom dos gráficos
+│   ├── ui/
+│   │   └── ui.js               Abas, swipe, data picker, mensagens e colapsáveis
+│   ├── reports/
+│   │   ├── pdf-report.js       Fachada pública da exportação
+│   │   ├── pdf-report-config.js Configuração das abas do relatório
+│   │   ├── pdf-report-format.js Formatação e status
+│   │   ├── pdf-report-data.js  Coleta e resumo dos dados
+│   │   ├── pdf-report-dom.js   HTML do relatório
+│   │   ├── pdf-report-charts.js Imagens e gráficos do PDF
+│   │   ├── pdf-report-pdf.js   Paginação A4 e jsPDF
+│   │   └── pdf-report-export.js Orquestração PDF/JSON
 │   └── views/
 │       ├── quarto-view.js      Renderização da aba Quarto
 │       ├── sala-view.js        Renderização da aba Sala
@@ -57,7 +76,9 @@ Bibliotecas carregadas via CDN:
 │   ├── zoom.css                Overlay de zoom
 │   ├── tables.css              Tabelas
 │   ├── chat.css                Chat com IA
-│   └── responsive.css          Ajustes mobile
+│   ├── responsive.css          Ajustes mobile
+│   └── reports/
+│       └── pdf-report.css      Estilo usado na exportação PDF
 ├── tools/
 │   └── validate-project.mjs    Validação estrutural local
 └── docs/
@@ -162,7 +183,7 @@ A validação verifica:
 - Tabelas com unidades nos valores, sem espaco antes da unidade, como `26.40°C`, `57.50%`, `8.66ppm`, `1.20NTU` e `930.60hPa`.
 - Leituras do Aquário normalizadas antes da exibição: TDS dividido por 10 e Turbidez dividido por 1000.
 - Indicador astronômico no cabeçalho, alinhado ao tamanho do relógio, com estado de dia/noite e tooltip com horários de nascer e pôr do sol.
-- Chat com Firebase AI Logic para perguntas sobre os dados carregados da data selecionada, com atalhos para resumo, media, maxima e alertas.
+- Chat com Firebase AI Logic para perguntas sobre os dados carregados, incluindo ambiente, periodo, hora, faixa horaria, ciclo solar, comparacoes solares, AQI/IAQ/qualidade do ar, gases do MQ135 e consultas equivalentes aos heatmaps, com atalhos para resumo, media, maxima e alertas.
 - Exportação da aba ativa em PDF ou JSON.
 
 ## Exportação
@@ -198,8 +219,11 @@ JSON:
 - Atalhos do chat usam `data-chat-question` e reutilizam o mesmo fluxo de envio da pergunta digitada.
 - O chat usa duas etapas: Gemini classifica a intenção em JSON; JavaScript calcula os dados; Gemini apenas redige a resposta final.
 - Perguntas sobre ciclo solar no chat reutilizam o parser solar central do app, evitando leitura duplicada dos campos solares.
+- Perguntas de comparacao solar no chat calculam localmente duracao do dia, maior/menor duracao de luz, tendencia de nascer/por do sol e comparacao semanal.
+- Perguntas sobre AQI/IAQ/qualidade do ar no chat reutilizam `ClimateAqi.calculate`; CO, CO2, Acetona, Álcool, Amônia e Tolueno são tratados como métricas da Sala/MQ135 quando nenhum ambiente é citado ou quando a aba/ambiente atual não possui essa medição.
+- Perguntas equivalentes aos heatmaps no chat calculam localmente calendário mensal por dia, hora típica do período e mapa semanal por dia/hora antes da redação da IA.
 - Quando ambiente, data, periodo ou operação aparecem de forma informal, a classificação em JSON ajuda a entender erros de digitação e fala natural.
-- Consultas de período usam limite de 30 dias; `últimos dias` usa 7 dias por padrão.
+- Consultas de período usam limite de 30 dias; `últimos dias` usa 7 dias por padrão. O calendário mensal pode consultar o mês completo.
 - O CSS foi dividido em arquivos por responsabilidade dentro de `styles/`.
 - Os renderizadores por aba ficam separados em `scripts/views/`.
 - A documentação técnica fica centralizada em `docs/`.
@@ -210,7 +234,7 @@ JSON:
 - Não altere ids do HTML sem atualizar `scripts/config.js`.
 - Não altere caminhos Firebase sem revisar `scripts/config.js` e os dados reais.
 - Não altere nomes de campos dos sensores sem revisar `fields` em `scripts/config.js`.
-- Não altere campos solares sem revisar `scripts/solar.js`.
+- Não altere campos solares sem revisar `scripts/charts/solar.js`.
 - Não mude a ordem dos scripts sem revisar dependências globais.
 - O projeto não tem backend local, autenticação ou build tooling completo.
 

@@ -24,16 +24,18 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - `scripts/config.js`: Firebase, paths, ids, campos e cores.
 - `scripts/main.js`: orquestracao, listeners Firebase e renderizacao das views.
 - `scripts/firebase-service.js`: inicializacao Firebase e `onValue`.
-- `scripts/ai-service.js`: Firebase AI Logic.
-- `scripts/chat.js`: UI do chat, classificacao de intencao, calculos de consulta e redacao final com IA.
-- `scripts/data-utils.js`: datas, filtros, tabelas e extracao de series.
-- `scripts/chart-utils.js`: graficos comuns e fallback.
-- `scripts/analytics.js`: estatisticas e heatmaps.
-- `scripts/solar.js`: eventos e graficos solares.
-- `scripts/ui.js`: tabs, swipe touch entre abas, date picker, mensagens e colapsaveis.
-- `scripts/zoom.js`: zoom dos graficos.
-- `scripts/pdf-report.js`: exportacao PDF/JSON usando dados e graficos ja carregados.
-- `pdf-report.css`: layout do relatorio PDF.
+- `scripts/chat.js`: fachada publica do chat, mantendo `window.ClimateChat`.
+- `scripts/assistant/ai-service.js`: Firebase AI Logic.
+- `scripts/assistant/*.js`: UI do chat, classificacao de intencao, calculos de consulta, metricas, ciclo solar, AQI e redacao final com IA.
+- `scripts/data/data-utils.js`: datas, filtros, tabelas e extracao de series.
+- `scripts/charts/chart-utils.js`: graficos comuns e fallback.
+- `scripts/data/analytics.js`: estatisticas e heatmaps.
+- `scripts/charts/solar.js`: eventos e graficos solares.
+- `scripts/ui/ui.js`: tabs, swipe touch entre abas, date picker, mensagens e colapsaveis.
+- `scripts/charts/zoom.js`: zoom dos graficos.
+- `scripts/reports/pdf-report.js`: fachada publica da exportacao PDF/JSON.
+- `scripts/reports/pdf-report-*.js`: modulos internos de configuracao, formatacao, dados, DOM, graficos, PDF e exportacao.
+- `styles/reports/pdf-report.css`: layout do relatorio PDF.
 - `tools/validate-project.mjs`: validacao estrutural local, incluindo imports CSS.
 - `package.json`: comando `npm run validate`.
 - `scripts/views/quarto-view.js`, `scripts/views/sala-view.js`, `scripts/views/aquario-view.js`, `scripts/views/solar-view.js`: views.
@@ -63,6 +65,10 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Tabelas sao limitadas a 24 linhas.
 - Graficos comuns sem pontos numericos exibem fallback.
 - Faixa de conforto: 20 a 26 em graficos de temperatura/sensacao com sufixo `°`.
+- A assistente responde perguntas de faixa/status/conforto usando resultado local `faixa_conforto`: faixa usada, dentro/fora, horarios fora e pior horario fora da faixa.
+- A assistente interpreta `ultimas 24 horas`/`ultimas 24h` como janela movel real via `ClimateData.filterDataByRollingHours`, nao como dia atual.
+- A assistente interpreta faixas horarias como `entre 8h e 18h` e perguntas de maior/menor horario, calculando localmente os registros filtrados e o maior/menor valor medio por horario antes de redigir a resposta.
+- A assistente responde consultas equivalentes aos heatmaps: calendario mensal por dia, heatmap por hora do dia e mapa semanal por dia/hora, sempre calculando localmente antes da redacao da IA.
 - Zênite solar usa campos enviados pelo Firebase quando existem; caso contrario usa meio entre nascer e por do sol.
 - Aba ativa e salva em `localStorage.activeTab`.
 - Swipe touch entre abas segue `Sala ⇄ Quarto ⇄ Aquario`; esquerda avanca, direita volta, extremidades nao mudam, e gestos iniciados em tabelas/heatmaps/areas com rolagem horizontal nao trocam aba.
@@ -70,6 +76,8 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Chat com IA deve reutilizar `latestData`, `selectedDate` e aba ativa; nao deve enviar historicos completos ao modelo.
 - Chat deve usar Gemini para classificar a pergunta em JSON, JavaScript para validar/calcular resultados e Gemini apenas para redigir a resposta final.
 - Perguntas de ciclo solar no chat devem reutilizar `ClimateSolar.getSolarEventsForSelectedDate` sobre `latestData.solar`.
+- Perguntas de comparacao solar no chat devem ser calculadas localmente em `assistant-solar.js`: duracao do dia, maior/menor duracao de luz, tendencia de nascer/por do sol e comparacao semanal.
+- Perguntas de AQI/IAQ/qualidade do ar no chat devem reutilizar `ClimateAqi.calculate` sobre dados da Sala/MQ135; CO, CO2, Acetona, Alcool, Amonia e Tolueno sao metricas exclusivas da Sala quando nenhum ambiente e citado.
 - Consultas de periodo no chat devem limitar no maximo 30 dias; `ultimos dias` usa 7 dias por padrao.
 - Exportacao PDF deve montar paginas A4 manualmente com html2canvas + jsPDF, evitando paginacao automatica que pode cortar conteudo.
 - PDF deve manter tema escuro, usar resumo executivo na primeira pagina, juntar temperatura e sensacao quando possivel, usar tabela resumida por horario e respeitar o contrato por aba: Sala/Quarto com ciclo solar, Aquario sem ciclo solar, Sala com tabela MQ135.
@@ -81,9 +89,9 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Objetos globais esperados por `scripts/main.js`.
 - IDs em `index.html` sem atualizar `scripts/config.js`.
 - Paths Firebase em `scripts/config.js`.
-- Nomes de campos em `scripts/config.js` e `scripts/solar.js`.
+- Nomes de campos em `scripts/config.js` e `scripts/charts/solar.js`.
 - Contrato de `ClimateCharts.createLineChart`.
-- Conversoes de data em `scripts/data-utils.js`.
+- Conversoes de data em `scripts/data/data-utils.js`.
 - Contrato de `ClimatePdfReport.setup` com `getContext`.
 - Contrato de `ClimateChat.setup` com `getContext`.
 
@@ -101,16 +109,16 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 1. Identifique se a mudanca e de DOM, configuracao, dados, grafico, analytics, UI ou view.
 2. Leia `scripts/config.js` primeiro.
 3. Se mexer em uma aba, leia a view correspondente.
-4. Se mexer em graficos comuns, leia `scripts/chart-utils.js`.
-5. Se mexer em heatmaps/estatisticas, leia `scripts/analytics.js`.
-6. Se mexer em solar, leia `scripts/solar.js` e `scripts/views/solar-view.js`.
+4. Se mexer em graficos comuns, leia `scripts/charts/chart-utils.js`.
+5. Se mexer em heatmaps/estatisticas, leia `scripts/data/analytics.js`.
+6. Se mexer em solar, leia `scripts/charts/solar.js` e `scripts/views/solar-view.js`.
 7. Preserve objetos globais e ordem dos scripts.
 
 ## Checklist antes de modificar codigo
 
 - Confirmar o id DOM no `index.html`.
 - Confirmar o id ou campo em `scripts/config.js`.
-- Confirmar o formato dos dados em `scripts/data-utils.js`.
+- Confirmar o formato dos dados em `scripts/data/data-utils.js`.
 - Confirmar quem chama a funcao no `scripts/main.js` ou view.
 - Confirmar se existe fallback vazio ou erro.
 

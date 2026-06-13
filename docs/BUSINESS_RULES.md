@@ -4,7 +4,7 @@ Regras extraidas exclusivamente do codigo existente.
 
 ## Regra: formato da data atual Firebase
 
-Arquivo: `scripts/data-utils.js`
+Arquivo: `scripts/data/data-utils.js`
 
 Metodo: `dataAtual()`
 
@@ -24,7 +24,7 @@ Criticidade: Alta.
 
 ## Regra: conversao input HTML para Firebase
 
-Arquivo: `scripts/data-utils.js`
+Arquivo: `scripts/data/data-utils.js`
 
 Metodo: `convertInputDateToFirebase(dateString)`
 
@@ -36,7 +36,7 @@ Saidas: data Firebase.
 
 Impacto: toda selecao de data.
 
-Dependencias: `scripts/ui.js`.
+Dependencias: `scripts/ui/ui.js`.
 
 Se alterada: listeners continuam recebendo dados, mas filtros podem retornar vazio.
 
@@ -44,7 +44,7 @@ Criticidade: Critica.
 
 ## Regra: filtro por data selecionada
 
-Arquivo: `scripts/data-utils.js`
+Arquivo: `scripts/data/data-utils.js`
 
 Metodo: `filterDataByDays(data, days, selectedDate, useSelectedDate = true)`
 
@@ -64,7 +64,7 @@ Criticidade: Alta.
 
 ## Regra: janela movel de 24h para graficos comuns
 
-Arquivo: `scripts/data-utils.js`
+Arquivo: `scripts/data/data-utils.js`
 
 Metodo: `filterDataByRollingHours(data, selectedDate, hours = 24, referenceDate = new Date())`
 
@@ -104,7 +104,7 @@ Criticidade: Media.
 
 ## Regra: tabela limitada a 24 linhas
 
-Arquivo: `scripts/data-utils.js`
+Arquivo: `scripts/data/data-utils.js`
 
 Metodo: `createTables(headers, data)`
 
@@ -124,7 +124,7 @@ Criticidade: Media.
 
 ## Regra: headers traduzidos
 
-Arquivo: `scripts/data-utils.js`
+Arquivo: `scripts/data/data-utils.js`
 
 Metodo: `createTables`
 
@@ -144,7 +144,7 @@ Criticidade: Baixa.
 
 ## Regra: unidades nas tabelas
 
-Arquivo: `scripts/data-utils.js`
+Arquivo: `scripts/data/data-utils.js`
 
 Metodo: `createTables`
 
@@ -164,7 +164,7 @@ Criticidade: Media.
 
 ## Regra: normalizacao de leitura do Aquario
 
-Arquivo: `scripts/data-utils.js`
+Arquivo: `scripts/data/data-utils.js`
 
 Metodo: `normalizeMeasurementValue`
 
@@ -188,7 +188,7 @@ Criticidade: Alta.
 
 ## Regra: estatisticas por metrica
 
-Arquivo: `scripts/analytics.js`
+Arquivo: `scripts/data/analytics.js`
 
 Metodo: `renderStats`, `calculateStats`
 
@@ -208,7 +208,7 @@ Criticidade: Alta.
 
 ## Regra: tendencia
 
-Arquivo: `scripts/analytics.js`
+Arquivo: `scripts/data/analytics.js`
 
 Metodo: `getTrend(delta)`
 
@@ -232,7 +232,7 @@ Criticidade: Media.
 
 ## Regra: heatmaps climaticos
 
-Arquivo: `scripts/analytics.js`
+Arquivo: `scripts/data/analytics.js`
 
 Metodo: `renderAdvancedClimateViews`
 
@@ -264,7 +264,7 @@ Criticidade: Alta.
 
 ## Regra: escala de cor do heatmap
 
-Arquivo: `scripts/analytics.js`
+Arquivo: `scripts/data/analytics.js`
 
 Metodo: `getHeatColor(value, scale)`
 
@@ -288,7 +288,7 @@ Criticidade: Media.
 
 ## Regra: fallback de grafico vazio
 
-Arquivo: `scripts/chart-utils.js`
+Arquivo: `scripts/charts/chart-utils.js`
 
 Metodo: `createLineChart`
 
@@ -313,7 +313,7 @@ Criticidade: Media.
 
 ## Regra: faixa de conforto
 
-Arquivo: `scripts/chart-utils.js`
+Arquivo: `scripts/charts/chart-utils.js`
 
 Metodo: `shouldShowComfortBand`, `comfortBandPlugin`
 
@@ -341,7 +341,7 @@ Criticidade: Media.
 
 ## Regra: eventos solares obrigatorios
 
-Arquivo: `scripts/solar.js`
+Arquivo: `scripts/charts/solar.js`
 
 Metodo: `readSolarEventSeconds`
 
@@ -361,7 +361,7 @@ Criticidade: Alta.
 
 ## Regra: indicador astronomico do header
 
-Arquivos: `index.html`, `style.css`, `scripts/main.js`, `scripts/solar.js`
+Arquivos: `index.html`, `style.css`, `scripts/main.js`, `scripts/charts/solar.js`
 
 Metodos: `setupAstroIndicator`, `updateAstroIndicator`, `getSolarEventsForSelectedDate`
 
@@ -393,7 +393,7 @@ Criticidade: Media.
 
 ## Regra: AQI estimado no header
 
-Arquivos: `index.html`, `styles/header.css`, `styles/responsive.css`, `scripts/aqi.js`, `scripts/main.js`
+Arquivos: `index.html`, `styles/header.css`, `styles/responsive.css`, `scripts/charts/aqi.js`, `scripts/main.js`
 
 Metodos: `ClimateAqi.setup`, `ClimateAqi.update`, `ClimateAqi.calculate`
 
@@ -433,7 +433,7 @@ Criticidade: Media.
 
 ## Regra: zenite solar
 
-Arquivo: `scripts/solar.js`
+Arquivo: `scripts/charts/solar.js`
 
 Metodo: `readSolarEventSeconds`
 
@@ -456,9 +456,58 @@ Se alterada: zênite pode ficar incorreto.
 
 Criticidade: Alta.
 
+## Regra: faixa de conforto na assistente
+
+Arquivos:
+
+- `scripts/assistant/assistant-intent.js`
+- `scripts/assistant/assistant-metrics.js`
+- `scripts/assistant/assistant-query.js`
+
+Objetivo: responder perguntas sobre faixa, conforto, ideal, normal, dentro/fora da faixa e pior horario fora da faixa usando calculo local antes da redacao da IA.
+
+Entradas:
+
+- ambiente resolvido pela pergunta ou pela aba ativa
+- metrica resolvida pela pergunta
+- periodo/data/hora resolvidos pela pergunta ou calendario
+- `AppConfig.comfortBand`
+- `AppConfig.humidityComfortBand`
+- `AppConfig.aquariumComfortBand`
+
+Saidas:
+
+- tipo de resultado `faixa_conforto`
+- faixa usada
+- status `dentro_da_faixa` ou `fora_da_faixa`
+- total dentro/fora da faixa
+- quantidade de horarios fora da faixa
+- lista curta de horarios fora
+- pior horario fora da faixa, com data, hora, valor, distancia e direcao
+
+Faixas:
+
+- Temperatura e sensacao de Sala/Quarto: 20°C a 26°C.
+- Umidade: 40% a 60%.
+- Temperatura do Aquario: 25°C a 27°C.
+
+Regras:
+
+- Metricas sem faixa configurada devem responder que nao ha faixa de conforto configurada.
+- Quando houver filtro por hora, o calculo deve considerar somente aquela hora.
+- A IA deve redigir usando apenas o resultado calculado, sem recalcular faixas.
+
+Impacto: perguntas como `ficou dentro da faixa?`, `quantas horas ficou fora?` e `qual pior horario fora da faixa?`.
+
+Dependencias: `AppConfig`, `ClimateData.normalizeMeasurementValue`, `assistant-intent`, `assistant-metrics` e `assistant-query`.
+
+Se alterada: a assistente pode responder status de conforto incorreto ou usar faixa diferente dos graficos.
+
+Criticidade: Alta.
+
 ## Regra: aba ativa persistida
 
-Arquivo: `scripts/ui.js`
+Arquivo: `scripts/ui/ui.js`
 
 Metodo: `storeActiveTab`, `getStoredTab`, `setupTabs`
 
@@ -478,7 +527,7 @@ Criticidade: Baixa.
 
 ## Regra: navegacao touch entre abas
 
-Arquivo: `scripts/ui.js`
+Arquivo: `scripts/ui/ui.js`
 
 Metodo: `setupTabSwipe`
 
@@ -510,7 +559,7 @@ Criticidade: Media.
 
 ## Regra: zoom de grafico
 
-Arquivo: `scripts/zoom.js`
+Arquivo: `scripts/charts/zoom.js`
 
 Metodo: `setup`, `handleZoom`, `createZoomChart`
 
@@ -530,9 +579,9 @@ Criticidade: Media.
 
 ## Regra: exportacao de dados da aba ativa
 
-Arquivo: `scripts/pdf-report.js`
+Arquivos: `scripts/reports/pdf-report.js` e `scripts/reports/pdf-report-*.js`
 
-Metodo: `setup`, `exportActiveTab`, `buildReport`
+Metodo: `setup`, `exportActiveTab`, `buildReport` e modulos internos de dados, DOM, graficos e PDF
 
 Objetivo: gerar download automatico em PDF ou JSON para a aba ativa usando a data selecionada.
 
@@ -582,7 +631,7 @@ Regras de layout:
 
 Impacto: relatorio/dados exportados para Sala, Quarto e Aquario.
 
-Dependencias: `html2canvas`, `jsPDF`, `ClimateData`, `AppConfig`, canvases existentes, dados ja carregados pelo Firebase.
+Dependencias: `html2canvas`, `jsPDF`, `ClimateData`, `AppConfig`, `window.ClimatePdfReportModules`, canvases existentes, dados ja carregados pelo Firebase.
 
 Se alterada: exportacao pode reconsultar dados indevidamente, perder graficos, gerar layout quebrado ou falhar no download.
 
@@ -590,7 +639,7 @@ Criticidade: Alta.
 
 ## Regra: dados ausentes na exportacao
 
-Arquivo: `scripts/pdf-report.js`
+Arquivos: `scripts/reports/pdf-report.js` e `scripts/reports/pdf-report-*.js`
 
 Metodo: `emptySummary`, `captureChartImage`, `createTableSection`
 
@@ -610,7 +659,7 @@ Criticidade: Alta.
 
 ## Regra: chat com Firebase AI Logic
 
-Arquivos: `index.html`, `scripts/config.js`, `scripts/firebase-service.js`, `scripts/ai-service.js`, `scripts/chat.js`, `scripts/main.js`, `styles/chat.css`.
+Arquivos: `index.html`, `scripts/config.js`, `scripts/firebase-service.js`, `scripts/chat.js`, `scripts/assistant/*.js`, `scripts/main.js`, `styles/chat.css`.
 
 Objetivo: permitir perguntas em linguagem natural sobre os dados ja carregados da estacao.
 
@@ -623,10 +672,12 @@ Entradas:
 - intencao classificada em JSON pelo Gemini
 - `latestData`
 - eventos solares da data selecionada
+- dados de Sala/MQ135 para AQI estimado
 
 Saidas:
 
 - resposta textual do Gemini no painel de chat baseada em resultado ja calculado
+- resposta sobre AQI/IAQ/qualidade do ar com classificacao, impacto, dominante e subindices quando existirem
 - mensagem de erro visivel quando Firebase AI Logic, App Check ou o modelo configurado nao estiverem disponiveis
 - envio da pergunta predefinida quando o usuario aciona um atalho
 
@@ -639,18 +690,30 @@ Regra de contexto:
 - nao enviar historicos completos, paths inteiros do Firebase, credenciais ou dados que nao sejam necessarios para responder
 - quando nao houver dado suficiente, a resposta deve informar que nao ha dados carregados para a pergunta
 - se a pergunta nao mencionar Sala, Quarto ou Aquario, usar a aba ativa como ambiente alvo
+- se a pergunta nao mencionar ambiente, mas mencionar AQI, IAQ, qualidade do ar, CO, CO2, Acetona, Alcool, Amonia ou Tolueno, usar Sala/MQ135 como ambiente alvo
+- se o ambiente classificado nao possuir a metrica pedida e essa metrica existir em apenas outro ambiente, usar o ambiente que possui a medicao em vez de cair na metrica padrao
 - se a pergunta mencionar Sala, Quarto ou Aquario, usar o ambiente mencionado como alvo, mesmo que a aba ativa seja outra
+- perguntas sobre `ultimas 24 horas` ou `ultimas 24h` devem usar janela movel real com `ClimateData.filterDataByRollingHours`, data selecionada e hora atual do navegador
+- `ultimas 24h` nao deve ser tratado como `hoje`, nem como `ultimos dias`
 - se a pergunta nao mencionar data, usar a data selecionada no calendario da pagina
 - se a pergunta mencionar data em `DD/MM/AAAA`, `DD-MM-AAAA`, `hoje`, `ontem` ou `anteontem`, usar essa data como alvo sem alterar o calendario da pagina
 - se a pergunta mencionar hora como `14h`, `14:00` ou `14`, o chat deve filtrar a hora correspondente e comparar corretamente com chaves Firebase no formato `14-00`
+- se houver filtro por hora, a resposta deve ser direta e conter somente o valor da metrica, ambiente, data e hora; nao deve exibir resumo do dia nem numero de amostras
+- se a pergunta mencionar faixa horaria como `entre 8h e 18h`, `das 8 as 18` ou `de 8h a 18h`, o chat deve considerar somente registros dentro da faixa, incluindo as horas inicial e final
+- se a pergunta pedir o horario/periodo de maior ou menor valor, como `qual horario foi mais quente?`, `qual horario teve maior umidade?` ou `qual periodo do dia teve menor pressao?`, o JavaScript deve calcular o maior/menor valor medio por horario e enviar apenas esse resultado estruturado para a redacao da IA
+- se a pergunta pedir o dia do mes de maior/menor valor, o chat deve consultar o mes completo da data selecionada e calcular o maior/menor valor medio diario
+- se a pergunta pedir a hora que costuma ter maior/menor valor, o chat deve agrupar os registros por hora do dia no periodo resolvido; quando a pergunta usar `costuma`, o periodo padrao e o mes da data selecionada
+- se a pergunta pedir dia/hora da semana ou pico semanal, o chat deve usar a semana da data selecionada, de domingo ate a data selecionada, e calcular o maior/menor valor medio por celula dia da semana/hora
 - periodos como `ultimos dias` devem usar 7 dias por padrao; periodos devem ser limitados a 30 dias
 - a classificacao de intencao pode retornar `ambientes`, `metricas`, `operacao`, `periodo`, `criterio`, `confianca`, `precisa_esclarecimento` e `solar`, mas nao deve receber historico completo nem responder a pergunta do usuario
 - as regras de ambiente e data valem para media, maxima, minima, delta, tendencia e qualquer parametro carregado no ambiente alvo
 - perguntas de ciclo solar devem usar `latestData.solar` e `ClimateSolar.getSolarEventsForSelectedDate`, sem duplicar leitura manual dos campos solares no chat
+- perguntas de comparacao solar devem usar `assistant-solar.js` sobre os eventos ja parseados por `ClimateSolar.getSolarEventsForSelectedDate`; duracao do dia usa nascer ate por do sol, maior/menor duracao de luz usa o mes selecionado por padrao, e tendencias/comparacoes de nascer ou por do sol usam a semana selecionada por padrao
+- perguntas de AQI/IAQ/qualidade do ar devem reutilizar `ClimateAqi.calculate` sobre o recorte de data/hora consultado, sem duplicar o calculo de faixas no chat
 
-Impacto: perguntas sobre media, maxima, minima, tendencia e eventos solares.
+Impacto: perguntas sobre media, maxima, minima, tendencia, eventos solares e qualidade do ar.
 
-Dependencias: Firebase App Check com reCAPTCHA Enterprise, Firebase AI Logic, `ClimateAIService`, `ClimateData`, `ClimateSolar`, `latestData`.
+Dependencias: Firebase App Check com reCAPTCHA Enterprise, Firebase AI Logic, `ClimateAIService`, `ClimateData`, `ClimateSolar`, `ClimateAqi`, `latestData`.
 
 Se alterada: chat pode consumir tokens demais, expor dados desnecessarios, responder sem base nos dados carregados ou falhar quando o App Check estiver com enforcement ativo.
 
@@ -661,7 +724,7 @@ Criticidade: Alta.
 - Conversao de data HTML/Firebase sem revisar todos os filtros.
 - Paths Firebase em `scripts/config.js` sem revisar `scripts/main.js` e banco.
 - Campos de sensores em `scripts/config.js` sem revisar Firebase.
-- Leitura de zênite em `scripts/solar.js` sem revisar dados enviados pelo Arduino.
+- Leitura de zênite em `scripts/charts/solar.js` sem revisar dados enviados pelo Arduino.
 - Ordem de scripts em `index.html`.
 - Contrato de fallback em `ClimateCharts.createLineChart`.
 - Exportacao PDF/JSON deve reutilizar `latestData` e `chartInstances`, sem reconsultar Firebase.
@@ -689,7 +752,7 @@ Dependencias afetadas: main, views, ui, zoom, firebase-service.
 
 Nivel de risco: Critico.
 
-## `scripts/data-utils.js`
+## `scripts/data/data-utils.js`
 
 Responsabilidade: estrutura de dados.
 
@@ -699,7 +762,7 @@ Dependencias afetadas: views, analytics, charts, solar.
 
 Nivel de risco: Alto.
 
-## `scripts/analytics.js`
+## `scripts/data/analytics.js`
 
 Responsabilidade: estatisticas e heatmaps.
 
@@ -709,7 +772,7 @@ Dependencias afetadas: Quarto e Sala principalmente.
 
 Nivel de risco: Alto.
 
-## `scripts/solar.js`
+## `scripts/charts/solar.js`
 
 Responsabilidade: graficos solares.
 
@@ -775,7 +838,7 @@ Mitigacoes existentes:
 
 - `style.css` importa arquivos menores em `styles/`, separados por responsabilidade visual.
 - `tools/validate-project.mjs` valida sintaxe JS, referencias locais, imports CSS, ids duplicados e ids esperados por `AppConfig`.
-- Aliases solares ficam centralizados em `SOLAR_FIELD_ALIASES` dentro de `scripts/solar.js`.
+- Aliases solares ficam centralizados em `SOLAR_FIELD_ALIASES` dentro de `scripts/charts/solar.js`.
 
 # TAREFAS COMUNS
 
@@ -783,7 +846,7 @@ Mitigacoes existentes:
 
 Leia:
 
-- `scripts/chart-utils.js`
+- `scripts/charts/chart-utils.js`
 - `scripts/main.js`
 - view da aba afetada
 - `scripts/config.js`
@@ -795,14 +858,14 @@ Leia:
 - `scripts/config.js`
 - `scripts/firebase-service.js`
 - `scripts/main.js`
-- `scripts/data-utils.js`
+- `scripts/data/data-utils.js`
 
 ## Alterar chat com IA
 
 Leia:
 
 - `scripts/chat.js`
-- `scripts/ai-service.js`
+- `scripts/assistant/*.js`
 - `scripts/firebase-service.js`
 - `scripts/config.js`
 - `scripts/main.js`
@@ -815,14 +878,14 @@ Leia:
 
 - `scripts/config.js`
 - view da aba
-- `scripts/analytics.js`
-- `scripts/data-utils.js`
+- `scripts/data/analytics.js`
+- `scripts/data/data-utils.js`
 
 ## Alterar heatmaps
 
 Leia:
 
-- `scripts/analytics.js`
+- `scripts/data/analytics.js`
 - `scripts/config.js`
 - `scripts/views/quarto-view.js`
 - `scripts/views/sala-view.js`
@@ -832,7 +895,7 @@ Leia:
 
 Leia:
 
-- `scripts/solar.js`
+- `scripts/charts/solar.js`
 - `scripts/views/solar-view.js`
 - `scripts/config.js`
 - `scripts/main.js`
@@ -841,16 +904,16 @@ Leia:
 
 Leia:
 
-- `scripts/data-utils.js`
+- `scripts/data/data-utils.js`
 - view da aba
 - `index.html`
-- `scripts/ui.js`
+- `scripts/ui/ui.js`
 
 ## Alterar navegacao/abas/data picker
 
 Leia:
 
-- `scripts/ui.js`
+- `scripts/ui/ui.js`
 - `scripts/main.js`
 - `index.html`
 
@@ -858,9 +921,10 @@ Leia:
 
 Leia:
 
-- `scripts/pdf-report.js`
-- `pdf-report.css`
+- `scripts/reports/pdf-report.js`
+- `scripts/reports/pdf-report-*.js`
+- `styles/reports/pdf-report.css`
 - `scripts/main.js`
 - `index.html`
 - `scripts/config.js`
-- `scripts/data-utils.js`
+- `scripts/data/data-utils.js`
