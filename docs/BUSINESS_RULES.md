@@ -709,6 +709,8 @@ Regra de contexto:
 - as regras de ambiente e data valem para media, maxima, minima, delta, tendencia e qualquer parametro carregado no ambiente alvo
 - perguntas de ciclo solar devem usar `latestData.solar` e `ClimateSolar.getSolarEventsForSelectedDate`, sem duplicar leitura manual dos campos solares no chat
 - perguntas de comparacao solar devem usar `assistant-solar.js` sobre os eventos ja parseados por `ClimateSolar.getSolarEventsForSelectedDate`; duracao do dia usa nascer ate por do sol, maior/menor duracao de luz usa o mes selecionado por padrao, e tendencias/comparacoes de nascer ou por do sol usam a semana selecionada por padrao
+- termos como `tempo de luz`, `luz solar`, `duracao de luz` e `duracao do dia` devem ser tratados como intencao solar de duracao do dia
+- quando houver intencao solar, o chat deve forcar a metrica `ciclo_solar`, mesmo que a classificacao da IA retorne outra metrica por engano
 - perguntas de AQI/IAQ/qualidade do ar devem reutilizar `ClimateAqi.calculate` sobre o recorte de data/hora consultado, sem duplicar o calculo de faixas no chat
 
 Impacto: perguntas sobre media, maxima, minima, tendencia, eventos solares e qualidade do ar.

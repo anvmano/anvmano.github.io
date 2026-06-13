@@ -144,6 +144,8 @@ Arquivos principais:
 - Chat usa arquitetura em duas etapas: Gemini classifica a pergunta em JSON com schema fixo; JavaScript valida, limita periodo, seleciona dados e calcula media/maxima/minima/delta/tendencia/comparacoes; Gemini redige a resposta usando apenas o resultado calculado.
 - Chat responde perguntas de ciclo solar usando `ClimateSolar.getSolarEventsForSelectedDate` sobre `latestData.solar`, reutilizando aliases solares e fallback de zenite do modulo solar.
 - Chat responde comparacoes solares: duracao do dia, maior/menor duracao de luz no mes selecionado, tendencia de nascer do sol/por do sol na semana selecionada e comparacao de nascer/por do sol por dia no periodo.
+- Termos como `tempo de luz`, `luz solar`, `duracao de luz` e `duracao do dia` devem ser tratados como consulta solar de duracao do dia.
+- Quando a pergunta tiver intencao solar, o chat deve forcar metrica `ciclo_solar`, mesmo se a classificacao da IA sugerir outra metrica por engano.
 - Periodos suportados incluem data unica, hoje, ontem, anteontem, datas relativas, intervalo, ultimas 24h reais, ultimos dias, mes selecionado e semana selecionada. `Ultimos dias` usa 7 dias por padrao e consultas de periodo sao limitadas a 30 dias, exceto calendario mensal que pode consultar o mes completo.
 - Heatmaps destacam contexto temporal com `.is-selected`: calendario mensal destaca o dia selecionado, heatmap horario destaca a hora atual quando a data selecionada e hoje, e mapa semanal destaca dia da semana/hora atual quando a data selecionada e hoje.
 - O mapa semanal reinicia no domingo e considera apenas registros da semana da data selecionada, do domingo ate a data selecionada. Ele nao agrega semanas anteriores do mes.

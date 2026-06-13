@@ -529,7 +529,7 @@
     }
 
     function hasSolarIntent(normalizedQuestion) {
-        return ["solar", "sol", "nascer", "por do sol", "pôr do sol", "zenite", "zênite", "amanhecer", "anoitecer", "duracao do dia", "duração do dia", "duracao de luz", "duração de luz", "periodo de luz", "fotoperiodo"]
+        return ["solar", "sol", "nascer", "por do sol", "pôr do sol", "zenite", "zênite", "amanhecer", "anoitecer", "duracao do dia", "duração do dia", "duracao de luz", "duração de luz", "tempo de luz", "luz solar", "periodo de luz", "fotoperiodo"]
             .some(term => normalizedQuestion.includes(normalizeText(term)));
     }
 

@@ -34,7 +34,7 @@
         const classifiedMetrics = normalizeMetrics(classifiedIntent?.metricas || classifiedIntent?.metrica);
         const metrics = classifiedMetrics.length ? classifiedMetrics : inferMetricsFromQuestion(normalizedQuestion);
         const solarIntent = hasSolarIntent(normalizedQuestion) || operation.startsWith("solar_") || Boolean(classifiedIntent?.solar);
-        const finalMetrics = solarIntent && !metrics.length ? ["ciclo_solar"] : metrics;
+        const finalMetrics = solarIntent ? ["ciclo_solar"] : metrics;
         const environments = resolveTargetEnvironments({
             mentionedEnvironments,
             classifiedEnvironments,
@@ -101,7 +101,7 @@
             - Se a pergunta pedir "qual dia do mês" ou "calendário climático", use operação "calendario_dia_maior_valor" ou "calendario_dia_menor_valor" e periodo.tipo "mes_selecionado".
             - Se a pergunta pedir "qual hora costuma" ou "heatmap por hora", use operação "heatmap_hora_maior_valor" ou "heatmap_hora_menor_valor".
             - Se a pergunta pedir "qual dia/hora da semana", "mapa semanal" ou "pico semanal", use operação "heatmap_semana_maior_valor" ou "heatmap_semana_menor_valor" e periodo.tipo "semana_selecionada".
-            - Se a pergunta pedir maior/menor duração de luz ou duração do dia, use métrica "ciclo_solar", solar true e operação solar correspondente.
+            - Se a pergunta pedir maior/menor duração de luz, duração do dia, tempo de luz ou luz solar, use métrica "ciclo_solar", solar true e operação solar correspondente.
             - Se a pergunta perguntar se nascer do sol ou pôr do sol está ficando mais cedo/tarde, use operação "solar_tendencia_nascer" ou "solar_tendencia_por".
             - Se a pergunta pedir comparar nascer do sol ou pôr do sol da semana, use "solar_comparar_nascer" ou "solar_comparar_por" e periodo.tipo "semana_selecionada".
             - Se a pergunta mencionar nascer do sol, pôr do sol, zênite, amanhecer, anoitecer, sol ou ciclo solar, use métrica "ciclo_solar" e solar true.
@@ -214,7 +214,14 @@
         const asksTrend = normalizedQuestion.includes("ficando") || normalizedQuestion.includes("esta ficando") || normalizedQuestion.includes("tendencia");
         const asksCompare = normalizedQuestion.includes("compar") || normalizedQuestion.includes("compare");
 
-        if (normalizedQuestion.includes("duracao") || normalizedQuestion.includes("duração") || normalizedQuestion.includes("periodo de luz") || normalizedQuestion.includes("luz")) {
+        if (
+            normalizedQuestion.includes("duracao")
+            || normalizedQuestion.includes("duração")
+            || normalizedQuestion.includes("tempo de luz")
+            || normalizedQuestion.includes("luz solar")
+            || normalizedQuestion.includes("periodo de luz")
+            || normalizedQuestion.includes("luz")
+        ) {
             if (normalizedQuestion.includes("maior") || normalizedQuestion.includes("mais long")) return "solar_maior_duracao_luz";
             if (normalizedQuestion.includes("menor") || normalizedQuestion.includes("mais curt")) return "solar_menor_duracao_luz";
             return "solar_duracao_dia";
@@ -242,6 +249,8 @@
             "duracao de luz",
             "duração do dia",
             "duração de luz",
+            "tempo de luz",
+            "luz solar",
             "periodo de luz",
             "fotoperiodo",
         ].some(term => normalizedQuestion.includes(normalizeText(term)));
