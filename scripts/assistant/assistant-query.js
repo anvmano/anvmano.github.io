@@ -4,6 +4,8 @@
     const namespace = window.ClimateAssistant || {};
     const { MAX_PROMPT_CHARS } = namespace.config;
     const {
+        normalizeText,
+        hasWord,
         formatDate,
         formatNumber,
         formatMetricValue,
@@ -27,17 +29,19 @@
     }
 
     function executeQuery(context, intent, question) {
-        if (intent.needsClarification) {
+        const effectiveIntent = forceSolarIntentWhenNeeded(intent, question, context);
+
+        if (effectiveIntent.needsClarification) {
             return {
                 needsClarification: true,
-                message: intent.clarificationQuestion || "Preciso de mais detalhes para responder com segurança.",
+                message: effectiveIntent.clarificationQuestion || "Preciso de mais detalhes para responder com segurança.",
             };
         }
 
-        const environments = intent.environments;
-        const metrics = namespace.metrics.resolveMetricsForEnvironments(environments, intent.metrics, question);
-        const periodDates = namespace.intent.resolvePeriodDates(intent.period);
-        const periodLabel = getPeriodLabel(intent.period, periodDates);
+        const environments = effectiveIntent.environments;
+        const metrics = namespace.metrics.resolveMetricsForEnvironments(environments, effectiveIntent.metrics, question);
+        const periodDates = namespace.intent.resolvePeriodDates(effectiveIntent.period);
+        const periodLabel = getPeriodLabel(effectiveIntent.period, periodDates);
 
         if (!environments.length) {
             return {
@@ -53,23 +57,92 @@
             };
         }
 
-        const environmentResults = environments.map(environment => executeEnvironmentQuery(context, environment, metrics, periodDates, intent, periodLabel));
+        const environmentResults = environments.map(environment => executeEnvironmentQuery(context, environment, metrics, periodDates, effectiveIntent, periodLabel));
         return {
             question,
             intent: {
                 environments: environments.map(environment => environment.label),
                 metrics: metrics.map(metric => metric.label),
-                operation: intent.operation,
-                criterion: intent.criterion,
+                operation: effectiveIntent.operation,
+                criterion: effectiveIntent.criterion,
                 period: {
                     label: periodLabel,
                     dates: periodDates,
                 },
-                confidence: intent.confidence,
+                confidence: effectiveIntent.confidence,
             },
             results: environmentResults,
             generatedAt: new Date().toLocaleString("pt-BR"),
         };
+    }
+
+    function forceSolarIntentWhenNeeded(intent, question, context) {
+        const normalizedQuestion = normalizeText(question);
+        const asksLongestDay = normalizedQuestion.includes("dia mais long")
+            || normalizedQuestion.includes("dia com mais tempo de luz");
+        const asksShortestDay = normalizedQuestion.includes("dia mais curt")
+            || normalizedQuestion.includes("dia com menos tempo de luz");
+
+        if (!asksLongestDay && !asksShortestDay) return intent;
+
+        return {
+            ...intent,
+            metrics: ["ciclo_solar"],
+            operation: asksShortestDay ? "solar_menor_duracao_luz" : "solar_maior_duracao_luz",
+            period: buildSolarExtremePeriod(normalizedQuestion, context?.selectedDate),
+            needsClarification: false,
+            clarificationQuestion: null,
+        };
+    }
+
+    function buildSolarExtremePeriod(normalizedQuestion, selectedDate) {
+        const monthDate = getMentionedMonthDate(normalizedQuestion, selectedDate);
+        if (monthDate) return { type: "selected_month", selectedDate: monthDate };
+        return { type: "selected_year", selectedDate: getMentionedYearDate(normalizedQuestion, selectedDate) };
+    }
+
+    function getMentionedMonthDate(normalizedQuestion, selectedDate) {
+        const monthIndex = getMentionedMonthIndex(normalizedQuestion);
+        if (monthIndex === null) return null;
+
+        const selected = window.ClimateData.parseFirebaseDate(selectedDate || window.ClimateData.dataAtual());
+        const year = getMentionedYear(normalizedQuestion) || selected.getFullYear();
+        return formatFirebaseDate(new Date(year, monthIndex, 1));
+    }
+
+    function getMentionedYearDate(normalizedQuestion, selectedDate) {
+        const selected = window.ClimateData.parseFirebaseDate(selectedDate || window.ClimateData.dataAtual());
+        const year = getMentionedYear(normalizedQuestion) || selected.getFullYear();
+        return formatFirebaseDate(new Date(year, selected.getMonth(), selected.getDate()));
+    }
+
+    function getMentionedYear(normalizedQuestion) {
+        const match = normalizedQuestion.match(/\b(20\d{2})\b/);
+        return match ? Number(match[1]) : null;
+    }
+
+    function getMentionedMonthIndex(normalizedQuestion) {
+        const months = [
+            ["janeiro", "jan"],
+            ["fevereiro", "fev"],
+            ["marco", "março", "mar"],
+            ["abril", "abr"],
+            ["maio", "mai"],
+            ["junho", "jun"],
+            ["julho", "jul"],
+            ["agosto", "ago"],
+            ["setembro", "set"],
+            ["outubro", "out"],
+            ["novembro", "nov"],
+            ["dezembro", "dez"],
+        ];
+
+        const index = months.findIndex(aliases => aliases.some(alias => hasWord(normalizedQuestion, normalizeText(alias))));
+        return index >= 0 ? index : null;
+    }
+
+    function formatFirebaseDate(date) {
+        return `${String(date.getDate()).padStart(2, "0")}-${String(date.getMonth() + 1).padStart(2, "0")}-${date.getFullYear()}`;
     }
 
     function executeEnvironmentQuery(context, environment, requestedMetrics, periodDates, intent, periodLabel) {
