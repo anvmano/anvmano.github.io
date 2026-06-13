@@ -4,27 +4,28 @@
     const namespace = window.ClimateAssistant || {};
     const { CHAT_EXAMPLES } = namespace.config;
 
-    let contextProvider = null;
-    let elements = {};
-    let isOpen = false;
-    let isBusy = false;
-    let closeTimer = null;
+    let obterContexto = null;
+    let elementos = {};
+    let estaAberto = false;
+    let estaOcupado = false;
+    let temporizadorFechamento = null;
 
-    function setup(options = {}) {
-        contextProvider = options.getContext;
-        elements = collectElements();
-        if (!elements.toggle || !elements.panel || !elements.form || !elements.input || !elements.messages) return;
+    function configurar(opcoes = {}) {
+        obterContexto = opcoes.getContext;
+        elementos = coletarElementos();
+        if (!elementos.toggle || !elementos.panel || !elementos.form || !elementos.input || !elementos.messages) return;
 
-        elements.toggle.addEventListener("click", toggleChat);
-        elements.close?.addEventListener("click", closeChat);
-        elements.form.addEventListener("submit", handleSubmit);
-        elements.quickActions.forEach(button => {
-            button.addEventListener("click", () => submitQuestion(button.dataset.chatQuestion));
+        elementos.toggle.addEventListener("click", alternarChat);
+        elementos.close?.addEventListener("click", fecharChat);
+        elementos.form.addEventListener("submit", aoEnviarFormulario);
+        document.addEventListener("pointerdown", aoPressionarFora);
+        elementos.quickActions.forEach(botao => {
+            botao.addEventListener("click", () => enviarPergunta(botao.dataset.chatQuestion));
         });
-        renderWelcomeMessage();
+        renderizarMensagemInicial();
     }
 
-    function collectElements() {
+    function coletarElementos() {
         return {
             root: document.getElementById("aiChat"),
             toggle: document.getElementById("aiChatToggle"),
@@ -38,84 +39,89 @@
         };
     }
 
-    function toggleChat() {
-        isOpen ? closeChat() : openChat();
+    function alternarChat() {
+        estaAberto ? fecharChat() : abrirChat();
     }
 
-    function openChat() {
-        isOpen = true;
-        clearTimeout(closeTimer);
-        elements.toggle?.setAttribute("aria-expanded", "true");
-        elements.panel?.removeAttribute("hidden");
+    function abrirChat() {
+        estaAberto = true;
+        clearTimeout(temporizadorFechamento);
+        elementos.toggle?.setAttribute("aria-expanded", "true");
+        elementos.panel?.removeAttribute("hidden");
         requestAnimationFrame(() => {
-            elements.root?.classList.add("is-open");
+            elementos.root?.classList.add("is-open");
         });
-        setTimeout(() => elements.input?.focus(), 50);
+        setTimeout(() => elementos.input?.focus(), 50);
     }
 
-    function closeChat() {
-        isOpen = false;
-        elements.root?.classList.remove("is-open");
-        elements.toggle?.setAttribute("aria-expanded", "false");
-        clearTimeout(closeTimer);
-        closeTimer = setTimeout(() => {
-            if (!isOpen) elements.panel?.setAttribute("hidden", "");
+    function fecharChat() {
+        estaAberto = false;
+        elementos.root?.classList.remove("is-open");
+        elementos.toggle?.setAttribute("aria-expanded", "false");
+        clearTimeout(temporizadorFechamento);
+        temporizadorFechamento = setTimeout(() => {
+            if (!estaAberto) elementos.panel?.setAttribute("hidden", "");
         }, 220);
     }
 
-    function renderWelcomeMessage() {
-        appendMessage("assistant", `Tenho acesso aos dados carregados da estação climática. Escolha um atalho acima ou pergunte algo como:\n${CHAT_EXAMPLES.map(item => `• ${item}`).join("\n")}`);
+    function aoPressionarFora(evento) {
+        if (!estaAberto || elementos.root?.contains(evento.target)) return;
+        fecharChat();
     }
 
-    async function handleSubmit(event) {
-        event.preventDefault();
-        if (isBusy) return;
-
-        const question = elements.input.value.trim();
-        if (!question) return;
-
-        await submitQuestion(question);
+    function renderizarMensagemInicial() {
+        adicionarMensagem("assistant", `Tenho acesso aos dados carregados da estação climática. Escolha um atalho acima ou pergunte algo como:\n${CHAT_EXAMPLES.map(item => `• ${item}`).join("\n")}`);
     }
 
-    async function submitQuestion(question) {
-        if (isBusy || !question) return;
+    async function aoEnviarFormulario(evento) {
+        evento.preventDefault();
+        if (estaOcupado) return;
 
-        if (!isOpen) openChat();
-        appendMessage("user", question);
-        elements.input.value = "";
-        setBusy(true);
+        const pergunta = elementos.input.value.trim();
+        if (!pergunta) return;
 
-        const thinking = appendMessage("assistant", "Analisando os dados carregados...");
+        await enviarPergunta(pergunta);
+    }
+
+    async function enviarPergunta(pergunta) {
+        if (estaOcupado || !pergunta) return;
+
+        if (!estaAberto) abrirChat();
+        adicionarMensagem("user", pergunta);
+        elementos.input.value = "";
+        definirOcupado(true);
+
+        const mensagemPensando = adicionarMensagem("assistant", "Analisando os dados carregados...");
 
         try {
-            const context = contextProvider ? contextProvider() : {};
-            thinking.textContent = await namespace.query.answerQuestion(question, context);
-        } catch (error) {
-            console.error("Falha no chat com IA:", error);
-            thinking.textContent = "Não consegui consultar a IA agora. Verifique se o Firebase AI Logic e o App Check estão configurados para este domínio.";
+            const contexto = obterContexto ? obterContexto() : {};
+            mensagemPensando.textContent = await namespace.query.answerQuestion(pergunta, contexto);
+        } catch (erro) {
+            console.error("Falha no chat com IA:", erro);
+            mensagemPensando.textContent = "Não consegui consultar a IA agora. Verifique se o Firebase AI Logic e o App Check estão configurados para este domínio.";
         } finally {
-            setBusy(false);
+            definirOcupado(false);
         }
     }
 
-    function setBusy(value) {
-        isBusy = value;
-        elements.submit.disabled = value;
-        elements.input.disabled = value;
-        elements.quickActions.forEach(button => {
-            button.disabled = value;
+    function definirOcupado(valor) {
+        estaOcupado = valor;
+        elementos.submit.disabled = valor;
+        elementos.input.disabled = valor;
+        elementos.quickActions.forEach(botao => {
+            botao.disabled = valor;
         });
     }
 
-    function appendMessage(role, text) {
-        const message = document.createElement("div");
-        message.className = `ai-chat__message ai-chat__message--${role}`;
-        message.textContent = text;
-        elements.messages.appendChild(message);
-        elements.messages.scrollTop = elements.messages.scrollHeight;
-        return message;
+    function adicionarMensagem(papel, texto) {
+        const mensagem = document.createElement("div");
+        mensagem.className = `ai-chat__message ai-chat__message--${papel}`;
+        mensagem.textContent = texto;
+        elementos.messages.appendChild(mensagem);
+        elementos.messages.scrollTop = elementos.messages.scrollHeight;
+        return mensagem;
     }
 
-    namespace.ui = { setup };
+    namespace.ui = { setup: configurar };
     window.ClimateAssistant = namespace;
 })();

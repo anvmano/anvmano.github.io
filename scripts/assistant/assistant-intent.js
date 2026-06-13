@@ -67,7 +67,7 @@
             "metricas": ["temperatura" | "sensacao_termica" | "umidade" | "pressao" | "ciclo_solar" | "aqi" | "iaq" | "qualidade_ar" | "ph" | "tds" | "turbidez" | "co" | "co2" | "acetona" | "alcool" | "amonia" | "tolueno"] ou [],
             "operacao": "media" | "maxima" | "minima" | "delta" | "tendencia" | "resumo" | "valor" | "comparar_dias" | "dia_mais_frio" | "dia_mais_quente" | "status_faixa" | "horario_maior_valor" | "horario_menor_valor" | "calendario_dia_maior_valor" | "calendario_dia_menor_valor" | "heatmap_hora_maior_valor" | "heatmap_hora_menor_valor" | "heatmap_semana_maior_valor" | "heatmap_semana_menor_valor" | "solar_maior_duracao_luz" | "solar_menor_duracao_luz" | "solar_tendencia_nascer" | "solar_tendencia_por" | "solar_comparar_nascer" | "solar_comparar_por" | "solar_duracao_dia" ou null,
             "periodo": {
-                "tipo": "data_especifica" | "datas_relativas" | "ultimos_dias" | "ultimas_24h" | "intervalo" | "calendario" | "mes_selecionado" | "semana_selecionada" ou null,
+                "tipo": "data_especifica" | "datas_relativas" | "ultimos_dias" | "ultimas_24h" | "intervalo" | "calendario" | "mes_selecionado" | "semana_selecionada" | "ano_selecionado" ou null,
                 "data": "DD-MM-AAAA" | "hoje" | "ontem" | "anteontem" ou null,
                 "datas": ["DD-MM-AAAA" | "hoje" | "ontem" | "anteontem"] ou [],
                 "hora": "HH:mm" | "HH" | null,
@@ -101,7 +101,8 @@
             - Se a pergunta pedir "qual dia do mês" ou "calendário climático", use operação "calendario_dia_maior_valor" ou "calendario_dia_menor_valor" e periodo.tipo "mes_selecionado".
             - Se a pergunta pedir "qual hora costuma" ou "heatmap por hora", use operação "heatmap_hora_maior_valor" ou "heatmap_hora_menor_valor".
             - Se a pergunta pedir "qual dia/hora da semana", "mapa semanal" ou "pico semanal", use operação "heatmap_semana_maior_valor" ou "heatmap_semana_menor_valor" e periodo.tipo "semana_selecionada".
-            - Se a pergunta pedir maior/menor duração de luz, duração do dia, tempo de luz ou luz solar, use métrica "ciclo_solar", solar true e operação solar correspondente.
+            - Se a pergunta pedir maior/menor duração de luz, duração do dia, tempo de luz, luz solar, dia mais longo ou dia mais curto, use métrica "ciclo_solar", solar true e operação solar correspondente.
+            - Para "dia mais longo" ou "dia com mais tempo de luz solar", use periodo.tipo "ano_selecionado" quando nenhum mês/período for informado. Se houver mês informado, use "mes_selecionado".
             - Se a pergunta perguntar se nascer do sol ou pôr do sol está ficando mais cedo/tarde, use operação "solar_tendencia_nascer" ou "solar_tendencia_por".
             - Se a pergunta pedir comparar nascer do sol ou pôr do sol da semana, use "solar_comparar_nascer" ou "solar_comparar_por" e periodo.tipo "semana_selecionada".
             - Se a pergunta mencionar nascer do sol, pôr do sol, zênite, amanhecer, anoitecer, sol ou ciclo solar, use métrica "ciclo_solar" e solar true.
@@ -214,6 +215,9 @@
         const asksTrend = normalizedQuestion.includes("ficando") || normalizedQuestion.includes("esta ficando") || normalizedQuestion.includes("tendencia");
         const asksCompare = normalizedQuestion.includes("compar") || normalizedQuestion.includes("compare");
 
+        if (normalizedQuestion.includes("dia mais long") || normalizedQuestion.includes("dia com mais tempo de luz")) return "solar_maior_duracao_luz";
+        if (normalizedQuestion.includes("dia mais curt") || normalizedQuestion.includes("dia com menos tempo de luz")) return "solar_menor_duracao_luz";
+
         if (
             normalizedQuestion.includes("duracao")
             || normalizedQuestion.includes("duração")
@@ -253,6 +257,8 @@
             "luz solar",
             "periodo de luz",
             "fotoperiodo",
+            "dia mais longo",
+            "dia mais curto",
         ].some(term => normalizedQuestion.includes(normalizeText(term)));
     }
 
@@ -366,12 +372,18 @@
     function normalizePeriod(period, normalizedQuestion, selectedDate, operation) {
         const explicitDates = extractQuestionDates(normalizedQuestion);
         const normalizedType = normalizeText(period?.tipo);
+        const monthPeriodDate = extractMonthPeriodDate(normalizedQuestion, selectedDate);
+        const yearPeriodDate = extractYearPeriodDate(normalizedQuestion, selectedDate);
         if (normalizedType === "ultimas_24h" || hasRollingHoursIntent(normalizedQuestion)) {
             return { type: "rolling_hours", hours: 24, selectedDate: explicitDates[0] || selectedDate || window.ClimateData.dataAtual() };
         }
 
-        if (normalizedType === "mes_selecionado" || operation?.startsWith("calendario_dia_") || operation === "solar_maior_duracao_luz" || operation === "solar_menor_duracao_luz") {
-            return { type: "selected_month", selectedDate: explicitDates[0] || selectedDate || window.ClimateData.dataAtual() };
+        if (normalizedType === "mes_selecionado" || operation?.startsWith("calendario_dia_") || ((operation === "solar_maior_duracao_luz" || operation === "solar_menor_duracao_luz") && monthPeriodDate)) {
+            return { type: "selected_month", selectedDate: monthPeriodDate || explicitDates[0] || selectedDate || window.ClimateData.dataAtual() };
+        }
+
+        if (normalizedType === "ano_selecionado" || operation === "solar_maior_duracao_luz" || operation === "solar_menor_duracao_luz") {
+            return { type: "selected_year", selectedDate: explicitDates[0] || yearPeriodDate || selectedDate || window.ClimateData.dataAtual() };
         }
 
         if (normalizedType === "semana_selecionada" || operation?.startsWith("heatmap_semana_") || operation === "solar_tendencia_nascer" || operation === "solar_tendencia_por" || operation === "solar_comparar_nascer" || operation === "solar_comparar_por" || normalizedQuestion.includes("semana")) {
@@ -414,6 +426,7 @@
     function resolvePeriodDates(period) {
         if (period.type === "rolling_hours") return resolveRollingHourDates(period);
         if (period.type === "selected_month") return buildMonthDates(period.selectedDate);
+        if (period.type === "selected_year") return buildYearDates(period.selectedDate);
         if (period.type === "selected_week") return buildWeekDates(period.selectedDate);
         if (period.type === "datas") return uniqueDates(period.dates).slice(0, MAX_PERIOD_DAYS);
         if (period.type === "last_days") return buildLastDays(period.days);
@@ -427,6 +440,21 @@
         return Array.from({ length: daysInMonth }, (_, index) => (
             formatFirebaseDate(new Date(date.getFullYear(), date.getMonth(), index + 1))
         ));
+    }
+
+    function buildYearDates(selectedDate) {
+        const date = window.ClimateData.parseFirebaseDate(selectedDate || window.ClimateData.dataAtual());
+        const dates = [];
+
+        for (
+            const cursor = new Date(date.getFullYear(), 0, 1);
+            cursor.getFullYear() === date.getFullYear();
+            cursor.setDate(cursor.getDate() + 1)
+        ) {
+            dates.push(formatFirebaseDate(cursor));
+        }
+
+        return dates;
     }
 
     function buildWeekDates(selectedDate) {
@@ -483,6 +511,50 @@
         if (hasWord(normalizedQuestion, "hoje") || hasWord(normalizedQuestion, "hj")) dates.push(window.ClimateData.dataAtual());
 
         return uniqueDates(dates);
+    }
+
+    function extractMonthPeriodDate(normalizedQuestion, selectedDate) {
+        const monthIndex = getMentionedMonthIndex(normalizedQuestion);
+        if (monthIndex === null) {
+            return normalizedQuestion.includes("mes") || normalizedQuestion.includes("mês")
+                ? selectedDate || window.ClimateData.dataAtual()
+                : null;
+        }
+
+        const selected = window.ClimateData.parseFirebaseDate(selectedDate || window.ClimateData.dataAtual());
+        const year = extractQuestionYear(normalizedQuestion) || selected.getFullYear();
+        return formatFirebaseDate(new Date(year, monthIndex, 1));
+    }
+
+    function extractYearPeriodDate(normalizedQuestion, selectedDate) {
+        const selected = window.ClimateData.parseFirebaseDate(selectedDate || window.ClimateData.dataAtual());
+        const year = extractQuestionYear(normalizedQuestion) || selected.getFullYear();
+        return formatFirebaseDate(new Date(year, selected.getMonth(), selected.getDate()));
+    }
+
+    function extractQuestionYear(normalizedQuestion) {
+        const match = normalizedQuestion.match(/\b(20\d{2})\b/);
+        return match ? Number(match[1]) : null;
+    }
+
+    function getMentionedMonthIndex(normalizedQuestion) {
+        const months = [
+            ["janeiro", "jan"],
+            ["fevereiro", "fev"],
+            ["marco", "março", "mar"],
+            ["abril", "abr"],
+            ["maio", "mai"],
+            ["junho", "jun"],
+            ["julho", "jul"],
+            ["agosto", "ago"],
+            ["setembro", "set"],
+            ["outubro", "out"],
+            ["novembro", "nov"],
+            ["dezembro", "dez"],
+        ];
+
+        const index = months.findIndex(aliases => aliases.some(alias => hasWord(normalizedQuestion, normalizeText(alias))));
+        return index >= 0 ? index : null;
     }
 
     function extractQuestionHour(normalizedQuestion) {

@@ -256,7 +256,7 @@ Arquivos:
 
 - `assistant-config.js`: constantes, exemplos, ambientes, metricas e aliases.
 - `assistant-format.js`: normalizacao e formatacao compartilhadas.
-- `assistant-ui.js`: painel, mensagens, abertura/fechamento, submit e atalhos.
+- `assistant-ui.js`: painel, mensagens, abertura/fechamento, clique/toque fora para fechar, submit e atalhos.
 - `assistant-intent.js`: classificacao de intencao, ambiente, data, hora e periodo.
 - `assistant-query.js`: execucao da consulta, prompt final e fallback textual.
 - `assistant-metrics.js`: estatisticas numericas, aliases, comparacoes, faixa de conforto e roteamento de metricas.
@@ -279,7 +279,7 @@ Dependencias indiretas: `latestData`, aba ativa, data selecionada, data/periodo 
 Observacao: perguntas sobre `ultimas 24h` reutilizam `ClimateData.filterDataByRollingHours` para consultar a mesma janela movel usada pelos graficos comuns.
 Observacao: perguntas com faixa horaria ou maior/menor horario sao classificadas em `assistant-intent.js`, filtradas em `assistant-query.js` e calculadas em `assistant-metrics.js` sem deixar o modelo recalcular os dados.
 Observacao: perguntas equivalentes aos heatmaps usam a mesma estrutura de dados, mas calculam localmente em `assistant-metrics.js`: calendario mensal por dia, heatmap por hora do dia e mapa semanal por dia/hora.
-Observacao: comparacoes solares sao classificadas em `assistant-intent.js` e calculadas em `assistant-solar.js`, sempre reutilizando `ClimateSolar.getSolarEventsForSelectedDate`.
+Observacao: comparacoes solares sao classificadas em `assistant-intent.js` e calculadas em `assistant-solar.js`, sempre reutilizando `ClimateSolar.getSolarEventsForSelectedDate`. Maior/menor duracao de luz usa o ano da data selecionada por padrao, mas usa o mes quando um mes for informado.
 
 Quem chama: `scripts/chat.js` e outros modulos da propria pasta.
 
@@ -558,6 +558,10 @@ graph TD
 ```
 
 ## Mapa de Impacto
+
+## Regra de Nomenclatura
+
+Novos metodos, funcoes e variaveis internas devem seguir PT-BR. Nao traduzir campos Firebase reais, ids/classes DOM, contratos publicos em `window.*`, propriedades de APIs externas, opcoes de bibliotecas ou chaves estruturais ja consumidas entre modulos.
 
 ### `scripts/config.js`
 

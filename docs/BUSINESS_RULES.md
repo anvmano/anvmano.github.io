@@ -2,6 +2,22 @@
 
 Regras extraidas exclusivamente do codigo existente.
 
+## Regra: nomenclatura interna em PT-BR
+
+Novos metodos, funcoes e variaveis internas devem usar nomes em PT-BR para facilitar manutencao e leitura do dominio.
+
+Excecoes permitidas:
+
+- campos Firebase reais, como `Toluen`, `CO2`, `HourNascerDoSol` ou similares
+- ids e classes DOM existentes
+- contratos publicos em `window.*`
+- propriedades exigidas por Chart.js, Firebase, html2canvas, jsPDF ou APIs externas
+- chaves estruturais ja consumidas por outros modulos, como payloads da assistente e contratos de relatorio
+
+Impacto: legibilidade e consistencia com o dominio do projeto.
+
+Criticidade: Media.
+
 ## Regra: formato da data atual Firebase
 
 Arquivo: `scripts/data/data-utils.js`
@@ -708,8 +724,8 @@ Regra de contexto:
 - a classificacao de intencao pode retornar `ambientes`, `metricas`, `operacao`, `periodo`, `criterio`, `confianca`, `precisa_esclarecimento` e `solar`, mas nao deve receber historico completo nem responder a pergunta do usuario
 - as regras de ambiente e data valem para media, maxima, minima, delta, tendencia e qualquer parametro carregado no ambiente alvo
 - perguntas de ciclo solar devem usar `latestData.solar` e `ClimateSolar.getSolarEventsForSelectedDate`, sem duplicar leitura manual dos campos solares no chat
-- perguntas de comparacao solar devem usar `assistant-solar.js` sobre os eventos ja parseados por `ClimateSolar.getSolarEventsForSelectedDate`; duracao do dia usa nascer ate por do sol, maior/menor duracao de luz usa o mes selecionado por padrao, e tendencias/comparacoes de nascer ou por do sol usam a semana selecionada por padrao
-- termos como `tempo de luz`, `luz solar`, `duracao de luz` e `duracao do dia` devem ser tratados como intencao solar de duracao do dia
+- perguntas de comparacao solar devem usar `assistant-solar.js` sobre os eventos ja parseados por `ClimateSolar.getSolarEventsForSelectedDate`; duracao do dia usa nascer ate por do sol, maior/menor duracao de luz usa o ano da data selecionada por padrao, maior/menor duracao de luz usa o mes quando um mes for informado, e tendencias/comparacoes de nascer ou por do sol usam a semana selecionada por padrao
+- termos como `tempo de luz`, `luz solar`, `duracao de luz`, `duracao do dia`, `dia mais longo` e `dia mais curto` devem ser tratados como intencao solar de duracao do dia
 - quando houver intencao solar, o chat deve forcar a metrica `ciclo_solar`, mesmo que a classificacao da IA retorne outra metrica por engano
 - perguntas de AQI/IAQ/qualidade do ar devem reutilizar `ClimateAqi.calculate` sobre o recorte de data/hora consultado, sem duplicar o calculo de faixas no chat
 

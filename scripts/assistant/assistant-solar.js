@@ -2,225 +2,225 @@
 
 (function () {
     const namespace = window.ClimateAssistant || {};
-    const { formatDate, formatPeriodLabel } = namespace.format;
+    const { formatDate: formatarData, formatPeriodLabel: formatarRotuloPeriodo } = namespace.format;
 
-    function buildSolarCycleResult(environment, context, periodDates, intent) {
-        const solarSource =
-            context.latestData?.solar ||
-            context.latestData?.historico?.NascerPorDoSol ||
-            context.historico?.NascerPorDoSol ||
-            context.latestData?.NascerPorDoSol ||
+    function montarResultadoCicloSolar(ambiente, contexto, datasPeriodo, intencao) {
+        const origemSolar =
+            contexto.latestData?.solar ||
+            contexto.latestData?.historico?.NascerPorDoSol ||
+            contexto.historico?.NascerPorDoSol ||
+            contexto.latestData?.NascerPorDoSol ||
             {};
 
-        const dailySolarData = periodDates
-            .map(date => buildDailySolarCycleFromEvents(solarSource, date))
+        const dadosSolaresDiarios = datasPeriodo
+            .map(data => montarCicloSolarDiarioPorEventos(origemSolar, data))
             .filter(Boolean);
 
         const base = {
-            ambiente: environment.label,
+            ambiente: ambiente.label,
             metrica: "Ciclo solar",
             unidade: "",
-            operacao: intent.operation,
+            operacao: intencao.operation,
             criterio: "dados_solares_registrados",
-            periodo: intent.periodLabel || formatPeriodLabel(periodDates),
-            datas_consultadas: periodDates.map(formatDate),
-            dias_com_dados: dailySolarData.map(day => day.data),
-            amostras: dailySolarData.length,
+            periodo: intencao.periodLabel || formatarRotuloPeriodo(datasPeriodo),
+            datas_consultadas: datasPeriodo.map(formatarData),
+            dias_com_dados: dadosSolaresDiarios.map(dia => dia.data),
+            amostras: dadosSolaresDiarios.length,
         };
 
-        if (!dailySolarData.length) {
+        if (!dadosSolaresDiarios.length) {
             return {
                 ...base,
                 sem_dados: true,
-                mensagem: `Sem dados de ciclo solar para ${formatPeriodLabel(periodDates)}.`,
+                mensagem: `Sem dados de ciclo solar para ${formatarRotuloPeriodo(datasPeriodo)}.`,
             };
         }
 
-        const analyticResult = buildSolarAnalyticResult(base, dailySolarData, intent);
-        if (analyticResult) return analyticResult;
+        const resultadoAnalitico = montarResultadoAnaliticoSolar(base, dadosSolaresDiarios, intencao);
+        if (resultadoAnalitico) return resultadoAnalitico;
 
         return {
             ...base,
             tipo_resultado: "ciclo_solar",
-            por_dia: dailySolarData,
+            por_dia: dadosSolaresDiarios,
         };
     }
 
-    function buildSolarAnalyticResult(base, dailySolarData, intent) {
-        if (intent.operation === "solar_duracao_dia") {
-            const day = dailySolarData[0];
+    function montarResultadoAnaliticoSolar(base, dadosSolaresDiarios, intencao) {
+        if (intencao.operation === "solar_duracao_dia") {
+            const dia = dadosSolaresDiarios[0];
             return {
                 ...base,
                 tipo_resultado: "solar_duracao_dia",
-                data: day.data,
-                duracao_dia: day.duracao_dia,
-                duracao_minutos: day.duracao_minutos,
-                nascer_do_sol: day.nascer_do_sol,
-                por_do_sol: day.por_do_sol,
+                data: dia.data,
+                duracao_dia: dia.duracao_dia,
+                duracao_minutos: dia.duracao_minutos,
+                nascer_do_sol: dia.nascer_do_sol,
+                por_do_sol: dia.por_do_sol,
             };
         }
 
-        if (intent.operation === "solar_maior_duracao_luz" || intent.operation === "solar_menor_duracao_luz") {
-            const mode = intent.operation === "solar_menor_duracao_luz" ? "min" : "max";
-            const ranked = dailySolarData
-                .filter(day => Number.isFinite(day.duracao_minutos))
-                .sort((a, b) => mode === "max" ? b.duracao_minutos - a.duracao_minutos : a.duracao_minutos - b.duracao_minutos);
-            const best = ranked[0];
-            if (!best) return null;
+        if (intencao.operation === "solar_maior_duracao_luz" || intencao.operation === "solar_menor_duracao_luz") {
+            const modo = intencao.operation === "solar_menor_duracao_luz" ? "min" : "max";
+            const ranking = dadosSolaresDiarios
+                .filter(dia => Number.isFinite(dia.duracao_minutos))
+                .sort((a, b) => modo === "max" ? b.duracao_minutos - a.duracao_minutos : a.duracao_minutos - b.duracao_minutos);
+            const melhor = ranking[0];
+            if (!melhor) return null;
 
             return {
                 ...base,
                 tipo_resultado: "solar_extremo_duracao_luz",
-                criterio: mode === "max" ? "maior_duracao_luz" : "menor_duracao_luz",
-                data: best.data,
-                duracao_dia: best.duracao_dia,
-                duracao_minutos: best.duracao_minutos,
-                nascer_do_sol: best.nascer_do_sol,
-                por_do_sol: best.por_do_sol,
-                ranking: ranked.slice(0, 6).map(day => ({
-                    data: day.data,
-                    duracao_dia: day.duracao_dia,
-                    nascer_do_sol: day.nascer_do_sol,
-                    por_do_sol: day.por_do_sol,
+                criterio: modo === "max" ? "maior_duracao_luz" : "menor_duracao_luz",
+                data: melhor.data,
+                duracao_dia: melhor.duracao_dia,
+                duracao_minutos: melhor.duracao_minutos,
+                nascer_do_sol: melhor.nascer_do_sol,
+                por_do_sol: melhor.por_do_sol,
+                ranking: ranking.slice(0, 6).map(dia => ({
+                    data: dia.data,
+                    duracao_dia: dia.duracao_dia,
+                    nascer_do_sol: dia.nascer_do_sol,
+                    por_do_sol: dia.por_do_sol,
                 })),
             };
         }
 
-        if (intent.operation === "solar_tendencia_nascer" || intent.operation === "solar_tendencia_por") {
-            const eventKey = intent.operation === "solar_tendencia_nascer" ? "nascer" : "por";
-            return buildSolarTrendResult(base, dailySolarData, eventKey);
+        if (intencao.operation === "solar_tendencia_nascer" || intencao.operation === "solar_tendencia_por") {
+            const chaveEvento = intencao.operation === "solar_tendencia_nascer" ? "nascer" : "por";
+            return montarResultadoTendenciaSolar(base, dadosSolaresDiarios, chaveEvento);
         }
 
-        if (intent.operation === "solar_comparar_nascer" || intent.operation === "solar_comparar_por") {
-            const eventKey = intent.operation === "solar_comparar_nascer" ? "nascer" : "por";
-            return buildSolarComparisonResult(base, dailySolarData, eventKey);
+        if (intencao.operation === "solar_comparar_nascer" || intencao.operation === "solar_comparar_por") {
+            const chaveEvento = intencao.operation === "solar_comparar_nascer" ? "nascer" : "por";
+            return montarResultadoComparacaoSolar(base, dadosSolaresDiarios, chaveEvento);
         }
 
         return null;
     }
 
-    function buildSolarTrendResult(base, dailySolarData, eventKey) {
-        const field = eventKey === "nascer" ? "nascer_minutos" : "por_minutos";
-        const label = eventKey === "nascer" ? "nascer do sol" : "pôr do sol";
-        const series = dailySolarData
-            .filter(day => Number.isFinite(day[field]))
-            .map(day => ({
-                data: day.data,
-                horario: eventKey === "nascer" ? day.nascer_do_sol : day.por_do_sol,
-                minutos: day[field],
+    function montarResultadoTendenciaSolar(base, dadosSolaresDiarios, chaveEvento) {
+        const campo = chaveEvento === "nascer" ? "nascer_minutos" : "por_minutos";
+        const rotulo = chaveEvento === "nascer" ? "nascer do sol" : "pôr do sol";
+        const serie = dadosSolaresDiarios
+            .filter(dia => Number.isFinite(dia[campo]))
+            .map(dia => ({
+                data: dia.data,
+                horario: chaveEvento === "nascer" ? dia.nascer_do_sol : dia.por_do_sol,
+                minutos: dia[campo],
             }));
 
-        if (!series.length) return null;
+        if (!serie.length) return null;
 
-        const first = series[0];
-        const last = series[series.length - 1];
-        const delta = last.minutos - first.minutos;
+        const primeiro = serie[0];
+        const ultimo = serie[serie.length - 1];
+        const delta = ultimo.minutos - primeiro.minutos;
 
         return {
             ...base,
             tipo_resultado: "solar_tendencia_evento",
-            evento: label,
-            tendencia: trendFromMinuteDelta(delta),
+            evento: rotulo,
+            tendencia: tendenciaPorDeltaMinutos(delta),
             delta_minutos: delta,
-            primeiro: first,
-            ultimo: last,
-            por_dia: series,
+            primeiro,
+            ultimo,
+            por_dia: serie,
         };
     }
 
-    function buildSolarComparisonResult(base, dailySolarData, eventKey) {
-        const field = eventKey === "nascer" ? "nascer_minutos" : "por_minutos";
-        const label = eventKey === "nascer" ? "nascer do sol" : "pôr do sol";
-        const series = dailySolarData
-            .filter(day => Number.isFinite(day[field]))
-            .map(day => ({
-                data: day.data,
-                horario: eventKey === "nascer" ? day.nascer_do_sol : day.por_do_sol,
+    function montarResultadoComparacaoSolar(base, dadosSolaresDiarios, chaveEvento) {
+        const campo = chaveEvento === "nascer" ? "nascer_minutos" : "por_minutos";
+        const rotulo = chaveEvento === "nascer" ? "nascer do sol" : "pôr do sol";
+        const serie = dadosSolaresDiarios
+            .filter(dia => Number.isFinite(dia[campo]))
+            .map(dia => ({
+                data: dia.data,
+                horario: chaveEvento === "nascer" ? dia.nascer_do_sol : dia.por_do_sol,
                 diferenca_minutos: null,
             }));
 
-        if (!series.length) return null;
+        if (!serie.length) return null;
 
-        const firstMinutes = dailySolarData.find(day => Number.isFinite(day[field]))?.[field];
-        series.forEach(item => {
-            const day = dailySolarData.find(candidate => candidate.data === item.data);
-            item.diferenca_minutos = Number.isFinite(day?.[field]) && Number.isFinite(firstMinutes)
-                ? day[field] - firstMinutes
+        const minutosIniciais = dadosSolaresDiarios.find(dia => Number.isFinite(dia[campo]))?.[campo];
+        serie.forEach(item => {
+            const dia = dadosSolaresDiarios.find(candidato => candidato.data === item.data);
+            item.diferenca_minutos = Number.isFinite(dia?.[campo]) && Number.isFinite(minutosIniciais)
+                ? dia[campo] - minutosIniciais
                 : null;
         });
 
         return {
             ...base,
             tipo_resultado: "solar_comparacao_evento",
-            evento: label,
-            por_dia: series,
+            evento: rotulo,
+            por_dia: serie,
         };
     }
 
-    function buildDailySolarCycleFromEvents(solarSource, date) {
-        const events = window.ClimateSolar?.getSolarEventsForSelectedDate?.(solarSource, date);
-        if (!events) return null;
+    function montarCicloSolarDiarioPorEventos(origemSolar, data) {
+        const eventos = window.ClimateSolar?.getSolarEventsForSelectedDate?.(origemSolar, data);
+        if (!eventos) return null;
 
-        const amanhecer = window.ClimateData.formatTime(events.dawn);
-        const nascerDoSol = window.ClimateData.formatTime(events.sunrise);
-        const zenite = window.ClimateData.formatTime(events.zenith);
-        const porDoSol = window.ClimateData.formatTime(events.sunset);
-        const anoitecer = window.ClimateData.formatTime(events.dusk);
+        const amanhecer = window.ClimateData.formatTime(eventos.dawn);
+        const nascerDoSol = window.ClimateData.formatTime(eventos.sunrise);
+        const zenite = window.ClimateData.formatTime(eventos.zenith);
+        const porDoSol = window.ClimateData.formatTime(eventos.sunset);
+        const anoitecer = window.ClimateData.formatTime(eventos.dusk);
 
         return {
-            data: formatDate(date),
+            data: formatarData(data),
             amanhecer,
             nascer_do_sol: nascerDoSol,
             zenite,
             por_do_sol: porDoSol,
             anoitecer,
-            nascer_minutos: hourToMinutes(nascerDoSol),
-            por_minutos: hourToMinutes(porDoSol),
-            duracao_dia: calculateDurationLabel(nascerDoSol, porDoSol),
-            duracao_minutos: calculateDurationMinutes(nascerDoSol, porDoSol),
-            periodo_luz_total: calculateDurationLabel(amanhecer, anoitecer),
-            periodo_luz_total_minutos: calculateDurationMinutes(amanhecer, anoitecer),
+            nascer_minutos: converterHoraParaMinutos(nascerDoSol),
+            por_minutos: converterHoraParaMinutos(porDoSol),
+            duracao_dia: calcularRotuloDuracao(nascerDoSol, porDoSol),
+            duracao_minutos: calcularDuracaoMinutos(nascerDoSol, porDoSol),
+            periodo_luz_total: calcularRotuloDuracao(amanhecer, anoitecer),
+            periodo_luz_total_minutos: calcularDuracaoMinutos(amanhecer, anoitecer),
         };
     }
 
-    function calculateDurationLabel(start, end) {
-        const diff = calculateDurationMinutes(start, end);
-        if (diff === null) return null;
+    function calcularRotuloDuracao(inicio, fim) {
+        const diferenca = calcularDuracaoMinutos(inicio, fim);
+        if (diferenca === null) return null;
 
-        const hours = Math.floor(diff / 60);
-        const minutes = diff % 60;
-        return minutes === 0 ? `${hours}h` : `${hours}h${String(minutes).padStart(2, "0")}`;
+        const horas = Math.floor(diferenca / 60);
+        const minutos = diferenca % 60;
+        return minutos === 0 ? `${horas}h` : `${horas}h${String(minutos).padStart(2, "0")}`;
     }
 
-    function calculateDurationMinutes(start, end) {
-        const startMinutes = hourToMinutes(start);
-        const endMinutes = hourToMinutes(end);
-        if (startMinutes === null || endMinutes === null) return null;
+    function calcularDuracaoMinutos(inicio, fim) {
+        const minutosInicio = converterHoraParaMinutos(inicio);
+        const minutosFim = converterHoraParaMinutos(fim);
+        if (minutosInicio === null || minutosFim === null) return null;
 
-        let diff = endMinutes - startMinutes;
-        if (diff < 0) diff += 24 * 60;
-        return diff;
+        let diferenca = minutosFim - minutosInicio;
+        if (diferenca < 0) diferenca += 24 * 60;
+        return diferenca;
     }
 
-    function trendFromMinuteDelta(delta) {
+    function tendenciaPorDeltaMinutos(delta) {
         if (!Number.isFinite(delta) || Math.abs(delta) < 1) return "estavel";
         return delta > 0 ? "mais_tarde" : "mais_cedo";
     }
 
-    function hourToMinutes(value) {
-        if (!value) return null;
+    function converterHoraParaMinutos(valor) {
+        if (!valor) return null;
 
-        const match = String(value).match(/^(\d{2}):(\d{2})$/);
-        if (!match) return null;
+        const partes = String(valor).match(/^(\d{2}):(\d{2})$/);
+        if (!partes) return null;
 
-        const hour = Number(match[1]);
-        const minute = Number(match[2]);
-        if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
-        if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+        const hora = Number(partes[1]);
+        const minuto = Number(partes[2]);
+        if (!Number.isFinite(hora) || !Number.isFinite(minuto)) return null;
+        if (hora < 0 || hora > 23 || minuto < 0 || minuto > 59) return null;
 
-        return hour * 60 + minute;
+        return hora * 60 + minuto;
     }
 
-    namespace.solar = { buildSolarCycleResult };
+    namespace.solar = { buildSolarCycleResult: montarResultadoCicloSolar };
     window.ClimateAssistant = namespace;
 })();

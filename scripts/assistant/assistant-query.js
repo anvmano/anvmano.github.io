@@ -105,6 +105,7 @@
 
     function getPeriodLabel(period, periodDates) {
         if (period?.type === "selected_month") return formatMonthPeriodLabel(period.selectedDate || periodDates[0]);
+        if (period?.type === "selected_year") return formatYearPeriodLabel(period.selectedDate || periodDates[0]);
         if (period?.type === "selected_week") return `semana de ${formatPeriodLabel(periodDates)}`;
         if (period?.type !== "rolling_hours") return formatPeriodLabel(periodDates);
         return `últimas ${period.hours || 24} horas (${formatPeriodLabel(periodDates)})`;
@@ -113,6 +114,11 @@
     function formatMonthPeriodLabel(firebaseDate) {
         const date = window.ClimateData.parseFirebaseDate(firebaseDate || window.ClimateData.dataAtual());
         return `${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
+    }
+
+    function formatYearPeriodLabel(firebaseDate) {
+        const date = window.ClimateData.parseFirebaseDate(firebaseDate || window.ClimateData.dataAtual());
+        return String(date.getFullYear());
     }
 
     function buildAnswerPrompt(question, result) {

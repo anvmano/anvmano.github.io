@@ -76,7 +76,7 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Chat com IA deve reutilizar `latestData`, `selectedDate` e aba ativa; nao deve enviar historicos completos ao modelo.
 - Chat deve usar Gemini para classificar a pergunta em JSON, JavaScript para validar/calcular resultados e Gemini apenas para redigir a resposta final.
 - Perguntas de ciclo solar no chat devem reutilizar `ClimateSolar.getSolarEventsForSelectedDate` sobre `latestData.solar`.
-- Perguntas de comparacao solar no chat devem ser calculadas localmente em `assistant-solar.js`: duracao do dia, maior/menor duracao de luz, tendencia de nascer/por do sol e comparacao semanal.
+- Perguntas de comparacao solar no chat devem ser calculadas localmente em `assistant-solar.js`: duracao do dia, maior/menor duracao de luz no ano da data selecionada por padrao, maior/menor duracao de luz no mes quando um mes for informado, tendencia de nascer/por do sol e comparacao semanal.
 - Perguntas de AQI/IAQ/qualidade do ar no chat devem reutilizar `ClimateAqi.calculate` sobre dados da Sala/MQ135; CO, CO2, Acetona, Alcool, Amonia e Tolueno sao metricas exclusivas da Sala quando nenhum ambiente e citado.
 - Consultas de periodo no chat devem limitar no maximo 30 dias; `ultimos dias` usa 7 dias por padrao.
 - Exportacao PDF deve montar paginas A4 manualmente com html2canvas + jsPDF, evitando paginacao automatica que pode cortar conteudo.
@@ -113,6 +113,7 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 5. Se mexer em heatmaps/estatisticas, leia `scripts/data/analytics.js`.
 6. Se mexer em solar, leia `scripts/charts/solar.js` e `scripts/views/solar-view.js`.
 7. Preserve objetos globais e ordem dos scripts.
+8. Use nomenclatura PT-BR para novos metodos, funcoes e variaveis internas; preserve nomes externos obrigatorios, campos Firebase, ids/classes DOM, contratos publicos e opcoes exigidas por bibliotecas.
 
 ## Checklist antes de modificar codigo
 

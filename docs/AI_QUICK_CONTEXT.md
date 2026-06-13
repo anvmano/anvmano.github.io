@@ -130,7 +130,7 @@ Arquivos principais:
 - PDF e montado manualmente em paginas A4; resumo, graficos e tabela iniciam em paginas proprias, com rodape em todas as paginas.
 - Chat usa `latestData`, aba ativa, data selecionada e intenção classificada para selecionar dados. Nao envia o Firebase inteiro ao modelo.
 - Chat tem atalhos em `data-chat-question`; eles reutilizam o mesmo fluxo de envio da pergunta digitada.
-- Chat abre e fecha com transicao gradual em `styles/chat.css`; `scripts/assistant/assistant-ui.js` so aplica `hidden` depois da animacao de fechamento.
+- Chat abre e fecha com transicao gradual em `styles/chat.css`; `scripts/assistant/assistant-ui.js` so aplica `hidden` depois da animacao de fechamento. Quando aberto, clique/toque fora de `#aiChat` fecha o painel, preservando cliques dentro do chat.
 - Chat resolve intencao antes de responder: ambiente mencionado vence a aba ativa; data/periodo mencionado vence o calendario sem alterar a pagina; se ambiente/data nao forem mencionados, usa aba ativa e calendario.
 - Chat reconhece metricas exclusivas de ambiente: perguntas sobre AQI/IAQ/qualidade do ar, CO, CO2, Acetona, Alcool, Amonia ou Tolueno consultam a Sala/MQ135 quando nenhum ambiente e informado, mesmo se a aba ativa for Quarto ou Aquario. Se um ambiente classificado nao tiver a metrica pedida e a metrica existir em apenas outro ambiente, o chat usa o ambiente que possui a medicao.
 - Chat calcula AQI estimado reutilizando `ClimateAqi.calculate` sobre o recorte de data/hora consultado; a resposta pode incluir AQI, classificacao, impacto, dominante e subindices principais.
@@ -143,10 +143,10 @@ Arquivos principais:
 - Chat entende `ultimas 24 horas`/`ultimas 24h` como janela movel real, reutilizando `ClimateData.filterDataByRollingHours` com a data selecionada e a hora atual do navegador; nao deve tratar isso como `hoje` nem como `ultimos dias`.
 - Chat usa arquitetura em duas etapas: Gemini classifica a pergunta em JSON com schema fixo; JavaScript valida, limita periodo, seleciona dados e calcula media/maxima/minima/delta/tendencia/comparacoes; Gemini redige a resposta usando apenas o resultado calculado.
 - Chat responde perguntas de ciclo solar usando `ClimateSolar.getSolarEventsForSelectedDate` sobre `latestData.solar`, reutilizando aliases solares e fallback de zenite do modulo solar.
-- Chat responde comparacoes solares: duracao do dia, maior/menor duracao de luz no mes selecionado, tendencia de nascer do sol/por do sol na semana selecionada e comparacao de nascer/por do sol por dia no periodo.
-- Termos como `tempo de luz`, `luz solar`, `duracao de luz` e `duracao do dia` devem ser tratados como consulta solar de duracao do dia.
+- Chat responde comparacoes solares: duracao do dia, maior/menor duracao de luz no ano da data selecionada por padrao, maior/menor duracao de luz no mes quando um mes for informado, tendencia de nascer do sol/por do sol na semana selecionada e comparacao de nascer/por do sol por dia no periodo.
+- Termos como `tempo de luz`, `luz solar`, `duracao de luz`, `duracao do dia`, `dia mais longo` e `dia mais curto` devem ser tratados como consulta solar de duracao do dia.
 - Quando a pergunta tiver intencao solar, o chat deve forcar metrica `ciclo_solar`, mesmo se a classificacao da IA sugerir outra metrica por engano.
-- Periodos suportados incluem data unica, hoje, ontem, anteontem, datas relativas, intervalo, ultimas 24h reais, ultimos dias, mes selecionado e semana selecionada. `Ultimos dias` usa 7 dias por padrao e consultas de periodo sao limitadas a 30 dias, exceto calendario mensal que pode consultar o mes completo.
+- Periodos suportados incluem data unica, hoje, ontem, anteontem, datas relativas, intervalo, ultimas 24h reais, ultimos dias, mes selecionado, semana selecionada e ano selecionado para consultas solares anuais. `Ultimos dias` usa 7 dias por padrao e consultas de periodo sao limitadas a 30 dias, exceto calendario mensal que pode consultar o mes completo e comparacoes solares anuais que podem consultar o ano inteiro.
 - Heatmaps destacam contexto temporal com `.is-selected`: calendario mensal destaca o dia selecionado, heatmap horario destaca a hora atual quando a data selecionada e hoje, e mapa semanal destaca dia da semana/hora atual quando a data selecionada e hoje.
 - O mapa semanal reinicia no domingo e considera apenas registros da semana da data selecionada, do domingo ate a data selecionada. Ele nao agrega semanas anteriores do mes.
 - Heatmaps normalizam a data recebida para `DD-MM-AAAA` antes de filtrar registros. Falhas nas visualizacoes climaticas avancadas nao devem bloquear os graficos principais da aba.
@@ -172,6 +172,7 @@ Arquivos principais:
 - Nao mudar ordem dos scripts sem revisar dependencias globais.
 - Nao renomear ids do HTML sem atualizar `scripts/config.js`.
 - Nao renomear campos Firebase sem atualizar `scripts/config.js` e, para solar, `scripts/charts/solar.js`.
+- Novos metodos, funcoes e variaveis internas devem seguir nomenclatura PT-BR. Excecoes: campos Firebase, ids/classes DOM, nomes exigidos por APIs externas, contratos publicos em `window.*`, opcoes de bibliotecas e propriedades estruturais ja consumidas por outros modulos.
 - O Firebase e lido com `onValue` no path completo.
 - Firebase AI Logic depende de App Check configurado no app web correto; enforcement deve ser ativado apenas depois de validar o token em producao.
 - Zênite solar usa campos `HoraZenite` e `MinuteZenite` quando presentes; se nao houver, calcula meio entre nascer e por do sol.
@@ -179,4 +180,4 @@ Arquivos principais:
 
 ## Resumo para IA
 
-Este projeto e um frontend estatico, sem framework, que depende de dados Firebase e de ids DOM centralizados. Para alterar uma aba, leia primeiro `scripts/config.js`, depois a view da aba, depois `scripts/data/data-utils.js` e `scripts/charts/chart-utils.js`/`scripts/data/analytics.js`. Para graficos solares, leia `scripts/charts/solar.js`. Toda alteracao deve preservar os objetos globais esperados por `scripts/main.js`.
+Este projeto e um frontend estatico, sem framework, que depende de dados Firebase e de ids DOM centralizados. Para alterar uma aba, leia primeiro `scripts/config.js`, depois a view da aba, depois `scripts/data/data-utils.js` e `scripts/charts/chart-utils.js`/`scripts/data/analytics.js`. Para graficos solares, leia `scripts/charts/solar.js`. Toda alteracao deve preservar os objetos globais esperados por `scripts/main.js`. Ao criar ou refatorar codigo interno, prefira nomes em PT-BR e preserve apenas contratos externos ou nomes tecnicos obrigatorios.

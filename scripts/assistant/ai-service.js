@@ -1,13 +1,13 @@
 'use strict';
 
 (function () {
-    let model = null;
+    let modelo = null;
 
-    async function initialize() {
-        if (model) return model;
+    async function inicializar() {
+        if (modelo) return modelo;
 
-        const firebaseConfig = window.AppConfig?.firebase;
-        if (!firebaseConfig?.aiUrl) {
+        const configuracaoFirebase = window.AppConfig?.firebase;
+        if (!configuracaoFirebase?.aiUrl) {
             throw new Error("Firebase AI Logic não está configurado.");
         }
 
@@ -17,25 +17,25 @@
             throw new Error("Firebase App não inicializado.");
         }
 
-        const { getAI, getGenerativeModel, GoogleAIBackend } = await import(firebaseConfig.aiUrl);
-        const ai = getAI(app, { backend: new GoogleAIBackend() });
-        model = getGenerativeModel(ai, {
-            model: firebaseConfig.aiModel || "gemini-3.5-flash",
+        const { getAI, getGenerativeModel, GoogleAIBackend } = await import(configuracaoFirebase.aiUrl);
+        const ia = getAI(app, { backend: new GoogleAIBackend() });
+        modelo = getGenerativeModel(ia, {
+            model: configuracaoFirebase.aiModel || "gemini-3.5-flash",
         });
 
-        return model;
+        return modelo;
     }
 
-    async function generateText(prompt) {
-        const activeModel = await initialize();
-        const response = await activeModel.generateContent(prompt);
-        if (typeof response.text === "function") return response.text();
-        if (typeof response.text === "string") return response.text;
+    async function gerarTexto(prompt) {
+        const modeloAtivo = await inicializar();
+        const resposta = await modeloAtivo.generateContent(prompt);
+        if (typeof resposta.text === "function") return resposta.text();
+        if (typeof resposta.text === "string") return resposta.text;
         return "Não consegui gerar uma resposta agora.";
     }
 
     window.ClimateAIService = {
-        initialize,
-        generateText,
+        initialize: inicializar,
+        generateText: gerarTexto,
     };
 })();

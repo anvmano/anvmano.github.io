@@ -3,97 +3,97 @@
 (function () {
     const namespace = window.ClimateAssistant || {};
 
-    function normalizeText(text) {
-        return String(text || "")
+    function normalizarTexto(texto) {
+        return String(texto || "")
             .normalize("NFD")
             .replace(/[\u0300-\u036f]/g, "")
             .toLowerCase();
     }
 
-    function escapeRegExp(value) {
-        return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    function escaparRegExp(valor) {
+        return String(valor).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     }
 
-    function hasWord(text, word) {
-        return new RegExp(`(^|\\W)${escapeRegExp(word)}(\\W|$)`, "i").test(text);
+    function temPalavra(texto, palavra) {
+        return new RegExp(`(^|\\W)${escaparRegExp(palavra)}(\\W|$)`, "i").test(texto);
     }
 
-    function normalizeHourFilter(value) {
-        if (!value) return null;
+    function normalizarFiltroHora(valor) {
+        if (!valor) return null;
 
-        const text = String(value).trim();
-        const match = text.match(/^(\d{1,2})(?:(?::|-)\d{2}|h)?$/i);
-        if (!match) return null;
+        const texto = String(valor).trim();
+        const partes = texto.match(/^(\d{1,2})(?:(?::|-)\d{2}|h)?$/i);
+        if (!partes) return null;
 
-        const hour = Number(match[1]);
-        if (!Number.isFinite(hour) || hour < 0 || hour > 23) return null;
+        const hora = Number(partes[1]);
+        if (!Number.isFinite(hora) || hora < 0 || hora > 23) return null;
 
-        return String(hour).padStart(2, "0");
+        return String(hora).padStart(2, "0");
     }
 
-    function formatDate(firebaseDate) {
-        return firebaseDate ? firebaseDate.replace(/-/g, "/") : "--";
+    function formatarData(dataFirebase) {
+        return dataFirebase ? dataFirebase.replace(/-/g, "/") : "--";
     }
 
-    function formatNumber(value) {
-        return Number.isFinite(value) ? value.toFixed(2) : "--";
+    function formatarNumero(valor) {
+        return Number.isFinite(valor) ? valor.toFixed(2) : "--";
     }
 
-    function formatMetricValue(value, unit) {
-        if (!Number.isFinite(value)) return "--";
-        if (!unit) return Number.isInteger(value) ? String(value) : formatNumber(value);
-        return `${formatNumber(value)}${unit}`;
+    function formatarValorMetrica(valor, unidade) {
+        if (!Number.isFinite(valor)) return "--";
+        if (!unidade) return Number.isInteger(valor) ? String(valor) : formatarNumero(valor);
+        return `${formatarNumero(valor)}${unidade}`;
     }
 
-    function formatHourLabel(hour) {
-        const normalizedHour = normalizeHourFilter(hour);
-        return normalizedHour ? `${normalizedHour}:00` : "--";
+    function formatarRotuloHora(hora) {
+        const horaNormalizada = normalizarFiltroHora(hora);
+        return horaNormalizada ? `${horaNormalizada}:00` : "--";
     }
 
-    function formatHourRangeLabel(hourRange) {
-        if (!hourRange?.start || !hourRange?.end) return null;
-        return `${formatHourLabel(hourRange.start)} a ${formatHourLabel(hourRange.end)}`;
+    function formatarRotuloFaixaHora(faixaHora) {
+        if (!faixaHora?.start || !faixaHora?.end) return null;
+        return `${formatarRotuloHora(faixaHora.start)} a ${formatarRotuloHora(faixaHora.end)}`;
     }
 
-    function formatPeriodLabel(dates) {
-        if (!dates.length) return "--";
-        if (dates.length === 1) return formatDate(dates[0]);
-        return `${formatDate(dates[0])} a ${formatDate(dates[dates.length - 1])}`;
+    function formatarRotuloPeriodo(datas) {
+        if (!datas.length) return "--";
+        if (datas.length === 1) return formatarData(datas[0]);
+        return `${formatarData(datas[0])} a ${formatarData(datas[datas.length - 1])}`;
     }
 
-    function formatFirebaseDate(date) {
-        return `${String(date.getDate()).padStart(2, "0")}-${String(date.getMonth() + 1).padStart(2, "0")}-${date.getFullYear()}`;
+    function formatarDataFirebase(data) {
+        return `${String(data.getDate()).padStart(2, "0")}-${String(data.getMonth() + 1).padStart(2, "0")}-${data.getFullYear()}`;
     }
 
-    function formatTimestampLabel(timestamp) {
+    function formatarRotuloTimestamp(timestamp) {
         if (!(timestamp instanceof Date) || Number.isNaN(timestamp.getTime())) return null;
-        const date = `${String(timestamp.getDate()).padStart(2, "0")}/${String(timestamp.getMonth() + 1).padStart(2, "0")}/${timestamp.getFullYear()}`;
-        const time = `${String(timestamp.getHours()).padStart(2, "0")}:${String(timestamp.getMinutes()).padStart(2, "0")}`;
-        return `${date} ${time}`;
+        const data = `${String(timestamp.getDate()).padStart(2, "0")}/${String(timestamp.getMonth() + 1).padStart(2, "0")}/${timestamp.getFullYear()}`;
+        const hora = `${String(timestamp.getHours()).padStart(2, "0")}:${String(timestamp.getMinutes()).padStart(2, "0")}`;
+        return `${data} ${hora}`;
     }
 
-    function getTabLabel(tabId) {
-        return { Tab1: "Sala", Tab2: "Quarto", Tab3: "Aquário" }[tabId] || tabId || "--";
+    function obterRotuloAba(idAba) {
+        return { Tab1: "Sala", Tab2: "Quarto", Tab3: "Aquário" }[idAba] || idAba || "--";
     }
 
-    function uniqueDates(dates) {
-        return [...new Set(dates.filter(Boolean))];
+    function obterDatasUnicas(datas) {
+        return [...new Set(datas.filter(Boolean))];
     }
 
     namespace.format = {
-        normalizeText,
-        hasWord,
-        normalizeHourFilter,
-        formatDate,
-        formatNumber,
-        formatMetricValue,
-        formatHourLabel,
-        formatHourRangeLabel,
-        formatPeriodLabel,
-        formatFirebaseDate,
-        formatTimestampLabel,
-        getTabLabel,
-        uniqueDates,
+        normalizeText: normalizarTexto,
+        hasWord: temPalavra,
+        normalizeHourFilter: normalizarFiltroHora,
+        formatDate: formatarData,
+        formatNumber: formatarNumero,
+        formatMetricValue: formatarValorMetrica,
+        formatHourLabel: formatarRotuloHora,
+        formatHourRangeLabel: formatarRotuloFaixaHora,
+        formatPeriodLabel: formatarRotuloPeriodo,
+        formatFirebaseDate: formatarDataFirebase,
+        formatTimestampLabel: formatarRotuloTimestamp,
+        getTabLabel: obterRotuloAba,
+        uniqueDates: obterDatasUnicas,
     };
 
     window.ClimateAssistant = namespace;

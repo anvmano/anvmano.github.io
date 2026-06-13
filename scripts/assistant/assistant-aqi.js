@@ -3,111 +3,111 @@
 (function () {
     const namespace = window.ClimateAssistant || {};
     const {
-        normalizeHourFilter,
-        formatDate,
-        formatPeriodLabel,
-        formatHourLabel,
-        formatNumber,
-        formatTimestampLabel,
+        normalizeHourFilter: normalizarFiltroHora,
+        formatDate: formatarData,
+        formatPeriodLabel: formatarRotuloPeriodo,
+        formatHourLabel: formatarRotuloHora,
+        formatNumber: formatarNumero,
+        formatTimestampLabel: formatarRotuloTimestamp,
     } = namespace.format;
 
-    function buildAirQualityResult(environment, metric, periodDates, intent, data) {
-        const dailyAqi = periodDates
-            .map(date => buildDailyAirQuality(data?.[date], date, intent.hour))
+    function montarResultadoQualidadeAr(ambiente, metrica, datasPeriodo, intencao, dados) {
+        const aqiDiario = datasPeriodo
+            .map(data => montarQualidadeArDiaria(dados?.[data], data, intencao.hour))
             .filter(Boolean);
         const base = {
-            ambiente: environment.label,
-            metrica: metric.label,
-            unidade: metric.unit,
-            operacao: intent.operation,
+            ambiente: ambiente.label,
+            metrica: metrica.label,
+            unidade: metrica.unit,
+            operacao: intencao.operation,
             criterio: "aqi_estimado_mq135",
-            periodo: intent.periodLabel || formatPeriodLabel(periodDates),
-            hora_consultada: intent.hour ? formatHourLabel(intent.hour) : null,
-            datas_consultadas: periodDates.map(formatDate),
-            dias_com_dados: dailyAqi.map(day => day.data),
+            periodo: intencao.periodLabel || formatarRotuloPeriodo(datasPeriodo),
+            hora_consultada: intencao.hour ? formatarRotuloHora(intencao.hour) : null,
+            datas_consultadas: datasPeriodo.map(formatarData),
+            dias_com_dados: aqiDiario.map(dia => dia.data),
         };
 
-        if (!dailyAqi.length) {
+        if (!aqiDiario.length) {
             return {
                 ...base,
                 sem_dados: true,
-                mensagem: intent.hour
-                    ? `Sem dados de AQI estimado em ${environment.label} para ${intent.periodLabel || formatPeriodLabel(periodDates)} às ${formatHourLabel(intent.hour)}.`
-                    : `Sem dados de AQI estimado em ${environment.label} para ${intent.periodLabel || formatPeriodLabel(periodDates)}.`,
+                mensagem: intencao.hour
+                    ? `Sem dados de AQI estimado em ${ambiente.label} para ${intencao.periodLabel || formatarRotuloPeriodo(datasPeriodo)} às ${formatarRotuloHora(intencao.hour)}.`
+                    : `Sem dados de AQI estimado em ${ambiente.label} para ${intencao.periodLabel || formatarRotuloPeriodo(datasPeriodo)}.`,
             };
         }
 
-        if (intent.hour) {
-            const firstDay = dailyAqi[0];
+        if (intencao.hour) {
+            const primeiroDia = aqiDiario[0];
             return {
                 ...base,
                 tipo_resultado: "consulta_horaria",
-                valor: firstDay.aqi,
-                classificacao: firstDay.classificacao,
-                impacto: firstDay.impacto,
-                dominante: firstDay.dominante,
-                subindices: firstDay.subindices,
+                valor: primeiroDia.aqi,
+                classificacao: primeiroDia.classificacao,
+                impacto: primeiroDia.impacto,
+                dominante: primeiroDia.dominante,
+                subindices: primeiroDia.subindices,
             };
         }
 
-        const values = dailyAqi.map(day => day.aqi);
-        const stats = namespace.metrics.calculateStats(values);
-        const latest = dailyAqi[dailyAqi.length - 1];
+        const valores = aqiDiario.map(dia => dia.aqi);
+        const estatisticas = namespace.metrics.calculateStats(valores);
+        const maisRecente = aqiDiario[aqiDiario.length - 1];
 
         return {
             ...base,
             tipo_resultado: "qualidade_ar",
-            media: Math.round(stats.avg),
-            minima: Math.round(stats.min),
-            maxima: Math.round(stats.max),
-            delta: Math.round(stats.delta),
-            tendencia: namespace.metrics.trendFromDelta(stats.delta),
-            classificacao_atual: latest.classificacao,
-            impacto_atual: latest.impacto,
-            dominante_atual: latest.dominante,
-            atualizado_em: latest.horario,
-            por_dia: dailyAqi,
+            media: Math.round(estatisticas.avg),
+            minima: Math.round(estatisticas.min),
+            maxima: Math.round(estatisticas.max),
+            delta: Math.round(estatisticas.delta),
+            tendencia: namespace.metrics.trendFromDelta(estatisticas.delta),
+            classificacao_atual: maisRecente.classificacao,
+            impacto_atual: maisRecente.impacto,
+            dominante_atual: maisRecente.dominante,
+            atualizado_em: maisRecente.horario,
+            por_dia: aqiDiario,
         };
     }
 
-    function buildDailyAirQuality(dayData, date, hour) {
+    function montarQualidadeArDiaria(dadosDia, data, hora) {
         if (!window.ClimateAqi?.calculate) return null;
 
-        const scopedData = scopeDayDataByHour(dayData, hour);
-        if (!Object.keys(scopedData).length) return null;
+        const dadosFiltrados = filtrarDadosDiaPorHora(dadosDia, hora);
+        if (!Object.keys(dadosFiltrados).length) return null;
 
-        const result = window.ClimateAqi.calculate({ [date]: scopedData });
-        if (!result) return null;
+        const resultado = window.ClimateAqi.calculate({ [data]: dadosFiltrados });
+        if (!resultado) return null;
 
         return {
-            data: formatDate(date),
-            aqi: result.aqi,
-            classificacao: result.category.label,
-            impacto: result.category.impact,
-            dominante: `${result.dominant.label} (${formatAqiConcentration(result.dominant)})`,
-            horario: formatTimestampLabel(result.timestamp),
-            subindices: result.subIndexes.slice(0, 6).map(item => ({
+            data: formatarData(data),
+            aqi: resultado.aqi,
+            classificacao: resultado.category.label,
+            impacto: resultado.category.impact,
+            dominante: `${resultado.dominant.label} (${formatarConcentracaoAqi(resultado.dominant)})`,
+            horario: formatarRotuloTimestamp(resultado.timestamp),
+            subindices: resultado.subIndexes.slice(0, 6).map(item => ({
                 indicador: item.label,
-                valor: formatAqiConcentration(item),
+                valor: formatarConcentracaoAqi(item),
                 aqi: Math.round(item.aqi),
             })),
         };
     }
 
-    function scopeDayDataByHour(dayData, hour) {
-        const scopedData = {};
-        for (const time of Object.keys(dayData || {}).sort()) {
-            const normalizedTimeHour = normalizeHourFilter(time);
-            if (hour && normalizedTimeHour !== hour) continue;
-            scopedData[time] = dayData[time];
+    function filtrarDadosDiaPorHora(dadosDia, hora) {
+        const dadosFiltrados = {};
+        for (const horario of Object.keys(dadosDia || {}).sort()) {
+            const horaNormalizada = normalizarFiltroHora(horario);
+            if (hora && horaNormalizada !== hora) continue;
+            dadosFiltrados[horario] = dadosDia[horario];
         }
-        return scopedData;
+        return dadosFiltrados;
     }
 
-    function formatAqiConcentration(item) {
-        return `${formatNumber(Number(item.value))}${item.unit}`;
+    function formatarConcentracaoAqi(item) {
+        return `${formatarNumero(Number(item.value))}${item.unit}`;
     }
 
-    namespace.aqi = { buildAirQualityResult };
+    namespace.aqi = { buildAirQualityResult: montarResultadoQualidadeAr };
     window.ClimateAssistant = namespace;
 })();

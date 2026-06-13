@@ -24,6 +24,10 @@ Usuarios nao sao definidos no codigo. O problema de negocio nao e declarado em R
 
 ## Estrutura Fisica
 
+## Convencao de Nomenclatura
+
+Codigo interno novo ou refatorado deve usar nomes em PT-BR para metodos, funcoes e variaveis, acompanhando o dominio da aplicacao. Devem permanecer com o nome original apenas os campos Firebase, ids/classes DOM, contratos publicos em `window.*`, propriedades exigidas por APIs externas/bibliotecas e chaves estruturais ja consumidas por outros modulos.
+
 ```text
 .
 ├── index.html
@@ -99,11 +103,11 @@ Responsabilidades:
 - `scripts/firebase-service.js`: inicializacao Firebase, listeners `onValue`, loading bar e erros.
 - `scripts/chat.js`: fachada publica do chat, mantendo `window.ClimateChat.setup` para o `scripts/main.js`.
 - `scripts/assistant/ai-service.js`: inicializacao do Firebase AI Logic e envio de prompts ao Gemini.
-- `scripts/assistant/assistant-ui.js`: painel do chat, atalhos de perguntas, mensagens, abertura/fechamento e estado ocupado.
+- `scripts/assistant/assistant-ui.js`: painel do chat, atalhos de perguntas, mensagens, abertura/fechamento, clique/toque fora para fechar e estado ocupado.
 - `scripts/assistant/assistant-intent.js`: classificacao de intencao em JSON, ambiente, metrica, data, hora e periodo.
 - `scripts/assistant/assistant-query.js`: execucao da consulta, montagem do prompt final e fallback textual local.
 - `scripts/assistant/assistant-metrics.js`: estatisticas numericas, aliases de metricas, roteamento de metricas, comparacoes e consultas equivalentes aos heatmaps.
-- `scripts/assistant/assistant-solar.js`: consultas e comparacoes solares via `ClimateSolar.getSolarEventsForSelectedDate`.
+- `scripts/assistant/assistant-solar.js`: consultas e comparacoes solares via `ClimateSolar.getSolarEventsForSelectedDate`; maior/menor duracao de luz usa ano por padrao e mes quando um mes for informado.
 - `scripts/assistant/assistant-aqi.js`: consultas de AQI via `ClimateAqi.calculate`.
 - `scripts/assistant/assistant-config.js`: constantes, exemplos, ambientes e aliases da assistente.
 - `scripts/assistant/assistant-format.js`: normalizacao e formatacao compartilhadas.

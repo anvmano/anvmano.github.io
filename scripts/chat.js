@@ -1,9 +1,9 @@
 'use strict';
 
 (function () {
-    function setup(options = {}) {
-        window.ClimateAssistant?.ui?.setup(options);
+    function configurar(opcoes = {}) {
+        window.ClimateAssistant?.ui?.setup(opcoes);
     }
 
-    window.ClimateChat = { setup };
+    window.ClimateChat = { setup: configurar };
 })();
