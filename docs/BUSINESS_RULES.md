@@ -696,10 +696,13 @@ Saidas:
 - resposta sobre AQI/IAQ/qualidade do ar com classificacao, impacto, dominante e subindices quando existirem
 - mensagem de erro visivel quando Firebase AI Logic, App Check ou o modelo configurado nao estiverem disponiveis
 - envio da pergunta predefinida quando o usuario aciona um atalho
+- enquanto o painel estiver aberto, a rolagem da pagina de fundo deve ficar travada e a rolagem deve acontecer somente dentro da area de mensagens do chat
 
 Regra de contexto:
 
 - o chat deve usar a IA primeiro para classificar a intencao em JSON e depois usar JavaScript para buscar e calcular os dados
+- depois da classificacao, `assistant-planner.js` deve transformar a intencao bruta em plano de consulta confiavel antes de `assistant-query.js` executar a busca
+- o chat deve manter memoria curta da ultima resposta valida, incluindo ambiente, metricas, operacao e periodo; perguntas de continuidade como `e no quarto?`, `e ontem?` ou `e a umidade?` podem herdar somente os campos ausentes da pergunta anterior
 - a IA nao deve calcular media, maxima, minima, delta, tendencia, dia mais frio/quente ou comparacoes; esses valores devem ser calculados no codigo
 - a resposta final da IA deve receber apenas o resultado estruturado calculado pelo JavaScript
 - o chat deve enviar ao modelo apenas uma classificacao curta ou o resultado calculado, nunca o historico completo do Firebase
@@ -715,7 +718,9 @@ Regra de contexto:
 - se a pergunta mencionar data em `DD/MM/AAAA`, `DD-MM-AAAA`, `hoje`, `ontem` ou `anteontem`, usar essa data como alvo sem alterar o calendario da pagina
 - se a pergunta mencionar hora como `14h`, `14:00` ou `14`, o chat deve filtrar a hora correspondente e comparar corretamente com chaves Firebase no formato `14-00`
 - se houver filtro por hora, a resposta deve ser direta e conter somente o valor da metrica, ambiente, data e hora; nao deve exibir resumo do dia nem numero de amostras
+- se a pergunta pedir valor atual/agora/ultima medicao, ou perguntar de forma simples `qual o/a <metrica>` sem solicitar media, maxima, minima, tendencia, faixa ou periodo inteiro, o chat deve retornar a ultima medicao disponivel da metrica no recorte consultado; essa regra vale para qualquer metrica conhecida, incluindo temperatura, sensacao termica, umidade, pressao, pH, TDS, turbidez e gases da Sala
 - se a pergunta mencionar faixa horaria como `entre 8h e 18h`, `das 8 as 18` ou `de 8h a 18h`, o chat deve considerar somente registros dentro da faixa, incluindo as horas inicial e final
+- se a pergunta comparar dias mencionados, como `ontem ou hoje`, `ontem e anteontem`, `maior que hoje` ou `mais quente que hoje`, o planner deve usar operacao `comparar_dias` e a resposta deve informar o dia com maior media diaria, o valor do dia comparado e a diferenca
 - se a pergunta pedir o horario/periodo de maior ou menor valor, como `qual horario foi mais quente?`, `qual horario teve maior umidade?` ou `qual periodo do dia teve menor pressao?`, o JavaScript deve calcular o maior/menor valor medio por horario e enviar apenas esse resultado estruturado para a redacao da IA
 - se a pergunta pedir o dia do mes de maior/menor valor, o chat deve consultar o mes completo da data selecionada e calcular o maior/menor valor medio diario
 - se a pergunta pedir a hora que costuma ter maior/menor valor, o chat deve agrupar os registros por hora do dia no periodo resolvido; quando a pergunta usar `costuma`, o periodo padrao e o mes da data selecionada

@@ -258,6 +258,7 @@ Arquivos:
 - `assistant-format.js`: normalizacao e formatacao compartilhadas.
 - `assistant-ui.js`: painel, mensagens, abertura/fechamento, clique/toque fora para fechar, submit e atalhos.
 - `assistant-intent.js`: classificacao de intencao, ambiente, data, hora e periodo.
+- `assistant-planner.js`: normalizacao final da intencao em plano de consulta antes da execucao.
 - `assistant-query.js`: execucao da consulta, prompt final e fallback textual.
 - `assistant-metrics.js`: estatisticas numericas, aliases, comparacoes, faixa de conforto e roteamento de metricas.
 - `assistant-solar.js`: consulta de ciclo solar para respostas do chat.
@@ -280,6 +281,7 @@ Observacao: perguntas sobre `ultimas 24h` reutilizam `ClimateData.filterDataByRo
 Observacao: perguntas com faixa horaria ou maior/menor horario sao classificadas em `assistant-intent.js`, filtradas em `assistant-query.js` e calculadas em `assistant-metrics.js` sem deixar o modelo recalcular os dados.
 Observacao: perguntas equivalentes aos heatmaps usam a mesma estrutura de dados, mas calculam localmente em `assistant-metrics.js`: calendario mensal por dia, heatmap por hora do dia e mapa semanal por dia/hora.
 Observacao: comparacoes solares sao classificadas em `assistant-intent.js` e calculadas em `assistant-solar.js`, sempre reutilizando `ClimateSolar.getSolarEventsForSelectedDate`. Maior/menor duracao de luz usa o ano da data selecionada por padrao, mas usa o mes quando um mes for informado.
+Observacao: `assistant-planner.js` fica entre `assistant-intent.js` e `assistant-query.js`; ele concentra correcoes de interpretacao antes da consulta, como perguntas solares extremas e ultima medicao.
 
 Quem chama: `scripts/chat.js` e outros modulos da propria pasta.
 

@@ -1,11 +1,25 @@
 /* =====================================================================
    Chat com IA
    ===================================================================== */
+html.ai-chat-scroll-locked,
+body.ai-chat-scroll-locked {
+    overflow: hidden;
+    overscroll-behavior: none;
+}
+
+body.ai-chat-scroll-locked {
+    position: fixed;
+    left: 0;
+    right: 0;
+    width: 100%;
+}
+
 .ai-chat {
     position: fixed;
     right: 18px;
     bottom: 18px;
     z-index: 120;
+    touch-action: auto;
 }
 
 .ai-chat__toggle {
@@ -83,6 +97,7 @@
     bottom: 56px;
     width: min(410px, calc(100vw - 32px));
     max-height: min(660px, calc(100vh - 118px));
+    min-height: 0;
     display: flex;
     flex-direction: column;
     border: 1px solid rgba(96, 165, 250, 0.26);
@@ -92,6 +107,8 @@
         var(--bg-card);
     box-shadow: 0 28px 76px rgba(0, 0, 0, 0.48);
     overflow: hidden;
+    overscroll-behavior: contain;
+    touch-action: auto;
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
@@ -192,8 +209,13 @@
 }
 
 .ai-chat__messages {
-    min-height: 230px;
+    flex: 1 1 auto;
+    min-height: 0;
+    flex-basis: 230px;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     padding: 14px;
     display: flex;
     flex-direction: column;

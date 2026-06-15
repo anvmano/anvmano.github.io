@@ -4,32 +4,45 @@
     const namespace = window.ClimateAssistant || {};
     const { MAX_PROMPT_CHARS } = namespace.config;
     const {
-        normalizeText,
-        hasWord,
-        formatDate,
         formatNumber,
         formatMetricValue,
         formatPeriodLabel,
     } = namespace.format;
 
     async function answerQuestion(question, context) {
+        const answerResult = await answerQuestionDetailed(question, context);
+        return answerResult.answer;
+    }
+
+    async function answerQuestionDetailed(question, context) {
         const intent = await namespace.intent.resolveQuestionIntent(question, context);
         const result = executeQuery(context, intent, question);
 
-        if (result.needsClarification) return result.message;
+        if (result.needsClarification) {
+            return {
+                answer: result.message,
+                result,
+            };
+        }
 
         const prompt = buildAnswerPrompt(question, result);
 
         try {
-            return await window.ClimateAIService.generateText(prompt);
+            return {
+                answer: await window.ClimateAIService.generateText(prompt),
+                result,
+            };
         } catch (error) {
             console.warn("Falha ao redigir resposta com IA. Usando resposta local.", error);
-            return formatResultFallback(result);
+            return {
+                answer: formatResultFallback(result),
+                result,
+            };
         }
     }
 
     function executeQuery(context, intent, question) {
-        const effectiveIntent = forceSolarIntentWhenNeeded(intent, question, context);
+        const effectiveIntent = namespace.planner.planQuestionIntent(intent, question, context);
 
         if (effectiveIntent.needsClarification) {
             return {
@@ -60,6 +73,7 @@
         const environmentResults = environments.map(environment => executeEnvironmentQuery(context, environment, metrics, periodDates, effectiveIntent, periodLabel));
         return {
             question,
+            resolvedIntent: effectiveIntent,
             intent: {
                 environments: environments.map(environment => environment.label),
                 metrics: metrics.map(metric => metric.label),
@@ -74,75 +88,6 @@
             results: environmentResults,
             generatedAt: new Date().toLocaleString("pt-BR"),
         };
-    }
-
-    function forceSolarIntentWhenNeeded(intent, question, context) {
-        const normalizedQuestion = normalizeText(question);
-        const asksLongestDay = normalizedQuestion.includes("dia mais long")
-            || normalizedQuestion.includes("dia com mais tempo de luz");
-        const asksShortestDay = normalizedQuestion.includes("dia mais curt")
-            || normalizedQuestion.includes("dia com menos tempo de luz");
-
-        if (!asksLongestDay && !asksShortestDay) return intent;
-
-        return {
-            ...intent,
-            metrics: ["ciclo_solar"],
-            operation: asksShortestDay ? "solar_menor_duracao_luz" : "solar_maior_duracao_luz",
-            period: buildSolarExtremePeriod(normalizedQuestion, context?.selectedDate),
-            needsClarification: false,
-            clarificationQuestion: null,
-        };
-    }
-
-    function buildSolarExtremePeriod(normalizedQuestion, selectedDate) {
-        const monthDate = getMentionedMonthDate(normalizedQuestion, selectedDate);
-        if (monthDate) return { type: "selected_month", selectedDate: monthDate };
-        return { type: "selected_year", selectedDate: getMentionedYearDate(normalizedQuestion, selectedDate) };
-    }
-
-    function getMentionedMonthDate(normalizedQuestion, selectedDate) {
-        const monthIndex = getMentionedMonthIndex(normalizedQuestion);
-        if (monthIndex === null) return null;
-
-        const selected = window.ClimateData.parseFirebaseDate(selectedDate || window.ClimateData.dataAtual());
-        const year = getMentionedYear(normalizedQuestion) || selected.getFullYear();
-        return formatFirebaseDate(new Date(year, monthIndex, 1));
-    }
-
-    function getMentionedYearDate(normalizedQuestion, selectedDate) {
-        const selected = window.ClimateData.parseFirebaseDate(selectedDate || window.ClimateData.dataAtual());
-        const year = getMentionedYear(normalizedQuestion) || selected.getFullYear();
-        return formatFirebaseDate(new Date(year, selected.getMonth(), selected.getDate()));
-    }
-
-    function getMentionedYear(normalizedQuestion) {
-        const match = normalizedQuestion.match(/\b(20\d{2})\b/);
-        return match ? Number(match[1]) : null;
-    }
-
-    function getMentionedMonthIndex(normalizedQuestion) {
-        const months = [
-            ["janeiro", "jan"],
-            ["fevereiro", "fev"],
-            ["marco", "março", "mar"],
-            ["abril", "abr"],
-            ["maio", "mai"],
-            ["junho", "jun"],
-            ["julho", "jul"],
-            ["agosto", "ago"],
-            ["setembro", "set"],
-            ["outubro", "out"],
-            ["novembro", "nov"],
-            ["dezembro", "dez"],
-        ];
-
-        const index = months.findIndex(aliases => aliases.some(alias => hasWord(normalizedQuestion, normalizeText(alias))));
-        return index >= 0 ? index : null;
-    }
-
-    function formatFirebaseDate(date) {
-        return `${String(date.getDate()).padStart(2, "0")}-${String(date.getMonth() + 1).padStart(2, "0")}-${date.getFullYear()}`;
     }
 
     function executeEnvironmentQuery(context, environment, requestedMetrics, periodDates, intent, periodLabel) {
@@ -218,6 +163,7 @@
             - Se o resultado tiver "tipo_resultado": "analise_calendario_mensal", responda o dia do mês encontrado, o valor principal e o período consultado.
             - Se o resultado tiver "tipo_resultado": "analise_heatmap_horario", responda a hora do dia encontrada, o valor principal e o período consultado.
             - Se o resultado tiver "tipo_resultado": "analise_heatmap_semanal", responda o dia da semana/hora encontrados, o valor principal e o período consultado.
+            - Se o resultado tiver "tipo_resultado": "comparacao_dias", responda qual dia venceu, a diferença e o critério usado.
             - Não mencione número de amostras, exceto se o usuário perguntar explicitamente.
             - Quando útil, informe o período consultado.
             - Se não houver dados, diga isso diretamente.
@@ -275,6 +221,13 @@
             const value = formatMetricValue(firstMetric.valor, firstMetric.unidade);
             const descriptor = firstMetric.criterio === "menor_media_dia_hora" ? "menor média por dia/hora" : "maior média por dia/hora";
             return `No mapa semanal (${firstMetric.periodo}), o ponto com ${descriptor} de ${firstMetric.metrica} em ${firstMetric.ambiente} foi ${firstMetric.dia_semana} às ${firstMetric.horario}: ${value}.`;
+        }
+
+        if (firstMetric.tipo_resultado === "comparacao_dias") {
+            const winnerValue = formatMetricValue(firstMetric.vencedor.media, firstMetric.unidade);
+            const referenceValue = formatMetricValue(firstMetric.comparado_com.media, firstMetric.unidade);
+            const difference = formatMetricValue(firstMetric.diferenca, firstMetric.unidade);
+            return `${firstMetric.vencedor.data} teve maior média de ${firstMetric.metrica} em ${firstMetric.ambiente}: ${winnerValue}. ${firstMetric.comparado_com.data} ficou com ${referenceValue}, diferença de ${difference}.`;
         }
 
         if (firstMetric.tipo_resultado === "qualidade_ar") {
@@ -388,6 +341,9 @@
         return lines.join("\n");
     }
 
-    namespace.query = { answerQuestion };
+    namespace.query = {
+        answerQuestion,
+        answerQuestionDetailed,
+    };
     window.ClimateAssistant = namespace;
 })();

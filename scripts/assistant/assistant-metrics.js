@@ -59,6 +59,12 @@
         if (intent.operation === "heatmap_semana_maior_valor" || intent.operation === "heatmap_semana_menor_valor") {
             return buildWeeklySlotExtremeResult(base, dailyStats, intent);
         }
+        if (intent.operation === "ultima_medicao") {
+            return montarResultadoUltimaMedicao(base, dailyStats);
+        }
+        if (intent.operation === "comparar_dias") {
+            return montarResultadoComparacaoDias(base, dailyStats);
+        }
 
         const overallStats = calculateStats(allValues);
         if (intent.hour) {
@@ -137,6 +143,81 @@
             }
         }
         return values;
+    }
+
+    function montarResultadoUltimaMedicao(base, dailyStats) {
+        const registros = dailyStats.flatMap(dia => (
+            dia.records.map(registro => ({
+                ...registro,
+                date: dia.date,
+                dateLabel: dia.dateLabel,
+            }))
+        ));
+        const registroMaisRecente = selecionarRegistroMaisRecente(registros);
+
+        if (!registroMaisRecente) {
+            return {
+                ...base,
+                sem_dados: true,
+                mensagem: `Sem dados de ${base.metrica} em ${base.ambiente} para ${base.periodo}.`,
+            };
+        }
+
+        const { amostras, ...baseSemAmostras } = base;
+        return {
+            ...baseSemAmostras,
+            tipo_resultado: "consulta_horaria",
+            operacao: "ultima_medicao",
+            valor: round(registroMaisRecente.value),
+            hora_consultada: registroMaisRecente.time,
+            datas_consultadas: [registroMaisRecente.dateLabel],
+            periodo: registroMaisRecente.dateLabel,
+        };
+    }
+
+    function selecionarRegistroMaisRecente(registros) {
+        return [...registros].sort((a, b) => {
+            const dateDiff = window.ClimateData.parseFirebaseDate(b.date) - window.ClimateData.parseFirebaseDate(a.date);
+            if (dateDiff !== 0) return dateDiff;
+            return converterHoraEmMinutos(b.time) - converterHoraEmMinutos(a.time);
+        })[0] || null;
+    }
+
+    function converterHoraEmMinutos(hora) {
+        const [horas, minutos] = String(hora || "00:00").split(":").map(Number);
+        return (Number.isFinite(horas) ? horas : 0) * 60 + (Number.isFinite(minutos) ? minutos : 0);
+    }
+
+    function montarResultadoComparacaoDias(base, dailyStats) {
+        const resumos = dailyStats.map(dia => ({
+            data: dia.dateLabel,
+            media: round(dia.stats.avg),
+            minima: round(dia.stats.min),
+            maxima: round(dia.stats.max),
+            delta: round(dia.stats.delta),
+        }));
+
+        if (resumos.length < 2) {
+            return {
+                ...base,
+                sem_dados: true,
+                mensagem: `Preciso de pelo menos dois dias com dados de ${base.metrica} em ${base.ambiente} para comparar.`,
+            };
+        }
+
+        const ordenados = [...resumos].sort((a, b) => b.media - a.media);
+        const vencedor = ordenados[0];
+        const referencia = ordenados[1];
+
+        return {
+            ...base,
+            tipo_resultado: "comparacao_dias",
+            criterio: "maior_media_diaria",
+            vencedor,
+            comparado_com: referencia,
+            diferenca: round(vencedor.media - referencia.media),
+            por_dia: ordenados,
+        };
     }
 
     function buildHourlyExtremeResult(base, metric, dailyStats, intent) {

@@ -65,7 +65,7 @@
             {
             "ambientes": ["sala" | "quarto" | "aquario"] ou [],
             "metricas": ["temperatura" | "sensacao_termica" | "umidade" | "pressao" | "ciclo_solar" | "aqi" | "iaq" | "qualidade_ar" | "ph" | "tds" | "turbidez" | "co" | "co2" | "acetona" | "alcool" | "amonia" | "tolueno"] ou [],
-            "operacao": "media" | "maxima" | "minima" | "delta" | "tendencia" | "resumo" | "valor" | "comparar_dias" | "dia_mais_frio" | "dia_mais_quente" | "status_faixa" | "horario_maior_valor" | "horario_menor_valor" | "calendario_dia_maior_valor" | "calendario_dia_menor_valor" | "heatmap_hora_maior_valor" | "heatmap_hora_menor_valor" | "heatmap_semana_maior_valor" | "heatmap_semana_menor_valor" | "solar_maior_duracao_luz" | "solar_menor_duracao_luz" | "solar_tendencia_nascer" | "solar_tendencia_por" | "solar_comparar_nascer" | "solar_comparar_por" | "solar_duracao_dia" ou null,
+            "operacao": "media" | "maxima" | "minima" | "delta" | "tendencia" | "resumo" | "valor" | "ultima_medicao" | "comparar_dias" | "dia_mais_frio" | "dia_mais_quente" | "status_faixa" | "horario_maior_valor" | "horario_menor_valor" | "calendario_dia_maior_valor" | "calendario_dia_menor_valor" | "heatmap_hora_maior_valor" | "heatmap_hora_menor_valor" | "heatmap_semana_maior_valor" | "heatmap_semana_menor_valor" | "solar_maior_duracao_luz" | "solar_menor_duracao_luz" | "solar_tendencia_nascer" | "solar_tendencia_por" | "solar_comparar_nascer" | "solar_comparar_por" | "solar_duracao_dia" ou null,
             "periodo": {
                 "tipo": "data_especifica" | "datas_relativas" | "ultimos_dias" | "ultimas_24h" | "intervalo" | "calendario" | "mes_selecionado" | "semana_selecionada" | "ano_selecionado" ou null,
                 "data": "DD-MM-AAAA" | "hoje" | "ontem" | "anteontem" ou null,
@@ -94,6 +94,7 @@
             - Se a pergunta mencionar AQI, IAQ, qualidade do ar, índice de qualidade do ar ou ar da sala, use métrica "qualidade_ar".
             - Se a pergunta mencionar faixa, conforto, ideal, normal, dentro da faixa, fora da faixa, fora do ideal, pior horário fora da faixa ou quantas horas fora, use operação "status_faixa".
             - Se métrica não aparecer mas a pergunta falar frio/quente, use "temperatura".
+            - Se a pergunta pedir o valor atual/agora ou apenas perguntar "qual o valor" de uma métrica sem pedir média, máxima, mínima, tendência ou período inteiro, use operação "ultima_medicao".
             - Se a pergunta tiver "às 14h", "14:00", "as 14", preencha "hora": "14".
             - Se a pergunta tiver faixa horária como "entre 8h e 18h", "das 8 às 18" ou "de 8h a 18h", preencha "hora_inicio" e "hora_fim".
             - Se a pergunta pedir "qual horário foi mais quente", "qual horário teve maior umidade" ou equivalente, use operação "horario_maior_valor".
@@ -196,7 +197,6 @@
         if (heatmapOperation) return heatmapOperation;
         const hourlyOperation = inferHourlyOperation(normalizedQuestion);
         if (hourlyOperation) return hourlyOperation;
-        if (operation) return operation;
         if (normalizedQuestion.includes("mais fri")) return "dia_mais_frio";
         if (normalizedQuestion.includes("mais quent")) return "dia_mais_quente";
         if (hasComfortBandIntent(normalizedQuestion)) return "status_faixa";
@@ -204,7 +204,57 @@
         if (normalizedQuestion.includes("minim")) return "minima";
         if (normalizedQuestion.includes("media")) return "media";
         if (normalizedQuestion.includes("diferenca") || normalizedQuestion.includes("diferença")) return "comparar_dias";
+        if (temIntencaoUltimaMedicao(normalizedQuestion) || operation === "valor") return "ultima_medicao";
+        if (operation && operation !== "resumo") return operation;
+        if (operation) return operation;
         return "resumo";
+    }
+
+    function temIntencaoUltimaMedicao(normalizedQuestion) {
+        const pedeValorAtual = [
+            "agora",
+            "atual",
+            "atualmente",
+            "nesse momento",
+            "neste momento",
+            "ultima medicao",
+            "ultima medição",
+            "ultimo valor",
+            "último valor",
+            "valor atual",
+        ].some(term => normalizedQuestion.includes(normalizeText(term)));
+        if (pedeValorAtual) return true;
+
+        const pedeValorSimples = [
+            "qual o",
+            "qual a",
+            "quanto esta",
+            "quanto está",
+            "quanto ta",
+            "quanto tá",
+        ].some(term => normalizedQuestion.includes(normalizeText(term)));
+        if (!pedeValorSimples) return false;
+
+        return ![
+            "media",
+            "média",
+            "maxim",
+            "minim",
+            "tendencia",
+            "tendência",
+            "delta",
+            "diferenca",
+            "diferença",
+            "faixa",
+            "conforto",
+            "horario",
+            "horário",
+            "dia mais",
+            "ultimas",
+            "últimas",
+            "ultimos",
+            "últimos",
+        ].some(term => normalizedQuestion.includes(normalizeText(term)));
     }
 
     function inferSolarOperation(normalizedQuestion) {
