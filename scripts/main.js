@@ -6,6 +6,7 @@ const ClimateAnalytics = window.ClimateAnalytics;
 const ClimateSolar = window.ClimateSolar;
 const ClimateCharts = window.ClimateCharts;
 const ClimateAqi = window.ClimateAqi;
+const ClimateSeason = window.ClimateSeason;
 const FirebaseService = window.FirebaseService;
 const ClimateUI = window.ClimateUI;
 const ClimateZoom = window.ClimateZoom;
@@ -16,6 +17,7 @@ const QuartoView = window.QuartoView;
 const AquarioView = window.AquarioView;
 const SalaView = window.SalaView;
 const SolarView = window.SolarView;
+const EstacaoView = window.EstacaoView;
 
 if (
     !AppConfig ||
@@ -24,6 +26,7 @@ if (
     !ClimateSolar ||
     !ClimateCharts ||
     !ClimateAqi ||
+    !ClimateSeason ||
     !FirebaseService ||
     !ClimateUI ||
     !ClimateZoom ||
@@ -33,7 +36,8 @@ if (
     !QuartoView ||
     !AquarioView ||
     !SalaView ||
-    !SolarView
+    !SolarView ||
+    !EstacaoView
 ) {
     throw new Error("Módulos auxiliares não foram carregados na ordem correta.");
 }
@@ -64,6 +68,7 @@ function getSelectedDate() {
 
 function setSelectedDate(date) {
     selectedDate = date;
+    ClimateSeason.update(selectedDate);
 }
 
 function createChart({
@@ -157,9 +162,9 @@ function renderRoomData(data) {
     });
 }
 
-function renderSolarData(data) {
-    SolarView.render({
-        data,
+function renderStationData() {
+    EstacaoView.render({
+        latestData,
         selectedDate,
         chartInstances,
         defaults: CHART_DEFAULTS,
@@ -190,8 +195,8 @@ function renderLivingRoomData(data) {
 }
 
 function rerenderDashboardFromSelectedDate() {
+    renderStationData();
     if (latestData.room) renderRoomData(latestData.room);
-    if (latestData.solar) renderSolarData(latestData.solar);
     if (latestData.aquarium) renderAquariumData(latestData.aquarium);
     if (latestData.livingRoom) renderLivingRoomData(latestData.livingRoom);
 }
@@ -376,9 +381,11 @@ async function setupFirebaseListeners() {
         latestData.room = data;
         if (!data) {
             ClimateUI.renderEmptyState(IDS.tables.room, "Sem dados de temperatura.");
+            renderStationData();
             return;
         }
         renderRoomData(data);
+        renderStationData();
     }, () => ClimateUI.renderEmptyState(IDS.tables.room, "Falha ao carregar dados de temperatura.", "error"));
 
     FirebaseService.listenToPath(FIREBASE_PATHS.solar, data => {
@@ -387,14 +394,16 @@ async function setupFirebaseListeners() {
             const formattedDate = selectedDate.replace(/-/g, "/");
             ClimateUI.renderChartMessage(IDS.chartContainers.sunHistory, `Sem dados de nascer e pôr do sol em ${formattedDate}.`);
             ClimateUI.renderChartMessage(IDS.chartContainers.solarToday, `Sem dados de ciclo solar em ${formattedDate}.`);
+            renderStationData();
             updateAstroIndicator();
             return;
         }
-        renderSolarData(data);
+        renderStationData();
         updateAstroIndicator();
     }, () => {
         ClimateUI.renderChartMessage(IDS.chartContainers.sunHistory, "Falha ao carregar dados solares.", "error");
         ClimateUI.renderChartMessage(IDS.chartContainers.solarToday, "Falha ao carregar ciclo solar.", "error");
+        renderStationData();
         updateAstroIndicator();
     });
 
@@ -402,9 +411,11 @@ async function setupFirebaseListeners() {
         latestData.aquarium = data;
         if (!data) {
             ClimateUI.renderEmptyState(IDS.tables.aquarium, "Sem dados do aquário.");
+            renderStationData();
             return;
         }
         renderAquariumData(data);
+        renderStationData();
     }, () => ClimateUI.renderEmptyState(IDS.tables.aquarium, "Falha ao carregar dados do aquário.", "error"));
 
     FirebaseService.listenToPath(FIREBASE_PATHS.livingRoom, data => {
@@ -412,16 +423,18 @@ async function setupFirebaseListeners() {
         if (!data) {
             ClimateAqi.update(null);
             ClimateUI.renderEmptyState(IDS.tables.livingRoom, "Sem dados da sala.");
+            renderStationData();
             return;
         }
         renderLivingRoomData(data);
+        renderStationData();
     }, () => ClimateUI.renderEmptyState(IDS.tables.livingRoom, "Falha ao carregar dados da sala.", "error"));
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    ClimateUI.setupTabs("Tab1");
+    ClimateUI.setupTabs("Tab0");
     ClimateUI.setupTabSwipe({
-        tabOrder: ["Tab1", "Tab2", "Tab3"]
+        tabOrder: ["Tab0", "Tab1", "Tab2", "Tab3"]
     });
     ClimateUI.setupDateControls({
         getSelectedDate,
@@ -449,6 +462,7 @@ document.addEventListener("DOMContentLoaded", () => {
         })
     });
     ClimateAqi.setup();
+    ClimateSeason.setup({ getSelectedDate });
     setupAstroIndicator();
 
     setupFirebaseListeners().catch(error => {

@@ -73,7 +73,7 @@
     }
 
     function obterRotuloAba(idAba) {
-        return { Tab1: "Sala", Tab2: "Quarto", Tab3: "Aquário" }[idAba] || idAba || "--";
+        return { Tab0: "Estação", Tab1: "Sala", Tab2: "Quarto", Tab3: "Aquário" }[idAba] || idAba || "--";
     }
 
     function obterDatasUnicas(datas) {

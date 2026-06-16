@@ -89,7 +89,7 @@ Arquivos principais:
 - Solar: `scripts/charts/solar.js` e `scripts/views/solar-view.js`.
 - Tabelas: `scripts/data/data-utils.js` + views.
 - Heatmaps: `scripts/data/analytics.js`; containers em `index.html`; ids em `scripts/config.js`.
-- Zoom: `scripts/charts/zoom.js`.
+- Zoom: `scripts/charts/zoom.js`; em dispositivos touch, toque dentro do canvas ampliado interage com o tooltip e nao fecha o overlay.
 - PDF: `scripts/reports/pdf-report.js`, `scripts/reports/pdf-report-*.js` e `styles/reports/pdf-report.css`.
 - Abas e date picker: `scripts/ui/ui.js`.
 - Estilo visual: `style.css` importa os arquivos em `styles/`.
@@ -113,6 +113,7 @@ Arquivos principais:
 - O eixo X do grafico Ciclo Solar do Dia usa formato abreviado em horas (`0h`, `2h`, `4h`, `24h`) para manter paridade com o projeto C#/.NET.
 - Eixo Y dos graficos deve exibir a unidade da metrica quando houver: `°C`, `%`, `hPa`, `ppm`, `NTU`.
 - Graficos comuns de series temporais usam horarios no eixo X em diagonal; graficos solares e heatmaps preservam seu layout especifico.
+- Zoom de graficos: duplo clique ou botao amplia; `Esc`, botao de fechar ou clique/toque no fundo do overlay fecha. Em mobile/touch, `pointerdown`/`touchstart` dentro do canvas ampliado nao fecha o overlay para preservar tooltip e leitura do dado.
 - Mensagens de graficos vazios devem seguir `Sem dados de <tipo_grafico> em <DD/MM/AAAA>`.
 - Aba ativa e persistida em `localStorage.activeTab`.
 - Swipe touch segue o fluxo Sala ⇄ Quarto ⇄ Aquario. Arrastar para esquerda avanca; arrastar para direita volta; extremidades nao mudam de aba. Gestos iniciados em tabelas, heatmaps ou qualquer area com rolagem horizontal nao trocam de aba.

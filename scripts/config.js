@@ -92,6 +92,8 @@
                 livingRoomFeelsLike: "chart-container-st-sala",
                 livingRoomHumidity: "chart-container-umidade-sala",
                 livingRoomPressure: "chart-container-pressao-sala",
+                globalTemperature: "chart-container-global-temp",
+                globalHumidity: "chart-container-global-umidade",
             },
             charts: {
                 roomTemperature: "plotsTemp",
@@ -107,6 +109,8 @@
                 livingRoomFeelsLike: "plotsSTSala",
                 livingRoomHumidity: "plotsUmidadeSala",
                 livingRoomPressure: "plotsPressaoSala",
+                globalTemperature: "plotGlobalTemperature",
+                globalHumidity: "plotGlobalHumidity",
             },
             advancedViews: {
                 room: {

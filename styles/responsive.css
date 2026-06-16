@@ -22,15 +22,15 @@
     }
 
     .header-status {
-        --header-status-chip-width: 74px;
+        --header-status-chip-width: 66px;
         --header-status-chip-height: 36px;
         gap: 4px;
         flex-shrink: 0;
     }
 
     .aqi-indicator {
-        min-width: 70px;
-        max-width: 70px;
+        min-width: 64px;
+        max-width: 64px;
         padding: 0 7px;
         gap: 4px;
     }
@@ -53,6 +53,29 @@
     }
 
     .aqi-popover {
+        right: 0;
+    }
+
+    .season-indicator {
+        min-width: 64px;
+        max-width: 64px;
+        padding: 0 7px;
+        gap: 4px;
+    }
+
+    .season-indicator__scene {
+        width: 18px;
+        height: 16px;
+    }
+
+    .season-indicator__value {
+        max-width: 34px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 0.68rem;
+    }
+
+    .season-header-popover {
         right: 0;
     }
 
@@ -148,6 +171,26 @@
         grid-template-columns: 1fr;
     }
 
+    .season-timeline__header {
+        align-items: center;
+        flex-direction: row;
+    }
+
+    .season-timeline__current {
+        width: auto;
+    }
+
+    .season-timeline__segment {
+        font-size: 0.62rem;
+    }
+
+    .season-popover {
+        left: 0.75rem;
+        right: 0.75rem;
+        top: 4.6rem;
+        width: auto;
+    }
+
     .advanced-grid {
         grid-template-columns: 1fr;
     }
@@ -174,6 +217,13 @@
         width: 100%;
         max-height: calc(100vh - 1rem);
         padding: 0.85rem;
+    }
+
+    .plot-zoom-close {
+        top: 8px;
+        right: 8px;
+        width: 36px;
+        height: 36px;
     }
 
     .plot-zoom-overlay .plot {

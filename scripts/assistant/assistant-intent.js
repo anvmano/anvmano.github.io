@@ -63,7 +63,7 @@
 
             Schema obrigatório:
             {
-            "ambientes": ["sala" | "quarto" | "aquario"] ou [],
+            "ambientes": ["estacao" | "sala" | "quarto" | "aquario"] ou [],
             "metricas": ["temperatura" | "sensacao_termica" | "umidade" | "pressao" | "ciclo_solar" | "aqi" | "iaq" | "qualidade_ar" | "ph" | "tds" | "turbidez" | "co" | "co2" | "acetona" | "alcool" | "amonia" | "tolueno"] ou [],
             "operacao": "media" | "maxima" | "minima" | "delta" | "tendencia" | "resumo" | "valor" | "ultima_medicao" | "comparar_dias" | "dia_mais_frio" | "dia_mais_quente" | "status_faixa" | "horario_maior_valor" | "horario_menor_valor" | "calendario_dia_maior_valor" | "calendario_dia_menor_valor" | "heatmap_hora_maior_valor" | "heatmap_hora_menor_valor" | "heatmap_semana_maior_valor" | "heatmap_semana_menor_valor" | "solar_maior_duracao_luz" | "solar_menor_duracao_luz" | "solar_tendencia_nascer" | "solar_tendencia_por" | "solar_comparar_nascer" | "solar_comparar_por" | "solar_duracao_dia" ou null,
             "periodo": {
@@ -91,6 +91,7 @@
             - "dia mais quente" usa maior média diária, exceto se pedir explicitamente maior registro.
             - "ontem ou anteontem foi mais quente que hoje" deve usar operação "comparar_dias" e datas ["ontem", "anteontem", "hoje"].
             - Se ambiente não aparecer, deixe "ambientes" vazio. O código usará a aba ativa.
+            - Se a pergunta for sobre ciclo solar, luz do dia, nascer do sol, pôr do sol, zênite, amanhecer ou anoitecer, use ambiente "estacao".
             - Se a pergunta mencionar AQI, IAQ, qualidade do ar, índice de qualidade do ar ou ar da sala, use métrica "qualidade_ar".
             - Se a pergunta mencionar faixa, conforto, ideal, normal, dentro da faixa, fora da faixa, fora do ideal, pior horário fora da faixa ou quantas horas fora, use operação "status_faixa".
             - Se métrica não aparecer mas a pergunta falar frio/quente, use "temperatura".
@@ -151,7 +152,14 @@
         if (classifiedEnvironments.length) return resolveCompatibleEnvironments(classifiedEnvironments, requestedMetrics) || classifiedEnvironments;
 
         const metricEnvironment = findExclusiveMetricEnvironment(requestedMetrics);
-        return metricEnvironment ? [metricEnvironment] : [fallbackEnvironment];
+        if (metricEnvironment) return [metricEnvironment];
+
+        const generalEnvironments = fallbackEnvironment?.dataKey === "solar"
+            ? findCompatibleMetricEnvironments(requestedMetrics)
+            : [];
+        if (generalEnvironments.length) return generalEnvironments;
+
+        return [fallbackEnvironment];
     }
 
     function resolveCompatibleEnvironments(candidateEnvironments, requestedMetrics) {
@@ -171,17 +179,26 @@
     }
 
     function findExclusiveMetricEnvironment(requestedMetrics) {
+        const matches = findCompatibleMetricEnvironments(requestedMetrics);
+        return matches.length === 1 ? matches[0] : null;
+    }
+
+    function findCompatibleMetricEnvironments(requestedMetrics) {
+        const ambientes = [];
         for (const requestedMetric of requestedMetrics || []) {
             const matches = Object.values(ENVIRONMENTS).filter(environment => (
+                environment.dataKey !== "solar" &&
                 environment.metrics
                     .map(toMetricObject)
                     .some(metric => metricMatches(metric, requestedMetric))
             ));
 
-            if (matches.length === 1) return matches[0];
+            for (const environment of matches) {
+                if (!ambientes.includes(environment)) ambientes.push(environment);
+            }
         }
 
-        return null;
+        return ambientes;
     }
 
     function normalizeMetrics(value) {

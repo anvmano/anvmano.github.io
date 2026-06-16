@@ -88,3 +88,197 @@
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
+
+.station-summary-card {
+    min-width: 0;
+}
+
+.station-summary-card .stats-card__header {
+    align-items: flex-start;
+}
+
+.station-summary-card .stats-card__label {
+    max-width: 58%;
+    overflow-wrap: anywhere;
+}
+
+.station-summary-card .stats-card__trend {
+    max-width: 42%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.station-summary-card .stats-card__value {
+    margin-bottom: 0.55rem;
+}
+
+.station-summary-card__meta {
+    display: grid;
+    gap: 0.2rem;
+    color: var(--text-secondary);
+    font-size: 0.74rem;
+    font-weight: 600;
+    line-height: 1.25;
+    min-width: 0;
+}
+
+.station-summary-card__meta span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.station-summary-card__meta span:first-child {
+    color: var(--text-primary);
+}
+
+.season-timeline {
+    position: relative;
+    margin: 0 0 1rem;
+    padding: 0.85rem;
+    background: rgba(26, 34, 52, 0.76);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.24);
+}
+
+.season-timeline__header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.6rem;
+    margin-bottom: 0.65rem;
+}
+
+.season-timeline__current {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 24px;
+    padding: 0 0.65rem;
+    color: var(--accent);
+    background: rgba(14, 165, 233, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.22);
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.season-timeline__track {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    min-height: 34px;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: var(--radius-sm);
+    background:
+        linear-gradient(
+            90deg,
+            rgba(251, 191, 36, 0.30) 0%,
+            rgba(251, 146, 60, 0.28) 24%,
+            rgba(194, 123, 84, 0.24) 36%,
+            rgba(56, 189, 248, 0.24) 50%,
+            rgba(67, 177, 198, 0.23) 62%,
+            rgba(52, 211, 153, 0.27) 76%,
+            rgba(45, 212, 191, 0.22) 100%
+        ),
+        rgba(15, 23, 42, 0.52);
+}
+
+.season-timeline__segment {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    color: rgba(241, 245, 249, 0.82);
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.season-timeline__segment i {
+    position: relative;
+    z-index: 1;
+    font-style: normal;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.season-timeline__segment::before {
+    content: "";
+    position: absolute;
+    top: 7px;
+    bottom: 7px;
+    left: 0;
+    width: 1px;
+    background: rgba(241, 245, 249, 0.12);
+}
+
+.season-timeline__segment:first-child::before {
+    display: none;
+}
+
+.season-timeline__marker {
+    position: absolute;
+    z-index: 2;
+    top: 4px;
+    bottom: 4px;
+    width: 3px;
+    transform: translateX(-50%);
+    border-radius: 999px;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16), 0 0 14px rgba(56, 189, 248, 0.38);
+}
+
+.season-popover {
+    position: absolute;
+    z-index: 8;
+    right: 0.9rem;
+    top: 3.2rem;
+    width: min(280px, calc(100vw - 2rem));
+    padding: 0.85rem;
+    color: var(--text-secondary);
+    background: rgba(15, 23, 42, 0.98);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-hover);
+}
+
+.season-popover strong {
+    display: block;
+    margin-bottom: 0.55rem;
+    color: var(--text-primary);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.season-popover dl {
+    display: grid;
+    gap: 0.42rem;
+    margin: 0;
+}
+
+.season-popover div {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.season-popover dt {
+    color: var(--text-muted);
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.season-popover dd {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 0.76rem;
+    font-weight: 700;
+}

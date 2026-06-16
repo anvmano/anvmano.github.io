@@ -125,7 +125,7 @@
     }
 
     async function buildReport(context) {
-        const tabConfig = TAB_CONFIG[context.activeTab] || TAB_CONFIG.Tab1;
+        const tabConfig = TAB_CONFIG[context.activeTab] || TAB_CONFIG.Tab0 || TAB_CONFIG.Tab1;
         const selectedDate = context.selectedDate || ClimateData.dataAtual();
         const generatedAt = new Date();
         const fileNameBase = `relatorio-estacao-${slug(tabConfig.label)}-${selectedDate}`;
@@ -144,7 +144,9 @@
         report.appendChild(createHeader(tabConfig.label, selectedDate, generatedAt));
         report.appendChild(createSummarySection(summaryCards, alerts));
         report.appendChild(createChartsSection(chartCards));
-        report.appendChild(createTableSection(tableRows, tableMetrics));
+        if (tabConfig.hasTable !== false) {
+            report.appendChild(createTableSection(tableRows, tableMetrics));
+        }
 
         return {
             element: report,

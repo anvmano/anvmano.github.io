@@ -27,6 +27,19 @@
                 <h1>Estação Climática</h1>
             </div>
             <div class="header-status">
+                <button class="season-indicator season-indicator--unknown" id="seasonIndicator" type="button" aria-expanded="false" aria-controls="seasonPopover" title="Estação do ano indisponível">
+                    <span class="season-indicator__scene" aria-hidden="true">
+                        <span class="season-indicator__orb"></span>
+                    </span>
+                    <strong class="season-indicator__value">--</strong>
+                </button>
+                <div class="season-header-popover" id="seasonPopover" hidden>
+                    <div class="season-header-popover__header">
+                        <span>Estação do ano</span>
+                        <strong>--</strong>
+                    </div>
+                    <dl class="season-header-popover__list"></dl>
+                </div>
                 <button class="aqi-indicator aqi-indicator--unknown" id="aqiIndicator" type="button" aria-expanded="false" aria-controls="aqiPopover" title="AQI estimado indisponível">
                     <span class="aqi-indicator__prefix">AQI</span>
                     <strong class="aqi-indicator__value">--</strong>
@@ -60,7 +73,11 @@
     <div class="app-body">
         <div class="tab-toolbar">
             <nav class="tab-nav" role="tablist" aria-label="Ambientes monitorados">
-                <button class="tablink active" type="button" role="tab" aria-selected="true" aria-controls="Tab1" data-tab-target="Tab1">
+                <button class="tablink active" type="button" role="tab" aria-selected="true" aria-controls="Tab0" data-tab-target="Tab0">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/><circle cx="12" cy="12" r="4"/></svg>
+                    Estação
+                </button>
+                <button class="tablink" type="button" role="tab" aria-selected="false" aria-controls="Tab1" data-tab-target="Tab1">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                     Sala
                 </button>
@@ -113,6 +130,30 @@
 
         <div class="loading-bar" id="loadingBar"></div>
         <main class="container">
+            <!-- Estação -->
+            <div class="tabcontent" id="Tab0" role="tabpanel">
+                <section class="season-timeline" id="seasonTimeline" aria-label="Estação do ano atual"></section>
+                <div class="stats-grid" id="statsEstacao" aria-label="Resumo global da estação"></div>
+                <div class="charts-grid">
+                    <div class="chart-card" id="chart-container-global-temp">
+                        <span class="chart-label">Temperatura por Ambiente</span>
+                        <canvas aria-label="Temperatura comparativa por ambiente" class="plot" id="plotGlobalTemperature" role="img"></canvas>
+                    </div>
+                    <div class="chart-card" id="chart-container-global-umidade">
+                        <span class="chart-label">Umidade por Ambiente</span>
+                        <canvas aria-label="Umidade comparativa por ambiente" class="plot" id="plotGlobalHumidity" role="img"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card chart-card--wide" id="chart-container-sun-today">
+                    <span class="chart-label">Ciclo Solar do Dia</span>
+                    <canvas aria-label="Ciclo solar do dia selecionado" class="plot plot--solar-day" id="plotSolarToday" role="img"></canvas>
+                </div>
+                <div class="chart-card chart-card--wide" id="chart-container-sun">
+                    <span class="chart-label">Nascer &amp; Pôr do Sol</span>
+                    <canvas aria-label="Nascer e pôr do sol" class="plot" id="plotSunriseSunset" role="img"></canvas>
+                </div>
+            </div>
+
             <!-- Sala -->
             <div class="tabcontent" id="Tab1" role="tabpanel">
                 <div class="stats-grid" id="statsSala" aria-label="Resumo dos dados da sala"></div>
@@ -179,14 +220,6 @@
                         <span class="chart-label">Umidade</span>
                         <canvas aria-label="Umidade do quarto" class="plot" id="plotsUmidade" role="img"></canvas>
                     </div>
-                </div>
-                <div class="chart-card chart-card--wide" id="chart-container-sun-today">
-                    <span class="chart-label">Ciclo Solar do Dia</span>
-                    <canvas aria-label="Ciclo solar do dia selecionado" class="plot plot--solar-day" id="plotSolarToday" role="img"></canvas>
-                </div>
-                <div class="chart-card chart-card--wide" id="chart-container-sun">
-                    <span class="chart-label">Nascer &amp; Pôr do Sol</span>
-                    <canvas aria-label="Nascer e pôr do sol" class="plot" id="plotSunriseSunset" role="img"></canvas>
                 </div>
                 <section class="advanced-section collapsible-section is-collapsed" aria-label="Visualizações climáticas avançadas">
                     <button class="collapsible-trigger" type="button" aria-expanded="false">
@@ -299,9 +332,10 @@
     <script src="scripts/charts/solar.js?v=20260612-1"></script>
     <script src="scripts/charts/chart-utils.js?v=20260612-1"></script>
     <script src="scripts/charts/aqi.js?v=20260612-1"></script>
+    <script src="scripts/charts/season.js?v=20260616-1"></script>
     <script src="scripts/firebase-service.js?v=20260528-1"></script>
     <script src="scripts/ui/ui.js?v=20260612-1"></script>
-    <script src="scripts/charts/zoom.js?v=20260612-1"></script>
+    <script src="scripts/charts/zoom.js?v=20260615-1"></script>
     <script src="scripts/reports/pdf-report-config.js?v=20260612-1"></script>
     <script src="scripts/reports/pdf-report-format.js?v=20260612-1"></script>
     <script src="scripts/reports/pdf-report-data.js?v=20260612-1"></script>
@@ -325,7 +359,8 @@
     <script src="scripts/views/aquario-view.js?v=20260528-1"></script>
     <script src="scripts/views/sala-view.js?v=20260602-1"></script>
     <script src="scripts/views/solar-view.js?v=20260528-1"></script>
-    <script src="scripts/main.js?v=20260603-5"></script>
+    <script src="scripts/views/estacao-view.js?v=20260616-1"></script>
+    <script src="scripts/main.js?v=20260616-1"></script>
 </body>
 
 </html>

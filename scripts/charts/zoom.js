@@ -3,6 +3,10 @@
 (function () {
     let zoomOverlay = null;
 
+    function isTouchDevice() {
+        return window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
+    }
+
     function closeZoom() {
         if (!zoomOverlay) return;
         const zoomChart = zoomOverlay._chart;
@@ -76,20 +80,40 @@
 
         const overlay = document.createElement("div");
         overlay.className = "plot-zoom-overlay";
+        if (isTouchDevice()) {
+            overlay.classList.add("plot-zoom-overlay--touch");
+        }
 
         const clone = card.cloneNode(false);
         const label = card.querySelector(".chart-label");
+        const closeButton = document.createElement("button");
         const zoomCanvas = document.createElement("canvas");
+        closeButton.type = "button";
+        closeButton.className = "plot-zoom-close";
+        closeButton.setAttribute("aria-label", "Fechar gráfico ampliado");
+        closeButton.innerHTML = "&times;";
         zoomCanvas.className = "plot plot--zoom";
         zoomCanvas.setAttribute("aria-label", sourceCanvas.getAttribute("aria-label") || "Gráfico ampliado");
         zoomCanvas.setAttribute("role", "img");
 
         if (label) clone.appendChild(label.cloneNode(true));
+        clone.appendChild(closeButton);
         clone.appendChild(zoomCanvas);
         overlay.appendChild(clone);
 
-        overlay.addEventListener("click", event => {
-            if (event.target.closest(".chart-card")) closeZoom();
+        const fecharSeFundo = event => {
+            if (event.target === overlay) closeZoom();
+        };
+
+        overlay.addEventListener("pointerdown", fecharSeFundo);
+        overlay.addEventListener("click", fecharSeFundo);
+        clone.addEventListener("pointerdown", event => event.stopPropagation());
+        clone.addEventListener("touchstart", event => event.stopPropagation(), { passive: true });
+        zoomCanvas.addEventListener("pointerdown", event => event.stopPropagation());
+        zoomCanvas.addEventListener("touchstart", event => event.stopPropagation(), { passive: true });
+        closeButton.addEventListener("click", event => {
+            event.stopPropagation();
+            closeZoom();
         });
 
         zoomOverlay = overlay;
@@ -128,7 +152,7 @@
 
         document.querySelectorAll(".chart-card").forEach(card => {
             card.classList.add("chart-card--zoomable");
-            card.title = "Dê duplo clique ou use o botão para ampliar";
+            card.removeAttribute("title");
             createZoomButton(card, zoomOptions);
             card.addEventListener("dblclick", () => handleZoom(card, zoomOptions));
         });

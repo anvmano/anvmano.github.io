@@ -7,6 +7,7 @@
         hasWord,
         formatFirebaseDate,
     } = namespace.format;
+    const { ENVIRONMENTS } = namespace.config;
 
     function planejarIntencaoPergunta(intencao, pergunta, contexto = {}) {
         const perguntaNormalizada = normalizeText(pergunta);
@@ -41,6 +42,8 @@
         return ![
             "sala",
             "quarto",
+            "estacao",
+            "estação",
             "aquario",
             "aquário",
         ].some(termo => hasWord(perguntaNormalizada, normalizeText(termo)));
@@ -60,6 +63,8 @@
             || [
                 "no quarto",
                 "na sala",
+                "na estacao",
+                "na estação",
                 "no aquario",
                 "no aquário",
                 "ontem",
@@ -99,6 +104,7 @@
 
         return {
             ...plano,
+            environments: [ENVIRONMENTS.estacao],
             metrics: ["ciclo_solar"],
             operation: pedeDiaMaisCurto ? "solar_menor_duracao_luz" : "solar_maior_duracao_luz",
             period: montarPeriodoSolarExtremo(perguntaNormalizada, contexto?.selectedDate),

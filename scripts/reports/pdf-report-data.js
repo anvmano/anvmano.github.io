@@ -7,6 +7,7 @@
     const { formatValue, formatDelta, getMetricStatus } = format;
 
     function getFields(tabConfig) {
+        if (tabConfig.tableType === "station") return {};
         if (tabConfig.tableType === "room") return AppConfig.fields.room;
         if (tabConfig.tableType === "livingRoom") return AppConfig.fields.livingRoom;
         return AppConfig.fields.aquarium;

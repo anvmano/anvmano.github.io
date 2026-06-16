@@ -4,6 +4,14 @@
     const modules = window.ClimatePdfReportModules = window.ClimatePdfReportModules || {};
 
     const TAB_CONFIG = {
+        Tab0: {
+            label: "Estação",
+            dataKey: "solar",
+            tableType: "station",
+            metrics: [],
+            includeSolar: true,
+            hasTable: false,
+        },
         Tab1: {
             label: "Sala",
             dataKey: "livingRoom",
@@ -22,7 +30,7 @@
                 { key: "nh4", label: "Amônia", unit: "ppm" },
                 { key: "toluene", label: "Tolueno", unit: "ppm" },
             ],
-            includeSolar: true,
+            includeSolar: false,
         },
         Tab2: {
             label: "Quarto",
@@ -33,10 +41,7 @@
                 { key: "feelsLike", label: "Sensação térmica", unit: "°C", chart: "roomFeelsLike", comfortBand: AppConfig.comfortBand },
                 { key: "humidity", label: "Umidade", unit: "%", chart: "roomHumidity", comfortBand: AppConfig.humidityComfortBand },
             ],
-            solarCharts: [
-                { label: "Ciclo solar", unit: "h", chart: "solarToday" },
-            ],
-            includeSolar: true,
+            includeSolar: false,
         },
         Tab3: {
             label: "Aquário",

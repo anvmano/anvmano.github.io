@@ -34,6 +34,15 @@
     };
 
     const ENVIRONMENTS = {
+        estacao: {
+            label: "Estação",
+            dataKey: "solar",
+            aliases: ["estacao", "estação", "geral", "global"],
+            activeTab: "Tab0",
+            metrics: [
+                ["Ciclo solar", "cicloSolar", ""],
+            ],
+        },
         sala: {
             label: "Sala",
             dataKey: "livingRoom",
@@ -44,7 +53,6 @@
                 ["Sensação térmica", "sensacaoTermica", "°C"],
                 ["Umidade", "umidade", "%"],
                 ["Pressão", "pressao", "hPa"],
-                ["Ciclo solar", "cicloSolar", ""],
                 ["AQI estimado", "qualidadeAr", ""],
                 ["CO", "CO", "ppm"],
                 ["CO2", "CO2", "ppm"],
@@ -63,7 +71,6 @@
                 ["Temperatura", "Temperatura", "°C"],
                 ["Sensação térmica", "Sensacao termica", "°C"],
                 ["Umidade", "Umidade", "%"],
-                ["Ciclo solar", "cicloSolar", ""],
             ],
         },
         aquario: {
@@ -76,7 +83,6 @@
                 ["pH", "PH", ""],
                 ["TDS", "TDS", "ppm"],
                 ["Turbidez", "Turbidez", "NTU"],
-                ["Ciclo solar", "cicloSolar", ""],
             ],
         },
     };

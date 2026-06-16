@@ -585,6 +585,15 @@ Entradas: instancia Chart.js original.
 
 Saidas: overlay com novo Chart.js.
 
+Interacao:
+
+- duplo clique ou botao do card abre o zoom
+- `Esc` fecha o zoom
+- botao de fechar do overlay fecha o zoom
+- clique/toque no fundo do overlay fecha o zoom
+- clique/toque dentro do card/canvas ampliado nao fecha o zoom
+- em dispositivos touch, `pointerdown`/`touchstart` dentro do canvas ampliado deve preservar a interacao do Chart.js para tooltip/leitura de dado
+
 Impacto: interacao de graficos.
 
 Dependencias: Chart.js, `chartInstances`, opcoes de zoom em `scripts/main.js`.
