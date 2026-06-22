@@ -189,6 +189,10 @@
         grid-template-columns: 1fr;
     }
 
+    #statsEstacao {
+        min-height: 768px;
+    }
+
     .season-timeline__segment {
         font-size: 0.62rem;
     }

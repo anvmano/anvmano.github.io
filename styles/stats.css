@@ -8,6 +8,10 @@
     margin-bottom: 1rem;
 }
 
+#statsEstacao {
+    min-height: 118px;
+}
+
 .stats-card {
     background: rgba(26, 34, 52, 0.76);
     border: 1px solid var(--border);
@@ -91,6 +95,25 @@
 
 .station-summary-card {
     min-width: 0;
+}
+
+.station-summary-card--placeholder {
+    min-height: 118px;
+    background:
+        linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.08), transparent),
+        rgba(26, 34, 52, 0.58);
+    background-size: 220px 100%, auto;
+    animation: station-placeholder-sheen 1.4s ease-in-out infinite;
+}
+
+@keyframes station-placeholder-sheen {
+    0% {
+        background-position: -220px 0, 0 0;
+    }
+
+    100% {
+        background-position: calc(100% + 220px) 0, 0 0;
+    }
 }
 
 .station-summary-card .stats-card__header {

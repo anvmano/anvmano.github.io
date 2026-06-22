@@ -25,7 +25,7 @@ O codigo nao define usuarios, autenticacao, permissoes ou backend local.
 
 Arquivos principais:
 
-- `index.html`: estrutura DOM e ordem dos scripts.
+- `index.html`: estrutura DOM, ordem dos scripts e carregamento `defer` dos scripts externos.
 - `scripts/config.js`: Firebase, paths, ids, cores, campos, unidades e diagnostico leve de console.
 - `scripts/main.js`: orquestrador da aplicacao.
 - `scripts/firebase-service.js`: conexao e listeners Firebase.
@@ -119,12 +119,12 @@ Arquivos principais:
 - Mensagens de graficos vazios devem seguir `Sem dados de <tipo_grafico> em <DD/MM/AAAA>`.
 - Aba ativa e persistida em `localStorage.activeTab`.
 - Swipe touch segue o fluxo Estacao ⇄ Sala ⇄ Quarto ⇄ Aquario. Arrastar para esquerda avanca; arrastar para direita volta; extremidades nao mudam de aba. Gestos iniciados em tabelas, heatmaps ou qualquer area com rolagem horizontal nao trocam de aba.
-- A aba Estacao e a visao global do sistema: mostra faixa das estacoes do ano, fase da lua da data selecionada, cards globais, graficos comparativos de temperatura/umidade por ambiente e graficos solares. A faixa das estacoes usa a data atual do navegador, nao a data selecionada no calendario, e o marcador progride por segmento visual de estacao: Verao 0-25%, Outono 25-50%, Inverno 50-75%, Primavera 75-100%. No PDF, o card de Estacao do ano mostra o progresso dentro da estacao atual, nao a posicao anual da barra.
+- A aba Estacao e a visao global do sistema: mostra faixa das estacoes do ano, fase da lua da data selecionada, cards globais, graficos comparativos de temperatura/umidade por ambiente e graficos solares. A faixa das estacoes usa a data atual do navegador, nao a data selecionada no calendario, e o marcador progride por segmento visual de estacao: Verao 0-25%, Outono 25-50%, Inverno 50-75%, Primavera 75-100%. No PDF, o card de Estacao do ano mostra o progresso dentro da estacao atual, nao a posicao anual da barra. O resumo global da Estacao nasce com placeholders/altura reservada para reduzir CLS enquanto os dados Firebase chegam.
 - O header exibe os chips na ordem Estacao do ano, AQI, ciclo solar, fase da lua e relogio. Em mobile, o relogio e a marca `Estacao Climatica` podem ser ocultados e os chips principais devem ocupar toda a largura util do header.
 - Indicador astronomico do header e um chip visual no tamanho aproximado do relogio, sem texto interno; o tooltip/`aria-label` mostra nascer e por do sol. Clique/toque abre popover com amanhecer, nascer do sol, zenite, por do sol, anoitecer, estado atual e duracao do dia.
 - Indicador AQI do header usa dados mais recentes da Sala/MQ135 em `historico/AirQuality` e mostra apenas `AQI <valor>` no chip. A classificacao completa fica no tooltip/`aria-label` e no popover aberto por clique/toque.
 - Indicador de estacao do ano usa `scripts/charts/season.js`, mostra a estacao atual no header, tem pequena animacao sazonal e popover com inicio das estacoes do ciclo atual.
-- Indicador de fase da lua usa `scripts/charts/moon.js`, calcula localmente a fase sem API externa, mostra a fase atual no header e abre popover com iluminacao, idade lunar, proxima cheia e proxima nova. Na aba Estacao, o bloco lunar usa a data selecionada no calendario.
+- Indicador de fase da lua usa `scripts/charts/moon.js`, calcula localmente a fase sem API externa, mostra a fase atual no header e abre popover com iluminacao, idade lunar, proxima cheia e proxima nova. O `title` deve ficar limpo com a descricao completa, enquanto o `aria-label` inclui tambem o texto visivel abreviado do chip para manter acessibilidade. Na aba Estacao, o bloco lunar usa a data selecionada no calendario.
 - Popovers do header sao mutuamente exclusivos: abrir Estacao do ano, AQI, Solar ou Lua fecha os demais.
 - AQI do header e uma estimativa local: usa categorias oficiais AQI (`0-50`, `51-100`, `101-150`, `151-200`, `201-300`, `301+`), mas o calculo vem dos gases disponiveis no MQ135 e deve ser exibido como `AQI estimado da Sala`.
 - Solar usa data selecionada para ciclo do dia e filtro de 365 dias para historico.
@@ -183,7 +183,7 @@ Arquivos principais:
 
 ## Regras Importantes
 
-- Nao mudar ordem dos scripts sem revisar dependencias globais.
+- Nao mudar ordem dos scripts sem revisar dependencias globais. Os scripts externos do fim do `body` usam `defer`, preservando a mesma ordem para reduzir bloqueio de renderizacao.
 - Nao renomear ids do HTML sem atualizar `scripts/config.js`.
 - Nao renomear campos Firebase sem atualizar `scripts/config.js` e, para solar, `scripts/charts/solar.js`.
 - Novos metodos, funcoes e variaveis internas devem seguir nomenclatura PT-BR. Excecoes: campos Firebase, ids/classes DOM, nomes exigidos por APIs externas, contratos publicos em `window.*`, opcoes de bibliotecas e propriedades estruturais ja consumidas por outros modulos.

@@ -60,7 +60,7 @@
         indicador.className = `moon-indicator moon-indicator--${estado.fase.chave}`;
         indicador.style.setProperty("--moon-shadow", `${estado.sombra}%`);
         indicador.title = descricao;
-        indicador.setAttribute("aria-label", descricao);
+        indicador.setAttribute("aria-label", `${estado.nomeCurto}. ${descricao}`);
 
         const valor = indicador.querySelector(".moon-indicator__value");
         if (valor) valor.textContent = estado.nomeCurto;

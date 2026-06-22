@@ -512,6 +512,7 @@ Saidas:
 - faixa horizontal na aba Estacao com Verao, Outono, Inverno e Primavera
 - marcador vertical de progresso na faixa
 - card da Estacao do ano no PDF com progresso dentro da estacao atual
+- placeholders/altura reservada no resumo global da aba Estacao para reduzir deslocamento de layout durante o carregamento dos dados
 
 Regras:
 
@@ -521,6 +522,7 @@ Regras:
 - o header usa a ordem: Estacao do ano, AQI, ciclo solar, fase da lua e relogio
 - em mobile, o relogio e a marca `Estacao Climatica` podem ser ocultados e os chips principais devem ocupar toda a largura util do header
 - o popover de estacao do ano e mutuamente exclusivo com AQI, solar e lua
+- os placeholders iniciais de `#statsEstacao` devem ter altura compativel com os 6 cards globais reais, especialmente no mobile, para evitar CLS alto no Lighthouse
 
 Impacto: leitura rapida de contexto sazonal e consistencia visual da aba Estacao.
 
@@ -554,6 +556,8 @@ Regras:
 - o bloco lunar da aba Estacao representa a fase da lua da data selecionada
 - o popover da lua e mutuamente exclusivo com Estacao do ano, AQI e solar
 - o calculo lunar e aproximado e nao deve ser tratado como efemeride astronomica de alta precisao
+- o `title` do chip lunar deve conter somente a descricao completa, como `Quarto crescente: 50% iluminado`
+- o `aria-label` do chip lunar deve incluir tambem o texto visivel abreviado, como `Q. crescente`, para cumprir a regra de acessibilidade de nome visivel contido no nome acessivel
 
 Impacto: contexto visual astronomico no header e na visao global.
 
@@ -879,7 +883,7 @@ Criticidade: Alta.
 - Paths Firebase em `scripts/config.js` sem revisar `scripts/main.js` e banco.
 - Campos de sensores em `scripts/config.js` sem revisar Firebase.
 - Leitura de zênite em `scripts/charts/solar.js` sem revisar dados enviados pelo Arduino.
-- Ordem de scripts em `index.html`.
+- Ordem de scripts em `index.html`; os scripts externos podem usar `defer`, mas a sequencia relativa deve ser preservada.
 - Contrato de fallback em `ClimateCharts.createLineChart`.
 - Exportacao PDF/JSON deve reutilizar `latestData` e `chartInstances`, sem reconsultar Firebase.
 - Chat com IA deve reutilizar `latestData`, aba ativa e data selecionada, sem reconsultar Firebase nem enviar historico completo ao modelo.
