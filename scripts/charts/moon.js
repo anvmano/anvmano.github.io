@@ -56,7 +56,7 @@
             return;
         }
 
-        const descricao = `${estado.fase.nome}: ${estado.iluminacao}% iluminada.`;
+        const descricao = `${estado.fase.nome}: ${estado.iluminacao}% iluminado.`;
         indicador.className = `moon-indicator moon-indicator--${estado.fase.chave}`;
         indicador.style.setProperty("--moon-shadow", `${estado.sombra}%`);
         indicador.title = descricao;
@@ -100,7 +100,7 @@
     function renderizarIndisponivel() {
         indicador.className = "moon-indicator moon-indicator--unknown";
         indicador.title = "Fase da lua indisponível";
-        indicador.setAttribute("aria-label", indicador.title);
+        indicador.setAttribute("aria-label", "--. Fase da lua indisponível.");
         indicador.setAttribute("aria-expanded", "false");
 
         const valor = indicador.querySelector(".moon-indicator__value");

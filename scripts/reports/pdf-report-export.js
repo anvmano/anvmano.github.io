@@ -25,11 +25,6 @@
 
     async function exportActiveTab(button) {
         const format = getSelectedFormat();
-        if (format === "pdf" && !canGeneratePdf()) {
-            alert("Biblioteca de PDF não carregada.");
-            return;
-        }
-
         const originalText = button.innerText;
         button.disabled = true;
         button.innerText = format === "json" ? "Gerando JSON..." : "Gerando PDF...";
@@ -46,6 +41,7 @@
                 return;
             }
 
+            await carregarBibliotecasPdf();
             renderRoot.appendChild(report.element);
             document.body.appendChild(renderRoot);
             await generatePdf(report.element, report.fileNamePdf);
@@ -88,27 +84,53 @@
         return typeof html2canvas === "function" && typeof window.jspdf?.jsPDF === "function";
     }
 
+    async function carregarBibliotecasPdf() {
+        if (canGeneratePdf()) return;
+
+        const configuracao = window.AppConfig?.firebase || {};
+        await carregarScriptUnico(configuracao.html2canvasUrl, "html2canvas");
+        await carregarScriptUnico(configuracao.jsPdfUrl, "jspdf");
+
+        if (!canGeneratePdf()) {
+            throw new Error("Bibliotecas de PDF indisponíveis.");
+        }
+    }
+
+    function carregarScriptUnico(url, nomeGlobal) {
+        if (!url) return Promise.reject(new Error(`URL ausente para ${nomeGlobal}.`));
+        if (window[nomeGlobal]) return Promise.resolve();
+
+        return new Promise((resolve, reject) => {
+            const existente = document.querySelector(`script[data-lazy-lib="${nomeGlobal}"]`);
+            if (existente) {
+                existente.addEventListener("load", resolve, { once: true });
+                existente.addEventListener("error", reject, { once: true });
+                return;
+            }
+
+            const script = document.createElement("script");
+            script.src = url;
+            script.async = true;
+            script.dataset.lazyLib = nomeGlobal;
+            script.onload = resolve;
+            script.onerror = () => reject(new Error(`Falha ao carregar ${nomeGlobal}.`));
+            document.head.appendChild(script);
+        });
+    }
+
     function exportJsonReport(report) {
         const payload = {
             relatorio: "Estação Climática",
+            versaoFormato: 2,
             aba: report.tabLabel,
             dataConsultada: formatFirebaseDate(report.selectedDate),
             dataConsultadaFirebase: report.selectedDate,
             geradoEm: report.generatedAt.toISOString(),
-            resumo: report.summaryCards.map(card => ({
-                indicador: card.label,
-                atual: card.current,
-                minimo: card.min,
-                maximo: card.max,
-                delta: card.delta,
-                status: card.status,
-            })),
-            tabela: report.rows.map(row => ({
-                horario: row.time,
-                indicador: row.label,
-                valor: row.value,
-                status: row.status,
-            })),
+            resumo: report.summaryCards.map(formatarCardResumoJson),
+            tabelaResumida: report.tableRows.map(formatarLinhaTabelaResumidaJson(report.tableMetrics)),
+            tabelaDetalhada: report.rows.map(formatarLinhaTabelaDetalhadaJson),
+            // Compatibilidade com o JSON antigo: consumidores existentes ainda encontram `tabela`.
+            tabela: report.rows.map(formatarLinhaTabelaDetalhadaJson),
             dadosBrutos: report.selectedData,
         };
         const blob = new Blob([JSON.stringify(payload, null, 2)], {
@@ -122,6 +144,60 @@
         link.click();
         link.remove();
         URL.revokeObjectURL(url);
+    }
+
+    function formatarCardResumoJson(card) {
+        const detalhes = normalizarDetalhesResumoJson(card);
+        const item = {
+            indicador: card.label,
+            valorAtual: card.current,
+            status: card.status,
+            detalhes,
+        };
+
+        if (card.min !== undefined || card.max !== undefined || card.delta !== undefined) {
+            item.minimo = card.min;
+            item.maximo = card.max;
+            item.delta = card.delta;
+        }
+
+        return item;
+    }
+
+    function normalizarDetalhesResumoJson(card) {
+        if (Array.isArray(card.details) && card.details.length) {
+            return card.details.map(detail => ({
+                rotulo: detail.label || "",
+                valor: detail.value ?? "--",
+            }));
+        }
+
+        return [
+            { rotulo: "Mín", valor: card.min },
+            { rotulo: "Máx", valor: card.max },
+            { rotulo: "Delta", valor: card.delta },
+        ];
+    }
+
+    function formatarLinhaTabelaResumidaJson(metrics) {
+        return row => ({
+            horario: row.time,
+            valores: metrics.reduce((acc, metric) => {
+                acc[metric.label] = row.values[metric.key] || "--";
+                return acc;
+            }, {}),
+            statusGeral: row.status,
+        });
+    }
+
+    function formatarLinhaTabelaDetalhadaJson(row) {
+        return {
+            horario: row.time,
+            horarioCompleto: row.fullTime,
+            indicador: row.label,
+            valor: row.value,
+            status: row.status,
+        };
     }
 
     async function buildReport(context) {
@@ -158,6 +234,7 @@
             summaryCards,
             rows,
             tableRows,
+            tableMetrics,
             selectedData,
         };
     }

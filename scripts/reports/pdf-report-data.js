@@ -118,9 +118,11 @@
         return {
             label: "Estação do ano",
             current: estado.estacao.nome,
-            min: `Início ${formatarDataCompletaEstacao(estado.estacao.inicio)}`,
-            max: `Próx. ${proxima.nome}`,
-            delta: `${Number(estado.progressoAno).toFixed(1)}%`,
+            details: [
+                { label: "Início", value: formatarDataCompletaEstacao(estado.estacao.inicio) },
+                { label: "Próxima", value: proxima.nome },
+                { label: "Na estação", value: `${Number(estado.progressoEstacao ?? 0).toFixed(1)}%` },
+            ],
             status: "Atual",
         };
     }
@@ -132,9 +134,11 @@
         return {
             label: "Fase da lua",
             current: `${estado.iluminacao}% iluminada`,
-            min: estado.fase.nome,
-            max: `Cheia ${formatarDataCompletaEstacao(estado.proximaCheia)}`,
-            delta: `Nova ${formatarDataCompletaEstacao(estado.proximaNova)}`,
+            details: [
+                { label: "Fase", value: estado.fase.nome },
+                { label: "Próx. cheia", value: formatarDataCompletaEstacao(estado.proximaCheia) },
+                { label: "Próx. nova", value: formatarDataCompletaEstacao(estado.proximaNova) },
+            ],
             status: "Atual",
         };
     }
@@ -146,9 +150,11 @@
         return {
             label: "AQI estimado",
             current: String(resultado.aqi),
-            min: resultado.category.label,
-            max: `Dominante ${resultado.dominant.label}`,
-            delta: formatarTimestampEstacao(resultado.timestamp),
+            details: [
+                { label: "Status", value: resultado.category.label },
+                { label: "Dominante", value: resultado.dominant.label },
+                { label: "Atualizado", value: formatarTimestampEstacao(resultado.timestamp) },
+            ],
             status: resultado.category.label,
         };
     }
@@ -160,9 +166,11 @@
         return {
             label,
             current: formatValue(registro.valor, unidade),
-            min: registro.data.replace(/-/g, "/"),
-            max: registro.horario,
-            delta: "Atual",
+            details: [
+                { label: "Data", value: registro.data.replace(/-/g, "/") },
+                { label: "Hora", value: registro.horario },
+                { label: "Referência", value: "Última medição" },
+            ],
             status: "Estável",
         };
     }
@@ -185,6 +193,11 @@
             min: formatValue(min, metric.unit),
             max: formatValue(max, metric.unit),
             delta: formatDelta(delta, metric.unit),
+            details: [
+                { label: "Mín", value: formatValue(min, metric.unit) },
+                { label: "Máx", value: formatValue(max, metric.unit) },
+                { label: "Delta", value: formatDelta(delta, metric.unit) },
+            ],
             status,
         };
     }
@@ -200,6 +213,11 @@
             min: `Nascer ${ClimateData.formatTime(times.sunrise)}`,
             max: `Pôr ${ClimateData.formatTime(times.sunset)}`,
             delta: `${dayLength.toFixed(2)}h`,
+            details: [
+                { label: "Nascer", value: ClimateData.formatTime(times.sunrise) },
+                { label: "Pôr", value: ClimateData.formatTime(times.sunset) },
+                { label: "Duração", value: `${dayLength.toFixed(2)}h` },
+            ],
             status: "Estável",
         };
     }
@@ -211,6 +229,9 @@
             min: "--",
             max: "--",
             delta: "--",
+            details: [
+                { label: "Status", value: "Sem dados" },
+            ],
             status: "Sem dados",
         };
     }

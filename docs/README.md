@@ -11,8 +11,8 @@ Dashboard web estático para acompanhamento de dados climáticos da Estação, S
 Bibliotecas carregadas via CDN:
 
 - Chart.js `4.5.1`
-- html2canvas `1.4.1`
-- jsPDF `2.5.2`
+- html2canvas `1.4.1` sob demanda ao exportar PDF
+- jsPDF `2.5.2` sob demanda ao exportar PDF
 - Firebase SDK modular `12.13.0`
 - Firebase App Check
 - Firebase AI Logic
@@ -106,6 +106,7 @@ Pontos configuráveis:
 
 - `firebase`: configuração do Firebase.
 - `firebase.appCheckUrl`, `firebase.aiUrl`, `firebase.recaptchaEnterpriseSiteKey` e `firebase.aiModel`: App Check e Firebase AI Logic.
+- `firebase.html2canvasUrl` e `firebase.jsPdfUrl`: bibliotecas carregadas sob demanda para exportar PDF.
 - `firebasePaths`: caminhos do Realtime Database.
 - `ids`: ids DOM usados por gráficos, tabelas, estados e controles.
 - `fields`: nomes dos campos esperados nos sensores.
@@ -190,20 +191,21 @@ A validação verifica:
 - Tabelas com unidades nos valores, sem espaco antes da unidade, como `26.40°C`, `57.50%`, `8.66ppm`, `1.20NTU` e `930.60hPa`.
 - Leituras do Aquário normalizadas antes da exibição: TDS dividido por 10 e Turbidez dividido por 1000.
 - Indicador astronômico no cabeçalho, alinhado ao tamanho do relógio, com estado de dia/noite e tooltip/popover com horários solares.
-- Chips do header para estação do ano, AQI, ciclo solar e fase da lua, com popovers mutuamente exclusivos.
+- Chips do header para estação do ano, AQI, ciclo solar e fase da lua, com popovers mutuamente exclusivos; no mobile, eles ocupam a largura útil do header.
 - Chat com Firebase AI Logic para perguntas sobre os dados carregados, incluindo ambiente, periodo, hora, faixa horaria, ciclo solar, comparacoes solares, AQI/IAQ/qualidade do ar, gases do MQ135 e consultas equivalentes aos heatmaps, com atalhos para resumo, media, maxima e alertas.
 - Exportação da aba ativa em PDF ou JSON.
 
 ## Exportação
 
 A exportação usa os dados já carregados na tela. Ela não reconsulta o Firebase.
+As bibliotecas `html2canvas` e `jsPDF` só são baixadas quando o usuário escolhe PDF; exportar JSON não carrega essas dependências.
 
 PDF:
 
 - Usa resumo executivo na primeira página, com metadados, cards principais e alertas do dia.
 - Monta páginas A4 manualmente para evitar cortes.
 - Junta temperatura e sensação térmica no mesmo gráfico quando a aba possui as duas métricas.
-- Estação inclui cards contextuais de Estação do ano e Fase da lua, 6 cards globais, gráficos comparativos e ciclo solar; não possui tabela.
+- Estação inclui cards contextuais de Estação do ano e Fase da lua com rótulos próprios de detalhe, 6 cards globais, gráficos comparativos e ciclo solar; não possui tabela.
 - Sala não inclui ciclo solar no PDF e usa tabela MQ135 com CO, CO2, Acetona, Álcool, Amônia e Tolueno.
 - Quarto não inclui ciclo solar no PDF e usa tabela ambiental.
 - Aquário não inclui ciclo solar no PDF.
@@ -215,7 +217,8 @@ JSON:
 
 - Inclui metadados.
 - Inclui resumo.
-- Inclui tabela processada.
+- Inclui `tabelaResumida` e `tabelaDetalhada`.
+- Mantém `tabela` como compatibilidade da tabela detalhada antiga.
 - Inclui dados brutos filtrados da aba ativa.
 
 ## Decisões Técnicas
@@ -224,7 +227,7 @@ JSON:
 - Os módulos são scripts clássicos e expõem objetos em `window.*`.
 - A ordem dos scripts em `index.html` é parte do contrato da aplicação.
 - O Firebase é lido no cliente com listeners `onValue`.
-- O App Check usa reCAPTCHA Enterprise e deve ser validado antes de ativar enforcement.
+- O App Check usa reCAPTCHA Enterprise, fica sob demanda para evitar custo de carregamento inicial e deve ser validado antes de ativar enforcement.
 - O chat envia ao Gemini apenas resumo compacto de dados carregados, nunca o histórico inteiro.
 - Atalhos do chat usam `data-chat-question` e reutilizam o mesmo fluxo de envio da pergunta digitada.
 - O chat usa duas etapas: Gemini classifica a intenção em JSON; JavaScript calcula os dados; Gemini apenas redige a resposta final.

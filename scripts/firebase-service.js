@@ -41,16 +41,20 @@
         ]);
 
         app = initializeApp(config.options);
-        await initializeAppCheckIfConfigured();
-
         database = getDatabase(app);
         refFn = ref;
         onValueFn = onValue;
     }
 
+    async function ensureAppCheckInitialized() {
+        await initialize();
+        return initializeAppCheckIfConfigured();
+    }
+
     async function initializeAppCheckIfConfigured() {
         const config = window.AppConfig.firebase;
-        if (appCheckInitialized || !config.recaptchaEnterpriseSiteKey || !config.appCheckUrl || isLocalHost()) return;
+        // App Check fica sob demanda para evitar carregar reCAPTCHA antes de recursos protegidos, como a IA.
+        if (appCheckInitialized || !config.recaptchaEnterpriseSiteKey || !config.appCheckUrl || ehHostLocal()) return;
 
         try {
             const { initializeAppCheck, ReCaptchaEnterpriseProvider } = await import(config.appCheckUrl);
@@ -64,7 +68,7 @@
         }
     }
 
-    function isLocalHost() {
+    function ehHostLocal() {
         const hostname = window.location.hostname;
         return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
     }
@@ -91,6 +95,7 @@
 
     window.FirebaseService = {
         initialize,
+        ensureAppCheckInitialized,
         listenToPath,
         getApp: () => app,
         setLoading,

@@ -11,6 +11,7 @@
             throw new Error("Firebase AI Logic não está configurado.");
         }
 
+        await window.FirebaseService.ensureAppCheckInitialized?.();
         await window.FirebaseService.initialize();
         const app = window.FirebaseService.getApp();
         if (!app) {

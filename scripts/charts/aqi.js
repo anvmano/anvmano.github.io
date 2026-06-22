@@ -131,7 +131,7 @@
 
         const valueEl = indicator.querySelector(".aqi-indicator__value");
         const statusEl = indicator.querySelector(".aqi-indicator__status");
-        const title = `AQI estimado da Sala: ${result.aqi} ${result.category.label}. Dominante: ${result.dominant.label}.`;
+        const title = `AQI ${result.aqi}. AQI estimado da Sala: ${result.category.label}. Dominante: ${result.dominant.label}.`;
 
         indicator.className = `aqi-indicator aqi-indicator--${result.category.className}`;
         indicator.title = title;
@@ -222,7 +222,7 @@
     function renderUnavailable() {
         indicator.className = "aqi-indicator aqi-indicator--unknown";
         indicator.title = "AQI estimado indisponível";
-        indicator.setAttribute("aria-label", indicator.title);
+        indicator.setAttribute("aria-label", "AQI --. AQI estimado indisponível.");
         indicator.setAttribute("aria-expanded", "false");
 
         const valueEl = indicator.querySelector(".aqi-indicator__value");

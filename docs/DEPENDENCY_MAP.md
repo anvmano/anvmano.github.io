@@ -151,7 +151,7 @@ Arquivos:
 - `zoom.css`: overlay de zoom.
 - `tables.css`: tabelas.
 - `chat.css`: painel, botao flutuante, mensagens e atalhos do chat com IA.
-- `responsive.css`: regras mobile.
+- `responsive.css`: regras mobile, incluindo header compacto com chips ocupando a largura util.
 
 Impacto da alteracao: Medio a Alto, dependendo do arquivo e seletor.
 
@@ -221,7 +221,7 @@ Impacto da alteracao: Critico.
 
 ## scripts/firebase-service.js
 
-Responsabilidade: carregar SDK Firebase, conectar database, inicializar App Check quando configurado e fora de host local, criar listeners e controlar loading.
+Responsabilidade: carregar SDK Firebase, conectar database, inicializar App Check sob demanda quando um recurso protegido precisar, criar listeners e controlar loading.
 
 Dependencias diretas:
 
@@ -233,7 +233,7 @@ Dependencias indiretas: Realtime Database e Firebase App Check.
 
 Quem chama: `scripts/main.js`, `scripts/assistant/ai-service.js`.
 
-Quem e chamado: Firebase SDK (`initializeApp`, `getDatabase`, `ref`, `onValue`) e Firebase App Check (`initializeAppCheck`, `ReCaptchaEnterpriseProvider`) quando o host nao e `localhost`, `127.0.0.1` ou `::1`.
+Quem e chamado: Firebase SDK (`initializeApp`, `getDatabase`, `ref`, `onValue`) e Firebase App Check (`initializeAppCheck`, `ReCaptchaEnterpriseProvider`) via `ensureAppCheckInitialized()` quando o host nao e `localhost`, `127.0.0.1` ou `::1`.
 
 Impacto da alteracao: Critico.
 
@@ -360,7 +360,7 @@ Impacto da alteracao: Medio. Pode afetar o header e a leitura rapida da qualidad
 
 ## scripts/charts/season.js
 
-Responsabilidade: calcular a estacao do ano atual, renderizar o chip sazonal do header, popover com inicio das estacoes e fornecer estado para a faixa da aba Estacao.
+Responsabilidade: calcular a estacao do ano atual, renderizar o chip sazonal do header, popover com inicio das estacoes, fornecer a posicao na faixa anual da aba Estacao e o progresso dentro da estacao atual para o PDF.
 
 Dependencias diretas:
 
@@ -468,16 +468,16 @@ Observacoes:
 
 - PDF usa resumo executivo, alertas, graficos otimizados e tabela resumida por horario
 - PDF junta Temperatura e Sensacao termica no mesmo grafico quando possivel
-- PDF tem contrato por aba: Estacao inclui cards contextuais de Estacao do ano e Fase da lua, 6 cards globais, graficos comparativos e ciclo solar, sem tabela; Sala usa tabela MQ135 e nao inclui solar; Quarto nao inclui solar; Aquario nao inclui solar.
-- JSON preserva tabela detalhada com `Horario`, `Indicador`, `Valor` e `Status`
+- PDF tem contrato por aba: Estacao inclui cards contextuais de Estacao do ano e Fase da lua com rotulos proprios de detalhe, 6 cards globais, graficos comparativos e ciclo solar, sem tabela; Sala usa tabela MQ135 e nao inclui solar; Quarto nao inclui solar; Aquario nao inclui solar.
+- JSON inclui `resumo` com detalhes, `tabelaResumida`, `tabelaDetalhada`, `dadosBrutos` e mantem `tabela` como alias de compatibilidade da tabela detalhada antiga.
 - layout do PDF prioriza blocos compactos em coluna unica para reduzir cortes em A4 retrato
-- exportacao JSON inclui metadados, resumo, tabela e dados brutos filtrados
+- exportacao JSON inclui metadados, resumo, tabela resumida, tabela detalhada e dados brutos filtrados
+- html2canvas e jsPDF sao carregados sob demanda pelo exportador somente ao gerar PDF
 
 Dependencias diretas:
 
 - DOM
-- `html2canvas`
-- `jsPDF`
+- URLs de `html2canvas` e `jsPDF` em `AppConfig.firebase`
 - Blob/URL nativos do navegador para JSON
 - `AppConfig`
 - `ClimateData`
@@ -487,7 +487,7 @@ Dependencias diretas:
 
 Quem chama: `scripts/main.js`.
 
-Quem e chamado: modulos internos em `window.ClimatePdfReportModules`, html2canvas para captura do relatorio, jsPDF para montagem manual das paginas e Blob/URL para download JSON.
+Quem e chamado: modulos internos em `window.ClimatePdfReportModules`, carregador sob demanda de html2canvas/jsPDF para PDF e Blob/URL para download JSON.
 
 Impacto da alteracao: Medio a Alto. Pode afetar exportacao PDF/JSON, captura de graficos e download.
 

@@ -21,7 +21,7 @@
             series: [
                 criarSerie("Sala", latestData.livingRoom, fields.livingRoom.temperature, cores.blue),
                 criarSerie("Quarto", latestData.room, fields.room.temperature, cores.green),
-                criarSerie("Aquário", latestData.aquarium, fields.aquarium.temperature, cores.teal),
+                criarSerie("Aquário", latestData.aquarium, fields.aquarium.temperature, cores.amber),
             ],
             selectedDate,
             mensagemVazia: `Sem dados comparativos de temperatura em ${selectedDate.replace(/-/g, "/")}.`,

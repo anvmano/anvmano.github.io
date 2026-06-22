@@ -42,6 +42,8 @@
             databaseUrl: `https://www.gstatic.com/firebasejs/${firebaseSdkVersion}/firebase-database.js`,
             appCheckUrl: `https://www.gstatic.com/firebasejs/${firebaseSdkVersion}/firebase-app-check.js`,
             aiUrl: `https://www.gstatic.com/firebasejs/${firebaseSdkVersion}/firebase-ai.js`,
+            html2canvasUrl: "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js",
+            jsPdfUrl: "https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js",
             recaptchaEnterpriseSiteKey: "6Le5eg0tAAAAAAtn_VdxKOV82oq1sNr2tJlFiULj",
             aiModel: "gemini-3.5-flash",
             options: {

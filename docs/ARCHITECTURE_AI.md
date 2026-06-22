@@ -17,7 +17,7 @@ Usuarios nao sao definidos no codigo. Pelo codigo, o fluxo principal e visualiza
 - Chart.js via CDN: `https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js`.
 - Firebase SDK modular dinamico: versao `12.13.0`, carregado por `import()` a partir de `https://www.gstatic.com/firebasejs/...`.
 - Firebase Realtime Database.
-- Firebase App Check com reCAPTCHA Enterprise.
+- Firebase App Check com reCAPTCHA Enterprise, inicializado sob demanda para recursos protegidos.
 - Firebase AI Logic com Gemini Developer API para o chat.
 - Sem React, Angular, Vue, C#, .NET, banco SQL ou codigo Arduino no projeto analisado.
 - Sem testes funcionais automatizados e sem build tooling local completo.
@@ -120,7 +120,7 @@ Responsabilidades:
 - `scripts/charts/chart-utils.js`: defaults Chart.js, criacao de graficos de linha, fallback de grafico vazio, faixa de conforto.
 - `scripts/data/analytics.js`: estatisticas, cards de resumo, calendario climatico, heatmap horario e heatmap semanal.
 - `scripts/charts/aqi.js`: AQI estimado da Sala/MQ135, chip no header e popover.
-- `scripts/charts/season.js`: estacao do ano atual, chip no header, popover e faixa anual da aba Estacao.
+- `scripts/charts/season.js`: estacao do ano atual, chip no header, popover, faixa anual da aba Estacao e progresso dentro da estacao atual para o PDF.
 - `scripts/charts/moon.js`: fase da lua, chip no header, popover e estado lunar por data.
 - `scripts/charts/solar.js`: leitura e renderizacao dos eventos solares, historico nascer/por do sol, ciclo solar do dia, aliases solares centralizados e exposicao de eventos solares para o header.
 - `scripts/ui/ui.js`: estados vazios, mensagens em graficos, tabelas, tabs, swipe touch entre abas, colapsaveis, date picker.
@@ -144,11 +144,9 @@ Responsabilidades:
 
 ## Fluxo de Execucao
 
-1. `index.html` carrega Chart.js, html2canvas e jsPDF via CDN.
+1. `index.html` carrega Chart.js via CDN; html2canvas e jsPDF ficam sob demanda no fluxo de exportacao PDF.
 2. Scripts sao carregados em ordem:
    - Chart.js CDN
-   - html2canvas CDN
-   - jsPDF CDN
    - `scripts/config.js`
    - `scripts/data/data-utils.js`
    - `scripts/data/analytics.js`
@@ -185,7 +183,7 @@ Responsabilidades:
    - `ClimateMoon.setup()`
    - `setupAstroIndicator()`
    - `setupFirebaseListeners()`
-6. `FirebaseService.initialize()` importa SDK Firebase, conecta ao Realtime Database e tenta inicializar App Check.
+6. `FirebaseService.initialize()` importa SDK Firebase e conecta ao Realtime Database; `ensureAppCheckInitialized()` inicializa App Check sob demanda antes de recursos protegidos, como a IA.
 7. `FirebaseService.listenToPath()` cria listeners para quatro paths.
 8. Cada snapshot atualiza `latestData` e chama a view correspondente; a aba Estacao e rerenderizada quando qualquer fonte global muda.
 
@@ -436,16 +434,17 @@ Fluxo:
 - filtra dados pela data selecionada
 - cria resumo executivo com cabecalho, metadados, cards principais e alertas do dia
 - gera cards de resumo conforme contrato da aba ativa
-- na aba Estacao, inclui cards contextuais de Estacao do ano e Fase da lua, alem dos 6 cards globais da aba
+- na aba Estacao, inclui cards contextuais de Estacao do ano e Fase da lua com rotulos proprios de detalhe, alem dos 6 cards globais da aba
 - gera graficos temporarios otimizados para PDF quando precisa juntar metricas
 - junta Temperatura e Sensacao termica no mesmo grafico quando ambas existem
 - renderiza ciclo solar compacto em Chart.js offscreen a partir de `$solarDayTimes` apenas quando a aba ativa inclui ciclo solar, reutilizando `ClimateSolar.getSolarTodayOptions` e `solarDayBackgroundPlugin`
 - monta tabela resumida com uma linha por horario e status geral
 - usa tabela MQ135 na Sala, tabela ambiental no Quarto, tabela de aquario no Aquario e nao gera tabela na Estacao
-- mantem tabela detalhada original no JSON
+- no JSON, exporta `resumo` com `detalhes`, `tabelaResumida`, `tabelaDetalhada`, `dadosBrutos` e mantem `tabela` como alias de compatibilidade da tabela detalhada antiga
 - renderiza os graficos em coluna unica compacta, com legenda e estatisticas de min/max/media quando possivel
 - usa html2canvas para capturar cabecalho, resumo, graficos e tabela
 - usa jsPDF para montar paginas A4 manualmente
+- carrega html2canvas e jsPDF sob demanda somente quando o formato PDF e executado
 - organiza resumo, graficos e tabela em secoes/paginas proprias conforme o conteudo da aba ativa
 - mantem graficos como blocos inteiros e permite quebra apenas na tabela longa
 - adiciona rodape com pagina atual/total
@@ -516,8 +515,8 @@ Indices Firebase: nao existem no projeto.
 ## APIs Externas
 
 - Chart.js UMD por CDN jsDelivr.
-- html2canvas por CDN jsDelivr para captura do relatorio.
-- jsPDF por CDN jsDelivr para montagem manual das paginas A4.
+- html2canvas por CDN jsDelivr para captura do relatorio, carregado sob demanda.
+- jsPDF por CDN jsDelivr para montagem manual das paginas A4, carregado sob demanda.
 - Firebase SDK por CDN Google.
 - Google Fonts (`Inter`) no HTML.
 

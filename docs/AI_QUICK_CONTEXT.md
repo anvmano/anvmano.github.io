@@ -11,7 +11,7 @@ O codigo nao define usuarios, autenticacao, permissoes ou backend local.
 - HTML, CSS e JavaScript puro.
 - Scripts classicos com modulos globais em `window.*`.
 - Chart.js `4.5.1` via CDN.
-- html2canvas `1.4.1` e jsPDF `2.5.2` via CDN para exportacao PDF.
+- html2canvas `1.4.1` e jsPDF `2.5.2` via CDN para exportacao PDF, carregados sob demanda somente ao exportar PDF.
 - Exportacao JSON usa Blob nativo do navegador, sem biblioteca externa.
 - Firebase SDK modular `12.13.0` carregado dinamicamente.
 - Firebase Realtime Database.
@@ -44,7 +44,7 @@ Arquivos principais:
 - `scripts/data/data-utils.js`: datas, filtros, tabelas e series.
 - `scripts/charts/chart-utils.js`: Chart.js comum e faixa de conforto.
 - `scripts/charts/aqi.js`: AQI estimado da Sala/MQ135, chip do header e popover.
-- `scripts/charts/season.js`: estacao do ano atual, chip do header, popover e progresso da faixa anual.
+- `scripts/charts/season.js`: estacao do ano atual, chip do header, popover, posicao na faixa anual e progresso dentro da estacao atual.
 - `scripts/charts/moon.js`: fase da lua, chip do header, popover e estado lunar por data.
 - `scripts/data/analytics.js`: estatisticas e heatmaps.
 - `scripts/charts/solar.js`: regras e graficos solares.
@@ -61,7 +61,7 @@ Arquivos principais:
 1. HTML carrega scripts em ordem.
 2. `scripts/main.js` valida todos os objetos globais.
 3. No `DOMContentLoaded`, inicializa tabs, date picker, colapsaveis, zoom, chat, exportacao PDF/JSON e listeners Firebase.
-4. `FirebaseService.initialize()` importa SDK Firebase, cria database e tenta inicializar App Check quando o host nao e local.
+4. `FirebaseService.initialize()` importa SDK Firebase e cria database; App Check/reCAPTCHA fica sob demanda para recursos protegidos, como a IA.
 5. `FirebaseService.listenToPath()` escuta:
    - `historico/Temperatura`
    - `historico/NascePorDoSol`
@@ -119,8 +119,8 @@ Arquivos principais:
 - Mensagens de graficos vazios devem seguir `Sem dados de <tipo_grafico> em <DD/MM/AAAA>`.
 - Aba ativa e persistida em `localStorage.activeTab`.
 - Swipe touch segue o fluxo Estacao ⇄ Sala ⇄ Quarto ⇄ Aquario. Arrastar para esquerda avanca; arrastar para direita volta; extremidades nao mudam de aba. Gestos iniciados em tabelas, heatmaps ou qualquer area com rolagem horizontal nao trocam de aba.
-- A aba Estacao e a visao global do sistema: mostra faixa das estacoes do ano, fase da lua da data selecionada, cards globais, graficos comparativos de temperatura/umidade por ambiente e graficos solares. A faixa das estacoes usa a data atual do navegador, nao a data selecionada no calendario, e o marcador progride por segmento visual de estacao: Verao 0-25%, Outono 25-50%, Inverno 50-75%, Primavera 75-100%.
-- O header exibe os chips na ordem Estacao do ano, AQI, ciclo solar, fase da lua e relogio. Em mobile, o relogio e a marca `Estacao Climatica` podem ser ocultados para preservar os chips principais.
+- A aba Estacao e a visao global do sistema: mostra faixa das estacoes do ano, fase da lua da data selecionada, cards globais, graficos comparativos de temperatura/umidade por ambiente e graficos solares. A faixa das estacoes usa a data atual do navegador, nao a data selecionada no calendario, e o marcador progride por segmento visual de estacao: Verao 0-25%, Outono 25-50%, Inverno 50-75%, Primavera 75-100%. No PDF, o card de Estacao do ano mostra o progresso dentro da estacao atual, nao a posicao anual da barra.
+- O header exibe os chips na ordem Estacao do ano, AQI, ciclo solar, fase da lua e relogio. Em mobile, o relogio e a marca `Estacao Climatica` podem ser ocultados e os chips principais devem ocupar toda a largura util do header.
 - Indicador astronomico do header e um chip visual no tamanho aproximado do relogio, sem texto interno; o tooltip/`aria-label` mostra nascer e por do sol. Clique/toque abre popover com amanhecer, nascer do sol, zenite, por do sol, anoitecer, estado atual e duracao do dia.
 - Indicador AQI do header usa dados mais recentes da Sala/MQ135 em `historico/AirQuality` e mostra apenas `AQI <valor>` no chip. A classificacao completa fica no tooltip/`aria-label` e no popover aberto por clique/toque.
 - Indicador de estacao do ano usa `scripts/charts/season.js`, mostra a estacao atual no header, tem pequena animacao sazonal e popover com inicio das estacoes do ciclo atual.
@@ -130,11 +130,12 @@ Arquivos principais:
 - Solar usa data selecionada para ciclo do dia e filtro de 365 dias para historico.
 - Exportacao PDF/JSON usa automaticamente aba ativa, data selecionada, `latestData` e `chartInstances`; nao reconsulta Firebase.
 - Controle `PDF/JSON` em `name="exportFormat"` altera a label do botao `#btnExportData`.
+- Bibliotecas de PDF (`html2canvas` e `jsPDF`) sao carregadas sob demanda apenas quando o formato PDF e executado; exportacao JSON nao deve carregar essas dependencias.
 - PDF usa primeira pagina como resumo executivo, com metadados, cards principais e alertas do dia.
 - PDF junta Temperatura e Sensacao termica no mesmo grafico quando a aba possui as duas metricas.
-- PDF usa contrato por aba: Estacao mostra no resumo os cards contextuais de Estacao do ano e Fase da lua, alem dos 6 cards globais da propria aba (AQI estimado, Temp. Sala, Temp. Quarto, Temp. Aquario, Umidade Sala e Umidade Quarto), graficos comparativos de temperatura/umidade por ambiente e ciclo solar, sem tabela; Sala mostra temperatura, sensacao, umidade e pressao, mas tabela MQ135; Quarto mostra temperatura, sensacao e umidade; Aquario mostra apenas temperatura, PH, TDS e Turbidez, sem ciclo solar.
+- PDF usa contrato por aba: Estacao mostra no resumo os cards contextuais de Estacao do ano e Fase da lua com rotulos proprios de detalhe, alem dos 6 cards globais da propria aba (AQI estimado, Temp. Sala, Temp. Quarto, Temp. Aquario, Umidade Sala e Umidade Quarto), graficos comparativos de temperatura/umidade por ambiente e ciclo solar, sem tabela; Sala mostra temperatura, sensacao, umidade e pressao, mas tabela MQ135; Quarto mostra temperatura, sensacao e umidade; Aquario mostra apenas temperatura, PH, TDS e Turbidez, sem ciclo solar.
 - PDF renderiza o ciclo solar compacto em um Chart.js offscreen a partir de `$solarDayTimes`, usando `ClimateSolar.getSolarTodayOptions` e `solarDayBackgroundPlugin` para manter o visual da pagina sem depender de canvas oculto ou vazio da interface.
-- PDF usa tabela resumida por horario, com status geral por linha; JSON preserva a tabela detalhada antiga.
+- PDF usa tabela resumida por horario, com status geral por linha. JSON exporta `resumo` com `detalhes`, `tabelaResumida`, `tabelaDetalhada`, `dadosBrutos` e mantem `tabela` como alias de compatibilidade para a tabela detalhada antiga.
 - PDF e montado manualmente em paginas A4; resumo, graficos e tabela iniciam em paginas proprias, com rodape em todas as paginas.
 - Chat usa `latestData`, aba ativa, data selecionada e intenção classificada para selecionar dados. Nao envia o Firebase inteiro ao modelo.
 - Chat tem atalhos em `data-chat-question`; eles reutilizam o mesmo fluxo de envio da pergunta digitada.
@@ -187,7 +188,7 @@ Arquivos principais:
 - Nao renomear campos Firebase sem atualizar `scripts/config.js` e, para solar, `scripts/charts/solar.js`.
 - Novos metodos, funcoes e variaveis internas devem seguir nomenclatura PT-BR. Excecoes: campos Firebase, ids/classes DOM, nomes exigidos por APIs externas, contratos publicos em `window.*`, opcoes de bibliotecas e propriedades estruturais ja consumidas por outros modulos.
 - O Firebase e lido com `onValue` no path completo.
-- App Check nao e inicializado em `localhost`, `127.0.0.1` ou `::1`, para evitar warning falso de credenciais App Check invalidas durante desenvolvimento local.
+- App Check nao e inicializado no carregamento inicial nem em `localhost`, `127.0.0.1` ou `::1`; em producao, deve ser iniciado sob demanda antes de recursos protegidos como Firebase AI Logic.
 - Logs de fallback esperado usam `window.ClimateDiagnostics` e ficam ocultos por padrao. Para depurar, use `?debug=1` na URL ou `localStorage.climateDebug = "1"`.
 - Firebase AI Logic depende de App Check configurado no app web correto; enforcement deve ser ativado apenas depois de validar o token em producao.
 - Zênite solar usa campos `HoraZenite` e `MinuteZenite` quando presentes; se nao houver, calcula meio entre nascer e por do sol.

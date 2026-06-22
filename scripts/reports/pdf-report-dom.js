@@ -65,6 +65,7 @@
 
     function createSummaryCard(card) {
         const statusClass = getStatusClass(card.status);
+        const details = normalizarDetalhesResumo(card);
         const el = document.createElement("article");
         el.className = "pdf-summary-card";
         el.innerHTML = `
@@ -74,12 +75,30 @@
             </div>
             <strong class="pdf-summary-card__current">${escapeHtml(card.current)}</strong>
             <dl class="pdf-summary-card__details">
-                <div><dt>Mín</dt><dd>${escapeHtml(card.min)}</dd></div>
-                <div><dt>Máx</dt><dd>${escapeHtml(card.max)}</dd></div>
-                <div><dt>Delta</dt><dd>${escapeHtml(card.delta)}</dd></div>
+                ${details.map(detail => `
+                    <div>
+                        <dt>${escapeHtml(detail.label)}</dt>
+                        <dd>${escapeHtml(detail.value)}</dd>
+                    </div>
+                `).join("")}
             </dl>
         `;
         return el;
+    }
+
+    function normalizarDetalhesResumo(card) {
+        if (Array.isArray(card.details) && card.details.length) {
+            return card.details.slice(0, 3).map(detail => ({
+                label: detail.label || "",
+                value: detail.value ?? "--",
+            }));
+        }
+
+        return [
+            { label: "Mín", value: card.min },
+            { label: "Máx", value: card.max },
+            { label: "Delta", value: card.delta },
+        ];
     }
 
     function createChartsSection(cards) {
@@ -174,6 +193,7 @@
         createSummarySection,
         createAlertsPanel,
         createSummaryCard,
+        normalizarDetalhesResumo,
         createChartsSection,
         createChartCard,
         createTableSection,

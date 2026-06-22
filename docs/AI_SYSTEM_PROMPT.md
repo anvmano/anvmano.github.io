@@ -76,7 +76,7 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Zênite solar usa campos enviados pelo Firebase quando existem; caso contrario usa meio entre nascer e por do sol.
 - Aba ativa e salva em `localStorage.activeTab`.
 - Swipe touch entre abas segue `Estacao ⇄ Sala ⇄ Quarto ⇄ Aquario`; esquerda avanca, direita volta, extremidades nao mudam, e gestos iniciados em tabelas/heatmaps/areas com rolagem horizontal nao trocam aba.
-- Header usa chips na ordem Estacao do ano, AQI, ciclo solar, fase da lua e relogio; em mobile, relogio e marca Estacao Climatica podem ser ocultados para preservar espaco.
+- Header usa chips na ordem Estacao do ano, AQI, ciclo solar, fase da lua e relogio; em mobile, relogio e marca Estacao Climatica podem ser ocultados, e os chips principais devem ocupar toda a largura util do header.
 - Popovers do header sao mutuamente exclusivos: Estacao do ano, AQI, ciclo solar e Lua.
 - Estacao do ano usa data atual do navegador; fase da lua do header usa data atual e bloco lunar da aba Estacao usa data selecionada.
 - Exportacao PDF/JSON deve reutilizar `latestData`, `selectedDate`, aba ativa e `chartInstances`; nao deve reconsultar Firebase.
@@ -87,7 +87,7 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Perguntas de AQI/IAQ/qualidade do ar no chat devem reutilizar `ClimateAqi.calculate` sobre dados da Sala/MQ135; CO, CO2, Acetona, Alcool, Amonia e Tolueno sao metricas exclusivas da Sala quando nenhum ambiente e citado.
 - Consultas de periodo no chat devem limitar no maximo 30 dias; `ultimos dias` usa 7 dias por padrao.
 - Exportacao PDF deve montar paginas A4 manualmente com html2canvas + jsPDF, evitando paginacao automatica que pode cortar conteudo.
-- PDF deve manter tema escuro, usar resumo executivo na primeira pagina, juntar temperatura e sensacao quando possivel, usar tabela resumida por horario e respeitar o contrato por aba: Estacao com cards contextuais de Estacao do ano e Fase da lua, 6 cards globais, graficos comparativos e ciclo solar, sem tabela; Sala com tabela MQ135 e sem solar; Quarto sem solar; Aquario sem solar.
+- PDF deve manter tema escuro, usar resumo executivo na primeira pagina, juntar temperatura e sensacao quando possivel, usar tabela resumida por horario e respeitar o contrato por aba: Estacao com cards contextuais de Estacao do ano e Fase da lua usando rotulos proprios de detalhe, 6 cards globais, graficos comparativos e ciclo solar, sem tabela; Sala com tabela MQ135 e sem solar; Quarto sem solar; Aquario sem solar.
 - Aliases solares devem permanecer centralizados em `SOLAR_FIELD_ALIASES`.
 
 ## Nunca altere sem revisar

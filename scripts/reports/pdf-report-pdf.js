@@ -88,6 +88,7 @@
             scale: 2,
             backgroundColor: "#0b1120",
             useCORS: true,
+            logging: false,
             scrollX: 0,
             scrollY: 0,
             windowWidth: Math.max(element.scrollWidth, element.offsetWidth),

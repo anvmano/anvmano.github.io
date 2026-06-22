@@ -63,24 +63,25 @@ Se alterada: DevTools pode voltar a mostrar varios avisos esperados como se foss
 
 Criticidade: Baixa.
 
-## Regra: App Check em ambiente local
+## Regra: App Check sob demanda
 
 Arquivo: `scripts/firebase-service.js`
 
-Metodo: `initializeAppCheckIfConfigured`
+Metodos: `ensureAppCheckInitialized`, `initializeAppCheckIfConfigured`
 
-Objetivo: inicializar Firebase App Check somente quando o host nao for local.
+Objetivo: evitar carregar reCAPTCHA/App Check no carregamento inicial da pagina e inicializar App Check apenas quando um recurso protegido precisar, como a assistente com Firebase AI Logic.
 
 Entradas: `window.location.hostname`.
 
 Saidas:
 
-- em producao/GitHub Pages, App Check tenta inicializar normalmente
-- em `localhost`, `127.0.0.1` e `::1`, App Check e ignorado para evitar warning falso do Firebase Database sobre credenciais App Check invalidas
+- no carregamento inicial, apenas Firebase App e Realtime Database sao inicializados
+- em producao/GitHub Pages, `ensureAppCheckInitialized()` tenta inicializar App Check antes da IA
+- em `localhost`, `127.0.0.1` e `::1`, App Check e ignorado para evitar warning falso de credenciais App Check invalidas
 
-Impacto: desenvolvimento local e limpeza do console.
+Impacto: desenvolvimento local, limpeza do console, Lighthouse e custo de carregamento inicial.
 
-Se alterada: ambiente local pode voltar a emitir warnings do SDK Firebase mesmo com a pagina funcionando.
+Se alterada: a pagina pode voltar a carregar reCAPTCHA na abertura, emitir warnings/erros esperados ou deixar a IA sem token App Check em producao.
 
 Criticidade: Media.
 
@@ -510,13 +511,15 @@ Saidas:
 - popover do header com inicio das estacoes do ciclo atual
 - faixa horizontal na aba Estacao com Verao, Outono, Inverno e Primavera
 - marcador vertical de progresso na faixa
+- card da Estacao do ano no PDF com progresso dentro da estacao atual
 
 Regras:
 
 - o chip e a faixa usam a data atual do navegador, nao a data selecionada no calendario
 - o marcador da faixa progride por segmento visual: Verao 0-25%, Outono 25-50%, Inverno 50-75%, Primavera 75-100%
+- o percentual mostrado no card da Estacao do ano no PDF representa o quanto ja passou da estacao atual, portanto no inicio do inverno deve ficar perto de 0%, nao perto de 50%
 - o header usa a ordem: Estacao do ano, AQI, ciclo solar, fase da lua e relogio
-- em mobile, o relogio e a marca `Estacao Climatica` podem ser ocultados para preservar os chips principais
+- em mobile, o relogio e a marca `Estacao Climatica` podem ser ocultados e os chips principais devem ocupar toda a largura util do header
 - o popover de estacao do ano e mutuamente exclusivo com AQI, solar e lua
 
 Impacto: leitura rapida de contexto sazonal e consistencia visual da aba Estacao.
@@ -737,7 +740,7 @@ Entradas:
 Saidas:
 
 - arquivo PDF A4 retrato baixado automaticamente
-- arquivo JSON baixado automaticamente com metadados, resumo, tabela e dados brutos filtrados
+- arquivo JSON baixado automaticamente com metadados, resumo, tabela resumida, tabela detalhada e dados brutos filtrados
 - cabecalho com aba, data consultada e data/hora de geracao
 - resumo executivo na primeira pagina com cards principais e alertas do dia
 - graficos otimizados para PDF, juntando Temperatura e Sensacao termica quando possivel
@@ -747,7 +750,7 @@ Saidas:
 
 Contrato por aba:
 
-- Estacao: resumo com cards contextuais de Estacao do ano e Fase da lua, alem dos 6 cards globais exibidos na aba (AQI estimado, Temp. Sala, Temp. Quarto, Temp. Aquario, Umidade Sala e Umidade Quarto), graficos de Temperatura por Ambiente, Umidade por Ambiente e Ciclo solar; sem tabela.
+- Estacao: resumo com cards contextuais de Estacao do ano e Fase da lua usando rotulos proprios de detalhe, alem dos 6 cards globais exibidos na aba (AQI estimado, Temp. Sala, Temp. Quarto, Temp. Aquario, Umidade Sala e Umidade Quarto), graficos de Temperatura por Ambiente, Umidade por Ambiente e Ciclo solar; sem tabela.
 - Sala: cards de temperatura, sensacao termica, umidade e pressao; graficos de Temperatura x Sensacao, Umidade e Pressao; tabela MQ135 com CO, CO2, Acetona, Alcool, Amonia e Tolueno.
 - Quarto: cards de temperatura, sensacao termica e umidade; graficos de Temperatura x Sensacao e Umidade; tabela com Temperatura, Sensacao termica e Umidade.
 - Aquario: cards, graficos e tabela de Temperatura, PH, TDS e Turbidez; nao deve incluir card ou grafico de ciclo solar.
@@ -757,7 +760,10 @@ Regras da tabela:
 - PDF usa tabela resumida com uma linha por horario
 - status geral e `Alerta` se qualquer indicador daquele horario estiver em alerta
 - status geral e `Estavel` se todos os indicadores daquele horario estiverem estaveis
-- JSON preserva a tabela detalhada com `Horario`, `Indicador`, `Valor` e `Status`
+- JSON inclui `tabelaResumida` com uma linha por horario e `tabelaDetalhada` com `Horario`, `Indicador`, `Valor` e `Status`
+- JSON mantem `tabela` como alias de compatibilidade da tabela detalhada antiga
+- html2canvas e jsPDF devem ser carregados sob demanda somente quando o usuario exportar PDF
+- exportacao JSON nao deve carregar html2canvas nem jsPDF
 
 Regras de layout:
 
@@ -772,7 +778,7 @@ Regras de layout:
 
 Impacto: relatorio/dados exportados para Estacao, Sala, Quarto e Aquario.
 
-Dependencias: `html2canvas`, `jsPDF`, `ClimateData`, `AppConfig`, `window.ClimatePdfReportModules`, canvases existentes, dados ja carregados pelo Firebase.
+Dependencias: URLs de `html2canvas` e `jsPDF` em `AppConfig.firebase`, `ClimateData`, `AppConfig`, `window.ClimatePdfReportModules`, canvases existentes, dados ja carregados pelo Firebase.
 
 Se alterada: exportacao pode reconsultar dados indevidamente, perder graficos, gerar layout quebrado ou falhar no download.
 

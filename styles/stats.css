@@ -290,21 +290,23 @@
     grid-template-columns: 1fr;
     gap: 0.28rem;
     margin: 0 0 0 auto;
-    text-align: right;
 }
 
 .moon-summary__details div {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.35rem;
+    display: grid;
+    grid-template-columns: max-content minmax(74px, max-content);
+    align-items: baseline;
+    justify-content: end;
+    column-gap: 0.45rem;
 }
 
 .moon-summary__details dt {
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-size: 0.6rem;
     font-weight: 800;
     letter-spacing: 0.06em;
     text-transform: uppercase;
+    text-align: right;
 }
 
 .moon-summary__details dd {
@@ -314,6 +316,7 @@
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+    text-align: left;
 }
 
 .moon-summary__details div:first-child {

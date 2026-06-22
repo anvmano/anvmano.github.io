@@ -135,7 +135,12 @@
         const progressoSegmento = Math.min(1, Math.max(0, (data - estacao.inicio) / duracao));
         const progressoAno = (indiceSeguro * 25) + (progressoSegmento * 25);
 
-        return { estacao, estacoes, progressoAno: progressoAno.toFixed(2) };
+        return {
+            estacao,
+            estacoes,
+            progressoAno: progressoAno.toFixed(2),
+            progressoEstacao: (progressoSegmento * 100).toFixed(2),
+        };
     }
 
     function getState(dataFirebase = window.ClimateData?.dataAtual?.()) {
