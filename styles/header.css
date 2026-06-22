@@ -25,6 +25,18 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    color: inherit;
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+}
+
+.header-brand:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+}
+
+.header-brand:hover h1 {
+    color: var(--accent);
 }
 
 .header-icon {
@@ -582,6 +594,165 @@ h1 {
     white-space: nowrap;
 }
 
+.moon-indicator {
+    --moon-color: #c4b5fd;
+    --moon-bg: rgba(196, 181, 253, 0.10);
+    --moon-shadow: 50%;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-width: var(--header-status-chip-width);
+    height: var(--header-status-chip-height);
+    padding: 0 10px;
+    border: 1px solid color-mix(in srgb, var(--moon-color), transparent 58%);
+    border-radius: var(--radius-md);
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.025)),
+        var(--moon-bg);
+    color: var(--text-primary);
+    font: inherit;
+    cursor: pointer;
+}
+
+.moon-indicator:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
+
+.moon-indicator__scene {
+    position: relative;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.moon-indicator__orb {
+    position: absolute;
+    inset: 2px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #f8fafc 0 16%, var(--moon-color) 17% 100%);
+    box-shadow: 0 0 14px rgba(196, 181, 253, 0.34);
+    overflow: hidden;
+    animation: moonGlow 3.1s ease-in-out infinite;
+}
+
+.moon-indicator__orb::after {
+    content: "";
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    width: var(--moon-shadow);
+    right: -1px;
+    border-radius: 50%;
+    background: rgba(15, 23, 42, 0.88);
+}
+
+.moon-indicator__value {
+    min-width: 0;
+    color: var(--text-primary);
+    font-size: 0.72rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.moon-indicator--nova,
+.moon-indicator--minguante {
+    --moon-color: #94a3b8;
+    --moon-bg: rgba(148, 163, 184, 0.10);
+}
+
+.moon-indicator--crescente,
+.moon-indicator--quarto-crescente,
+.moon-indicator--gibosa-crescente {
+    --moon-color: #bae6fd;
+    --moon-bg: rgba(56, 189, 248, 0.10);
+}
+
+.moon-indicator--cheia {
+    --moon-color: #fde68a;
+    --moon-bg: rgba(250, 204, 21, 0.10);
+}
+
+.moon-indicator--gibosa-minguante,
+.moon-indicator--quarto-minguante {
+    --moon-color: #c4b5fd;
+    --moon-bg: rgba(196, 181, 253, 0.11);
+}
+
+.moon-popover {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 120;
+    width: min(280px, calc(100vw - 32px));
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: rgba(15, 23, 42, 0.98);
+    box-shadow: var(--shadow-lg);
+}
+
+.moon-popover[hidden] {
+    display: none;
+}
+
+.moon-popover__header,
+.moon-popover__list div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.moon-popover__header {
+    padding-bottom: 9px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.moon-popover__header span {
+    color: var(--text-secondary);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.moon-popover__header strong {
+    color: var(--accent);
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-align: right;
+}
+
+.moon-popover__list {
+    display: grid;
+    gap: 8px;
+    margin: 11px 0 0;
+}
+
+.moon-popover__list dt {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+}
+
+.moon-popover__list dd {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 0.82rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.moon-popover__text {
+    margin: 10px 0 0;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
 @keyframes astroPulse {
     0%, 100% {
         opacity: 0.82;
@@ -590,6 +761,17 @@ h1 {
     50% {
         opacity: 1;
         transform: translateX(-50%) scale(1.08);
+    }
+}
+
+@keyframes moonGlow {
+    0%, 100% {
+        opacity: 0.86;
+        transform: scale(0.96);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.06);
     }
 }
 

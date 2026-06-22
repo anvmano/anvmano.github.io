@@ -2,7 +2,7 @@
 
 ## O que e o sistema
 
-Dashboard web estatico de estacao climatica. Exibe dados de Sala, Quarto, Aquario e eventos solares. A interface tem abas, navegacao por swipe touch entre abas, seletor global de data, graficos, estatisticas, heatmaps, tabelas colapsaveis, zoom de graficos, indicador AQI estimado da Sala, indicador astronomico no header, chat com Firebase AI Logic e atalhos de perguntas, alem de exportacao PDF/JSON da aba ativa.
+Dashboard web estatico de estacao climatica. Exibe uma aba global Estacao, alem de Sala, Quarto, Aquario e eventos solares. A interface tem abas, navegacao por swipe touch entre abas, seletor global de data, graficos, estatisticas, heatmaps, tabelas colapsaveis, zoom de graficos, indicador de estacao do ano, indicador AQI estimado da Sala, indicador astronomico no header, indicador de fase da lua, chat com Firebase AI Logic e atalhos de perguntas, alem de exportacao PDF/JSON da aba ativa.
 
 O codigo nao define usuarios, autenticacao, permissoes ou backend local.
 
@@ -26,7 +26,7 @@ O codigo nao define usuarios, autenticacao, permissoes ou backend local.
 Arquivos principais:
 
 - `index.html`: estrutura DOM e ordem dos scripts.
-- `scripts/config.js`: Firebase, paths, ids, cores, campos e unidades.
+- `scripts/config.js`: Firebase, paths, ids, cores, campos, unidades e diagnostico leve de console.
 - `scripts/main.js`: orquestrador da aplicacao.
 - `scripts/firebase-service.js`: conexao e listeners Firebase.
 - `scripts/chat.js`: fachada publica do chat, mantendo `window.ClimateChat`.
@@ -44,6 +44,8 @@ Arquivos principais:
 - `scripts/data/data-utils.js`: datas, filtros, tabelas e series.
 - `scripts/charts/chart-utils.js`: Chart.js comum e faixa de conforto.
 - `scripts/charts/aqi.js`: AQI estimado da Sala/MQ135, chip do header e popover.
+- `scripts/charts/season.js`: estacao do ano atual, chip do header, popover e progresso da faixa anual.
+- `scripts/charts/moon.js`: fase da lua, chip do header, popover e estado lunar por data.
 - `scripts/data/analytics.js`: estatisticas e heatmaps.
 - `scripts/charts/solar.js`: regras e graficos solares.
 - `scripts/ui/ui.js`: tabs, swipe touch entre abas, date picker, mensagens, colapsaveis.
@@ -51,7 +53,7 @@ Arquivos principais:
 - `scripts/reports/pdf-report.js`: fachada publica da exportacao PDF/JSON.
 - `scripts/reports/pdf-report-*.js`: modulos internos de configuracao, formatacao, dados, DOM, graficos, PDF e exportacao.
 - `styles/reports/pdf-report.css`: visual do relatorio PDF.
-- `scripts/views/quarto-view.js`, `scripts/views/sala-view.js`, `scripts/views/aquario-view.js`, `scripts/views/solar-view.js`: renderizacao por dominio.
+- `scripts/views/estacao-view.js`, `scripts/views/quarto-view.js`, `scripts/views/sala-view.js`, `scripts/views/aquario-view.js`, `scripts/views/solar-view.js`: renderizacao por dominio.
 - `tools/validate-project.mjs`: valida sintaxe JS, referencias locais, imports CSS e contratos HTML/config.
 
 ## Fluxo Principal
@@ -59,7 +61,7 @@ Arquivos principais:
 1. HTML carrega scripts em ordem.
 2. `scripts/main.js` valida todos os objetos globais.
 3. No `DOMContentLoaded`, inicializa tabs, date picker, colapsaveis, zoom, chat, exportacao PDF/JSON e listeners Firebase.
-4. `FirebaseService.initialize()` importa SDK Firebase, cria database e tenta inicializar App Check.
+4. `FirebaseService.initialize()` importa SDK Firebase, cria database e tenta inicializar App Check quando o host nao e local.
 5. `FirebaseService.listenToPath()` escuta:
    - `historico/Temperatura`
    - `historico/NascePorDoSol`
@@ -116,18 +118,22 @@ Arquivos principais:
 - Zoom de graficos: duplo clique ou botao amplia; `Esc`, botao de fechar ou clique/toque no fundo do overlay fecha. Em mobile/touch, `pointerdown`/`touchstart` dentro do canvas ampliado nao fecha o overlay para preservar tooltip e leitura do dado.
 - Mensagens de graficos vazios devem seguir `Sem dados de <tipo_grafico> em <DD/MM/AAAA>`.
 - Aba ativa e persistida em `localStorage.activeTab`.
-- Swipe touch segue o fluxo Sala ⇄ Quarto ⇄ Aquario. Arrastar para esquerda avanca; arrastar para direita volta; extremidades nao mudam de aba. Gestos iniciados em tabelas, heatmaps ou qualquer area com rolagem horizontal nao trocam de aba.
+- Swipe touch segue o fluxo Estacao ⇄ Sala ⇄ Quarto ⇄ Aquario. Arrastar para esquerda avanca; arrastar para direita volta; extremidades nao mudam de aba. Gestos iniciados em tabelas, heatmaps ou qualquer area com rolagem horizontal nao trocam de aba.
+- A aba Estacao e a visao global do sistema: mostra faixa das estacoes do ano, fase da lua da data selecionada, cards globais, graficos comparativos de temperatura/umidade por ambiente e graficos solares. A faixa das estacoes usa a data atual do navegador, nao a data selecionada no calendario, e o marcador progride por segmento visual de estacao: Verao 0-25%, Outono 25-50%, Inverno 50-75%, Primavera 75-100%.
+- O header exibe os chips na ordem Estacao do ano, AQI, ciclo solar, fase da lua e relogio. Em mobile, o relogio e a marca `Estacao Climatica` podem ser ocultados para preservar os chips principais.
 - Indicador astronomico do header e um chip visual no tamanho aproximado do relogio, sem texto interno; o tooltip/`aria-label` mostra nascer e por do sol. Clique/toque abre popover com amanhecer, nascer do sol, zenite, por do sol, anoitecer, estado atual e duracao do dia.
 - Indicador AQI do header usa dados mais recentes da Sala/MQ135 em `historico/AirQuality` e mostra apenas `AQI <valor>` no chip. A classificacao completa fica no tooltip/`aria-label` e no popover aberto por clique/toque.
-- Popovers do header sao mutuamente exclusivos: abrir AQI fecha o solar, abrir solar fecha o AQI.
+- Indicador de estacao do ano usa `scripts/charts/season.js`, mostra a estacao atual no header, tem pequena animacao sazonal e popover com inicio das estacoes do ciclo atual.
+- Indicador de fase da lua usa `scripts/charts/moon.js`, calcula localmente a fase sem API externa, mostra a fase atual no header e abre popover com iluminacao, idade lunar, proxima cheia e proxima nova. Na aba Estacao, o bloco lunar usa a data selecionada no calendario.
+- Popovers do header sao mutuamente exclusivos: abrir Estacao do ano, AQI, Solar ou Lua fecha os demais.
 - AQI do header e uma estimativa local: usa categorias oficiais AQI (`0-50`, `51-100`, `101-150`, `151-200`, `201-300`, `301+`), mas o calculo vem dos gases disponiveis no MQ135 e deve ser exibido como `AQI estimado da Sala`.
 - Solar usa data selecionada para ciclo do dia e filtro de 365 dias para historico.
 - Exportacao PDF/JSON usa automaticamente aba ativa, data selecionada, `latestData` e `chartInstances`; nao reconsulta Firebase.
 - Controle `PDF/JSON` em `name="exportFormat"` altera a label do botao `#btnExportData`.
 - PDF usa primeira pagina como resumo executivo, com metadados, cards principais e alertas do dia.
 - PDF junta Temperatura e Sensacao termica no mesmo grafico quando a aba possui as duas metricas.
-- PDF usa contrato por aba: Sala mostra cards/graficos de temperatura, sensacao, umidade, pressao e ciclo solar, mas tabela MQ135; Quarto mostra temperatura, sensacao, umidade e ciclo solar; Aquario mostra apenas temperatura, PH, TDS e Turbidez, sem ciclo solar.
-- PDF renderiza o ciclo solar compacto em um Chart.js offscreen a partir de `$solarDayTimes`, usando `ClimateSolar.getSolarTodayOptions` e `solarDayBackgroundPlugin` para manter o visual da pagina sem depender de canvas oculto ou vazio da aba Quarto.
+- PDF usa contrato por aba: Estacao mostra no resumo os cards contextuais de Estacao do ano e Fase da lua, alem dos 6 cards globais da propria aba (AQI estimado, Temp. Sala, Temp. Quarto, Temp. Aquario, Umidade Sala e Umidade Quarto), graficos comparativos de temperatura/umidade por ambiente e ciclo solar, sem tabela; Sala mostra temperatura, sensacao, umidade e pressao, mas tabela MQ135; Quarto mostra temperatura, sensacao e umidade; Aquario mostra apenas temperatura, PH, TDS e Turbidez, sem ciclo solar.
+- PDF renderiza o ciclo solar compacto em um Chart.js offscreen a partir de `$solarDayTimes`, usando `ClimateSolar.getSolarTodayOptions` e `solarDayBackgroundPlugin` para manter o visual da pagina sem depender de canvas oculto ou vazio da interface.
 - PDF usa tabela resumida por horario, com status geral por linha; JSON preserva a tabela detalhada antiga.
 - PDF e montado manualmente em paginas A4; resumo, graficos e tabela iniciam em paginas proprias, com rodape em todas as paginas.
 - Chat usa `latestData`, aba ativa, data selecionada e intenção classificada para selecionar dados. Nao envia o Firebase inteiro ao modelo.
@@ -167,11 +173,12 @@ Arquivos principais:
 6. `scripts/data/data-utils.js`
 7. `scripts/charts/chart-utils.js`
 8. `scripts/charts/aqi.js`
-9. `scripts/data/analytics.js`
-10. `scripts/charts/solar.js`
-11. `index.html`
-12. `style.css` e `styles/`
-13. Views por aba
+9. `scripts/charts/moon.js`
+10. `scripts/data/analytics.js`
+11. `scripts/charts/solar.js`
+12. `index.html`
+13. `style.css` e `styles/`
+14. Views por aba
 
 ## Regras Importantes
 
@@ -180,6 +187,8 @@ Arquivos principais:
 - Nao renomear campos Firebase sem atualizar `scripts/config.js` e, para solar, `scripts/charts/solar.js`.
 - Novos metodos, funcoes e variaveis internas devem seguir nomenclatura PT-BR. Excecoes: campos Firebase, ids/classes DOM, nomes exigidos por APIs externas, contratos publicos em `window.*`, opcoes de bibliotecas e propriedades estruturais ja consumidas por outros modulos.
 - O Firebase e lido com `onValue` no path completo.
+- App Check nao e inicializado em `localhost`, `127.0.0.1` ou `::1`, para evitar warning falso de credenciais App Check invalidas durante desenvolvimento local.
+- Logs de fallback esperado usam `window.ClimateDiagnostics` e ficam ocultos por padrao. Para depurar, use `?debug=1` na URL ou `localStorage.climateDebug = "1"`.
 - Firebase AI Logic depende de App Check configurado no app web correto; enforcement deve ser ativado apenas depois de validar o token em producao.
 - Zênite solar usa campos `HoraZenite` e `MinuteZenite` quando presentes; se nao houver, calcula meio entre nascer e por do sol.
 - Aliases solares ficam centralizados em `SOLAR_FIELD_ALIASES`.

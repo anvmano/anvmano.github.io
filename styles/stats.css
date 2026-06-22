@@ -134,37 +134,21 @@
     color: var(--text-primary);
 }
 
+.station-context-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
 .season-timeline {
     position: relative;
-    margin: 0 0 1rem;
-    padding: 0.85rem;
+    margin: 0;
+    padding: 0.75rem 0.85rem;
     background: rgba(26, 34, 52, 0.76);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     box-shadow: 0 1px 3px rgba(0,0,0,0.24);
-}
-
-.season-timeline__header {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 0.6rem;
-    margin-bottom: 0.65rem;
-}
-
-.season-timeline__current {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 24px;
-    padding: 0 0.65rem;
-    color: var(--accent);
-    background: rgba(14, 165, 233, 0.12);
-    border: 1px solid rgba(56, 189, 248, 0.22);
-    border-radius: 999px;
-    font-size: 0.72rem;
-    font-weight: 700;
-    cursor: pointer;
 }
 
 .season-timeline__track {
@@ -226,59 +210,112 @@
 .season-timeline__marker {
     position: absolute;
     z-index: 2;
-    top: 4px;
-    bottom: 4px;
-    width: 3px;
+    top: 3px;
+    bottom: 3px;
+    width: 4px;
     transform: translateX(-50%);
     border-radius: 999px;
     background: var(--accent);
     box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16), 0 0 14px rgba(56, 189, 248, 0.38);
 }
 
-.season-popover {
-    position: absolute;
-    z-index: 8;
-    right: 0.9rem;
-    top: 3.2rem;
-    width: min(280px, calc(100vw - 2rem));
-    padding: 0.85rem;
-    color: var(--text-secondary);
-    background: rgba(15, 23, 42, 0.98);
+.moon-summary {
+    --moon-shadow: 50%;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    margin: 0;
+    padding: 0.75rem 0.85rem;
+    background: rgba(26, 34, 52, 0.76);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    box-shadow: var(--shadow-hover);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.24);
 }
 
-.season-popover strong {
-    display: block;
-    margin-bottom: 0.55rem;
-    color: var(--text-primary);
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+.moon-summary__scene {
+    position: relative;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
 }
 
-.season-popover dl {
+.moon-summary__orb {
+    position: absolute;
+    inset: 2px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #f8fafc 0 16%, #c4b5fd 17% 100%);
+    box-shadow: 0 0 18px rgba(196, 181, 253, 0.26);
+    overflow: hidden;
+}
+
+.moon-summary__orb::after {
+    content: "";
+    position: absolute;
+    top: -3px;
+    bottom: -3px;
+    right: -1px;
+    width: var(--moon-shadow);
+    border-radius: 50%;
+    background: rgba(15, 23, 42, 0.88);
+}
+
+.moon-summary__content {
     display: grid;
-    gap: 0.42rem;
-    margin: 0;
+    gap: 0.15rem;
+    min-width: 0;
+    flex: 1 1 auto;
 }
 
-.season-popover div {
-    display: flex;
-    justify-content: space-between;
-    gap: 0.75rem;
+.moon-summary__content span {
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.season-popover dt {
-    color: var(--text-muted);
-    font-size: 0.76rem;
-    font-weight: 700;
-}
-
-.season-popover dd {
-    margin: 0;
+.moon-summary__content strong {
     color: var(--text-primary);
-    font-size: 0.76rem;
+    font-size: 0.95rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.moon-summary__details {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.28rem;
+    margin: 0 0 0 auto;
+    text-align: right;
+}
+
+.moon-summary__details div {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.35rem;
+}
+
+.moon-summary__details dt {
+    color: var(--text-muted);
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.moon-summary__details dd {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.72rem;
     font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.moon-summary__details div:first-child {
+    display: none;
 }

@@ -119,7 +119,7 @@
             const answer = await window.ClimateAIService.generateText(prompt);
             return parseIntentJson(answer);
         } catch (error) {
-            console.warn("Falha ao classificar intenção do chat. Usando fallback local.", error);
+            window.ClimateDiagnostics?.depurar("Falha ao classificar intenção do chat. Usando fallback local.", error);
             return null;
         }
     }
@@ -132,7 +132,7 @@
             const parsed = JSON.parse(jsonText);
             return parsed && typeof parsed === "object" ? parsed : null;
         } catch (error) {
-            console.warn("Intenção do chat não veio em JSON válido.", answer);
+            window.ClimateDiagnostics?.depurar("Intenção do chat não veio em JSON válido.", answer);
             return null;
         }
     }

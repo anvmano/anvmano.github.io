@@ -7,6 +7,7 @@ const ClimateSolar = window.ClimateSolar;
 const ClimateCharts = window.ClimateCharts;
 const ClimateAqi = window.ClimateAqi;
 const ClimateSeason = window.ClimateSeason;
+const ClimateMoon = window.ClimateMoon;
 const FirebaseService = window.FirebaseService;
 const ClimateUI = window.ClimateUI;
 const ClimateZoom = window.ClimateZoom;
@@ -27,6 +28,7 @@ if (
     !ClimateCharts ||
     !ClimateAqi ||
     !ClimateSeason ||
+    !ClimateMoon ||
     !FirebaseService ||
     !ClimateUI ||
     !ClimateZoom ||
@@ -68,7 +70,8 @@ function getSelectedDate() {
 
 function setSelectedDate(date) {
     selectedDate = date;
-    ClimateSeason.update(selectedDate);
+    ClimateSeason.update();
+    ClimateMoon.update();
 }
 
 function createChart({
@@ -462,7 +465,8 @@ document.addEventListener("DOMContentLoaded", () => {
         })
     });
     ClimateAqi.setup();
-    ClimateSeason.setup({ getSelectedDate });
+    ClimateSeason.setup();
+    ClimateMoon.setup();
     setupAstroIndicator();
 
     setupFirebaseListeners().catch(error => {

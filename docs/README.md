@@ -1,6 +1,6 @@
 # Estacao Climática Web
 
-Dashboard web estático para acompanhamento de dados climáticos de Sala, Quarto, Aquário e eventos solares. A aplicação lê dados do Firebase Realtime Database diretamente no navegador, filtra pela data selecionada e renderiza gráficos, estatísticas, tabelas, visualizações avançadas e exportação de dados.
+Dashboard web estático para acompanhamento de dados climáticos da Estação, Sala, Quarto, Aquário e eventos solares. A aplicação lê dados do Firebase Realtime Database diretamente no navegador, filtra pela data selecionada e renderiza gráficos, estatísticas, tabelas, visualizações avançadas, contexto astronômico, chat com IA e exportação de dados.
 
 ## Requisitos
 
@@ -35,6 +35,7 @@ Bibliotecas carregadas via CDN:
 │   │   ├── assistant-format.js Formatação e normalização
 │   │   ├── assistant-ui.js     Painel e mensagens do chat
 │   │   ├── assistant-intent.js Classificação de intenção
+│   │   ├── assistant-planner.js Normalização do plano de consulta
 │   │   ├── assistant-query.js  Execução das consultas
 │   │   ├── assistant-metrics.js Estatísticas e métricas
 │   │   ├── assistant-solar.js  Consultas solares do chat
@@ -45,6 +46,8 @@ Bibliotecas carregadas via CDN:
 │   ├── charts/
 │   │   ├── chart-utils.js      Gráficos comuns e faixa de conforto
 │   │   ├── aqi.js              AQI estimado da Sala no header
+│   │   ├── season.js           Estação do ano no header e aba Estação
+│   │   ├── moon.js             Fase da lua no header e aba Estação
 │   │   ├── solar.js            Eventos e gráficos solares
 │   │   └── zoom.js             Zoom dos gráficos
 │   ├── ui/
@@ -59,6 +62,7 @@ Bibliotecas carregadas via CDN:
 │   │   ├── pdf-report-pdf.js   Paginação A4 e jsPDF
 │   │   └── pdf-report-export.js Orquestração PDF/JSON
 │   └── views/
+│       ├── estacao-view.js     Renderização da aba Estação
 │       ├── quarto-view.js      Renderização da aba Quarto
 │       ├── sala-view.js        Renderização da aba Sala
 │       ├── aquario-view.js     Renderização da aba Aquário
@@ -66,11 +70,11 @@ Bibliotecas carregadas via CDN:
 ├── styles/
 │   ├── tokens.css              Variáveis visuais
 │   ├── base.css                Base e reset
-│   ├── header.css              Cabeçalho, AQI, relógio e indicador astronômico
+│   ├── header.css              Cabeçalho, AQI, estação, lua, relógio e indicador astronômico
 │   ├── layout.css              Layout principal
 │   ├── tabs-toolbar.css        Abas, seletor de data e exportação
 │   ├── feedback.css            Loading, mensagens e transições
-│   ├── stats.css               Cards de estatísticas
+│   ├── stats.css               Cards, faixa de estações e resumo lunar
 │   ├── charts.css              Cards e canvases dos gráficos
 │   ├── advanced-views.css      Heatmaps e visualizações climáticas
 │   ├── zoom.css                Overlay de zoom
@@ -166,23 +170,27 @@ A validação verifica:
 
 ## Funcionalidades
 
-- Abas para Sala, Quarto e Aquário.
+- Aba global Estação e abas por dispositivo: Sala, Quarto e Aquário.
 - Navegação por clique e swipe touch horizontal, sem capturar a rolagem lateral de tabelas e heatmaps.
 - Seletor global de data.
 - Persistência da aba ativa em `localStorage`.
-- Gráficos de temperatura, sensação térmica, umidade, qualidade do ar e aquário.
+- Gráficos globais de temperatura/umidade por ambiente na aba Estação.
+- Gráficos de temperatura, sensação térmica, umidade, pressão, qualidade do ar e aquário.
 - Cards com média, mínima, máxima, delta e tendência.
 - Faixa de conforto térmico nos gráficos de temperatura e sensação.
 - Faixa de conforto do Aquário entre 25°C e 27°C.
 - Heatmaps e visualizações climáticas avançadas para Sala e Quarto.
 - Destaque temporal nos heatmaps: dia selecionado no calendário, hora atual no heatmap horário de hoje e dia/hora atual no mapa semanal do mês atual.
-- Ciclo solar do dia com amanhecer, nascer do sol, zênite, pôr do sol e anoitecer.
-- Histórico de nascer e pôr do sol.
+- Ciclo solar do dia com amanhecer, nascer do sol, zênite, pôr do sol e anoitecer na aba Estação.
+- Histórico de nascer e pôr do sol na aba Estação.
+- Estação do ano atual no header e faixa visual na aba Estação.
+- Fase da lua atual no header e fase lunar da data selecionada na aba Estação.
 - Zoom dos gráficos.
 - Tabelas colapsáveis.
 - Tabelas com unidades nos valores, sem espaco antes da unidade, como `26.40°C`, `57.50%`, `8.66ppm`, `1.20NTU` e `930.60hPa`.
 - Leituras do Aquário normalizadas antes da exibição: TDS dividido por 10 e Turbidez dividido por 1000.
-- Indicador astronômico no cabeçalho, alinhado ao tamanho do relógio, com estado de dia/noite e tooltip com horários de nascer e pôr do sol.
+- Indicador astronômico no cabeçalho, alinhado ao tamanho do relógio, com estado de dia/noite e tooltip/popover com horários solares.
+- Chips do header para estação do ano, AQI, ciclo solar e fase da lua, com popovers mutuamente exclusivos.
 - Chat com Firebase AI Logic para perguntas sobre os dados carregados, incluindo ambiente, periodo, hora, faixa horaria, ciclo solar, comparacoes solares, AQI/IAQ/qualidade do ar, gases do MQ135 e consultas equivalentes aos heatmaps, com atalhos para resumo, media, maxima e alertas.
 - Exportação da aba ativa em PDF ou JSON.
 
@@ -195,8 +203,10 @@ PDF:
 - Usa resumo executivo na primeira página, com metadados, cards principais e alertas do dia.
 - Monta páginas A4 manualmente para evitar cortes.
 - Junta temperatura e sensação térmica no mesmo gráfico quando a aba possui as duas métricas.
-- Sala e Quarto incluem ciclo solar; Aquário não inclui ciclo solar no PDF.
-- Sala usa tabela MQ135 com CO, CO2, Acetona, Álcool, Amônia e Tolueno.
+- Estação inclui cards contextuais de Estação do ano e Fase da lua, 6 cards globais, gráficos comparativos e ciclo solar; não possui tabela.
+- Sala não inclui ciclo solar no PDF e usa tabela MQ135 com CO, CO2, Acetona, Álcool, Amônia e Tolueno.
+- Quarto não inclui ciclo solar no PDF e usa tabela ambiental.
+- Aquário não inclui ciclo solar no PDF.
 - Aquário usa cards, gráficos e tabela de Temperatura, pH, TDS e Turbidez.
 - Usa tabela resumida com uma linha por horário e status geral.
 - Mantém tema escuro com cards, bordas azuladas e destaques ciano.
@@ -222,6 +232,7 @@ JSON:
 - Perguntas de comparacao solar no chat calculam localmente duracao do dia, maior/menor duracao de luz no ano da data selecionada por padrao, maior/menor duracao de luz no mes quando um mes for informado, tendencia de nascer/por do sol e comparacao semanal.
 - Perguntas sobre AQI/IAQ/qualidade do ar no chat reutilizam `ClimateAqi.calculate`; CO, CO2, Acetona, Álcool, Amônia e Tolueno são tratados como métricas da Sala/MQ135 quando nenhum ambiente é citado ou quando a aba/ambiente atual não possui essa medição.
 - Perguntas equivalentes aos heatmaps no chat calculam localmente calendário mensal por dia, hora típica do período e mapa semanal por dia/hora antes da redação da IA.
+- Estação do ano e fase da lua são calculadas localmente para contexto visual. A fase lunar é aproximada e não deve ser tratada como efeméride astronômica de alta precisão.
 - Quando ambiente, data, periodo ou operação aparecem de forma informal, a classificação em JSON ajuda a entender erros de digitação e fala natural.
 - Consultas de período usam limite de 30 dias; `últimos dias` usa 7 dias por padrão. O calendário mensal pode consultar o mês completo.
 - O CSS foi dividido em arquivos por responsabilidade dentro de `styles/`.

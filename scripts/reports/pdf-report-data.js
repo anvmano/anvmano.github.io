@@ -73,7 +73,11 @@
         return alerts.slice(0, 4);
     }
 
-    function buildSummaryCards(tabConfig, rows, chartInstances) {
+    function buildSummaryCards(tabConfig, rows, chartInstances, latestData = {}, selectedDate = ClimateData.dataAtual()) {
+        if (tabConfig.tableType === "station") {
+            return buildStationSummaryCards(latestData, selectedDate);
+        }
+
         const cards = tabConfig.metrics.map(metric => {
             const values = rows
                 .filter(row => row.metricKey === metric.key && Number.isFinite(row.numericValue))
@@ -87,6 +91,80 @@
         }
 
         return cards;
+    }
+
+    function buildStationSummaryCards(latestData, selectedDate) {
+        const campos = AppConfig.fields;
+
+        return [
+            buildStationSeasonCard(),
+            buildStationMoonCard(selectedDate),
+            buildStationAqiCard(latestData.livingRoom),
+            buildStationLatestCard("Temp. Sala", latestData.livingRoom, campos.livingRoom.temperature, "°C"),
+            buildStationLatestCard("Temp. Quarto", latestData.room, campos.room.temperature, "°C"),
+            buildStationLatestCard("Temp. Aquário", latestData.aquarium, campos.aquarium.temperature, "°C"),
+            buildStationLatestCard("Umidade Sala", latestData.livingRoom, campos.livingRoom.humidity, "%"),
+            buildStationLatestCard("Umidade Quarto", latestData.room, campos.room.humidity, "%"),
+        ];
+    }
+
+    function buildStationSeasonCard() {
+        const estado = window.ClimateSeason?.getState?.();
+        if (!estado) return emptySummary("Estação do ano");
+
+        const indiceAtual = estado.estacoes.findIndex(estacao => estacao.chave === estado.estacao.chave);
+        const proxima = estado.estacoes[indiceAtual + 1] || estado.estacoes[0];
+
+        return {
+            label: "Estação do ano",
+            current: estado.estacao.nome,
+            min: `Início ${formatarDataCompletaEstacao(estado.estacao.inicio)}`,
+            max: `Próx. ${proxima.nome}`,
+            delta: `${Number(estado.progressoAno).toFixed(1)}%`,
+            status: "Atual",
+        };
+    }
+
+    function buildStationMoonCard(selectedDate) {
+        const estado = window.ClimateMoon?.getState?.(selectedDate);
+        if (!estado) return emptySummary("Fase da lua");
+
+        return {
+            label: "Fase da lua",
+            current: `${estado.iluminacao}% iluminada`,
+            min: estado.fase.nome,
+            max: `Cheia ${formatarDataCompletaEstacao(estado.proximaCheia)}`,
+            delta: `Nova ${formatarDataCompletaEstacao(estado.proximaNova)}`,
+            status: "Atual",
+        };
+    }
+
+    function buildStationAqiCard(data) {
+        const resultado = window.ClimateAqi?.calculate?.(data);
+        if (!resultado) return emptySummary("AQI estimado");
+
+        return {
+            label: "AQI estimado",
+            current: String(resultado.aqi),
+            min: resultado.category.label,
+            max: `Dominante ${resultado.dominant.label}`,
+            delta: formatarTimestampEstacao(resultado.timestamp),
+            status: resultado.category.label,
+        };
+    }
+
+    function buildStationLatestCard(label, data, campo, unidade) {
+        const registro = obterUltimoRegistroEstacao(data, campo);
+        if (!registro) return emptySummary(label);
+
+        return {
+            label,
+            current: formatValue(registro.valor, unidade),
+            min: registro.data.replace(/-/g, "/"),
+            max: registro.horario,
+            delta: "Atual",
+            status: "Estável",
+        };
     }
 
     function buildMetricSummary(metric, values) {
@@ -137,6 +215,72 @@
         };
     }
 
+    function obterUltimoRegistroEstacao(data, campo) {
+        let ultimo = null;
+
+        for (const dataFirebase of Object.keys(data || {})) {
+            const dadosData = data[dataFirebase];
+            if (!dadosData || typeof dadosData !== "object") continue;
+
+            for (const horario of Object.keys(dadosData)) {
+                const valores = obterValoresDoHorarioEstacao(dadosData[horario], campo);
+                if (!valores.length) continue;
+
+                const chave = `${formatarDataOrdenavelEstacao(dataFirebase)} ${formatarHorarioEstacao(horario)}`;
+                const valor = valores[valores.length - 1];
+                if (!ultimo || chave > ultimo.chave) {
+                    ultimo = {
+                        chave,
+                        valor,
+                        data: dataFirebase,
+                        horario: formatarHorarioEstacao(horario),
+                    };
+                }
+            }
+        }
+
+        return ultimo;
+    }
+
+    function obterValoresDoHorarioEstacao(dadosHorario, campo) {
+        const valores = [];
+        if (!dadosHorario || typeof dadosHorario !== "object") return valores;
+
+        for (const item of Object.values(dadosHorario)) {
+            if (!item || typeof item !== "object") continue;
+            const valor = ClimateData.normalizeMeasurementValue(campo, item[campo]);
+            if (valor !== null) valores.push(valor);
+        }
+
+        return valores;
+    }
+
+    function formatarDataOrdenavelEstacao(dataFirebase) {
+        const [dia, mes, ano] = String(dataFirebase || "").split("-");
+        return `${ano}-${mes}-${dia}`;
+    }
+
+    function formatarHorarioEstacao(horarioFirebase) {
+        const [hora, minuto = "0"] = String(horarioFirebase || "").split("-");
+        return `${String(hora).padStart(2, "0")}:${String(minuto).padStart(2, "0")}`;
+    }
+
+    function formatarTimestampEstacao(timestamp) {
+        if (!(timestamp instanceof Date) || Number.isNaN(timestamp.getTime())) return "--";
+        const dia = String(timestamp.getDate()).padStart(2, "0");
+        const mes = String(timestamp.getMonth() + 1).padStart(2, "0");
+        const hora = String(timestamp.getHours()).padStart(2, "0");
+        const minuto = String(timestamp.getMinutes()).padStart(2, "0");
+        return `${dia}/${mes} ${hora}:${minuto}`;
+    }
+
+    function formatarDataCompletaEstacao(data) {
+        if (!(data instanceof Date) || Number.isNaN(data.getTime())) return "--";
+        const dia = String(data.getDate()).padStart(2, "0");
+        const mes = String(data.getMonth() + 1).padStart(2, "0");
+        return `${dia}/${mes}/${data.getFullYear()}`;
+    }
+
     function extractReportRows(data, metrics, fields) {
         const rows = [];
         const firebaseDates = Object.keys(data || {}).sort((a, b) => ClimateData.parseFirebaseDate(a) - ClimateData.parseFirebaseDate(b));
@@ -183,6 +327,11 @@
         buildCompactTableRows,
         buildDailyAlerts,
         buildSummaryCards,
+        buildStationSummaryCards,
+        buildStationSeasonCard,
+        buildStationMoonCard,
+        buildStationAqiCard,
+        buildStationLatestCard,
         buildMetricSummary,
         buildSolarSummary,
         emptySummary,

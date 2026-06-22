@@ -121,7 +121,7 @@
             mensagemPensando.textContent = resultado.answer;
             atualizarMemoriaConversa(pergunta, resultado.result);
         } catch (erro) {
-            console.error("Falha no chat com IA:", erro);
+            window.ClimateDiagnostics?.depurar("Falha no chat com IA.", erro);
             mensagemPensando.textContent = "Não consegui consultar a IA agora. Verifique se o Firebase AI Logic e o App Check estão configurados para este domínio.";
         } finally {
             definirOcupado(false);

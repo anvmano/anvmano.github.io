@@ -167,7 +167,7 @@
             renderHourlyHeatmap(dayRecords, normalizedDate, containers.hourlyHeatmap);
             renderWeeklyHeatmap(monthRecords, normalizedDate, containers.weeklyHeatmap);
         } catch (error) {
-            console.warn("Falha ao renderizar visualizações climáticas avançadas.", error);
+            window.ClimateDiagnostics?.depurar("Falha ao renderizar visualizações climáticas avançadas.", error);
         }
     }
 

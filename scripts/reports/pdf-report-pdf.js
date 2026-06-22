@@ -41,10 +41,12 @@
             cursorY = await addElementBlock(pdf, chartCard, layout, cursorY, { gap: 4 });
         }
 
-        cursorY = addPdfPage(pdf, layout);
-        cursorY = addSectionHeading(pdf, "Tabela resumida", layout, cursorY);
-        const tableContent = tableSection.querySelector(".pdf-table, .pdf-empty");
-        await addElementBlock(pdf, tableContent, layout, cursorY, { allowSplit: true, gap: 0 });
+        if (tableSection) {
+            cursorY = addPdfPage(pdf, layout);
+            cursorY = addSectionHeading(pdf, "Tabela resumida", layout, cursorY);
+            const tableContent = tableSection.querySelector(".pdf-table, .pdf-empty");
+            await addElementBlock(pdf, tableContent, layout, cursorY, { allowSplit: true, gap: 0 });
+        }
     }
 
     function createPdfLayout() {

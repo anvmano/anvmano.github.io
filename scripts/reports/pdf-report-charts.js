@@ -8,6 +8,23 @@
 
     async function collectChartCards(tabConfig, chartInstances, selectedDate) {
         const cards = [];
+        if (tabConfig.tableType === "station") {
+            cards.push(createExistingChartCard(
+                "Temperatura por Ambiente",
+                "°C",
+                AppConfig.ids.charts.globalTemperature,
+                chartInstances,
+                selectedDate
+            ));
+            cards.push(createExistingChartCard(
+                "Umidade por Ambiente",
+                "%",
+                AppConfig.ids.charts.globalHumidity,
+                chartInstances,
+                selectedDate
+            ));
+        }
+
         const temperatureMetric = tabConfig.metrics.find(metric => metric.key === "temperature");
         const feelsLikeMetric = tabConfig.metrics.find(metric => metric.key === "feelsLike");
         const humidityMetric = tabConfig.metrics.find(metric => metric.key === "humidity");
@@ -52,6 +69,17 @@
         }
 
         return cards;
+    }
+
+    function createExistingChartCard(label, unit, chartId, chartInstances, selectedDate) {
+        const chart = chartInstances[chartId];
+        return {
+            label,
+            unit,
+            image: captureChartImage(chartId, chartInstances),
+            emptyMessage: buildNoDataMessage(label, selectedDate),
+            stats: buildExistingChartStats(chart, unit),
+        };
     }
 
     async function createMetricChartCard(label, unit, metrics, chartInstances, selectedDate) {
@@ -407,6 +435,21 @@
         ];
     }
 
+    function buildExistingChartStats(chart, unit) {
+        const datasets = chart?.data?.datasets || [];
+        return datasets
+            .filter(dataset => dataset?.label)
+            .flatMap(dataset => buildChartStats(dataset.label, extractDatasetValues(dataset), unit));
+    }
+
+    function extractDatasetValues(dataset) {
+        return (dataset?.data || []).map(point => {
+            const value = typeof point === "object" && point !== null ? point.y : point;
+            const number = Number(value);
+            return Number.isFinite(number) ? number : null;
+        });
+    }
+
     function captureChartImage(chartId, chartInstances) {
         const chart = chartInstances[chartId];
         const canvas = chart?.canvas;
@@ -437,6 +480,9 @@
         calculateSeriesStats,
         buildChartStats,
         buildSolarChartStats,
+        createExistingChartCard,
+        buildExistingChartStats,
+        extractDatasetValues,
         captureChartImage,
     };
 })();

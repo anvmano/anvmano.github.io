@@ -50,7 +50,7 @@
             document.body.appendChild(renderRoot);
             await generatePdf(report.element, report.fileNamePdf);
         } catch (error) {
-            console.error("Erro ao exportar dados:", error);
+            window.ClimateDiagnostics?.depurar("Erro ao exportar dados.", error);
             alert("Não foi possível exportar os dados.");
         } finally {
             renderRoot.remove();
@@ -135,7 +135,7 @@
         const rows = extractReportRows(selectedData, getAllReportMetrics(tabConfig), fields);
         const tableMetrics = getPdfTableMetrics(tabConfig);
         const tableRows = buildCompactTableRows(rows, tableMetrics);
-        const summaryCards = buildSummaryCards(tabConfig, rows, context.chartInstances || {});
+        const summaryCards = buildSummaryCards(tabConfig, rows, context.chartInstances || {}, context.latestData || {}, selectedDate);
         const alerts = buildDailyAlerts(rows, tabConfig.metrics);
         const chartCards = await collectChartCards(tabConfig, context.chartInstances || {}, selectedDate);
 

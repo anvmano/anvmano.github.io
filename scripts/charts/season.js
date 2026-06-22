@@ -10,12 +10,9 @@
 
     let indicador = null;
     let popover = null;
-    let obterDataSelecionada = null;
-
-    function setup({ indicatorId = "seasonIndicator", popoverId = "seasonPopover", getSelectedDate } = {}) {
+    function setup({ indicatorId = "seasonIndicator", popoverId = "seasonPopover" } = {}) {
         indicador = document.getElementById(indicatorId);
         popover = document.getElementById(popoverId);
-        obterDataSelecionada = getSelectedDate;
 
         if (!indicador || !popover) return;
 
@@ -41,7 +38,7 @@
         update();
     }
 
-    function update(dataFirebase = obterDataSelecionada?.()) {
+    function update(dataFirebase = window.ClimateData?.dataAtual?.()) {
         if (!indicador || !popover) return;
 
         const data = parseDataFirebase(dataFirebase);
@@ -120,23 +117,28 @@
 
     function obterEstadoDaEstacao(data) {
         const ano = data.getFullYear();
-        const inicioAno = new Date(ano, 0, 1);
-        const fimAno = new Date(ano + 1, 0, 1);
-        const progressoAno = Math.min(100, Math.max(0, ((data - inicioAno) / (fimAno - inicioAno)) * 100));
+        const inicioVeraoAtual = new Date(ano, 11, 21);
+        const anoFimCiclo = data >= inicioVeraoAtual ? ano + 1 : ano;
         const estacoes = ESTACOES_BASE.map(estacao => ({
             ...estacao,
-            inicio: new Date(ano, estacao.mes, estacao.dia),
+            inicio: new Date(estacao.chave === "verao" ? anoFimCiclo - 1 : anoFimCiclo, estacao.mes, estacao.dia),
         }));
-        const estacoesOrdenadas = [
-            { ...ESTACOES_BASE[0], inicio: new Date(ano - 1, 11, 21) },
-            ...estacoes,
-        ].sort((a, b) => a.inicio - b.inicio);
-        const estacao = [...estacoesOrdenadas].reverse().find(item => data >= item.inicio) || estacoesOrdenadas[0];
+        const proximoVerao = { ...ESTACOES_BASE[0], inicio: new Date(anoFimCiclo, 11, 21) };
+        const indiceAtual = estacoes.findIndex((estacao, indice) => {
+            const proxima = estacoes[indice + 1] || proximoVerao;
+            return data >= estacao.inicio && data < proxima.inicio;
+        });
+        const indiceSeguro = indiceAtual >= 0 ? indiceAtual : 0;
+        const estacao = estacoes[indiceSeguro];
+        const proxima = estacoes[indiceSeguro + 1] || proximoVerao;
+        const duracao = proxima.inicio - estacao.inicio || 1;
+        const progressoSegmento = Math.min(1, Math.max(0, (data - estacao.inicio) / duracao));
+        const progressoAno = (indiceSeguro * 25) + (progressoSegmento * 25);
 
         return { estacao, estacoes, progressoAno: progressoAno.toFixed(2) };
     }
 
-    function getState(dataFirebase) {
+    function getState(dataFirebase = window.ClimateData?.dataAtual?.()) {
         const data = parseDataFirebase(dataFirebase);
         return data ? obterEstadoDaEstacao(data) : null;
     }

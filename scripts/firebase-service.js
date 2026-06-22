@@ -25,7 +25,7 @@
     }
 
     function handleError(path, error) {
-        console.error(`Erro ao carregar ${path}:`, error);
+        window.ClimateDiagnostics?.erro(`Erro ao carregar ${path}.`, error);
     }
 
     async function initialize() {
@@ -50,7 +50,7 @@
 
     async function initializeAppCheckIfConfigured() {
         const config = window.AppConfig.firebase;
-        if (appCheckInitialized || !config.recaptchaEnterpriseSiteKey || !config.appCheckUrl) return;
+        if (appCheckInitialized || !config.recaptchaEnterpriseSiteKey || !config.appCheckUrl || isLocalHost()) return;
 
         try {
             const { initializeAppCheck, ReCaptchaEnterpriseProvider } = await import(config.appCheckUrl);
@@ -60,8 +60,13 @@
             });
             appCheckInitialized = true;
         } catch (error) {
-            console.warn("App Check não foi inicializado.", error);
+            window.ClimateDiagnostics?.depurar("App Check não foi inicializado.", error);
         }
+    }
+
+    function isLocalHost() {
+        const hostname = window.location.hostname;
+        return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
     }
 
     function listenToPath(path, onData, onError) {

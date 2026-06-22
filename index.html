@@ -12,20 +12,20 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link href="style.css?v=20260614-2" rel="stylesheet" />
+    <link href="style.css?v=20260622-3" rel="stylesheet" />
     <link href="styles/reports/pdf-report.css?v=20260612-1" rel="stylesheet" />
 </head>
 
 <body>
     <header class="app-header">
         <div class="header-inner">
-            <div class="header-brand">
+            <a class="header-brand" href="./" aria-label="Atualizar Estação Climática">
                 <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
                     <circle cx="12" cy="12" r="4"/>
                 </svg>
                 <h1>Estação Climática</h1>
-            </div>
+            </a>
             <div class="header-status">
                 <button class="season-indicator season-indicator--unknown" id="seasonIndicator" type="button" aria-expanded="false" aria-controls="seasonPopover" title="Estação do ano indisponível">
                     <span class="season-indicator__scene" aria-hidden="true">
@@ -64,6 +64,19 @@
                         <strong>--</strong>
                     </div>
                     <dl class="astro-popover__list"></dl>
+                </div>
+                <button class="moon-indicator moon-indicator--unknown" id="moonIndicator" type="button" aria-expanded="false" aria-controls="moonPopover" title="Fase da lua indisponível">
+                    <span class="moon-indicator__scene" aria-hidden="true">
+                        <span class="moon-indicator__orb"></span>
+                    </span>
+                    <strong class="moon-indicator__value">--</strong>
+                </button>
+                <div class="moon-popover" id="moonPopover" hidden>
+                    <div class="moon-popover__header">
+                        <span>Fase da lua</span>
+                        <strong>--</strong>
+                    </div>
+                    <dl class="moon-popover__list"></dl>
                 </div>
                 <div class="header-time" id="headerTime"></div>
             </div>
@@ -132,7 +145,10 @@
         <main class="container">
             <!-- Estação -->
             <div class="tabcontent" id="Tab0" role="tabpanel">
-                <section class="season-timeline" id="seasonTimeline" aria-label="Estação do ano atual"></section>
+                <div class="station-context-row">
+                    <section class="season-timeline" id="seasonTimeline" aria-label="Estação do ano atual"></section>
+                    <section class="moon-summary" id="moonSummary" aria-label="Fase da lua da data consultada"></section>
+                </div>
                 <div class="stats-grid" id="statsEstacao" aria-label="Resumo global da estação"></div>
                 <div class="charts-grid">
                     <div class="chart-card" id="chart-container-global-temp">
@@ -332,17 +348,18 @@
     <script src="scripts/charts/solar.js?v=20260612-1"></script>
     <script src="scripts/charts/chart-utils.js?v=20260612-1"></script>
     <script src="scripts/charts/aqi.js?v=20260612-1"></script>
-    <script src="scripts/charts/season.js?v=20260616-1"></script>
+    <script src="scripts/charts/season.js?v=20260622-1"></script>
+    <script src="scripts/charts/moon.js?v=20260622-2"></script>
     <script src="scripts/firebase-service.js?v=20260528-1"></script>
     <script src="scripts/ui/ui.js?v=20260612-1"></script>
     <script src="scripts/charts/zoom.js?v=20260615-1"></script>
     <script src="scripts/reports/pdf-report-config.js?v=20260612-1"></script>
     <script src="scripts/reports/pdf-report-format.js?v=20260612-1"></script>
-    <script src="scripts/reports/pdf-report-data.js?v=20260612-1"></script>
+    <script src="scripts/reports/pdf-report-data.js?v=20260622-3"></script>
     <script src="scripts/reports/pdf-report-dom.js?v=20260612-1"></script>
-    <script src="scripts/reports/pdf-report-charts.js?v=20260612-1"></script>
-    <script src="scripts/reports/pdf-report-pdf.js?v=20260612-1"></script>
-    <script src="scripts/reports/pdf-report-export.js?v=20260612-1"></script>
+    <script src="scripts/reports/pdf-report-charts.js?v=20260622-1"></script>
+    <script src="scripts/reports/pdf-report-pdf.js?v=20260622-1"></script>
+    <script src="scripts/reports/pdf-report-export.js?v=20260622-3"></script>
     <script src="scripts/reports/pdf-report.js?v=20260612-2"></script>
     <script src="scripts/assistant/ai-service.js?v=20260614-1"></script>
     <script src="scripts/assistant/assistant-config.js?v=20260614-1"></script>
@@ -359,8 +376,8 @@
     <script src="scripts/views/aquario-view.js?v=20260528-1"></script>
     <script src="scripts/views/sala-view.js?v=20260602-1"></script>
     <script src="scripts/views/solar-view.js?v=20260528-1"></script>
-    <script src="scripts/views/estacao-view.js?v=20260616-1"></script>
-    <script src="scripts/main.js?v=20260616-1"></script>
+    <script src="scripts/views/estacao-view.js?v=20260622-2"></script>
+    <script src="scripts/main.js?v=20260622-2"></script>
 </body>
 
 </html>

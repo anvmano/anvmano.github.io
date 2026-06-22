@@ -4,7 +4,7 @@ Voce esta trabalhando no projeto Estacao Climática.
 
 ## Objetivo do sistema
 
-Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no Firebase Realtime Database. O sistema mostra abas para Sala, Quarto e Aquario, alem de graficos solares dentro da aba Quarto, indicador astronomico no header e chat com Firebase AI Logic. A pagina permite selecionar data, navegar por abas com click ou swipe touch, ver graficos, estatisticas, heatmaps, tabelas, ampliar graficos, perguntar sobre dados carregados e exportar dados em PDF ou JSON da aba ativa.
+Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no Firebase Realtime Database. O sistema mostra uma aba global Estacao, alem das abas Sala, Quarto e Aquario. A aba Estacao concentra contexto astronomico, estacao do ano, fase da lua, AQI resumido, comparativos por ambiente e graficos solares. A pagina permite selecionar data, navegar por abas com click ou swipe touch, ver graficos, estatisticas, heatmaps, tabelas, ampliar graficos, perguntar sobre dados carregados e exportar dados em PDF ou JSON da aba ativa.
 
 ## Tecnologias
 
@@ -31,6 +31,9 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - `scripts/charts/chart-utils.js`: graficos comuns e fallback.
 - `scripts/data/analytics.js`: estatisticas e heatmaps.
 - `scripts/charts/solar.js`: eventos e graficos solares.
+- `scripts/charts/aqi.js`: AQI estimado no header e calculo compartilhado com a assistente.
+- `scripts/charts/season.js`: estacao do ano, chip, popover e estado da faixa anual.
+- `scripts/charts/moon.js`: fase da lua, chip, popover e estado lunar por data.
 - `scripts/ui/ui.js`: tabs, swipe touch entre abas, date picker, mensagens e colapsaveis.
 - `scripts/charts/zoom.js`: zoom dos graficos.
 - `scripts/reports/pdf-report.js`: fachada publica da exportacao PDF/JSON.
@@ -38,7 +41,7 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - `styles/reports/pdf-report.css`: layout do relatorio PDF.
 - `tools/validate-project.mjs`: validacao estrutural local, incluindo imports CSS.
 - `package.json`: comando `npm run validate`.
-- `scripts/views/quarto-view.js`, `scripts/views/sala-view.js`, `scripts/views/aquario-view.js`, `scripts/views/solar-view.js`: views.
+- `scripts/views/estacao-view.js`, `scripts/views/quarto-view.js`, `scripts/views/sala-view.js`, `scripts/views/aquario-view.js`, `scripts/views/solar-view.js`: views.
 - `style.css`: manifesto de imports CSS.
 - `styles/`: layout e visual por responsabilidade.
 
@@ -56,6 +59,7 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 5. Dados entram em `latestData`.
 6. Views filtram por `selectedDate` e renderizam componentes.
 7. Alterar data rerenderiza usando o cache em `latestData`.
+8. Indicadores globais do header sao inicializados por `ClimateAqi`, `ClimateSeason`, `ClimateMoon` e `setupAstroIndicator`.
 
 ## Regras criticas
 
@@ -71,7 +75,10 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - A assistente responde consultas equivalentes aos heatmaps: calendario mensal por dia, heatmap por hora do dia e mapa semanal por dia/hora, sempre calculando localmente antes da redacao da IA.
 - Zênite solar usa campos enviados pelo Firebase quando existem; caso contrario usa meio entre nascer e por do sol.
 - Aba ativa e salva em `localStorage.activeTab`.
-- Swipe touch entre abas segue `Sala ⇄ Quarto ⇄ Aquario`; esquerda avanca, direita volta, extremidades nao mudam, e gestos iniciados em tabelas/heatmaps/areas com rolagem horizontal nao trocam aba.
+- Swipe touch entre abas segue `Estacao ⇄ Sala ⇄ Quarto ⇄ Aquario`; esquerda avanca, direita volta, extremidades nao mudam, e gestos iniciados em tabelas/heatmaps/areas com rolagem horizontal nao trocam aba.
+- Header usa chips na ordem Estacao do ano, AQI, ciclo solar, fase da lua e relogio; em mobile, relogio e marca Estacao Climatica podem ser ocultados para preservar espaco.
+- Popovers do header sao mutuamente exclusivos: Estacao do ano, AQI, ciclo solar e Lua.
+- Estacao do ano usa data atual do navegador; fase da lua do header usa data atual e bloco lunar da aba Estacao usa data selecionada.
 - Exportacao PDF/JSON deve reutilizar `latestData`, `selectedDate`, aba ativa e `chartInstances`; nao deve reconsultar Firebase.
 - Chat com IA deve reutilizar `latestData`, `selectedDate` e aba ativa; nao deve enviar historicos completos ao modelo.
 - Chat deve usar Gemini para classificar a pergunta em JSON, JavaScript para validar/calcular resultados e Gemini apenas para redigir a resposta final.
@@ -80,7 +87,7 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Perguntas de AQI/IAQ/qualidade do ar no chat devem reutilizar `ClimateAqi.calculate` sobre dados da Sala/MQ135; CO, CO2, Acetona, Alcool, Amonia e Tolueno sao metricas exclusivas da Sala quando nenhum ambiente e citado.
 - Consultas de periodo no chat devem limitar no maximo 30 dias; `ultimos dias` usa 7 dias por padrao.
 - Exportacao PDF deve montar paginas A4 manualmente com html2canvas + jsPDF, evitando paginacao automatica que pode cortar conteudo.
-- PDF deve manter tema escuro, usar resumo executivo na primeira pagina, juntar temperatura e sensacao quando possivel, usar tabela resumida por horario e respeitar o contrato por aba: Sala/Quarto com ciclo solar, Aquario sem ciclo solar, Sala com tabela MQ135.
+- PDF deve manter tema escuro, usar resumo executivo na primeira pagina, juntar temperatura e sensacao quando possivel, usar tabela resumida por horario e respeitar o contrato por aba: Estacao com cards contextuais de Estacao do ano e Fase da lua, 6 cards globais, graficos comparativos e ciclo solar, sem tabela; Sala com tabela MQ135 e sem solar; Quarto sem solar; Aquario sem solar.
 - Aliases solares devem permanecer centralizados em `SOLAR_FIELD_ALIASES`.
 
 ## Nunca altere sem revisar
@@ -112,8 +119,9 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 4. Se mexer em graficos comuns, leia `scripts/charts/chart-utils.js`.
 5. Se mexer em heatmaps/estatisticas, leia `scripts/data/analytics.js`.
 6. Se mexer em solar, leia `scripts/charts/solar.js` e `scripts/views/solar-view.js`.
-7. Preserve objetos globais e ordem dos scripts.
-8. Use nomenclatura PT-BR para novos metodos, funcoes e variaveis internas; preserve nomes externos obrigatorios, campos Firebase, ids/classes DOM, contratos publicos e opcoes exigidas por bibliotecas.
+7. Se mexer em estacao do ano ou fase da lua, leia `scripts/charts/season.js`, `scripts/charts/moon.js` e `scripts/views/estacao-view.js`.
+8. Preserve objetos globais e ordem dos scripts.
+9. Use nomenclatura PT-BR para novos metodos, funcoes e variaveis internas; preserve nomes externos obrigatorios, campos Firebase, ids/classes DOM, contratos publicos e opcoes exigidas por bibliotecas.
 
 ## Checklist antes de modificar codigo
 

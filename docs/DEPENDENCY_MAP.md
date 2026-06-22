@@ -10,6 +10,8 @@ graph TD
     HTML --> Solar[ClimateSolar]
     HTML --> Charts[ClimateCharts]
     HTML --> Aqi[ClimateAqi]
+    HTML --> Season[ClimateSeason]
+    HTML --> Moon[ClimateMoon]
     HTML --> Firebase[FirebaseService]
     HTML --> AI[ClimateAIService]
     HTML --> Chat[ClimateChat]
@@ -20,6 +22,7 @@ graph TD
     HTML --> Aquario[AquarioView]
     HTML --> Sala[SalaView]
     HTML --> SolarView[SolarView]
+    HTML --> Estacao[EstacaoView]
     HTML --> Main[scripts/main.js]
 
     Main --> Config
@@ -28,6 +31,8 @@ graph TD
     Main --> Solar
     Main --> Charts
     Main --> Aqi
+    Main --> Season
+    Main --> Moon
     Main --> Firebase
     Main --> Chat
     Main --> UI
@@ -37,6 +42,7 @@ graph TD
     Main --> Aquario
     Main --> Sala
     Main --> SolarView
+    Main --> Estacao
 
     Firebase --> FirebaseSDK[Firebase SDK CDN]
     Firebase --> AppCheck[Firebase App Check]
@@ -59,6 +65,14 @@ graph TD
     SolarView --> Solar
     Charts --> ChartJS[Chart.js]
     Aqi --> LivingRoomData[historico/AirQuality]
+    Season --> Data
+    Moon --> Data
+    Estacao --> Data
+    Estacao --> Charts
+    Estacao --> SolarView
+    Estacao --> Aqi
+    Estacao --> Season
+    Estacao --> Moon
     Solar --> ChartJS
     Zoom --> ChartJS
     Pdf --> Html2Canvas[html2canvas]
@@ -127,11 +141,11 @@ Arquivos:
 
 - `tokens.css`: variaveis visuais.
 - `base.css`: reset e base.
-- `header.css`: header, AQI estimado, relogio e indicador astronomico.
+- `header.css`: header, AQI estimado, estacao do ano, fase da lua, relogio e indicador astronomico.
 - `layout.css`: wrapper principal.
 - `tabs-toolbar.css`: abas, toolbar, seletor de data e exportacao.
 - `feedback.css`: loading, transicoes, mensagens.
-- `stats.css`: cards de estatisticas.
+- `stats.css`: cards de estatisticas, faixa anual das estacoes e bloco lunar da aba Estacao.
 - `charts.css`: cards e canvases de graficos.
 - `advanced-views.css`: colapsaveis, visualizacoes climaticas e heatmaps.
 - `zoom.css`: overlay de zoom.
@@ -143,7 +157,7 @@ Impacto da alteracao: Medio a Alto, dependendo do arquivo e seletor.
 
 ## scripts/config.js
 
-Responsabilidade: centralizar Firebase, paths, ids, campos, unidades, cores e faixas de conforto.
+Responsabilidade: centralizar Firebase, paths, ids, campos, unidades, cores, faixas de conforto e diagnostico leve de console.
 
 Dependencias diretas: nenhuma.
 
@@ -166,6 +180,9 @@ Dependencias diretas:
 - `ClimateAnalytics`
 - `ClimateSolar`
 - `ClimateCharts`
+- `ClimateAqi`
+- `ClimateSeason`
+- `ClimateMoon`
 - `FirebaseService`
 - `ClimateAIService`
 - `ClimateChat`
@@ -175,6 +192,7 @@ Dependencias diretas:
 - `AquarioView`
 - `SalaView`
 - `SolarView`
+- `EstacaoView`
 
 Dependencias indiretas: Chart.js, Firebase SDK, DOM.
 
@@ -191,14 +209,19 @@ Quem e chamado:
 - `ClimateZoom.setup`
 - `ClimatePdfReport.setup`
 - `ClimateChat.setup`
+- `ClimateAqi.setup`
+- `ClimateSeason.setup`
+- `ClimateMoon.setup`
 - `ClimateSolar.getSolarEventsForSelectedDate`
 - views.
+
+Observacao: `window.ClimateDiagnostics` tambem nasce neste arquivo; logs de fallback esperado ficam ocultos por padrao e podem ser ativados com `?debug=1` ou `localStorage.climateDebug = "1"`.
 
 Impacto da alteracao: Critico.
 
 ## scripts/firebase-service.js
 
-Responsabilidade: carregar SDK Firebase, conectar database, inicializar App Check quando configurado, criar listeners e controlar loading.
+Responsabilidade: carregar SDK Firebase, conectar database, inicializar App Check quando configurado e fora de host local, criar listeners e controlar loading.
 
 Dependencias diretas:
 
@@ -210,7 +233,7 @@ Dependencias indiretas: Realtime Database e Firebase App Check.
 
 Quem chama: `scripts/main.js`, `scripts/assistant/ai-service.js`.
 
-Quem e chamado: Firebase SDK (`initializeApp`, `getDatabase`, `ref`, `onValue`) e Firebase App Check (`initializeAppCheck`, `ReCaptchaEnterpriseProvider`).
+Quem e chamado: Firebase SDK (`initializeApp`, `getDatabase`, `ref`, `onValue`) e Firebase App Check (`initializeAppCheck`, `ReCaptchaEnterpriseProvider`) quando o host nao e `localhost`, `127.0.0.1` ou `::1`.
 
 Impacto da alteracao: Critico.
 
@@ -335,6 +358,34 @@ Quem e chamado: nenhum modulo externo.
 
 Impacto da alteracao: Medio. Pode afetar o header e a leitura rapida da qualidade do ar estimada da Sala.
 
+## scripts/charts/season.js
+
+Responsabilidade: calcular a estacao do ano atual, renderizar o chip sazonal do header, popover com inicio das estacoes e fornecer estado para a faixa da aba Estacao.
+
+Dependencias diretas:
+
+- DOM `#seasonIndicator` e `#seasonPopover`
+- `ClimateData.dataAtual`
+- `ClimateData.parseFirebaseDate`
+
+Quem chama: `scripts/main.js` e `scripts/views/estacao-view.js`.
+
+Impacto da alteracao: Medio. Pode afetar header, popover sazonal e faixa visual da aba Estacao.
+
+## scripts/charts/moon.js
+
+Responsabilidade: calcular localmente a fase da lua, renderizar o chip lunar do header, popover e fornecer estado lunar por data para a aba Estacao e exportacao.
+
+Dependencias diretas:
+
+- DOM `#moonIndicator` e `#moonPopover`
+- `ClimateData.dataAtual`
+- `ClimateData.parseFirebaseDate`
+
+Quem chama: `scripts/main.js`, `scripts/views/estacao-view.js` e `scripts/reports/pdf-report-data.js`.
+
+Impacto da alteracao: Medio. Pode afetar header, popover lunar, bloco lunar da aba Estacao e resumo do PDF/JSON da Estacao.
+
 ## scripts/data/analytics.js
 
 Responsabilidade: estatisticas e heatmaps.
@@ -417,7 +468,7 @@ Observacoes:
 
 - PDF usa resumo executivo, alertas, graficos otimizados e tabela resumida por horario
 - PDF junta Temperatura e Sensacao termica no mesmo grafico quando possivel
-- PDF tem contrato por aba: Sala e Quarto incluem ciclo solar; Aquario nao inclui ciclo solar; Sala usa tabela MQ135.
+- PDF tem contrato por aba: Estacao inclui cards contextuais de Estacao do ano e Fase da lua, 6 cards globais, graficos comparativos e ciclo solar, sem tabela; Sala usa tabela MQ135 e nao inclui solar; Quarto nao inclui solar; Aquario nao inclui solar.
 - JSON preserva tabela detalhada com `Horario`, `Indicador`, `Valor` e `Status`
 - layout do PDF prioriza blocos compactos em coluna unica para reduzir cortes em A4 retrato
 - exportacao JSON inclui metadados, resumo, tabela e dados brutos filtrados
@@ -456,6 +507,26 @@ Dependencias diretas:
 Quem chama: `scripts/main.js`.
 
 Impacto da alteracao: Medio.
+
+## scripts/views/estacao-view.js
+
+Responsabilidade: renderizar a aba global Estacao.
+
+Dependencias diretas:
+
+- `AppConfig.ids`
+- `AppConfig.fields`
+- `ClimateData`
+- `ClimateCharts`
+- `ClimateAqi`
+- `ClimateSeason`
+- `ClimateMoon`
+- `SolarView`
+- `ClimateUI`
+
+Quem chama: `scripts/main.js`.
+
+Impacto da alteracao: Alto para a visao global, graficos comparativos, contexto sazonal/lunar e solares.
 
 ## scripts/views/sala-view.js
 
@@ -518,6 +589,10 @@ graph TD
     DOMContentLoaded --> SetupZoom
     DOMContentLoaded --> SetupPdfReport
     DOMContentLoaded --> SetupChat
+    DOMContentLoaded --> SetupAqi
+    DOMContentLoaded --> SetupSeason
+    DOMContentLoaded --> SetupMoon
+    DOMContentLoaded --> SetupAstro
     DOMContentLoaded --> SetupFirebase
     SetupFirebase --> FirebaseInitialize
     SetupFirebase --> ListenRoom
@@ -525,13 +600,18 @@ graph TD
     SetupFirebase --> ListenAquarium
     SetupFirebase --> ListenLivingRoom
     ListenRoom --> RenderRoom
+    ListenRoom --> RenderStation
     ListenSolar --> RenderSolar
+    ListenSolar --> RenderStation
     ListenAquarium --> RenderAquarium
+    ListenAquarium --> RenderStation
     ListenLivingRoom --> RenderLivingRoom
+    ListenLivingRoom --> RenderStation
     TouchSwipe --> SetupTabSwipe
     SetupTabSwipe --> SetupTabs
     DateChange --> RerenderDashboard
     RerenderDashboard --> RenderRoom
+    RerenderDashboard --> RenderStation
     RerenderDashboard --> RenderSolar
     RerenderDashboard --> RenderAquarium
     RerenderDashboard --> RenderLivingRoom

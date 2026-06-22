@@ -2,6 +2,38 @@
 
 (function () {
     const firebaseSdkVersion = "12.13.0";
+    const debugParams = new URLSearchParams(window.location.search);
+
+    function deveRegistrarDiagnostico() {
+        try {
+            return debugParams.has("debug") || window.localStorage.getItem("climateDebug") === "1";
+        } catch (erro) {
+            return debugParams.has("debug");
+        }
+    }
+
+    function registrarDiagnostico(nivel, mensagem, detalhe) {
+        if (!deveRegistrarDiagnostico()) return;
+        const metodo = console[nivel] || console.log;
+        if (detalhe !== undefined) {
+            metodo.call(console, `[Estação Climática] ${mensagem}`, detalhe);
+            return;
+        }
+        metodo.call(console, `[Estação Climática] ${mensagem}`);
+    }
+
+    window.ClimateDiagnostics = {
+        depurar: (mensagem, detalhe) => registrarDiagnostico("debug", mensagem, detalhe),
+        informar: (mensagem, detalhe) => registrarDiagnostico("info", mensagem, detalhe),
+        avisar: (mensagem, detalhe) => registrarDiagnostico("warn", mensagem, detalhe),
+        erro: (mensagem, detalhe) => {
+            if (detalhe !== undefined) {
+                console.error(`[Estação Climática] ${mensagem}`, detalhe);
+                return;
+            }
+            console.error(`[Estação Climática] ${mensagem}`);
+        },
+    };
 
     window.AppConfig = {
         firebase: {

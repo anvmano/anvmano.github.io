@@ -8,6 +8,7 @@
     function render({ latestData, selectedDate, chartInstances, defaults, colors: cores, ui }) {
         renderizarResumoGlobal(latestData, selectedDate);
         renderizarLinhaEstacoes(selectedDate);
+        renderizarResumoLua(selectedDate);
         renderizarGraficoComparativo({
             canvasCtx: canvasTemperatura,
             containerId: ids.chartContainers.globalTemperature,
@@ -151,14 +152,14 @@
         const container = document.getElementById("seasonTimeline");
         if (!container) return;
 
-        const estado = window.ClimateSeason?.getState?.(selectedDate);
+        const estado = window.ClimateSeason?.getState?.();
         if (!estado) {
             container.innerHTML = "";
             return;
         }
 
         container.innerHTML = `
-            <div class="season-timeline__track" aria-hidden="true">
+            <div class="season-timeline__track" aria-label="Progresso anual das estações">
                 ${estado.estacoes.map(estacao => `
                     <span class="season-timeline__segment season-timeline__segment--${estacao.chave}">
                         <i>${estacao.nome}</i>
@@ -166,6 +167,32 @@
                 `).join("")}
                 <span class="season-timeline__marker" style="left: ${estado.progressoAno}%"></span>
             </div>
+        `;
+    }
+
+    function renderizarResumoLua(selectedDate) {
+        const container = document.getElementById("moonSummary");
+        if (!container) return;
+
+        const estado = window.ClimateMoon?.getState?.(selectedDate);
+        if (!estado) {
+            container.innerHTML = "";
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="moon-summary__scene moon-summary__scene--${estado.fase.chave}" style="--moon-shadow: ${estado.sombra}%">
+                <span class="moon-summary__orb" aria-hidden="true"></span>
+            </div>
+            <div class="moon-summary__content">
+                <span>${estado.fase.nome}</span>
+                <strong>${estado.iluminacao}% iluminada</strong>
+            </div>
+            <dl class="moon-summary__details">
+                <div><dt>Idade</dt><dd>${estado.idade.toFixed(1)} dias</dd></div>
+                <div><dt>Próx. cheia</dt><dd>${formatarDataCompleta(estado.proximaCheia)}</dd></div>
+                <div><dt>Próx. nova</dt><dd>${formatarDataCompleta(estado.proximaNova)}</dd></div>
+            </dl>
         `;
     }
 
@@ -333,6 +360,10 @@
 
     function formatarValor(valor, unidade) {
         return Number.isFinite(valor) ? `${valor.toFixed(2)}${unidade}` : "--";
+    }
+
+    function formatarDataCompleta(data) {
+        return `${String(data.getDate()).padStart(2, "0")}/${String(data.getMonth() + 1).padStart(2, "0")}/${data.getFullYear()}`;
     }
 
     function media(valores) {

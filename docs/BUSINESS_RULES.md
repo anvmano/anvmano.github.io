@@ -38,6 +38,52 @@ Se alterada: filtro inicial e botao Hoje podem buscar path inexistente.
 
 Criticidade: Alta.
 
+## Regra: diagnostico de console
+
+Arquivo: `scripts/config.js`
+
+Objeto publico: `window.ClimateDiagnostics`
+
+Objetivo: evitar poluicao do DevTools com fallbacks esperados e manter logs detalhados apenas quando o desenvolvedor pedir.
+
+Entradas:
+
+- parametro `?debug=1`
+- `localStorage.climateDebug = "1"`
+- chamadas `depurar`, `informar`, `avisar` e `erro`
+
+Saidas:
+
+- `depurar`, `informar` e `avisar` so escrevem no console quando debug esta ativo
+- `erro` escreve no console sempre, para falhas realmente criticas
+
+Impacto: mensagens de fallback de App Check, chat, PDF e visualizacoes avancadas.
+
+Se alterada: DevTools pode voltar a mostrar varios avisos esperados como se fossem falhas reais.
+
+Criticidade: Baixa.
+
+## Regra: App Check em ambiente local
+
+Arquivo: `scripts/firebase-service.js`
+
+Metodo: `initializeAppCheckIfConfigured`
+
+Objetivo: inicializar Firebase App Check somente quando o host nao for local.
+
+Entradas: `window.location.hostname`.
+
+Saidas:
+
+- em producao/GitHub Pages, App Check tenta inicializar normalmente
+- em `localhost`, `127.0.0.1` e `::1`, App Check e ignorado para evitar warning falso do Firebase Database sobre credenciais App Check invalidas
+
+Impacto: desenvolvimento local e limpeza do console.
+
+Se alterada: ambiente local pode voltar a emitir warnings do SDK Firebase mesmo com a pagina funcionando.
+
+Criticidade: Media.
+
 ## Regra: conversao input HTML para Firebase
 
 Arquivo: `scripts/data/data-utils.js`
@@ -447,6 +493,73 @@ Se alterada: o header pode mostrar AQI indisponivel, classificacao incorreta ou 
 
 Criticidade: Media.
 
+## Regra: estacao do ano no header e na aba Estacao
+
+Arquivos: `index.html`, `styles/header.css`, `styles/stats.css`, `styles/responsive.css`, `scripts/charts/season.js`, `scripts/views/estacao-view.js`, `scripts/main.js`
+
+Objetivo: exibir a estacao do ano atual como contexto global da pagina.
+
+Entradas:
+
+- data atual do navegador em `ClimateData.dataAtual()`
+- datas fixas de inicio: Verao 21/12, Outono 20/03, Inverno 21/06 e Primavera 22/09
+
+Saidas:
+
+- chip no header com a estacao atual e pequena animacao sazonal
+- popover do header com inicio das estacoes do ciclo atual
+- faixa horizontal na aba Estacao com Verao, Outono, Inverno e Primavera
+- marcador vertical de progresso na faixa
+
+Regras:
+
+- o chip e a faixa usam a data atual do navegador, nao a data selecionada no calendario
+- o marcador da faixa progride por segmento visual: Verao 0-25%, Outono 25-50%, Inverno 50-75%, Primavera 75-100%
+- o header usa a ordem: Estacao do ano, AQI, ciclo solar, fase da lua e relogio
+- em mobile, o relogio e a marca `Estacao Climatica` podem ser ocultados para preservar os chips principais
+- o popover de estacao do ano e mutuamente exclusivo com AQI, solar e lua
+
+Impacto: leitura rapida de contexto sazonal e consistencia visual da aba Estacao.
+
+Dependencias: `ClimateData.dataAtual`, ids `seasonIndicator`, `seasonPopover` e `seasonTimeline`.
+
+Se alterada: header, popovers ou progresso sazonal podem ficar inconsistentes.
+
+Criticidade: Media.
+
+## Regra: fase da lua no header e na aba Estacao
+
+Arquivos: `index.html`, `styles/header.css`, `styles/stats.css`, `styles/responsive.css`, `scripts/charts/moon.js`, `scripts/views/estacao-view.js`, `scripts/main.js`
+
+Objetivo: exibir a fase da lua como contexto astronomico complementar ao ciclo solar.
+
+Entradas:
+
+- data atual do navegador em `ClimateData.dataAtual()` para o chip do header
+- data selecionada no calendario para o bloco lunar da aba Estacao
+- calculo local baseado em ciclo lunar medio, sem API externa
+
+Saidas:
+
+- chip no header com fase lunar atual e pequena animacao visual
+- popover do header com fase, iluminacao, idade lunar, proxima cheia e proxima nova
+- bloco na aba Estacao com fase lunar da data selecionada
+
+Regras:
+
+- o chip do header representa a fase da lua atual
+- o bloco lunar da aba Estacao representa a fase da lua da data selecionada
+- o popover da lua e mutuamente exclusivo com Estacao do ano, AQI e solar
+- o calculo lunar e aproximado e nao deve ser tratado como efemeride astronomica de alta precisao
+
+Impacto: contexto visual astronomico no header e na visao global.
+
+Dependencias: `ClimateData.parseFirebaseDate`, ids `moonIndicator`, `moonPopover` e `moonSummary`.
+
+Se alterada: header, popovers ou resumo astronomico da aba Estacao podem ficar inconsistentes.
+
+Criticidade: Media.
+
 ## Regra: zenite solar
 
 Arquivo: `scripts/charts/solar.js`
@@ -547,22 +660,24 @@ Arquivo: `scripts/ui/ui.js`
 
 Metodo: `setupTabSwipe`
 
-Objetivo: permitir troca de abas por gesto horizontal touch no fluxo Sala ⇄ Quarto ⇄ Aquario.
+Objetivo: permitir troca de abas por gesto horizontal touch no fluxo Estacao ⇄ Sala ⇄ Quarto ⇄ Aquario.
 
 Entradas:
 
-- `tabOrder` configurado em `scripts/main.js` como `["Tab1", "Tab2", "Tab3"]`
+- `tabOrder` configurado em `scripts/main.js` como `["Tab0", "Tab1", "Tab2", "Tab3"]`
 - evento `touchstart`
 - evento `touchend`
 
 Saidas:
 
+- swipe para esquerda em Estacao abre Sala
 - swipe para esquerda em Sala abre Quarto
 - swipe para esquerda em Quarto abre Aquario
 - swipe para esquerda em Aquario nao faz nada
 - swipe para direita em Aquario abre Quarto
 - swipe para direita em Quarto abre Sala
-- swipe para direita em Sala nao faz nada
+- swipe para direita em Sala abre Estacao
+- swipe para direita em Estacao nao faz nada
 - gestos iniciados em tabelas, heatmaps ou areas com rolagem horizontal nao trocam de aba
 
 Impacto: navegacao mobile por touch.
@@ -626,14 +741,15 @@ Saidas:
 - cabecalho com aba, data consultada e data/hora de geracao
 - resumo executivo na primeira pagina com cards principais e alertas do dia
 - graficos otimizados para PDF, juntando Temperatura e Sensacao termica quando possivel
-- ciclo solar compacto apenas para Sala e Quarto
+- ciclo solar compacto quando a aba ativa inclui ciclo solar
 - tabela resumida com uma linha por horario e status geral
 - rodape com Estacao Climatica, pagina atual/total e data/hora
 
 Contrato por aba:
 
-- Sala: cards de temperatura, sensacao termica, umidade, pressao e ciclo solar; graficos de Temperatura x Sensacao, Umidade, Pressao e Ciclo solar; tabela MQ135 com CO, CO2, Acetona, Alcool, Amonia e Tolueno.
-- Quarto: cards de temperatura, sensacao termica, umidade e ciclo solar; graficos de Temperatura x Sensacao, Umidade e Ciclo solar; tabela com Temperatura, Sensacao termica e Umidade.
+- Estacao: resumo com cards contextuais de Estacao do ano e Fase da lua, alem dos 6 cards globais exibidos na aba (AQI estimado, Temp. Sala, Temp. Quarto, Temp. Aquario, Umidade Sala e Umidade Quarto), graficos de Temperatura por Ambiente, Umidade por Ambiente e Ciclo solar; sem tabela.
+- Sala: cards de temperatura, sensacao termica, umidade e pressao; graficos de Temperatura x Sensacao, Umidade e Pressao; tabela MQ135 com CO, CO2, Acetona, Alcool, Amonia e Tolueno.
+- Quarto: cards de temperatura, sensacao termica e umidade; graficos de Temperatura x Sensacao e Umidade; tabela com Temperatura, Sensacao termica e Umidade.
 - Aquario: cards, graficos e tabela de Temperatura, PH, TDS e Turbidez; nao deve incluir card ou grafico de ciclo solar.
 
 Regras da tabela:
@@ -654,7 +770,7 @@ Regras de layout:
 - jsPDF deve montar as paginas manualmente, adicionando cabecalho, resumo e graficos como blocos inteiros
 - somente a tabela longa pode ser fatiada entre paginas
 
-Impacto: relatorio/dados exportados para Sala, Quarto e Aquario.
+Impacto: relatorio/dados exportados para Estacao, Sala, Quarto e Aquario.
 
 Dependencias: `html2canvas`, `jsPDF`, `ClimateData`, `AppConfig`, `window.ClimatePdfReportModules`, canvases existentes, dados ja carregados pelo Firebase.
 

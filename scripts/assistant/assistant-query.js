@@ -33,7 +33,7 @@
                 result,
             };
         } catch (error) {
-            console.warn("Falha ao redigir resposta com IA. Usando resposta local.", error);
+            window.ClimateDiagnostics?.depurar("Falha ao redigir resposta com IA. Usando resposta local.", error);
             return {
                 answer: formatResultFallback(result),
                 result,
