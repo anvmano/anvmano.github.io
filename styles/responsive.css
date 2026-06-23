@@ -172,7 +172,7 @@
     .toolbar-group {
         width: 100%;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(104px, 0.45fr);
+        grid-template-columns: minmax(0, 1fr) clamp(136px, 38vw, 148px);
         gap: 0.5rem;
         padding: 0.5rem;
     }
@@ -190,6 +190,7 @@
     .toolbar-button {
         width: 100%;
         min-width: 0;
+        padding-inline: 0.65rem;
         white-space: nowrap;
     }
 
