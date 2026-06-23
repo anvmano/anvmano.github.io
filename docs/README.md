@@ -2,6 +2,8 @@
 
 Dashboard web estático para acompanhamento de dados climáticos da Estação, Sala, Quarto, Aquário e eventos solares. A aplicação lê dados do Firebase Realtime Database diretamente no navegador, filtra pela data selecionada e renderiza gráficos, estatísticas, tabelas, visualizações avançadas, contexto astronômico, chat com IA e exportação de dados.
 
+O site também possui modo público sem login. Visitantes podem consultar clima por CEP ou localização do navegador usando APIs públicas externas. O dashboard interno completo fica disponível somente após login Google com um dos e-mails autorizados.
+
 ## Requisitos
 
 - Navegador moderno.
@@ -14,8 +16,11 @@ Bibliotecas carregadas via CDN:
 - html2canvas `1.4.1` sob demanda ao exportar PDF
 - jsPDF `2.5.2` sob demanda ao exportar PDF
 - Firebase SDK modular `12.13.0`
+- Firebase Auth para login Google opcional
 - Firebase App Check
 - Firebase AI Logic
+- BrasilAPI/ViaCEP para CEP
+- Open-Meteo Forecast, Air Quality e Geocoding para clima público
 
 ## Estrutura
 
@@ -30,6 +35,11 @@ Bibliotecas carregadas via CDN:
 │   ├── main.js                 Orquestração geral da aplicação
 │   ├── firebase-service.js     Inicialização Firebase e listeners
 │   ├── chat.js                 Fachada pública leve do chat com IA
+│   ├── auth/
+│   │   └── auth-service.js     Login Google e usuários internos
+│   ├── external/
+│   │   ├── browser-location-service.js Localização do navegador
+│   │   └── external-weather-service.js CEP, geocoding, clima e AQI externos
 │   ├── assistant/
 │   │   ├── ai-service.js       Firebase AI Logic
 │   │   ├── assistant-config.js Constantes, ambientes e aliases
@@ -67,7 +77,8 @@ Bibliotecas carregadas via CDN:
 │       ├── quarto-view.js      Renderização da aba Quarto
 │       ├── sala-view.js        Renderização da aba Sala
 │       ├── aquario-view.js     Renderização da aba Aquário
-│       └── solar-view.js       Renderização dos gráficos solares
+│       ├── solar-view.js       Renderização dos gráficos solares
+│       └── public-weather-view.js Modo público por CEP/localização
 ├── styles/
 │   ├── tokens.css              Variáveis visuais
 │   ├── base.css                Base e reset
@@ -108,6 +119,8 @@ Pontos configuráveis:
 - `firebase`: configuração do Firebase.
 - `firebase.appCheckUrl`, `firebase.aiUrl`, `firebase.recaptchaEnterpriseSiteKey` e `firebase.aiModel`: App Check e Firebase AI Logic.
 - `firebase.html2canvasUrl` e `firebase.jsPdfUrl`: bibliotecas carregadas sob demanda para exportar PDF.
+- `auth.usuariosInternosAutorizados`: e-mails que podem acessar o dashboard completo.
+- `externalApis`: BrasilAPI/ViaCEP e Open-Meteo usados no modo público.
 - `firebasePaths`: caminhos do Realtime Database.
 - `ids`: ids DOM usados por gráficos, tabelas, estados e controles.
 - `fields`: nomes dos campos esperados nos sensores.
@@ -172,6 +185,13 @@ A validação verifica:
 
 ## Funcionalidades
 
+- Modo público sem login, com consulta por CEP ou localização do navegador.
+- Login Google opcional.
+- Acesso interno completo somente para `anvmano@gmail.com` e `clarissamikado@gmail.com`.
+- Usuários não autorizados permanecem no modo público.
+- Tela pública com cards de temperatura, sensação térmica, umidade, pressão e AQI externo.
+- Tela pública com gráficos de temperatura, sensação térmica, umidade, pressão e ciclo solar.
+- Tela pública com estação do ano e fase da lua.
 - Aba global Estação e abas por dispositivo: Sala, Quarto e Aquário.
 - Navegação por clique e swipe touch horizontal, sem capturar a rolagem lateral de tabelas e heatmaps.
 - Seletor global de data.
@@ -194,6 +214,7 @@ A validação verifica:
 - Indicador astronômico no cabeçalho, alinhado ao tamanho do relógio, com estado de dia/noite e tooltip/popover com horários solares.
 - Chips do header para estação do ano, AQI, ciclo solar e fase da lua, com popovers mutuamente exclusivos; no mobile, eles ocupam a largura útil do header.
 - Chat com Firebase AI Logic para perguntas sobre os dados carregados, incluindo ambiente, periodo, hora, faixa horaria, ciclo solar, comparacoes solares, AQI/IAQ/qualidade do ar, gases do MQ135 e consultas equivalentes aos heatmaps, com atalhos para resumo, media, maxima e alertas.
+- Chat com IA exclusivo para usuários internos autorizados.
 - Exportação da aba ativa em PDF ou JSON.
 
 ## Exportação
@@ -229,6 +250,9 @@ JSON:
 - A ordem dos scripts em `index.html` é parte do contrato da aplicação.
 - Recursos pesados usam `scripts/runtime-loader.js`: Chart.js entra no primeiro gráfico com dados, a assistente entra no primeiro clique do chat e os módulos de relatório entram somente ao exportar.
 - O Firebase é lido no cliente com listeners `onValue`.
+- Firebase Auth é usado como portão de experiência: modo público sem login e modo interno para e-mails autorizados.
+- O modo público não inicia listeners internos do Realtime Database e não inicializa a assistente IA.
+- A localização do navegador no modo público é usada apenas em memória para a consulta atual.
 - O App Check usa reCAPTCHA Enterprise, fica sob demanda para evitar custo de carregamento inicial e deve ser validado antes de ativar enforcement.
 - O chat envia ao Gemini apenas resumo compacto de dados carregados, nunca o histórico inteiro.
 - Os módulos `scripts/assistant/*` e Firebase AI Logic não entram no carregamento inicial; `scripts/chat.js` inicializa a assistente real no primeiro clique.
@@ -255,7 +279,7 @@ JSON:
 - Não altere campos solares sem revisar `scripts/charts/solar.js`.
 - Não mude a ordem dos scripts sem revisar dependências globais.
 - Ao criar ou refatorar código interno, use nomes em PT-BR para métodos, funções e variáveis. Preserve nomes externos obrigatórios: campos Firebase, ids/classes DOM, contratos `window.*`, payloads já consumidos e opções exigidas por bibliotecas.
-- O projeto não tem backend local, autenticação ou build tooling completo.
+- O projeto não tem backend local próprio; autenticação é Firebase Auth e clima público vem de APIs externas.
 
 ## Documentação Técnica
 

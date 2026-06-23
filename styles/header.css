@@ -556,6 +556,12 @@ h1 {
     --track-color: rgba(129, 140, 248, 0.25);
 }
 
+.astro-indicator--unknown {
+    --orb-color: #94a3b8;
+    --orb-glow: rgba(148, 163, 184, 0.36);
+    --track-color: rgba(148, 163, 184, 0.22);
+}
+
 .astro-indicator--night .astro-indicator__orb::after {
     content: "";
     position: absolute;

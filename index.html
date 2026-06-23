@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link href="style.css?v=20260623-6" rel="stylesheet" />
+    <link href="style.css?v=20260623-8" rel="stylesheet" />
     <link rel="preload" href="styles/chat.css?v=20260623-4" as="style" onload="this.onload=null;this.rel='stylesheet'" />
     <noscript><link href="styles/chat.css?v=20260623-4" rel="stylesheet" /></noscript>
 </head>
@@ -85,7 +85,41 @@
         </div>
     </header>
 
-    <div class="app-body">
+    <section class="public-app" id="publicApp" hidden>
+        <div class="public-shell">
+            <div class="public-hero">
+                <div class="public-hero__content">
+                    <span class="public-eyebrow">Modo público</span>
+                    <h2>Clima por localização</h2>
+                    <p>Consulte uma cidade por CEP ou use a localização do navegador para ver clima atual, qualidade do ar externa, ciclo solar, estação do ano e fase da lua.</p>
+                    <div class="public-feature-list" aria-label="Dados exibidos no modo público">
+                        <span>Temperatura</span>
+                        <span>Sensação</span>
+                        <span>Umidade</span>
+                        <span>AQI externo</span>
+                    </div>
+                </div>
+                <div class="public-hero__panel">
+                    <div class="public-user-status" id="publicUserStatus">
+                        <span>Modo público</span>
+                        <button type="button" id="publicLoginButton">Entrar com Google</button>
+                    </div>
+                    <div class="public-controls" aria-label="Consulta pública de clima">
+                        <button class="toolbar-button public-location-button" type="button" id="publicLocationButton">Usar localização</button>
+                        <form class="public-cep-form" id="publicCepForm">
+                            <label for="publicCepInput">CEP</label>
+                            <input id="publicCepInput" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000" />
+                            <button class="toolbar-button" type="submit">Buscar</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="public-results" id="publicResults"></div>
+        </div>
+    </section>
+
+    <div class="app-body" id="privateApp" hidden>
         <div class="tab-toolbar">
             <nav class="tab-nav" role="tablist" aria-label="Ambientes monitorados">
                 <button class="tablink active" type="button" role="tab" aria-selected="true" aria-controls="Tab0" data-tab-target="Tab0">
@@ -307,7 +341,7 @@
         </main>
     </div>
 
-    <aside class="ai-chat" id="aiChat" aria-label="Chat da estação climática">
+    <aside class="ai-chat" id="aiChat" aria-label="Chat da estação climática" hidden>
         <button class="ai-chat__toggle" id="aiChatToggle" type="button" aria-expanded="false" aria-controls="aiChatPanel">
             <span class="ai-chat__toggle-icon" aria-hidden="true"></span>
             <span>Assistente</span>
@@ -354,10 +388,13 @@
     <script defer src="scripts/data/analytics.js?v=20260612-1"></script>
     <script defer src="scripts/charts/solar.js?v=20260612-1"></script>
     <script defer src="scripts/charts/chart-utils.js?v=20260612-1"></script>
-    <script defer src="scripts/charts/aqi.js?v=20260622-1"></script>
+    <script defer src="scripts/charts/aqi.js?v=20260623-2"></script>
     <script defer src="scripts/charts/season.js?v=20260622-2"></script>
     <script defer src="scripts/charts/moon.js?v=20260622-6"></script>
     <script defer src="scripts/firebase-service.js?v=20260622-2"></script>
+    <script defer src="scripts/auth/auth-service.js?v=20260623-1"></script>
+    <script defer src="scripts/external/browser-location-service.js?v=20260623-2"></script>
+    <script defer src="scripts/external/external-weather-service.js?v=20260623-2"></script>
     <script defer src="scripts/ui/ui.js?v=20260612-1"></script>
     <script defer src="scripts/charts/zoom.js?v=20260615-1"></script>
     <script defer src="scripts/reports/pdf-report.js?v=20260623-1"></script>
@@ -367,7 +404,8 @@
     <script defer src="scripts/views/sala-view.js?v=20260602-1"></script>
     <script defer src="scripts/views/solar-view.js?v=20260528-1"></script>
     <script defer src="scripts/views/estacao-view.js?v=20260623-1"></script>
-    <script defer src="scripts/main.js?v=20260623-1"></script>
+    <script defer src="scripts/views/public-weather-view.js?v=20260623-5"></script>
+    <script defer src="scripts/main.js?v=20260623-2"></script>
 </body>
 
 </html>

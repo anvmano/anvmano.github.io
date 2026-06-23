@@ -14,6 +14,9 @@ graph TD
     HTML --> Season[ClimateSeason]
     HTML --> Moon[ClimateMoon]
     HTML --> Firebase[FirebaseService]
+    HTML --> Auth[ClimateAuthService]
+    HTML --> BrowserLocation[BrowserLocationService]
+    HTML --> ExternalWeather[ExternalWeatherService]
     HTML --> Chat[ClimateChat]
     HTML --> UI[ClimateUI]
     HTML --> Zoom[ClimateZoom]
@@ -23,6 +26,7 @@ graph TD
     HTML --> Sala[SalaView]
     HTML --> SolarView[SolarView]
     HTML --> Estacao[EstacaoView]
+    HTML --> PublicView[PublicWeatherView]
     HTML --> Main[scripts/main.js]
 
     Main --> Config
@@ -35,6 +39,9 @@ graph TD
     Main --> Season
     Main --> Moon
     Main --> Firebase
+    Main --> Auth
+    Main --> BrowserLocation
+    Main --> ExternalWeather
     Main --> Chat
     Main --> UI
     Main --> Zoom
@@ -44,8 +51,20 @@ graph TD
     Main --> Sala
     Main --> SolarView
     Main --> Estacao
+    Main --> PublicView
 
     Firebase --> FirebaseSDK[Firebase SDK CDN]
+    Auth --> Firebase
+    Auth --> FirebaseAuth[Firebase Auth]
+    PublicView --> BrowserLocation
+    PublicView --> ExternalWeather
+    PublicView --> Assets
+    PublicView --> Charts
+    PublicView --> Solar
+    PublicView --> Season
+    PublicView --> Moon
+    ExternalWeather --> BrasilAPI[BrasilAPI/ViaCEP]
+    ExternalWeather --> OpenMeteo[Open-Meteo Forecast/Air Quality/Geocoding]
     Firebase --> AppCheck[Firebase App Check]
     AI --> Firebase
     AI --> FirebaseAI[Firebase AI Logic]
@@ -193,6 +212,8 @@ Quem e chamado: nenhum.
 
 Impacto da alteracao: Critico. Qualquer erro em ids/paths/campos quebra leitura ou renderizacao; erro em unidades ou faixas de conforto afeta tabelas, graficos, status e PDF.
 
+Observacao: tambem centraliza `auth.usuariosInternosAutorizados` e URLs de APIs externas em `externalApis`.
+
 ## scripts/main.js
 
 Responsabilidade: orquestrar modulos, inicializar UI/Firebase, armazenar cache `latestData`, renderizar views.
@@ -208,6 +229,9 @@ Dependencias diretas:
 - `ClimateSeason`
 - `ClimateMoon`
 - `FirebaseService`
+- `ClimateAuthService`
+- `BrowserLocationService`
+- `ExternalWeatherService`
 - `ClimateChat`
 - `ClimateUI`
 - `ClimateZoom`
@@ -216,6 +240,7 @@ Dependencias diretas:
 - `SalaView`
 - `SolarView`
 - `EstacaoView`
+- `PublicWeatherView`
 
 Dependencias indiretas: Chart.js, Firebase SDK, DOM.
 
@@ -223,8 +248,9 @@ Quem chama: navegador via script e `DOMContentLoaded`.
 
 Quem e chamado:
 
+- `ClimateAuthService.observarEstado`
 - `FirebaseService.initialize`
-- `FirebaseService.listenToPath`
+- `FirebaseService.listenToPath` somente quando usuario interno autorizado
 - `ClimateUI.setupTabs`
 - `ClimateUI.setupTabSwipe`
 - `ClimateUI.setupDateControls`
@@ -242,7 +268,54 @@ Observacao: `window.ClimateDiagnostics` tambem nasce neste arquivo; logs de fall
 
 Observacao: `main.js` nao exige que Chart.js, `ClimateAIService` ou `ClimatePdfReportModules` estejam prontos na abertura. Ele chama as fachadas e o carregador sob demanda quando a acao do usuario ou o primeiro grafico precisar.
 
+Observacao: o dashboard interno e inicializado apenas quando o Firebase Auth indica usuario autorizado. Sem login, ou com usuario nao autorizado, `main.js` mantem `#publicApp` visivel, oculta `#privateApp` e nao chama `ClimateChat.setup`, `ClimatePdfReport.setup` nem listeners internos.
+
 Impacto da alteracao: Critico.
+
+## scripts/auth/auth-service.js
+
+Responsabilidade: inicializar Firebase Auth, login/logout Google, observar estado e classificar usuario interno autorizado.
+
+Dependencias diretas:
+
+- `FirebaseService.initialize`
+- `FirebaseService.getApp`
+- `AppConfig.firebase.authUrl`
+- `AppConfig.auth.usuariosInternosAutorizados`
+
+Quem chama: `scripts/main.js`.
+
+Quem e chamado: Firebase Auth (`getAuth`, `GoogleAuthProvider`, `signInWithPopup`, `signOut`, `onAuthStateChanged`).
+
+Impacto da alteracao: Alto. Pode bloquear donos no modo publico ou liberar dashboard interno para usuario indevido.
+
+## scripts/external/browser-location-service.js
+
+Responsabilidade: obter localizacao atual do navegador para o modo publico.
+
+Dependencias diretas: `navigator.geolocation`.
+
+Quem chama: `scripts/views/public-weather-view.js`.
+
+Impacto da alteracao: Medio. Afeta somente modo publico por localizacao.
+
+## scripts/external/external-weather-service.js
+
+Responsabilidade: consultar CEP, resolver coordenadas e buscar clima/AQI externos.
+
+Dependencias diretas:
+
+- `AppConfig.externalApis`
+- `fetch`
+- BrasilAPI
+- ViaCEP
+- Open-Meteo Geocoding
+- Open-Meteo Forecast
+- Open-Meteo Air Quality
+
+Quem chama: `scripts/views/public-weather-view.js`.
+
+Impacto da alteracao: Alto para modo publico. Nao deve afetar dados internos do Firebase.
 
 ## scripts/firebase-service.js
 
@@ -554,6 +627,25 @@ Quem chama: `scripts/main.js`.
 
 Impacto da alteracao: Alto para a visao global, graficos comparativos, contexto sazonal/lunar e solares.
 
+## scripts/views/public-weather-view.js
+
+Responsabilidade: renderizar modo publico por CEP/localizacao.
+
+Dependencias diretas:
+
+- DOM `#publicApp`, `#privateApp`, `#publicCepForm`, `#publicLocationButton`, `#publicResults`
+- `BrowserLocationService`
+- `ExternalWeatherService`
+- `ClimateAssets.carregarChart`
+- `ClimateCharts`
+- `ClimateSolar`
+- `ClimateSeason`
+- `ClimateMoon`
+
+Quem chama: `scripts/main.js`.
+
+Impacto da alteracao: Alto para a experiencia publica. Nao deve inicializar assistente IA nem listeners internos.
+
 ## scripts/views/sala-view.js
 
 Responsabilidade: renderizar Sala.
@@ -608,7 +700,14 @@ Impacto da alteracao: Alto para solar.
 
 ```mermaid
 graph TD
-    DOMContentLoaded --> SetupTabs
+    DOMContentLoaded --> SetupSeason
+    DOMContentLoaded --> SetupMoon
+    DOMContentLoaded --> SetupAstro
+    DOMContentLoaded --> SetupPublicView
+    DOMContentLoaded --> SetupAuth
+    SetupAuth --> PublicMode
+    SetupAuth --> InternalMode
+    InternalMode --> SetupTabs
     DOMContentLoaded --> SetupTabSwipe
     DOMContentLoaded --> SetupDate
     DOMContentLoaded --> SetupCollapsible
@@ -616,10 +715,7 @@ graph TD
     DOMContentLoaded --> SetupPdfReport
     DOMContentLoaded --> SetupChat
     DOMContentLoaded --> SetupAqi
-    DOMContentLoaded --> SetupSeason
-    DOMContentLoaded --> SetupMoon
-    DOMContentLoaded --> SetupAstro
-    DOMContentLoaded --> SetupFirebase
+    InternalMode --> SetupFirebase
     SetupFirebase --> FirebaseInitialize
     SetupFirebase --> ListenRoom
     SetupFirebase --> ListenSolar

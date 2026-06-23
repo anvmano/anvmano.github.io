@@ -40,6 +40,7 @@
             sdkVersion: firebaseSdkVersion,
             appUrl: `https://www.gstatic.com/firebasejs/${firebaseSdkVersion}/firebase-app.js`,
             databaseUrl: `https://www.gstatic.com/firebasejs/${firebaseSdkVersion}/firebase-database.js`,
+            authUrl: `https://www.gstatic.com/firebasejs/${firebaseSdkVersion}/firebase-auth.js`,
             appCheckUrl: `https://www.gstatic.com/firebasejs/${firebaseSdkVersion}/firebase-app-check.js`,
             aiUrl: `https://www.gstatic.com/firebasejs/${firebaseSdkVersion}/firebase-ai.js`,
             html2canvasUrl: "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js",
@@ -56,6 +57,19 @@
                 appId: "1:589754957740:web:6299b8ce6763127b600409",
                 measurementId: "G-8GE5G3X1Y9"
             }
+        },
+        auth: {
+            usuariosInternosAutorizados: [
+                "anvmano@gmail.com",
+                "clarissamikado@gmail.com",
+            ],
+        },
+        externalApis: {
+            brasilApiCepUrl: "https://brasilapi.com.br/api/cep/v2",
+            viaCepUrl: "https://viacep.com.br/ws",
+            openMeteoGeocodingUrl: "https://geocoding-api.open-meteo.com/v1/search",
+            openMeteoForecastUrl: "https://api.open-meteo.com/v1/forecast",
+            openMeteoAirQualityUrl: "https://air-quality-api.open-meteo.com/v1/air-quality",
         },
         colors: {
             blue: '#38bdf8',

@@ -125,7 +125,7 @@
 
         const result = calculate(data);
         if (!result) {
-            renderUnavailable();
+            renderUnavailable("interno");
             return;
         }
 
@@ -140,6 +140,38 @@
         if (statusEl) statusEl.textContent = result.category.label;
 
         renderPopover(result);
+    }
+
+    function updateExternal(dados) {
+        if (!indicator || !popover) return;
+
+        const valor = Number(dados?.valor);
+        if (!Number.isFinite(valor)) {
+            renderUnavailable("publico");
+            return;
+        }
+
+        const aqi = Math.min(500, Math.max(0, Math.round(valor)));
+        const category = getCategory(aqi);
+        const origem = dados?.origem || "localização consultada";
+        const atualizadoEm = dados?.atualizadoEm instanceof Date ? dados.atualizadoEm : null;
+        const title = `AQI ${aqi}. AQI externo de ${origem}: ${category.label}.`;
+        const valueEl = indicator.querySelector(".aqi-indicator__value");
+        const statusEl = indicator.querySelector(".aqi-indicator__status");
+
+        indicator.className = `aqi-indicator aqi-indicator--${category.className}`;
+        indicator.title = title;
+        indicator.setAttribute("aria-label", title);
+        indicator.setAttribute("aria-expanded", "false");
+        if (valueEl) valueEl.textContent = aqi;
+        if (statusEl) statusEl.textContent = category.label;
+
+        renderExternalPopover({
+            aqi,
+            category,
+            origem,
+            atualizadoEm,
+        });
     }
 
     function calculate(data) {
@@ -219,10 +251,16 @@
         return AQI_CATEGORIES.find(category => aqi >= category.min && aqi <= category.max) || AQI_CATEGORIES[AQI_CATEGORIES.length - 1];
     }
 
-    function renderUnavailable() {
+    function renderUnavailable(mode = "interno") {
+        const isPublic = mode === "publico";
+        const titulo = isPublic ? "AQI externo" : "AQI estimado da Sala";
+        const texto = isPublic
+            ? "Informe um CEP ou permita a localização para consultar o AQI externo."
+            : "Sem dados suficientes do MQ135.";
+
         indicator.className = "aqi-indicator aqi-indicator--unknown";
-        indicator.title = "AQI estimado indisponível";
-        indicator.setAttribute("aria-label", "AQI --. AQI estimado indisponível.");
+        indicator.title = isPublic ? "AQI externo indisponível" : "AQI estimado indisponível";
+        indicator.setAttribute("aria-label", `AQI --. ${indicator.title}.`);
         indicator.setAttribute("aria-expanded", "false");
 
         const valueEl = indicator.querySelector(".aqi-indicator__value");
@@ -233,10 +271,10 @@
         popover.hidden = true;
         popover.innerHTML = `
             <div class="aqi-popover__header">
-                <span>AQI estimado da Sala</span>
+                <span>${titulo}</span>
                 <strong>--</strong>
             </div>
-            <p class="aqi-popover__text">Sem dados suficientes do MQ135.</p>
+            <p class="aqi-popover__text">${texto}</p>
         `;
     }
 
@@ -267,6 +305,25 @@
         `;
     }
 
+    function renderExternalPopover(result) {
+        popover.hidden = true;
+        popover.innerHTML = `
+            <div class="aqi-popover__header">
+                <span>AQI externo</span>
+                <strong>${result.aqi}</strong>
+            </div>
+            <div class="aqi-popover__badge aqi-popover__badge--${result.category.className}">
+                ${result.category.label}
+            </div>
+            <p class="aqi-popover__text">${result.category.impact}</p>
+            <dl class="aqi-popover__meta">
+                <div><dt>Origem</dt><dd>${result.origem}</dd></div>
+                <div><dt>Atualizado</dt><dd>${result.atualizadoEm ? formatTimestamp(result.atualizadoEm) : "--"}</dd></div>
+            </dl>
+            <p class="aqi-popover__note">Dado externo da API Open-Meteo Air Quality; não usa sensores internos da estação.</p>
+        `;
+    }
+
     function togglePopover() {
         if (popover.hidden) {
             window.dispatchEvent(new CustomEvent("header-popover-open", { detail: { source: "aqi" } }));
@@ -290,6 +347,7 @@
     window.ClimateAqi = {
         setup,
         update,
+        updateExternal,
         calculate,
     };
 })();

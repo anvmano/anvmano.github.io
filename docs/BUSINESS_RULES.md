@@ -85,6 +85,86 @@ Se alterada: a pagina pode voltar a carregar reCAPTCHA na abertura, emitir warni
 
 Criticidade: Media.
 
+## Regra: modo publico sem login e modo interno autorizado
+
+Arquivos: `index.html`, `scripts/config.js`, `scripts/auth/auth-service.js`, `scripts/main.js`, `scripts/views/public-weather-view.js`
+
+Objetivo: permitir acesso publico ao site sem expor dados internos da estacao e liberar o dashboard completo somente para usuarios autorizados.
+
+Entradas:
+
+- estado do Firebase Auth
+- email do usuario Google logado
+- `AppConfig.auth.usuariosInternosAutorizados`
+
+Saidas:
+
+- sem login: exibe modo publico por CEP/localizacao
+- login com `anvmano@gmail.com`: exibe dashboard interno completo
+- login com `clarissamikado@gmail.com`: exibe dashboard interno completo
+- login com qualquer outro usuario: mantem modo publico por CEP/localizacao
+
+Regras:
+
+- login Google e opcional; o usuario publico nao deve ser obrigado a autenticar
+- modo publico nao deve iniciar listeners internos do Realtime Database
+- modo publico nao deve inicializar ou exibir a assistente IA
+- modo interno inicializa abas, date picker, zoom, exportacao, chat e listeners Firebase internos
+- a seguranca real dos dados internos deve ser reforcada por regras do Firebase Realtime Database; ocultar UI no frontend nao substitui regras de banco
+
+Impacto: privacidade dos dados internos, custo de IA e separacao de experiencia publica/interna.
+
+Dependencias: Firebase Auth, `FirebaseService.initialize`, `PublicWeatherView`, `ClimateChat`, `ClimatePdfReport`.
+
+Se alterada: usuarios publicos podem ver recursos internos ou donos podem cair indevidamente no modo publico.
+
+Criticidade: Alta.
+
+## Regra: clima publico por CEP ou localizacao
+
+Arquivos: `scripts/external/browser-location-service.js`, `scripts/external/external-weather-service.js`, `scripts/views/public-weather-view.js`
+
+Objetivo: mostrar informacoes climaticas publicas quando nao ha usuario interno autorizado.
+
+Entradas:
+
+- CEP informado pelo usuario
+- localizacao opcional fornecida pelo navegador
+- BrasilAPI ou ViaCEP
+- Open-Meteo Geocoding
+- Open-Meteo Forecast
+- Open-Meteo Air Quality
+
+Saidas:
+
+- cards de temperatura, sensacao termica, umidade, pressao e AQI externo
+- graficos de temperatura, sensacao termica, umidade, pressao e ciclo solar do dia
+- contexto de estacao do ano e fase da lua
+
+Regras:
+
+- o site deve abrir pedindo CEP ou permissao de localizacao, sem exigir login
+- localizacao do navegador deve ficar somente em memoria e nao deve ser armazenada
+- localizacao do navegador deve tentar primeiro posicao em cache, depois busca normal com timeout maior e por fim alta precisao antes de retornar erro
+- CEP e resolvido para cidade/UF e depois para coordenadas via geocodificacao externa
+- graficos publicos de temperatura, sensacao termica, umidade e pressao devem mostrar janela movel das ultimas 24h, terminando na data/hora retornada pela localizacao consultada
+- a consulta Open-Meteo publica deve trazer dados horarios recentes suficientes para montar essa janela, sem exibir previsoes futuras nos graficos de serie temporal
+- ciclo solar publico usa coordenadas da localizacao/CEP, nao `historico/NascePorDoSol`
+- no modo publico, o chip/popover solar do header deve usar os eventos solares da localizacao/CEP consultado; antes da consulta, deve orientar CEP/localizacao em vez de apresentar fallback interno como se fosse dado real
+- o card publico de fase da lua deve seguir o mesmo comportamento do card interno: fase, iluminacao, idade, proxima cheia e proxima nova; ele nao deve exibir horarios solares como nascer ou por do sol
+- quando houver clima externo carregado, o card publico de fase da lua deve usar a data/hora da localizacao consultada; sem dados externos, usa a data atual do navegador como fallback visual
+- AQI publico vem de API externa e deve ser separado do AQI estimado interno da Sala/MQ135
+- no modo publico, o chip/popover AQI do header deve mostrar `AQI externo` da localizacao/CEP consultado e nao pode mencionar Sala ou MQ135
+- se nenhuma localizacao foi escolhida, mostrar estado vazio claro orientando CEP ou localizacao
+
+Impacto: experiencia publica e separacao entre dados externos e dados internos da estacao.
+
+Dependencias: APIs publicas externas e disponibilidade de rede.
+
+Se alterada: modo publico pode parecer quebrado ou misturar dados externos com sensores internos.
+
+Criticidade: Alta.
+
 ## Regra: carregamento sob demanda de recursos pesados
 
 Arquivos: `index.html`, `scripts/runtime-loader.js`, `scripts/main.js`, `scripts/chat.js`, `scripts/reports/pdf-report.js`

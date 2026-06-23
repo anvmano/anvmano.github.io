@@ -4,7 +4,7 @@
 
 Dashboard web estatico de estacao climatica. Exibe uma aba global Estacao, alem de Sala, Quarto, Aquario e eventos solares. A interface tem abas, navegacao por swipe touch entre abas, seletor global de data, graficos, estatisticas, heatmaps, tabelas colapsaveis, zoom de graficos, indicador de estacao do ano, indicador AQI estimado da Sala, indicador astronomico no header, indicador de fase da lua, chat com Firebase AI Logic e atalhos de perguntas, alem de exportacao PDF/JSON da aba ativa.
 
-O codigo nao define usuarios, autenticacao, permissoes ou backend local.
+O site possui modo publico sem login e modo interno com Google Firebase Auth. Sem login, ou com usuario nao autorizado, a pagina mostra clima por CEP/localizacao do navegador usando APIs externas. Somente `anvmano@gmail.com` e `clarissamikado@gmail.com` acessam o dashboard interno completo, listeners Firebase internos, exportacao interna e assistente IA.
 
 ## Tecnologias
 
@@ -14,10 +14,12 @@ O codigo nao define usuarios, autenticacao, permissoes ou backend local.
 - html2canvas `1.4.1` e jsPDF `2.5.2` via CDN para exportacao PDF, carregados sob demanda somente ao exportar PDF.
 - Exportacao JSON usa Blob nativo do navegador, sem biblioteca externa.
 - Firebase SDK modular `12.13.0` carregado dinamicamente.
+- Firebase Auth com login Google opcional.
 - Firebase Realtime Database.
 - Firebase App Check com reCAPTCHA Enterprise.
 - Firebase AI Logic com Gemini Developer API.
 - Google Fonts.
+- APIs publicas externas: BrasilAPI/ViaCEP para CEP, Open-Meteo Forecast, Open-Meteo Air Quality e Open-Meteo Geocoding.
 - Sem React, Vue, Angular, .NET, SQL ou Arduino no projeto analisado.
 - `npm run validate` executa uma checagem estrutural local sem dependencias externas.
 
@@ -30,6 +32,9 @@ Arquivos principais:
 - `scripts/runtime-loader.js`: carregador leve para recursos sob demanda, como Chart.js, CSS de zoom/relatorio, modulos de PDF e modulos da assistente.
 - `scripts/main.js`: orquestrador da aplicacao.
 - `scripts/firebase-service.js`: conexao e listeners Firebase.
+- `scripts/auth/auth-service.js`: Firebase Auth, login/logout Google e verificacao de usuarios internos autorizados.
+- `scripts/external/browser-location-service.js`: leitura opcional de localizacao do navegador, somente em memoria.
+- `scripts/external/external-weather-service.js`: CEP, geocodificacao e clima/AQI externos via APIs publicas.
 - `scripts/chat.js`: fachada publica leve do chat, mantendo `window.ClimateChat` e carregando `scripts/assistant/*` somente ao abrir a assistente.
 - `scripts/assistant/`: modulos da assistente e IA.
 - `scripts/assistant/ai-service.js`: inicializacao do Firebase AI Logic.
@@ -55,21 +60,25 @@ Arquivos principais:
 - `scripts/reports/pdf-report-*.js`: modulos internos de configuracao, formatacao, dados, DOM, graficos, PDF e exportacao.
 - `styles/reports/pdf-report.css`: visual do relatorio PDF.
 - `scripts/views/estacao-view.js`, `scripts/views/quarto-view.js`, `scripts/views/sala-view.js`, `scripts/views/aquario-view.js`, `scripts/views/solar-view.js`: renderizacao por dominio.
+- `scripts/views/public-weather-view.js`: modo publico por CEP/localizacao, com cards e graficos externos.
 - `tools/validate-project.mjs`: valida sintaxe JS, referencias locais, imports CSS e contratos HTML/config.
 
 ## Fluxo Principal
 
 1. HTML carrega scripts essenciais em ordem e mantem fachadas leves para chat e exportacao.
 2. `scripts/main.js` valida todos os objetos globais.
-3. No `DOMContentLoaded`, inicializa tabs, date picker, colapsaveis, zoom, fachadas de chat/exportacao e agenda Firebase apos a estrutura inicial da tela.
-4. `FirebaseService.initialize()` importa SDK Firebase e cria database; App Check/reCAPTCHA fica sob demanda para recursos protegidos, como a IA.
-5. `FirebaseService.listenToPath()` escuta:
+3. No `DOMContentLoaded`, inicializa chips globais do header, view publica e Firebase Auth.
+4. Se nao houver usuario interno autorizado, mostra `#publicApp`, oculta `#privateApp` e nao inicia listeners internos nem assistente IA.
+5. Se o usuario for `anvmano@gmail.com` ou `clarissamikado@gmail.com`, mostra o dashboard interno, inicializa abas/date picker/zoom/exportacao/chat e agenda Firebase.
+6. `FirebaseService.initialize()` importa SDK Firebase e cria app/database; App Check/reCAPTCHA fica sob demanda para recursos protegidos, como a IA.
+7. `FirebaseService.listenToPath()` escuta no modo interno:
    - `historico/Temperatura`
    - `historico/NascePorDoSol`
    - `historico/Aquario`
    - `historico/AirQuality`
-6. Dados sao armazenados em `latestData`.
-7. Views filtram pela data selecionada e renderizam estatisticas/tabelas imediatamente; graficos carregam Chart.js antes do primeiro desenho real.
+8. Dados internos sao armazenados em `latestData`.
+9. Views filtram pela data selecionada e renderizam estatisticas/tabelas imediatamente; graficos carregam Chart.js antes do primeiro desenho real.
+10. No modo publico, CEP/localizacao consulta APIs externas e renderiza temperatura, sensacao termica, umidade, pressao, AQI externo, estacao do ano, fase da lua e graficos de temperatura, sensacao, umidade, pressao e ciclo solar. Os graficos publicos de temperatura, sensacao, umidade e pressao usam janela movel das ultimas 24h, terminando na data/hora retornada pela localizacao consultada. O card publico da fase da lua segue o mesmo contrato visual do card interno: fase, iluminacao, idade, proxima cheia e proxima nova, usando a data/hora retornada para a localizacao consultada quando disponivel.
 
 ## Componentes Criticos
 
@@ -95,6 +104,7 @@ Arquivos principais:
 - Zoom: `scripts/charts/zoom.js`; em dispositivos touch, toque dentro do canvas ampliado interage com o tooltip e nao fecha o overlay.
 - PDF: `scripts/reports/pdf-report.js`, `scripts/reports/pdf-report-*.js` e `styles/reports/pdf-report.css`.
 - Abas e date picker: `scripts/ui/ui.js`.
+- Login Google e fluxo publico/interno: `scripts/auth/auth-service.js`, `scripts/views/public-weather-view.js`, `scripts/external/*` e `scripts/main.js`.
 - Estilo visual: `style.css` importa os arquivos em `styles/`.
 
 ## Fluxos Criticos
@@ -123,14 +133,15 @@ Arquivos principais:
 - Swipe touch segue o fluxo Estacao ⇄ Sala ⇄ Quarto ⇄ Aquario. Arrastar para esquerda avanca; arrastar para direita volta; extremidades nao mudam de aba. Gestos iniciados em tabelas, heatmaps ou qualquer area com rolagem horizontal nao trocam de aba.
 - A aba Estacao e a visao global do sistema: mostra faixa das estacoes do ano, fase da lua da data selecionada, cards globais, graficos comparativos de temperatura/umidade por ambiente e graficos solares. A faixa das estacoes usa a data atual do navegador, nao a data selecionada no calendario, e o marcador progride por segmento visual de estacao: Verao 0-25%, Outono 25-50%, Inverno 50-75%, Primavera 75-100%. No PDF, o card de Estacao do ano mostra o progresso dentro da estacao atual, nao a posicao anual da barra. O resumo global da Estacao nasce com placeholders/altura reservada para reduzir CLS enquanto os dados Firebase chegam.
 - O header exibe os chips na ordem Estacao do ano, AQI, ciclo solar, fase da lua e relogio. Os chips de Estacao do ano, AQI, ciclo solar e fase da lua devem manter apenas o icone/estado visual dentro do pill; descricoes, valores e classificacoes ficam no `title`/`aria-label` e popover. Em mobile, o relogio e a marca `Estacao Climatica` podem ser ocultados e os chips principais devem ocupar toda a largura util do header.
-- Indicador astronomico do header e um chip visual no tamanho aproximado do relogio, sem texto interno; o tooltip/`aria-label` mostra nascer e por do sol. Clique/toque abre popover com amanhecer, nascer do sol, zenite, por do sol, anoitecer, estado atual e duracao do dia.
-- Indicador AQI do header usa dados mais recentes da Sala/MQ135 em `historico/AirQuality`; o valor nao fica visivel dentro do chip, mas permanece no tooltip/`aria-label` e no popover aberto por clique/toque. O chip usa um mini medidor visual colorido, com posicao do ponteiro derivada da classificacao AQI.
+- Indicador astronomico do header e um chip visual no tamanho aproximado do relogio, sem texto interno; o tooltip/`aria-label` mostra nascer e por do sol. Clique/toque abre popover com amanhecer, nascer do sol, zenite, por do sol, anoitecer, estado atual e duracao do dia. No modo interno usa `historico/NascePorDoSol`; no modo publico usa os eventos solares da localizacao/CEP consultado pela Open-Meteo. Antes de uma localizacao publica ser consultada, deve ficar em estado aguardando e orientar CEP/localizacao, sem usar fallback interno como se fosse dado real.
+- Indicador AQI do header tem dois modos. No dashboard interno usa dados mais recentes da Sala/MQ135 em `historico/AirQuality` e deve aparecer como `AQI estimado da Sala`. No modo publico usa o AQI externo da localizacao/CEP consultado e deve aparecer como `AQI externo`, sem mencionar Sala ou MQ135. O valor nao fica visivel dentro do chip, mas permanece no tooltip/`aria-label` e no popover aberto por clique/toque. O chip usa um mini medidor visual colorido, com posicao do ponteiro derivada da classificacao AQI.
 - Indicador de estacao do ano usa `scripts/charts/season.js`, mostra apenas a animacao sazonal dentro do chip e usa tooltip/popover com inicio das estacoes do ciclo atual.
 - Indicador de fase da lua usa `scripts/charts/moon.js`, calcula localmente a fase sem API externa, mostra apenas a animacao lunar dentro do chip e abre popover com iluminacao, idade lunar, proxima cheia e proxima nova. O icone lunar deve diferenciar crescente e minguante pelo lado sombreado. O `title` deve ficar limpo com a descricao completa, enquanto o `aria-label` preserva a informacao textual necessaria. Na aba Estacao, o bloco lunar usa a data selecionada no calendario.
 - Popovers do header sao mutuamente exclusivos: abrir Estacao do ano, AQI, Solar ou Lua fecha os demais.
-- AQI do header e uma estimativa local: usa categorias oficiais AQI (`0-50`, `51-100`, `101-150`, `151-200`, `201-300`, `301+`), mas o calculo vem dos gases disponiveis no MQ135 e deve ser exibido como `AQI estimado da Sala`.
+- AQI interno do header e uma estimativa local: usa categorias oficiais AQI (`0-50`, `51-100`, `101-150`, `151-200`, `201-300`, `301+`), mas o calculo vem dos gases disponiveis no MQ135 e deve ser exibido como `AQI estimado da Sala`. AQI publico vem da Open-Meteo Air Quality e deve ser exibido como `AQI externo`.
 - Solar usa data selecionada para ciclo do dia e filtro de 365 dias para historico.
 - Exportacao PDF/JSON usa automaticamente aba ativa, data selecionada, `latestData` e `chartInstances`; nao reconsulta Firebase.
+- Exportacao PDF/JSON interna so e inicializada para usuarios internos autorizados.
 - Controle `PDF/JSON` em `name="exportFormat"` altera a label do botao `#btnExportData`.
 - A fachada `ClimatePdfReport` fica carregada no inicio, mas os modulos `scripts/reports/pdf-report-*` so entram no clique de exportacao. Exportacao JSON carrega somente os modulos de relatorio; PDF tambem carrega CSS do relatorio, Chart.js, html2canvas e jsPDF sob demanda.
 - Bibliotecas de PDF (`html2canvas` e `jsPDF`) sao carregadas sob demanda apenas quando o formato PDF e executado; exportacao JSON nao deve carregar essas dependencias.
@@ -141,6 +152,7 @@ Arquivos principais:
 - PDF usa tabela resumida por horario, com status geral por linha. JSON exporta `resumo` com `detalhes`, `tabelaResumida`, `tabelaDetalhada`, `dadosBrutos` e mantem `tabela` como alias de compatibilidade para a tabela detalhada antiga.
 - PDF e montado manualmente em paginas A4; resumo, graficos e tabela iniciam em paginas proprias, com rodape em todas as paginas.
 - Chat usa `latestData`, aba ativa, data selecionada e intenção classificada para selecionar dados. Nao envia o Firebase inteiro ao modelo.
+- Chat/assistente IA e exclusivo para usuarios internos autorizados. No modo publico, `#aiChat` fica oculto e `ClimateChat.setup` nao e chamado.
 - `scripts/chat.js` carrega a assistente real sob demanda no primeiro clique do botao. Antes disso, os modulos `scripts/assistant/*` e o Firebase AI Logic nao entram na carga inicial.
 - Chat tem atalhos em `data-chat-question`; eles reutilizam o mesmo fluxo de envio da pergunta digitada.
 - Chat abre e fecha com transicao gradual em `styles/chat.css`; `scripts/assistant/assistant-ui.js` so aplica `hidden` depois da animacao de fechamento. Quando aberto, clique/toque fora de `#aiChat` fecha o painel, preservando cliques dentro do chat. A rolagem da pagina de fundo fica travada enquanto o chat esta aberto; apenas a area `#aiChatMessages` deve rolar.
@@ -189,6 +201,10 @@ Arquivos principais:
 ## Regras Importantes
 
 - Nao mudar ordem dos scripts sem revisar dependencias globais. Os scripts externos do fim do `body` usam `defer`, preservando a mesma ordem para reduzir bloqueio de renderizacao.
+- O modo publico deve funcionar sem login. Login Google e opcional; se o usuario logado nao for autorizado, continua no modo publico.
+- O dashboard interno completo so deve iniciar para `AppConfig.auth.usuariosInternosAutorizados`.
+- APIs externas nao substituem Firebase interno; elas servem apenas para o modo publico por CEP/localizacao.
+- Localizacao do navegador nao deve ser persistida; usar apenas em memoria para a consulta atual.
 - Nao renomear ids do HTML sem atualizar `scripts/config.js`.
 - Nao renomear campos Firebase sem atualizar `scripts/config.js` e, para solar, `scripts/charts/solar.js`.
 - Novos metodos, funcoes e variaveis internas devem seguir nomenclatura PT-BR. Excecoes: campos Firebase, ids/classes DOM, nomes exigidos por APIs externas, contratos publicos em `window.*`, opcoes de bibliotecas e propriedades estruturais ja consumidas por outros modulos.
