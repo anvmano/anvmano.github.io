@@ -246,6 +246,7 @@
         getSelectedFormat,
         getButtonLabel,
         canGeneratePdf,
+        carregarBibliotecasPdf,
         exportJsonReport,
         buildReport,
     };

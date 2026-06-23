@@ -14,7 +14,7 @@ Usuarios nao sao definidos no codigo. Pelo codigo, o fluxo principal e visualiza
 - CSS puro: `style.css` como manifesto e arquivos modulares em `styles/`.
 - JavaScript em scripts classicos, sem `type="module"`.
 - Modulos globais expostos em `window.*`.
-- Chart.js via CDN: `https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js`.
+- Chart.js via CDN: `https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js`, carregado sob demanda por `scripts/runtime-loader.js`.
 - Firebase SDK modular dinamico: versao `12.13.0`, carregado por `import()` a partir de `https://www.gstatic.com/firebasejs/...`.
 - Firebase Realtime Database.
 - Firebase App Check com reCAPTCHA Enterprise, inicializado sob demanda para recursos protegidos.
@@ -48,6 +48,7 @@ Codigo interno novo ou refatorado deve usar nomes em PT-BR para metodos, funcoes
 │   └── responsive.css
 ├── scripts/
 │   ├── config.js
+│   ├── runtime-loader.js
 │   ├── main.js
 │   ├── firebase-service.js
 │   ├── chat.js
@@ -103,9 +104,10 @@ Responsabilidades:
 - `style.css`: manifesto de imports dos estilos modulares.
 - `styles/`: tema visual, layout, tabs, graficos, cards, tabelas, estados, heatmaps, zoom e responsividade.
 - `scripts/config.js`: configuracao Firebase, cores, ids DOM, paths Firebase, nomes de campos.
+- `scripts/runtime-loader.js`: carregamento sob demanda de Chart.js, modulos da assistente, modulos do relatorio e CSS nao critico.
 - `scripts/main.js`: orquestracao da aplicacao, listeners Firebase, cache de dados, renderizacao por view, contrato de criacao de graficos, opcoes de zoom, indicadores do header e exportacao.
 - `scripts/firebase-service.js`: inicializacao Firebase, listeners `onValue`, loading bar e erros.
-- `scripts/chat.js`: fachada publica do chat, mantendo `window.ClimateChat.setup` para o `scripts/main.js`.
+- `scripts/chat.js`: fachada publica leve do chat, mantendo `window.ClimateChat.setup` para o `scripts/main.js` e carregando `scripts/assistant/*` no primeiro clique.
 - `scripts/assistant/ai-service.js`: inicializacao do Firebase AI Logic e envio de prompts ao Gemini.
 - `scripts/assistant/assistant-ui.js`: painel do chat, atalhos de perguntas, mensagens, abertura/fechamento, clique/toque fora para fechar e estado ocupado.
 - `scripts/assistant/assistant-intent.js`: classificacao de intencao em JSON, ambiente, metrica, data, hora e periodo.
@@ -125,7 +127,7 @@ Responsabilidades:
 - `scripts/charts/solar.js`: leitura e renderizacao dos eventos solares, historico nascer/por do sol, ciclo solar do dia, aliases solares centralizados e exposicao de eventos solares para o header.
 - `scripts/ui/ui.js`: estados vazios, mensagens em graficos, tabelas, tabs, swipe touch entre abas, colapsaveis, date picker.
 - `scripts/charts/zoom.js`: ampliacao de graficos por botao/duplo clique, mantendo tooltip ativo no canvas ampliado.
-- `scripts/reports/pdf-report.js`: fachada publica da exportacao PDF/JSON, mantendo `window.ClimatePdfReport.setup`.
+- `scripts/reports/pdf-report.js`: fachada publica leve da exportacao PDF/JSON, mantendo `window.ClimatePdfReport.setup` e carregando `scripts/reports/pdf-report-*` somente ao exportar.
 - `scripts/reports/pdf-report-config.js`: configuracao das abas, metricas, tabela e inclusao de ciclo solar.
 - `scripts/reports/pdf-report-format.js`: formatacao de datas, valores, status, mensagens e HTML seguro.
 - `scripts/reports/pdf-report-data.js`: selecao de dados, linhas, resumos, cards contextuais da Estacao, alertas e contrato por aba.
@@ -144,10 +146,10 @@ Responsabilidades:
 
 ## Fluxo de Execucao
 
-1. `index.html` carrega Chart.js via CDN; html2canvas e jsPDF ficam sob demanda no fluxo de exportacao PDF.
+1. `index.html` carrega apenas scripts essenciais e fachadas leves; Chart.js, modulos da assistente, modulos do relatorio, CSS do PDF, html2canvas e jsPDF ficam sob demanda.
 2. Scripts sao carregados em ordem:
-   - Chart.js CDN
    - `scripts/config.js`
+   - `scripts/runtime-loader.js`
    - `scripts/data/data-utils.js`
    - `scripts/data/analytics.js`
    - `scripts/charts/solar.js`
@@ -158,10 +160,8 @@ Responsabilidades:
    - `scripts/firebase-service.js`
    - `scripts/ui/ui.js`
    - `scripts/charts/zoom.js`
-   - `scripts/reports/pdf-report-*.js`
    - `scripts/reports/pdf-report.js`
    - `scripts/chat.js`
-   - `scripts/assistant/*.js`
    - `scripts/views/quarto-view.js`
    - `scripts/views/aquario-view.js`
    - `scripts/views/sala-view.js`
@@ -169,7 +169,7 @@ Responsabilidades:
    - `scripts/views/estacao-view.js`
    - `scripts/main.js`
 3. Cada modulo registra um objeto global em `window`.
-4. `scripts/main.js` valida a existencia dos modulos.
+4. `scripts/main.js` valida a existencia dos modulos essenciais, mas nao exige Chart.js, `ClimateAIService` nem `ClimatePdfReportModules` na abertura.
 5. `DOMContentLoaded` executa:
    - `ClimateUI.setupTabs("Tab0")`
    - `ClimateUI.setupTabSwipe(...)`
@@ -182,7 +182,7 @@ Responsabilidades:
    - `ClimateSeason.setup()`
    - `ClimateMoon.setup()`
    - `setupAstroIndicator()`
-   - `setupFirebaseListeners()`
+   - `setupFirebaseListeners()` agendado apos a estrutura inicial da tela
 6. `FirebaseService.initialize()` importa SDK Firebase e conecta ao Realtime Database; `ensureAppCheckInitialized()` inicializa App Check sob demanda antes de recursos protegidos, como a IA.
 7. `FirebaseService.listenToPath()` cria listeners para quatro paths.
 8. Cada snapshot atualiza `latestData` e chama a view correspondente; a aba Estacao e rerenderizada quando qualquer fonte global muda.
@@ -281,11 +281,12 @@ Regras:
 - Destroi grafico anterior se `existingChart` for passado.
 - Extrai dados com `ClimateData.extractData`.
 - Se nao houver pontos numericos, chama `onEmpty` e retorna `null`.
+- Se Chart.js ainda nao estiver carregado, o caller deve mostrar mensagem de carregamento e acionar `ClimateAssets.carregarChart()` antes de tentar desenhar.
 - Se houver dados, chama `onReady`, cria Chart.js e aplica faixa de conforto em metricas de temperatura/sensacao com sufixo `°`.
 
 Dependencias:
 
-- `Chart`
+- `Chart`, carregado sob demanda
 - `ClimateData`
 
 ### ClimateAnalytics

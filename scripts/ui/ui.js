@@ -175,6 +175,11 @@
             trigger.addEventListener("click", () => {
                 const isCollapsed = section.classList.toggle("is-collapsed");
                 trigger.setAttribute("aria-expanded", String(!isCollapsed));
+                if (!isCollapsed) {
+                    document.dispatchEvent(new CustomEvent("climate-collapsible-expanded", {
+                        detail: { section }
+                    }));
+                }
             });
         });
     }

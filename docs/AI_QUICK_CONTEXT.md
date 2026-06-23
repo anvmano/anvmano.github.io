@@ -10,7 +10,7 @@ O codigo nao define usuarios, autenticacao, permissoes ou backend local.
 
 - HTML, CSS e JavaScript puro.
 - Scripts classicos com modulos globais em `window.*`.
-- Chart.js `4.5.1` via CDN.
+- Chart.js `4.5.1` via CDN, carregado sob demanda antes do primeiro grafico real.
 - html2canvas `1.4.1` e jsPDF `2.5.2` via CDN para exportacao PDF, carregados sob demanda somente ao exportar PDF.
 - Exportacao JSON usa Blob nativo do navegador, sem biblioteca externa.
 - Firebase SDK modular `12.13.0` carregado dinamicamente.
@@ -27,9 +27,10 @@ Arquivos principais:
 
 - `index.html`: estrutura DOM, ordem dos scripts e carregamento `defer` dos scripts externos.
 - `scripts/config.js`: Firebase, paths, ids, cores, campos, unidades e diagnostico leve de console.
+- `scripts/runtime-loader.js`: carregador leve para recursos sob demanda, como Chart.js, CSS de zoom/relatorio, modulos de PDF e modulos da assistente.
 - `scripts/main.js`: orquestrador da aplicacao.
 - `scripts/firebase-service.js`: conexao e listeners Firebase.
-- `scripts/chat.js`: fachada publica do chat, mantendo `window.ClimateChat`.
+- `scripts/chat.js`: fachada publica leve do chat, mantendo `window.ClimateChat` e carregando `scripts/assistant/*` somente ao abrir a assistente.
 - `scripts/assistant/`: modulos da assistente e IA.
 - `scripts/assistant/ai-service.js`: inicializacao do Firebase AI Logic.
 - `scripts/assistant/assistant-ui.js`: UI do chat.
@@ -50,7 +51,7 @@ Arquivos principais:
 - `scripts/charts/solar.js`: regras e graficos solares.
 - `scripts/ui/ui.js`: tabs, swipe touch entre abas, date picker, mensagens, colapsaveis.
 - `scripts/charts/zoom.js`: zoom dos graficos.
-- `scripts/reports/pdf-report.js`: fachada publica da exportacao PDF/JSON.
+- `scripts/reports/pdf-report.js`: fachada publica leve da exportacao PDF/JSON; carrega os modulos internos somente ao exportar.
 - `scripts/reports/pdf-report-*.js`: modulos internos de configuracao, formatacao, dados, DOM, graficos, PDF e exportacao.
 - `styles/reports/pdf-report.css`: visual do relatorio PDF.
 - `scripts/views/estacao-view.js`, `scripts/views/quarto-view.js`, `scripts/views/sala-view.js`, `scripts/views/aquario-view.js`, `scripts/views/solar-view.js`: renderizacao por dominio.
@@ -58,9 +59,9 @@ Arquivos principais:
 
 ## Fluxo Principal
 
-1. HTML carrega scripts em ordem.
+1. HTML carrega scripts essenciais em ordem e mantem fachadas leves para chat e exportacao.
 2. `scripts/main.js` valida todos os objetos globais.
-3. No `DOMContentLoaded`, inicializa tabs, date picker, colapsaveis, zoom, chat, exportacao PDF/JSON e listeners Firebase.
+3. No `DOMContentLoaded`, inicializa tabs, date picker, colapsaveis, zoom, fachadas de chat/exportacao e agenda Firebase apos a estrutura inicial da tela.
 4. `FirebaseService.initialize()` importa SDK Firebase e cria database; App Check/reCAPTCHA fica sob demanda para recursos protegidos, como a IA.
 5. `FirebaseService.listenToPath()` escuta:
    - `historico/Temperatura`
@@ -68,7 +69,7 @@ Arquivos principais:
    - `historico/Aquario`
    - `historico/AirQuality`
 6. Dados sao armazenados em `latestData`.
-7. Views filtram pela data selecionada e renderizam graficos/tabelas/estatisticas.
+7. Views filtram pela data selecionada e renderizam estatisticas/tabelas imediatamente; graficos carregam Chart.js antes do primeiro desenho real.
 
 ## Componentes Criticos
 
@@ -103,6 +104,7 @@ Arquivos principais:
 - Dados por data/hora: `historico/<tipo>/<DD-MM-AAAA>/<HH-MM>/<id>/<campos>`.
 - Graficos comuns usam `ClimateData.extractData`.
 - Graficos comuns de Sala, Quarto e Aquario usam janela movel das ultimas 24h pela hora atual do navegador. Se a data selecionada for `DD-MM-AAAA` e agora for 15h, a janela vai de 15h do dia anterior ate 15h da data selecionada.
+- Chart.js nao e carregado no HTML inicial. Quando uma view encontra dados para grafico e `window.Chart` ainda nao existe, mostra `Carregando grafico...`, carrega Chart.js por `ClimateAssets.carregarChart()` e redesenha a data selecionada.
 - Se grafico comum nao tem pontos numericos, `ClimateCharts.createLineChart` limpa o canvas, retorna `null` e o caller mostra mensagem no card.
 - Cada id em `AppConfig.ids.chartContainers` deve existir no `.chart-card` individual correspondente.
 - Tabelas mostram ate 24 linhas.
@@ -130,6 +132,7 @@ Arquivos principais:
 - Solar usa data selecionada para ciclo do dia e filtro de 365 dias para historico.
 - Exportacao PDF/JSON usa automaticamente aba ativa, data selecionada, `latestData` e `chartInstances`; nao reconsulta Firebase.
 - Controle `PDF/JSON` em `name="exportFormat"` altera a label do botao `#btnExportData`.
+- A fachada `ClimatePdfReport` fica carregada no inicio, mas os modulos `scripts/reports/pdf-report-*` so entram no clique de exportacao. Exportacao JSON carrega somente os modulos de relatorio; PDF tambem carrega CSS do relatorio, Chart.js, html2canvas e jsPDF sob demanda.
 - Bibliotecas de PDF (`html2canvas` e `jsPDF`) sao carregadas sob demanda apenas quando o formato PDF e executado; exportacao JSON nao deve carregar essas dependencias.
 - PDF usa primeira pagina como resumo executivo, com metadados, cards principais e alertas do dia.
 - PDF junta Temperatura e Sensacao termica no mesmo grafico quando a aba possui as duas metricas.
@@ -138,6 +141,7 @@ Arquivos principais:
 - PDF usa tabela resumida por horario, com status geral por linha. JSON exporta `resumo` com `detalhes`, `tabelaResumida`, `tabelaDetalhada`, `dadosBrutos` e mantem `tabela` como alias de compatibilidade para a tabela detalhada antiga.
 - PDF e montado manualmente em paginas A4; resumo, graficos e tabela iniciam em paginas proprias, com rodape em todas as paginas.
 - Chat usa `latestData`, aba ativa, data selecionada e intenção classificada para selecionar dados. Nao envia o Firebase inteiro ao modelo.
+- `scripts/chat.js` carrega a assistente real sob demanda no primeiro clique do botao. Antes disso, os modulos `scripts/assistant/*` e o Firebase AI Logic nao entram na carga inicial.
 - Chat tem atalhos em `data-chat-question`; eles reutilizam o mesmo fluxo de envio da pergunta digitada.
 - Chat abre e fecha com transicao gradual em `styles/chat.css`; `scripts/assistant/assistant-ui.js` so aplica `hidden` depois da animacao de fechamento. Quando aberto, clique/toque fora de `#aiChat` fecha o painel, preservando cliques dentro do chat. A rolagem da pagina de fundo fica travada enquanto o chat esta aberto; apenas a area `#aiChatMessages` deve rolar.
 - Chat resolve intencao antes de responder: ambiente mencionado vence a aba ativa; data/periodo mencionado vence o calendario sem alterar a pagina; se ambiente/data nao forem mencionados, usa aba ativa e calendario.
@@ -162,6 +166,7 @@ Arquivos principais:
 - Periodos suportados incluem data unica, hoje, ontem, anteontem, datas relativas, intervalo, ultimas 24h reais, ultimos dias, mes selecionado, semana selecionada e ano selecionado para consultas solares anuais. `Ultimos dias` usa 7 dias por padrao e consultas de periodo sao limitadas a 30 dias, exceto calendario mensal que pode consultar o mes completo e comparacoes solares anuais que podem consultar o ano inteiro.
 - Heatmaps destacam contexto temporal com `.is-selected`: calendario mensal destaca o dia selecionado, heatmap horario destaca a hora atual quando a data selecionada e hoje, e mapa semanal destaca dia da semana/hora atual quando a data selecionada e hoje.
 - O mapa semanal reinicia no domingo e considera apenas registros da semana da data selecionada, do domingo ate a data selecionada. Ele nao agrega semanas anteriores do mes.
+- Heatmaps de Sala/Quarto so montam o DOM quando a secao `Visualizacoes Climaticas` esta expandida; a abertura do colapsavel dispara novo render da data selecionada.
 - Heatmaps normalizam a data recebida para `DD-MM-AAAA` antes de filtrar registros. Falhas nas visualizacoes climaticas avancadas nao devem bloquear os graficos principais da aba.
 
 ## Arquivos Mais Importantes

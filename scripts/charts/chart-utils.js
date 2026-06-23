@@ -193,6 +193,7 @@
         }
 
         if (onReady) onReady();
+        if (!window.Chart) return null;
 
         const gradient = canvasCtx.createLinearGradient(0, 0, 0, 220);
         gradient.addColorStop(0, color + '33');

@@ -5,7 +5,7 @@
     const canvasTemperatura = document.getElementById(ids.charts.globalTemperature).getContext("2d");
     const canvasUmidade = document.getElementById(ids.charts.globalHumidity).getContext("2d");
 
-    function render({ latestData, selectedDate, chartInstances, defaults, colors: cores, ui }) {
+    function render({ latestData, selectedDate, chartInstances, defaults, colors: cores, ui, ensureChart }) {
         renderizarResumoGlobal(latestData, selectedDate);
         renderizarLinhaEstacoes(selectedDate);
         renderizarResumoLua(selectedDate);
@@ -15,6 +15,7 @@
             chartInstances,
             defaults,
             ui,
+            ensureChart,
             titulo: "Temperatura",
             unidade: "°",
             eixoY: "(°C)",
@@ -32,6 +33,7 @@
             chartInstances,
             defaults,
             ui,
+            ensureChart,
             titulo: "Umidade",
             unidade: "%",
             eixoY: "%",
@@ -49,6 +51,7 @@
                 chartInstances,
                 defaults,
                 colors: cores,
+                ensureChart,
                 ui
             });
         } else {
@@ -206,6 +209,7 @@
         chartInstances,
         defaults,
         ui,
+        ensureChart,
         titulo,
         unidade,
         eixoY,
@@ -227,6 +231,12 @@
             delete chartInstances[id];
             canvasCtx.clearRect(0, 0, canvasCtx.canvas.width, canvasCtx.canvas.height);
             ui.renderChartMessage(containerId, mensagemVazia);
+            return;
+        }
+
+        if (!window.Chart) {
+            ui.renderChartMessage(containerId, "Carregando gráfico...", "loading");
+            if (typeof ensureChart === "function") ensureChart();
             return;
         }
 

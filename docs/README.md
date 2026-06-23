@@ -10,7 +10,7 @@ Dashboard web estático para acompanhamento de dados climáticos da Estação, S
 
 Bibliotecas carregadas via CDN:
 
-- Chart.js `4.5.1`
+- Chart.js `4.5.1` sob demanda antes do primeiro gráfico real
 - html2canvas `1.4.1` sob demanda ao exportar PDF
 - jsPDF `2.5.2` sob demanda ao exportar PDF
 - Firebase SDK modular `12.13.0`
@@ -26,9 +26,10 @@ Bibliotecas carregadas via CDN:
 ├── package.json                Comando de validação local
 ├── scripts/
 │   ├── config.js               Firebase, paths, ids, campos, cores e limites
+│   ├── runtime-loader.js       Carregamento sob demanda de Chart, chat e PDF
 │   ├── main.js                 Orquestração geral da aplicação
 │   ├── firebase-service.js     Inicialização Firebase e listeners
-│   ├── chat.js                 Fachada pública do chat com IA
+│   ├── chat.js                 Fachada pública leve do chat com IA
 │   ├── assistant/
 │   │   ├── ai-service.js       Firebase AI Logic
 │   │   ├── assistant-config.js Constantes, ambientes e aliases
@@ -53,7 +54,7 @@ Bibliotecas carregadas via CDN:
 │   ├── ui/
 │   │   └── ui.js               Abas, swipe, data picker, mensagens e colapsáveis
 │   ├── reports/
-│   │   ├── pdf-report.js       Fachada pública da exportação
+│   │   ├── pdf-report.js       Fachada pública leve da exportação
 │   │   ├── pdf-report-config.js Configuração das abas do relatório
 │   │   ├── pdf-report-format.js Formatação e status
 │   │   ├── pdf-report-data.js  Coleta e resumo dos dados
@@ -198,7 +199,7 @@ A validação verifica:
 ## Exportação
 
 A exportação usa os dados já carregados na tela. Ela não reconsulta o Firebase.
-As bibliotecas `html2canvas` e `jsPDF` só são baixadas quando o usuário escolhe PDF; exportar JSON não carrega essas dependências.
+Os módulos internos de relatório são carregados apenas ao exportar. Exportar JSON não carrega Chart.js, CSS do PDF, `html2canvas` ou `jsPDF`. Exportar PDF carrega CSS do relatório, Chart.js, `html2canvas` e `jsPDF` sob demanda.
 
 PDF:
 
@@ -226,15 +227,18 @@ JSON:
 - O projeto não usa framework frontend.
 - Os módulos são scripts clássicos e expõem objetos em `window.*`.
 - A ordem dos scripts em `index.html` é parte do contrato da aplicação.
+- Recursos pesados usam `scripts/runtime-loader.js`: Chart.js entra no primeiro gráfico com dados, a assistente entra no primeiro clique do chat e os módulos de relatório entram somente ao exportar.
 - O Firebase é lido no cliente com listeners `onValue`.
 - O App Check usa reCAPTCHA Enterprise, fica sob demanda para evitar custo de carregamento inicial e deve ser validado antes de ativar enforcement.
 - O chat envia ao Gemini apenas resumo compacto de dados carregados, nunca o histórico inteiro.
+- Os módulos `scripts/assistant/*` e Firebase AI Logic não entram no carregamento inicial; `scripts/chat.js` inicializa a assistente real no primeiro clique.
 - Atalhos do chat usam `data-chat-question` e reutilizam o mesmo fluxo de envio da pergunta digitada.
 - O chat usa duas etapas: Gemini classifica a intenção em JSON; JavaScript calcula os dados; Gemini apenas redige a resposta final.
 - Perguntas sobre ciclo solar no chat reutilizam o parser solar central do app, evitando leitura duplicada dos campos solares.
 - Perguntas de comparacao solar no chat calculam localmente duracao do dia, maior/menor duracao de luz no ano da data selecionada por padrao, maior/menor duracao de luz no mes quando um mes for informado, tendencia de nascer/por do sol e comparacao semanal.
 - Perguntas sobre AQI/IAQ/qualidade do ar no chat reutilizam `ClimateAqi.calculate`; CO, CO2, Acetona, Álcool, Amônia e Tolueno são tratados como métricas da Sala/MQ135 quando nenhum ambiente é citado ou quando a aba/ambiente atual não possui essa medição.
 - Perguntas equivalentes aos heatmaps no chat calculam localmente calendário mensal por dia, hora típica do período e mapa semanal por dia/hora antes da redação da IA.
+- Heatmaps visuais de Sala/Quarto só montam o DOM quando `Visualizações Climáticas` é expandido.
 - Estação do ano e fase da lua são calculadas localmente para contexto visual. A fase lunar é aproximada e não deve ser tratada como efeméride astronômica de alta precisão.
 - Quando ambiente, data, periodo ou operação aparecem de forma informal, a classificação em JSON ajuda a entender erros de digitação e fala natural.
 - Consultas de período usam limite de 30 dias; `últimos dias` usa 7 dias por padrão. O calendário mensal pode consultar o mês completo.

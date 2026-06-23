@@ -11,8 +11,8 @@ const ClimateMoon = window.ClimateMoon;
 const FirebaseService = window.FirebaseService;
 const ClimateUI = window.ClimateUI;
 const ClimateZoom = window.ClimateZoom;
+const ClimateAssets = window.ClimateAssets;
 const ClimatePdfReport = window.ClimatePdfReport;
-const ClimateAIService = window.ClimateAIService;
 const ClimateChat = window.ClimateChat;
 const QuartoView = window.QuartoView;
 const AquarioView = window.AquarioView;
@@ -32,8 +32,8 @@ if (
     !FirebaseService ||
     !ClimateUI ||
     !ClimateZoom ||
+    !ClimateAssets ||
     !ClimatePdfReport ||
-    !ClimateAIService ||
     !ClimateChat ||
     !QuartoView ||
     !AquarioView ||
@@ -61,8 +61,9 @@ const IDS = AppConfig.ids;
 let selectedDate = ClimateData.dataAtual();
 let astroIndicatorTimer = null;
 let lastAstroState = null;
+let carregamentoChart = null;
 
-ClimateCharts.registerComfortBand();
+if (window.Chart) ClimateCharts.registerComfortBand();
 
 function getSelectedDate() {
     return selectedDate;
@@ -87,6 +88,12 @@ function createChart({
     emptyMessage = "Sem dados para esta data."
 }) {
     const id = canvasCtx.canvas.id;
+    if (!window.Chart) {
+        if (containerId) ClimateUI.renderChartMessage(containerId, "Carregando gráfico...", "loading");
+        carregarChartParaGraficos();
+        return chartInstances[id] || null;
+    }
+
     const chart = ClimateCharts.createLineChart({
         canvasCtx,
         data,
@@ -109,6 +116,30 @@ function createChart({
     });
     if (chart) chartInstances[id] = chart;
     return chartInstances[id];
+}
+
+function carregarChartParaGraficos() {
+    if (window.Chart) return Promise.resolve(window.Chart);
+    if (!carregamentoChart) {
+        carregamentoChart = ClimateAssets.carregarChart()
+            .then(chart => {
+                ClimateCharts.registerComfortBand();
+                rerenderDashboardFromSelectedDate();
+                return chart;
+            })
+            .catch(error => {
+                window.ClimateDiagnostics?.erro("Falha ao carregar Chart.js.", error);
+                mostrarFalhaGraficos();
+                throw error;
+            });
+    }
+    return carregamentoChart;
+}
+
+function mostrarFalhaGraficos() {
+    Object.values(IDS.chartContainers).forEach(containerId => {
+        ClimateUI.renderChartMessage(containerId, "Não foi possível carregar os gráficos.", "error");
+    });
 }
 
 function getZoomOptions(sourceId) {
@@ -172,6 +203,7 @@ function renderStationData() {
         chartInstances,
         defaults: CHART_DEFAULTS,
         colors: COLORS,
+        ensureChart: carregarChartParaGraficos,
         ui: ClimateUI
     });
 }
@@ -434,6 +466,24 @@ async function setupFirebaseListeners() {
     }, () => ClimateUI.renderEmptyState(IDS.tables.livingRoom, "Falha ao carregar dados da sala.", "error"));
 }
 
+function iniciarFirebaseProgressivo() {
+    ClimateAssets.executarQuandoOcioso(() => {
+        setupFirebaseListeners().catch(error => {
+            FirebaseService.handleError("Firebase", error);
+            FirebaseService.setLoading(false);
+            ClimateUI.renderStartupError();
+        });
+    }, 350);
+}
+
+function reagirAberturaColapsavel() {
+    document.addEventListener("climate-collapsible-expanded", event => {
+        const secao = event.detail?.section;
+        if (!secao?.querySelector?.(".calendar-heatmap, .hourly-heatmap, .weekly-heatmap")) return;
+        rerenderDashboardFromSelectedDate();
+    });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     ClimateUI.setupTabs("Tab0");
     ClimateUI.setupTabSwipe({
@@ -446,6 +496,7 @@ document.addEventListener("DOMContentLoaded", () => {
         onDateChange: rerenderDashboardFromSelectedDate
     });
     ClimateUI.setupCollapsibleSections();
+    reagirAberturaColapsavel();
     ClimateZoom.setup({ chartInstances, getZoomOptions });
     ClimatePdfReport.setup({
         buttonId: "btnExportData",
@@ -468,10 +519,12 @@ document.addEventListener("DOMContentLoaded", () => {
     ClimateSeason.setup();
     ClimateMoon.setup();
     setupAstroIndicator();
+    renderStationData();
 
-    setupFirebaseListeners().catch(error => {
-        FirebaseService.handleError("Firebase", error);
-        FirebaseService.setLoading(false);
-        ClimateUI.renderStartupError();
-    });
+    ClimateAssets.executarQuandoOcioso(() => {
+        ClimateAssets.carregarCssUmaVez("styles/zoom.css?v=20260623-1", "climate-zoom-css")
+            .catch(error => window.ClimateDiagnostics?.depurar("Falha ao carregar CSS de zoom.", error));
+    }, 1200);
+
+    iniciarFirebaseProgressivo();
 });

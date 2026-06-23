@@ -5,9 +5,16 @@
     const sunHistoryChart = document.getElementById(ids.charts.sunHistory).getContext("2d");
     const solarTodayChart = document.getElementById(ids.charts.solarToday).getContext("2d");
 
-    function render({ data, selectedDate, chartInstances, defaults, colors, ui }) {
+    function render({ data, selectedDate, chartInstances, defaults, colors, ui, ensureChart }) {
         ui.clearChartMessage(ids.chartContainers.sunHistory);
         ui.clearChartMessage(ids.chartContainers.solarToday);
+
+        if (!window.Chart) {
+            ui.renderChartMessage(ids.chartContainers.sunHistory, "Carregando gráfico...", "loading");
+            ui.renderChartMessage(ids.chartContainers.solarToday, "Carregando gráfico...", "loading");
+            if (typeof ensureChart === "function") ensureChart();
+            return;
+        }
 
         const historyData = ClimateData.filterDataByDays(data, 365, selectedDate, false);
         createSunriseSunsetChart({ data: historyData, selectedDate, chartInstances, defaults, colors, ui });

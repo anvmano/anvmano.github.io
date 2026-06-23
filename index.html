@@ -13,8 +13,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link href="style.css?v=20260623-3" rel="stylesheet" />
-    <link href="styles/reports/pdf-report.css?v=20260612-1" rel="stylesheet" />
+    <link href="style.css?v=20260623-4" rel="stylesheet" />
+    <link rel="preload" href="styles/chat.css?v=20260623-4" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link href="styles/chat.css?v=20260623-4" rel="stylesheet" /></noscript>
 </head>
 
 <body>
@@ -347,8 +348,8 @@
         setInterval(updateClock, 1000);
     </script>
 
-    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
     <script defer src="scripts/config.js?v=20260622-2"></script>
+    <script defer src="scripts/runtime-loader.js?v=20260623-3"></script>
     <script defer src="scripts/data/data-utils.js?v=20260612-1"></script>
     <script defer src="scripts/data/analytics.js?v=20260612-1"></script>
     <script defer src="scripts/charts/solar.js?v=20260612-1"></script>
@@ -359,31 +360,14 @@
     <script defer src="scripts/firebase-service.js?v=20260622-2"></script>
     <script defer src="scripts/ui/ui.js?v=20260612-1"></script>
     <script defer src="scripts/charts/zoom.js?v=20260615-1"></script>
-    <script defer src="scripts/reports/pdf-report-config.js?v=20260612-1"></script>
-    <script defer src="scripts/reports/pdf-report-format.js?v=20260612-1"></script>
-    <script defer src="scripts/reports/pdf-report-data.js?v=20260622-5"></script>
-    <script defer src="scripts/reports/pdf-report-dom.js?v=20260622-1"></script>
-    <script defer src="scripts/reports/pdf-report-charts.js?v=20260622-1"></script>
-    <script defer src="scripts/reports/pdf-report-pdf.js?v=20260622-2"></script>
-    <script defer src="scripts/reports/pdf-report-export.js?v=20260622-5"></script>
-    <script defer src="scripts/reports/pdf-report.js?v=20260612-2"></script>
-    <script defer src="scripts/assistant/ai-service.js?v=20260614-1"></script>
-    <script defer src="scripts/assistant/assistant-config.js?v=20260614-1"></script>
-    <script defer src="scripts/assistant/assistant-format.js?v=20260614-1"></script>
-    <script defer src="scripts/assistant/assistant-solar.js?v=20260614-1"></script>
-    <script defer src="scripts/assistant/assistant-aqi.js?v=20260614-1"></script>
-    <script defer src="scripts/assistant/assistant-metrics.js?v=20260614-1"></script>
-    <script defer src="scripts/assistant/assistant-intent.js?v=20260614-1"></script>
-    <script defer src="scripts/assistant/assistant-planner.js?v=20260614-3"></script>
-    <script defer src="scripts/assistant/assistant-query.js?v=20260614-4"></script>
-    <script defer src="scripts/assistant/assistant-ui.js?v=20260614-3"></script>
-    <script defer src="scripts/chat.js?v=20260614-1"></script>
+    <script defer src="scripts/reports/pdf-report.js?v=20260623-1"></script>
+    <script defer src="scripts/chat.js?v=20260623-1"></script>
     <script defer src="scripts/views/quarto-view.js?v=20260602-1"></script>
     <script defer src="scripts/views/aquario-view.js?v=20260528-1"></script>
     <script defer src="scripts/views/sala-view.js?v=20260602-1"></script>
     <script defer src="scripts/views/solar-view.js?v=20260528-1"></script>
-    <script defer src="scripts/views/estacao-view.js?v=20260622-3"></script>
-    <script defer src="scripts/main.js?v=20260622-2"></script>
+    <script defer src="scripts/views/estacao-view.js?v=20260623-1"></script>
+    <script defer src="scripts/main.js?v=20260623-1"></script>
 </body>
 
 </html>

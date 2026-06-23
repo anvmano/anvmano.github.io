@@ -85,6 +85,29 @@ Se alterada: a pagina pode voltar a carregar reCAPTCHA na abertura, emitir warni
 
 Criticidade: Media.
 
+## Regra: carregamento sob demanda de recursos pesados
+
+Arquivos: `index.html`, `scripts/runtime-loader.js`, `scripts/main.js`, `scripts/chat.js`, `scripts/reports/pdf-report.js`
+
+Objetivo: reduzir custo inicial de JavaScript/CSS sem introduzir build tooling.
+
+Entradas: abertura da pagina, primeiro grafico com dados, clique no chat e clique de exportacao.
+
+Saidas:
+
+- Chart.js nao e carregado no HTML inicial; o primeiro grafico com dados chama `ClimateAssets.carregarChart()` e redesenha a data selecionada.
+- `scripts/chat.js` fica como fachada leve; `scripts/assistant/*` e Firebase AI Logic so carregam no primeiro clique da assistente.
+- `scripts/reports/pdf-report.js` fica como fachada leve; `scripts/reports/pdf-report-*` so carregam ao exportar.
+- Exportacao JSON nao carrega Chart.js, CSS do PDF, html2canvas ou jsPDF.
+- Exportacao PDF carrega CSS do relatorio, Chart.js, html2canvas e jsPDF sob demanda.
+- `styles/zoom.css` nao bloqueia a primeira renderizacao; e carregado apos a inicializacao via `ClimateAssets`.
+
+Impacto: Lighthouse mobile, TBT, LCP, tamanho de JS inicial e render-blocking CSS.
+
+Se alterada: a pagina pode voltar a carregar IA/PDF/Chart.js na abertura ou quebrar chat/exportacao por ordem de modulos.
+
+Criticidade: Alta.
+
 ## Regra: conversao input HTML para Firebase
 
 Arquivo: `scripts/data/data-utils.js`
@@ -316,6 +339,7 @@ Regra de destaque:
 - calendario mensal destaca o dia selecionado
 - heatmap por hora destaca a hora atual apenas quando a data selecionada e hoje
 - mapa semanal destaca a celula do dia da semana atual e hora atual apenas quando a data selecionada e hoje
+- heatmaps de Sala/Quarto so devem montar o DOM quando a secao de visualizacoes climaticas estiver expandida; abrir o colapsavel dispara novo render da data selecionada
 
 Impacto: visualizacoes climaticas de Quarto e Sala.
 

@@ -158,6 +158,9 @@
             ...DEFAULT_ADVANCED_CONTAINERS,
             ...(options.containers || {}),
         };
+
+        if (visualizacoesEstaoRecolhidas(containers)) return;
+
         const normalizedDate = dateParts.firebaseDate;
         const monthRecords = extractClimateRecordsForSelectedMonth(data, metricKey, normalizedDate);
         const dayRecords = monthRecords.filter(record => record.firebaseDate === normalizedDate);
@@ -169,6 +172,15 @@
         } catch (error) {
             window.ClimateDiagnostics?.depurar("Falha ao renderizar visualizações climáticas avançadas.", error);
         }
+    }
+
+    function visualizacoesEstaoRecolhidas(containers) {
+        const ids = [containers.monthlyCalendar, containers.hourlyHeatmap, containers.weeklyHeatmap];
+        const container = ids
+            .map(id => document.getElementById(id))
+            .find(Boolean);
+        const section = container?.closest?.(".collapsible-section");
+        return !!section?.classList.contains("is-collapsed");
     }
 
     function extractClimateRecordsForSelectedMonth(data, metricKey, selectedDate) {

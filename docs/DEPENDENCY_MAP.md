@@ -5,6 +5,7 @@
 ```mermaid
 graph TD
     HTML[index.html] --> Config[AppConfig]
+    HTML --> Assets[ClimateAssets]
     HTML --> Data[ClimateData]
     HTML --> Analytics[ClimateAnalytics]
     HTML --> Solar[ClimateSolar]
@@ -13,7 +14,6 @@ graph TD
     HTML --> Season[ClimateSeason]
     HTML --> Moon[ClimateMoon]
     HTML --> Firebase[FirebaseService]
-    HTML --> AI[ClimateAIService]
     HTML --> Chat[ClimateChat]
     HTML --> UI[ClimateUI]
     HTML --> Zoom[ClimateZoom]
@@ -26,6 +26,7 @@ graph TD
     HTML --> Main[scripts/main.js]
 
     Main --> Config
+    Main --> Assets
     Main --> Data
     Main --> Analytics
     Main --> Solar
@@ -63,7 +64,10 @@ graph TD
     Aquario --> Charts
     SolarView --> Data
     SolarView --> Solar
-    Charts --> ChartJS[Chart.js]
+    Assets --> ChartJS[Chart.js]
+    Assets --> PdfModules[scripts/reports/pdf-report-*]
+    Assets --> AssistantModules[scripts/assistant/*]
+    Charts --> ChartJS
     Aqi --> LivingRoomData[historico/AirQuality]
     Season --> Data
     Moon --> Data
@@ -85,9 +89,9 @@ graph TD
 
 Responsabilidade: definir DOM, containers, abas, canvases e ordem dos scripts.
 
-Dependencias diretas: CDN Chart.js, scripts locais, Google Fonts, `style.css`.
+Dependencias diretas: scripts locais essenciais, Google Fonts, `style.css` e preload nao bloqueante de `styles/chat.css`.
 
-Dependencias indiretas: todas as dependencias dos scripts.
+Dependencias indiretas: todas as dependencias dos scripts. Chart.js, modulos do PDF e modulos da assistente entram por `scripts/runtime-loader.js` quando necessarios.
 
 Quem chama: navegador.
 
@@ -132,6 +136,26 @@ Quem chama: navegador.
 Quem e chamado: nenhum modulo JS.
 
 Impacto da alteracao: Medio a Alto, dependendo do seletor.
+
+## scripts/runtime-loader.js
+
+Responsabilidade: carregar recursos pesados sob demanda sem Vite/build tooling.
+
+Dependencias diretas: DOM `document.head`, URLs locais dos modulos de assistente/relatorio, CDN Chart.js.
+
+Quem chama: `scripts/main.js`, `scripts/chat.js`, `scripts/reports/pdf-report.js`.
+
+Quem e chamado: navegador ao inserir scripts e folhas de estilo dinamicamente.
+
+Recursos carregados:
+
+- Chart.js antes do primeiro grafico real ou exportacao PDF.
+- `scripts/assistant/*` no primeiro clique da assistente.
+- `scripts/reports/pdf-report-*` ao exportar PDF/JSON.
+- `styles/reports/pdf-report.css` apenas na exportacao PDF.
+- `styles/zoom.css` apos inicializacao, fora do caminho critico de renderizacao.
+
+Impacto da alteracao: Alto. Pode afetar graficos, chat, PDF/JSON e performance inicial.
 
 ## styles/*.css
 
@@ -184,7 +208,6 @@ Dependencias diretas:
 - `ClimateSeason`
 - `ClimateMoon`
 - `FirebaseService`
-- `ClimateAIService`
 - `ClimateChat`
 - `ClimateUI`
 - `ClimateZoom`
@@ -216,6 +239,8 @@ Quem e chamado:
 - views.
 
 Observacao: `window.ClimateDiagnostics` tambem nasce neste arquivo; logs de fallback esperado ficam ocultos por padrao e podem ser ativados com `?debug=1` ou `localStorage.climateDebug = "1"`.
+
+Observacao: `main.js` nao exige que Chart.js, `ClimateAIService` ou `ClimatePdfReportModules` estejam prontos na abertura. Ele chama as fachadas e o carregador sob demanda quando a acao do usuario ou o primeiro grafico precisar.
 
 Impacto da alteracao: Critico.
 
@@ -261,13 +286,14 @@ Responsabilidade: fachada publica do chat. Mantem `window.ClimateChat.setup` par
 
 Dependencias diretas:
 
-- `ClimateAssistant.ui`
+- `ClimateAssets.carregarAssistente`
+- DOM `#aiChatToggle`
 
 Dependencias indiretas: todos os modulos de `scripts/assistant/`.
 
 Quem chama: `scripts/main.js`.
 
-Quem e chamado: `ClimateAssistant.ui.setup`.
+Quem e chamado: `ClimateAssistant.ui.setup` depois que os modulos da pasta `scripts/assistant/` forem carregados sob demanda.
 
 Impacto da alteracao: Medio. Quebrar este arquivo impede o chat de inicializar, mesmo que os modulos internos estejam corretos.
 
@@ -487,7 +513,7 @@ Dependencias diretas:
 
 Quem chama: `scripts/main.js`.
 
-Quem e chamado: modulos internos em `window.ClimatePdfReportModules`, carregador sob demanda de html2canvas/jsPDF para PDF e Blob/URL para download JSON.
+Quem e chamado: `scripts/runtime-loader.js` para carregar modulos internos em `window.ClimatePdfReportModules`; carregador sob demanda de html2canvas/jsPDF para PDF e Blob/URL para download JSON.
 
 Impacto da alteracao: Medio a Alto. Pode afetar exportacao PDF/JSON, captura de graficos e download.
 
