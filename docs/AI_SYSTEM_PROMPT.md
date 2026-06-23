@@ -140,3 +140,11 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Verificar que `scripts/main.js` nao aponta para modulo inexistente.
 - Verificar que ids DOM usados existem no HTML.
 - Verificar cache bust dos scripts alterados se necessario.
+
+## Documentacao e commits
+
+- Atualize somente os arquivos `.md` diretamente impactados pela alteracao. Nao altere documentacao sem impacto real.
+- Para cada entrega logica concluida, gere uma mensagem de commit em portugues no formato:
+
+  ```text
+  <tipo>(<escopo>): <resumo no infinitivo e sem ponto>
