@@ -73,6 +73,8 @@ let carregamentoChart = null;
 let dashboardInternoInicializado = false;
 let modoPublicoAtivo = false;
 let eventosSolaresPublicos = null;
+let firebaseProgressivoAgendado = false;
+let canceladoresFirebase = [];
 
 if (window.Chart) ClimateCharts.registerComfortBand();
 
@@ -453,6 +455,8 @@ function configurarCicloSolarPublico() {
 }
 
 async function setupFirebaseListeners() {
+    if (canceladoresFirebase.length) return;
+
     FirebaseService.trackLoadStart();
     try {
         await FirebaseService.initialize();
@@ -460,7 +464,7 @@ async function setupFirebaseListeners() {
         FirebaseService.trackLoadEnd();
     }
 
-    FirebaseService.listenToPath(FIREBASE_PATHS.room, data => {
+    registrarListenerFirebase(FirebaseService.listenToPath(FIREBASE_PATHS.room, data => {
         latestData.room = data;
         if (!data) {
             ClimateUI.renderEmptyState(IDS.tables.room, "Sem dados de temperatura.");
@@ -469,9 +473,9 @@ async function setupFirebaseListeners() {
         }
         renderRoomData(data);
         renderStationData();
-    }, () => ClimateUI.renderEmptyState(IDS.tables.room, "Falha ao carregar dados de temperatura.", "error"));
+    }, () => ClimateUI.renderEmptyState(IDS.tables.room, "Falha ao carregar dados de temperatura.", "error")));
 
-    FirebaseService.listenToPath(FIREBASE_PATHS.solar, data => {
+    registrarListenerFirebase(FirebaseService.listenToPath(FIREBASE_PATHS.solar, data => {
         latestData.solar = data;
         if (!data) {
             const formattedDate = selectedDate.replace(/-/g, "/");
@@ -488,9 +492,9 @@ async function setupFirebaseListeners() {
         ClimateUI.renderChartMessage(IDS.chartContainers.solarToday, "Falha ao carregar ciclo solar.", "error");
         renderStationData();
         updateAstroIndicator();
-    });
+    }));
 
-    FirebaseService.listenToPath(FIREBASE_PATHS.aquarium, data => {
+    registrarListenerFirebase(FirebaseService.listenToPath(FIREBASE_PATHS.aquarium, data => {
         latestData.aquarium = data;
         if (!data) {
             ClimateUI.renderEmptyState(IDS.tables.aquarium, "Sem dados do aquário.");
@@ -499,9 +503,9 @@ async function setupFirebaseListeners() {
         }
         renderAquariumData(data);
         renderStationData();
-    }, () => ClimateUI.renderEmptyState(IDS.tables.aquarium, "Falha ao carregar dados do aquário.", "error"));
+    }, () => ClimateUI.renderEmptyState(IDS.tables.aquarium, "Falha ao carregar dados do aquário.", "error")));
 
-    FirebaseService.listenToPath(FIREBASE_PATHS.livingRoom, data => {
+    registrarListenerFirebase(FirebaseService.listenToPath(FIREBASE_PATHS.livingRoom, data => {
         latestData.livingRoom = data;
         if (!data) {
             ClimateAqi.update(null);
@@ -511,17 +515,40 @@ async function setupFirebaseListeners() {
         }
         renderLivingRoomData(data);
         renderStationData();
-    }, () => ClimateUI.renderEmptyState(IDS.tables.livingRoom, "Falha ao carregar dados da sala.", "error"));
+    }, () => ClimateUI.renderEmptyState(IDS.tables.livingRoom, "Falha ao carregar dados da sala.", "error")));
 }
 
 function iniciarFirebaseProgressivo() {
+    if (firebaseProgressivoAgendado || canceladoresFirebase.length) return;
+    firebaseProgressivoAgendado = true;
     ClimateAssets.executarQuandoOcioso(() => {
+        firebaseProgressivoAgendado = false;
+        if (modoPublicoAtivo) return;
         setupFirebaseListeners().catch(error => {
             FirebaseService.handleError("Firebase", error);
             FirebaseService.setLoading(false);
             ClimateUI.renderStartupError();
         });
     }, 350);
+}
+
+function registrarListenerFirebase(cancelador) {
+    if (typeof cancelador === "function") canceladoresFirebase.push(cancelador);
+}
+
+function pararFirebaseInterno() {
+    canceladoresFirebase.forEach(cancelador => {
+        try {
+            cancelador();
+        } catch (erro) {
+            window.ClimateDiagnostics?.depurar("Falha ao cancelar listener Firebase.", erro);
+        }
+    });
+    canceladoresFirebase = [];
+    Object.keys(latestData).forEach(chave => {
+        latestData[chave] = null;
+    });
+    ClimateAqi.update(null);
 }
 
 function reagirAberturaColapsavel() {
@@ -538,6 +565,7 @@ function inicializarDashboardInterno() {
     updateAstroIndicator();
     if (dashboardInternoInicializado) {
         PublicWeatherView.ocultar();
+        iniciarFirebaseProgressivo();
         return;
     }
 
@@ -586,12 +614,15 @@ function inicializarDashboardInterno() {
 function inicializarModoPublico(usuario, usuarioInterno) {
     modoPublicoAtivo = true;
     eventosSolaresPublicos = null;
+    pararFirebaseInterno();
     PublicWeatherView.atualizarUsuario(usuario, usuarioInterno);
     PublicWeatherView.mostrar();
     updateAstroIndicator();
 }
 
 function configurarAutenticacaoPublica() {
+    configurarLogoutHeader();
+
     PublicWeatherView.setup({
         getUsuario: () => ClimateAuthService.obterUsuarioAtual(),
         isOwner: () => ClimateAuthService.ehUsuarioInterno(),
@@ -614,6 +645,7 @@ function configurarAutenticacaoPublica() {
 
     ClimateAuthService.observarEstado(usuario => {
         const usuarioInterno = ClimateAuthService.ehUsuarioInterno(usuario);
+        atualizarLogoutHeader(usuarioInterno);
         if (usuarioInterno) {
             inicializarDashboardInterno();
             return;
@@ -624,6 +656,32 @@ function configurarAutenticacaoPublica() {
         window.ClimateDiagnostics?.erro("Falha ao inicializar autenticação.", erro);
         inicializarModoPublico(null, false);
     });
+}
+
+function configurarLogoutHeader() {
+    const botaoSair = document.getElementById("authLogoutButton");
+    if (!botaoSair) return;
+
+    botaoSair.addEventListener("click", async () => {
+        try {
+            await ClimateAuthService.sair();
+        } catch (erro) {
+            window.ClimateDiagnostics?.erro("Falha ao sair.", erro);
+            window.alert("Não foi possível sair agora.");
+        }
+    });
+}
+
+function atualizarLogoutHeader(usuarioInterno) {
+    const botaoSair = document.getElementById("authLogoutButton");
+    if (!botaoSair) return;
+
+    if (usuarioInterno) {
+        botaoSair.removeAttribute("hidden");
+        return;
+    }
+
+    botaoSair.setAttribute("hidden", "");
 }
 
 function obterMensagemErroLogin(erro) {

@@ -121,6 +121,13 @@
         display: none;
     }
 
+    .auth-logout-button {
+        flex: 0 0 auto;
+        min-width: 46px;
+        padding: 0 9px;
+        font-size: 0.76rem;
+    }
+
     .tab-toolbar {
         align-items: stretch;
         flex-direction: column;

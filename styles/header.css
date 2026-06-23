@@ -62,6 +62,35 @@ h1 {
     gap: 8px;
 }
 
+.auth-logout-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 58px;
+    height: var(--header-status-chip-height);
+    padding: 0 13px;
+    border: 1px solid rgba(148, 163, 184, 0.26);
+    border-radius: var(--radius-md);
+    background: rgba(15, 23, 42, 0.64);
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.auth-logout-button:hover,
+.auth-logout-button:focus-visible {
+    border-color: var(--border-hover);
+    background: rgba(56, 189, 248, 0.14);
+    color: var(--text-primary);
+}
+
+.auth-logout-button[hidden] {
+    display: none;
+}
+
 .aqi-indicator {
     --aqi-color: var(--text-muted);
     --aqi-bg: rgba(148, 163, 184, 0.12);

@@ -111,6 +111,8 @@ Regras:
 - modo publico nao deve iniciar listeners internos do Realtime Database
 - modo publico nao deve inicializar ou exibir a assistente IA
 - modo interno inicializa abas, date picker, zoom, exportacao, chat e listeners Firebase internos
+- modo interno deve exibir opcao de logout no header
+- ao executar logout ou voltar para modo publico, listeners internos do Firebase devem ser cancelados e `latestData` deve ser limpo para nao manter dados privados em memoria
 - a seguranca real dos dados internos deve ser reforcada por regras do Firebase Realtime Database; ocultar UI no frontend nao substitui regras de banco
 
 Impacto: privacidade dos dados internos, custo de IA e separacao de experiencia publica/interna.

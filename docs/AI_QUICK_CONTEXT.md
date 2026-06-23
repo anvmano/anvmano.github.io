@@ -69,7 +69,7 @@ Arquivos principais:
 2. `scripts/main.js` valida todos os objetos globais.
 3. No `DOMContentLoaded`, inicializa chips globais do header, view publica e Firebase Auth.
 4. Se nao houver usuario interno autorizado, mostra `#publicApp`, oculta `#privateApp` e nao inicia listeners internos nem assistente IA.
-5. Se o usuario for `anvmano@gmail.com` ou `clarissamikado@gmail.com`, mostra o dashboard interno, inicializa abas/date picker/zoom/exportacao/chat e agenda Firebase.
+5. Se o usuario for `anvmano@gmail.com` ou `clarissamikado@gmail.com`, mostra o dashboard interno, inicializa abas/date picker/zoom/exportacao/chat, exibe o botao de logout no header e agenda Firebase.
 6. `FirebaseService.initialize()` importa SDK Firebase e cria app/database; App Check/reCAPTCHA fica sob demanda para recursos protegidos, como a IA.
 7. `FirebaseService.listenToPath()` escuta no modo interno:
    - `historico/Temperatura`
@@ -203,6 +203,7 @@ Arquivos principais:
 - Nao mudar ordem dos scripts sem revisar dependencias globais. Os scripts externos do fim do `body` usam `defer`, preservando a mesma ordem para reduzir bloqueio de renderizacao.
 - O modo publico deve funcionar sem login. Login Google e opcional; se o usuario logado nao for autorizado, continua no modo publico.
 - O dashboard interno completo so deve iniciar para `AppConfig.auth.usuariosInternosAutorizados`.
+- O modo interno deve oferecer logout no header; ao sair, listeners internos do Firebase sao cancelados e o usuario volta para o modo publico.
 - Para login Google em producao, o dominio publicado, como `anvmano.github.io`, precisa estar em Firebase Authentication > Configuracoes > Dominios autorizados.
 - APIs externas nao substituem Firebase interno; elas servem apenas para o modo publico por CEP/localizacao.
 - Localizacao do navegador nao deve ser persistida; usar apenas em memoria para a consulta atual.
