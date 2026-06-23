@@ -51,7 +51,7 @@
 }
 
 .state-message {
-    padding: 1rem;
+    padding: var(--space-4);
     color: var(--text-secondary);
     text-align: center;
     font-size: 0.875rem;
@@ -63,5 +63,7 @@
 
 .chart-message {
     margin-top: -0.25rem;
-    padding: 0.5rem 0 0.25rem;
+    padding: 0.55rem 0 0.25rem;
+    color: var(--text-secondary);
+    font-size: 0.84rem;
 }

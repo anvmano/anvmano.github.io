@@ -470,7 +470,8 @@ Entradas:
 
 Saidas:
 
-- desktop e mobile: chip compacto com `AQI` e valor
+- desktop e mobile: chip compacto no mesmo formato visual dos demais chips do header, mostrando apenas um mini medidor colorido interno
+- o mini medidor deve comunicar visualmente a faixa AQI, com ponteiro mais a esquerda para valores melhores e mais a direita para valores piores
 - tooltip/`aria-label`: valor, classificacao e dominante
 - clique/toque: popover com valor, classificacao, impacto, dominante, horario e principais subindices
 - exclusividade: ao abrir este popover, outros popovers do header devem fechar
@@ -520,6 +521,7 @@ Regras:
 - o marcador da faixa progride por segmento visual: Verao 0-25%, Outono 25-50%, Inverno 50-75%, Primavera 75-100%
 - o percentual mostrado no card da Estacao do ano no PDF representa o quanto ja passou da estacao atual, portanto no inicio do inverno deve ficar perto de 0%, nao perto de 50%
 - o header usa a ordem: Estacao do ano, AQI, ciclo solar, fase da lua e relogio
+- o chip do header deve mostrar apenas a animacao/icone sazonal; o nome da estacao fica em `title`/`aria-label` e no popover
 - em mobile, o relogio e a marca `Estacao Climatica` podem ser ocultados e os chips principais devem ocupar toda a largura util do header
 - o popover de estacao do ano e mutuamente exclusivo com AQI, solar e lua
 - os placeholders iniciais de `#statsEstacao` devem ter altura compativel com os 6 cards globais reais, especialmente no mobile, para evitar CLS alto no Lighthouse
@@ -553,11 +555,13 @@ Saidas:
 Regras:
 
 - o chip do header representa a fase da lua atual
+- o chip do header deve mostrar apenas o icone/animacao lunar; o texto da fase fica em `title`/`aria-label` e no popover
+- o icone lunar deve respeitar visualmente a direcao da fase: crescente e minguante usam lados opostos de sombra
 - o bloco lunar da aba Estacao representa a fase da lua da data selecionada
 - o popover da lua e mutuamente exclusivo com Estacao do ano, AQI e solar
 - o calculo lunar e aproximado e nao deve ser tratado como efemeride astronomica de alta precisao
 - o `title` do chip lunar deve conter somente a descricao completa, como `Quarto crescente: 50% iluminado`
-- o `aria-label` do chip lunar deve incluir tambem o texto visivel abreviado, como `Q. crescente`, para cumprir a regra de acessibilidade de nome visivel contido no nome acessivel
+- o `aria-label` do chip lunar deve preservar a informacao textual da fase, mesmo sem texto visivel dentro do chip
 
 Impacto: contexto visual astronomico no header e na visao global.
 
@@ -686,6 +690,8 @@ Saidas:
 - swipe para direita em Sala abre Estacao
 - swipe para direita em Estacao nao faz nada
 - gestos iniciados em tabelas, heatmaps ou areas com rolagem horizontal nao trocam de aba
+- no mobile, as abas devem ocupar toda a largura horizontal em quatro colunas equivalentes e ter aparencia clara de abas/controle segmentado, distinguindo navegacao de conteudo da pagina
+- a aba ativa deve se integrar visualmente ao conteudo abaixo com destaque e transicao suave, evitando aparencia de botao quadrado isolado
 
 Impacto: navegacao mobile por touch.
 

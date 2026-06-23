@@ -13,3 +13,24 @@ html, body {
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
 }
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
+button {
+    color: inherit;
+}
+
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
+
+::selection {
+    background: rgba(56, 189, 248, 0.32);
+    color: var(--text-primary);
+}

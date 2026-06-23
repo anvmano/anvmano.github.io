@@ -4,7 +4,7 @@
 .plot-zoom-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(11, 17, 32, 0.85);
+    background: rgba(10, 16, 32, 0.88);
     backdrop-filter: blur(8px);
     z-index: 200;
     display: flex;
@@ -15,7 +15,7 @@
 }
 
 .plot-zoom-overlay .chart-card {
-    width: min(90vw, 860px);
+    width: min(92vw, 900px);
     cursor: default;
     transform: none;
     pointer-events: auto;
@@ -40,7 +40,7 @@
     width: 34px;
     height: 34px;
     border: 1px solid rgba(148, 163, 184, 0.22);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     background: rgba(15, 23, 42, 0.82);
     color: #bfdbfe;
     cursor: pointer;

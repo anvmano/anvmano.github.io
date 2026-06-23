@@ -6,7 +6,7 @@
     top: 0;
     z-index: 100;
     height: var(--header-h);
-    background: var(--bg-surface);
+    background: rgba(16, 24, 39, 0.94);
     border-bottom: 1px solid var(--border);
     backdrop-filter: blur(12px);
 }
@@ -59,20 +59,21 @@ h1 {
     position: relative;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .aqi-indicator {
     --aqi-color: var(--text-muted);
     --aqi-bg: rgba(148, 163, 184, 0.12);
+    --aqi-angle: 0deg;
     position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 5px;
-    min-width: 82px;
+    width: var(--header-status-chip-width);
     height: var(--header-status-chip-height);
-    padding: 0 11px;
+    padding: 0;
     border: 1px solid color-mix(in srgb, var(--aqi-color), transparent 55%);
     border-radius: var(--radius-md);
     background:
@@ -81,30 +82,63 @@ h1 {
     color: var(--text-primary);
     font: inherit;
     cursor: pointer;
+    overflow: hidden;
+}
+
+.aqi-indicator:hover,
+.season-indicator:hover,
+.astro-indicator:hover,
+.moon-indicator:hover {
+    border-color: var(--border-hover);
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.035)),
+        var(--aqi-bg, var(--season-bg, var(--moon-bg, rgba(56, 189, 248, 0.09))));
 }
 
 .aqi-indicator::before {
     content: "";
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--aqi-color);
-    box-shadow: 0 0 12px color-mix(in srgb, var(--aqi-color), transparent 35%);
-    flex-shrink: 0;
+    position: absolute;
+    left: 50%;
+    bottom: 7px;
+    width: 38px;
+    height: 19px;
+    border: 2px solid color-mix(in srgb, var(--aqi-color), transparent 18%);
+    border-bottom: 0;
+    border-radius: 38px 38px 0 0;
+    background:
+        radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--aqi-color), transparent 18%) 0 2px, transparent 3px),
+        linear-gradient(90deg,
+            rgba(34, 197, 94, 0.70),
+            rgba(250, 204, 21, 0.74),
+            rgba(251, 146, 60, 0.78),
+            rgba(251, 113, 133, 0.82),
+            rgba(167, 139, 250, 0.82));
+    box-shadow: 0 0 14px color-mix(in srgb, var(--aqi-color), transparent 58%);
+    transform: translateX(-50%);
+}
+
+.aqi-indicator::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 8px;
+    width: 3px;
+    height: 15px;
+    border-radius: 999px;
+    background: #f8fafc;
+    box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--aqi-color), transparent 50%),
+        0 0 9px color-mix(in srgb, var(--aqi-color), transparent 28%);
+    transform: translateX(-50%) rotate(var(--aqi-angle));
+    transform-origin: 50% 100%;
 }
 
 .aqi-indicator__prefix {
-    color: var(--accent);
-    font-size: 0.78rem;
-    font-weight: 800;
-    letter-spacing: 0.03em;
+    display: none;
 }
 
 .aqi-indicator__value {
-    color: var(--text-primary);
-    font-size: 0.86rem;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
+    display: none;
 }
 
 .aqi-indicator__status {
@@ -114,31 +148,37 @@ h1 {
 .aqi-indicator--good {
     --aqi-color: #22c55e;
     --aqi-bg: rgba(34, 197, 94, 0.10);
+    --aqi-angle: -58deg;
 }
 
 .aqi-indicator--moderate {
     --aqi-color: #facc15;
     --aqi-bg: rgba(250, 204, 21, 0.11);
+    --aqi-angle: -34deg;
 }
 
 .aqi-indicator--sensitive {
     --aqi-color: #fb923c;
     --aqi-bg: rgba(251, 146, 60, 0.11);
+    --aqi-angle: -12deg;
 }
 
 .aqi-indicator--unhealthy {
     --aqi-color: #fb7185;
     --aqi-bg: rgba(251, 113, 133, 0.11);
+    --aqi-angle: 12deg;
 }
 
 .aqi-indicator--very-unhealthy {
     --aqi-color: #a78bfa;
     --aqi-bg: rgba(167, 139, 250, 0.12);
+    --aqi-angle: 34deg;
 }
 
 .aqi-indicator--hazardous {
     --aqi-color: #b91c1c;
     --aqi-bg: rgba(185, 28, 28, 0.13);
+    --aqi-angle: 58deg;
 }
 
 .aqi-popover {
@@ -151,7 +191,7 @@ h1 {
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     background: rgba(15, 23, 42, 0.98);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-popover);
 }
 
 .aqi-popover[hidden] {
@@ -277,7 +317,7 @@ h1 {
     align-items: center;
     justify-content: center;
     gap: 7px;
-    min-width: var(--header-status-chip-width);
+    width: var(--header-status-chip-width);
     height: var(--header-status-chip-height);
     padding: 0 10px;
     border: 1px solid color-mix(in srgb, var(--season-color), transparent 58%);
@@ -297,8 +337,8 @@ h1 {
 
 .season-indicator__scene {
     position: relative;
-    width: 22px;
-    height: 18px;
+    width: 34px;
+    height: 24px;
     flex-shrink: 0;
     overflow: hidden;
     border-radius: 999px;
@@ -309,8 +349,8 @@ h1 {
     position: absolute;
     left: 1px;
     right: 1px;
-    bottom: 2px;
-    height: 9px;
+    bottom: 3px;
+    height: 12px;
     border-top: 1px solid color-mix(in srgb, var(--season-color), transparent 35%);
     border-radius: 999px 999px 0 0;
     opacity: 0.75;
@@ -319,10 +359,10 @@ h1 {
 .season-indicator__scene::after {
     content: "";
     position: absolute;
-    right: 3px;
-    bottom: 4px;
-    width: 4px;
-    height: 4px;
+    right: 5px;
+    bottom: 6px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     background: color-mix(in srgb, var(--season-color), white 24%);
     box-shadow: -10px -4px 0 -1px color-mix(in srgb, var(--season-color), white 8%);
@@ -332,10 +372,10 @@ h1 {
 
 .season-indicator__orb {
     position: absolute;
-    left: 4px;
-    bottom: 3px;
-    width: 10px;
-    height: 10px;
+    left: 7px;
+    bottom: 5px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     background: var(--season-color);
     box-shadow: 0 0 12px color-mix(in srgb, var(--season-color), transparent 35%);
@@ -343,11 +383,7 @@ h1 {
 }
 
 .season-indicator__value {
-    min-width: 0;
-    color: var(--text-primary);
-    font-size: 0.78rem;
-    font-weight: 800;
-    white-space: nowrap;
+    display: none;
 }
 
 .season-indicator--verao {
@@ -385,7 +421,7 @@ h1 {
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     background: rgba(15, 23, 42, 0.98);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-popover);
 }
 
 .season-header-popover[hidden] {
@@ -467,6 +503,7 @@ h1 {
     background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.025));
     overflow: hidden;
     cursor: pointer;
+    padding: 0;
 }
 
 .astro-indicator:focus-visible {
@@ -540,7 +577,7 @@ h1 {
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     background: rgba(15, 23, 42, 0.98);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-popover);
 }
 
 .astro-popover[hidden] {
@@ -603,7 +640,7 @@ h1 {
     align-items: center;
     justify-content: center;
     gap: 7px;
-    min-width: var(--header-status-chip-width);
+    width: var(--header-status-chip-width);
     height: var(--header-status-chip-height);
     padding: 0 10px;
     border: 1px solid color-mix(in srgb, var(--moon-color), transparent 58%);
@@ -623,8 +660,8 @@ h1 {
 
 .moon-indicator__scene {
     position: relative;
-    width: 20px;
-    height: 20px;
+    width: 28px;
+    height: 28px;
     flex-shrink: 0;
 }
 
@@ -644,17 +681,14 @@ h1 {
     top: -2px;
     bottom: -2px;
     width: var(--moon-shadow);
+    left: auto;
     right: -1px;
     border-radius: 50%;
     background: rgba(15, 23, 42, 0.88);
 }
 
 .moon-indicator__value {
-    min-width: 0;
-    color: var(--text-primary);
-    font-size: 0.72rem;
-    font-weight: 800;
-    white-space: nowrap;
+    display: none;
 }
 
 .moon-indicator--nova,
@@ -681,6 +715,13 @@ h1 {
     --moon-bg: rgba(196, 181, 253, 0.11);
 }
 
+.moon-indicator--minguante .moon-indicator__orb::after,
+.moon-indicator--gibosa-minguante .moon-indicator__orb::after,
+.moon-indicator--quarto-minguante .moon-indicator__orb::after {
+    left: -1px;
+    right: auto;
+}
+
 .moon-popover {
     position: absolute;
     top: calc(100% + 10px);
@@ -691,7 +732,7 @@ h1 {
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     background: rgba(15, 23, 42, 0.98);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-popover);
 }
 
 .moon-popover[hidden] {
@@ -808,7 +849,7 @@ h1 {
     color: var(--text-secondary);
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.05em;
-    background: rgba(255,255,255,0.04);
+    background: rgba(255,255,255,0.035);
     border: 1px solid var(--border);
     padding: 0 12px;
     border-radius: var(--radius-md);

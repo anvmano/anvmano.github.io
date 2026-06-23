@@ -2,37 +2,82 @@
    Tab navigation
    ===================================================================== */
 .tab-toolbar {
+    position: relative;
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 1.5rem;
-    padding: 16px 0 0;
-    border-bottom: 1px solid var(--border);
+    gap: var(--space-5);
+    padding: 18px 0 0;
+    border-bottom: 0;
     margin-bottom: 1rem;
+}
+
+.tab-toolbar::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.35), rgba(148, 163, 184, 0.16), transparent);
+    pointer-events: none;
 }
 
 .tab-nav {
     display: flex;
     gap: 4px;
     min-width: 0;
+    padding: 3px;
+    border: 1px solid rgba(132, 163, 214, 0.12);
+    border-bottom: 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    background: rgba(15, 23, 42, 0.36);
 }
 
 .tablink {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 7px;
-    padding: 8px 18px;
+    min-height: 38px;
+    padding: 8px 16px;
     font-size: 0.875rem;
     font-weight: 500;
     font-family: var(--font);
     color: var(--text-secondary);
     background: transparent;
-    border: none;
+    border: 1px solid transparent;
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
     cursor: pointer;
-    transition: color 0.2s, border-color 0.2s;
-    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.tablink::before,
+.tablink::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.tablink::before {
+    left: 0;
+    right: 0;
+    bottom: -12px;
+    height: 12px;
+    background: linear-gradient(180deg, rgba(56, 189, 248, 0.18), transparent);
+}
+
+.tablink::after {
+    left: 12px;
+    right: 12px;
+    bottom: -1px;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
 }
 
 .tablink svg {
@@ -45,7 +90,8 @@
 
 .tablink:hover {
     color: var(--text-primary);
-    background: rgba(255,255,255,0.04);
+    background: rgba(30, 41, 59, 0.58);
+    border-color: rgba(148, 163, 184, 0.20);
 }
 
 .tablink:hover svg { opacity: 1; }
@@ -57,7 +103,16 @@
 
 .tablink.active {
     color: var(--accent);
+    background:
+        linear-gradient(180deg, rgba(56, 189, 248, 0.20), rgba(56, 189, 248, 0.055)),
+        rgba(15, 23, 42, 0.82);
+    border-color: rgba(56, 189, 248, 0.50);
     border-bottom-color: var(--accent);
+}
+
+.tablink.active::before,
+.tablink.active::after {
+    opacity: 1;
 }
 
 .tablink.active svg { opacity: 1; }
@@ -69,65 +124,78 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 1rem;
+    gap: var(--space-3);
     padding-bottom: 8px;
 }
 
 .toolbar-group {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.55rem;
     flex-wrap: wrap;
     justify-content: flex-end;
+    padding: 5px;
+    border: 1px solid rgba(132, 163, 214, 0.12);
+    border-radius: var(--radius-lg);
+    background: rgba(15, 23, 42, 0.34);
 }
 
 .toolbar-label {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--text-secondary);
     font-weight: 500;
     white-space: nowrap;
 }
 
 .date-picker {
-    background: var(--bg-card);
+    min-height: 36px;
+    background: var(--bg-elevated);
     border: 1px solid var(--border);
     color: var(--text-primary);
-    padding: 0.55rem 0.8rem;
+    padding: 0.5rem 0.75rem;
     border-radius: var(--radius-md);
     font-family: var(--font);
 }
 
-.date-picker:focus {
-    outline: 2px solid var(--accent);
+.date-picker:focus-visible {
     border-color: var(--accent);
+    box-shadow: var(--focus-ring);
 }
 
 .toolbar-button {
     background: var(--accent-dim);
     border: 1px solid var(--border);
     color: var(--accent);
-    padding: 0.55rem 0.9rem;
+    min-height: 36px;
+    padding: 0.5rem 0.85rem;
     border-radius: var(--radius-md);
     cursor: pointer;
     font-weight: 600;
-    transition: 0.2s;
+    transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
 }
 
 .toolbar-button:hover {
     background: rgba(56, 189, 248, 0.18);
+    border-color: var(--border-hover);
+}
+
+.toolbar-button:focus-visible {
+    box-shadow: var(--focus-ring);
 }
 
 .toolbar-button--export {
-    min-width: 126px;
+    width: 138px;
+    flex: 0 0 138px;
+    text-align: center;
 }
 
 .export-format-toggle {
     display: inline-grid;
     grid-template-columns: repeat(2, 1fr);
     align-items: center;
-    height: 36px;
+    min-height: 36px;
     padding: 3px;
-    background: var(--bg-card);
+    background: var(--bg-elevated);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
 }

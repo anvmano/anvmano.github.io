@@ -4,22 +4,22 @@
 .charts-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1rem;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
 }
 
 .chart-card {
     position: relative;
-    background: var(--bg-card);
+    background: var(--bg-elevated);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    padding: 1rem 1rem 0.75rem;
+    padding: 1rem 1rem 0.8rem;
     box-shadow: var(--shadow-card);
     cursor: default;
     transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
     overflow: hidden;
 }
 
@@ -28,7 +28,7 @@
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    background: linear-gradient(135deg, rgba(56,189,248,0.04) 0%, transparent 60%);
+    background: linear-gradient(180deg, rgba(255,255,255,0.035), transparent 36%);
     pointer-events: none;
 }
 
@@ -63,13 +63,13 @@
     top: 10px;
     right: 10px;
     z-index: 2;
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     color: var(--text-secondary);
-    background: rgba(15, 23, 42, 0.72);
+    background: rgba(15, 23, 42, 0.76);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     cursor: zoom-in;
@@ -95,8 +95,9 @@
 }
 
 .chart-label {
-    font-size: 0.7rem;
-    font-weight: 600;
+    padding-right: 2.4rem;
+    font-size: 0.74rem;
+    font-weight: 750;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--text-secondary);
@@ -104,11 +105,11 @@
 
 .plot {
     width: 100% !important;
-    height: 220px !important;
+    height: 232px !important;
     display: block;
     cursor: crosshair;
 }
 
 .chart-card--wide .plot {
-    height: 240px !important;
+    height: 260px !important;
 }

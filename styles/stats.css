@@ -4,8 +4,8 @@
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 0.75rem;
-    margin-bottom: 1rem;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
 }
 
 #statsEstacao {
@@ -13,10 +13,12 @@
 }
 
 .stats-card {
-    background: rgba(26, 34, 52, 0.76);
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.035), transparent 42%),
+        var(--bg-elevated);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    padding: 0.85rem;
+    padding: 0.95rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.24);
 }
 
@@ -25,12 +27,12 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    margin-bottom: 0.45rem;
+    margin-bottom: 0.5rem;
 }
 
 .stats-card__label {
     color: var(--text-secondary);
-    font-size: 0.68rem;
+    font-size: 0.70rem;
     font-weight: 700;
     letter-spacing: 0.07em;
     text-transform: uppercase;
@@ -38,11 +40,11 @@
 
 .stats-card__trend {
     flex-shrink: 0;
-    font-size: 0.68rem;
+    font-size: 0.70rem;
     font-weight: 700;
     padding: 2px 7px;
     border-radius: 999px;
-    background: rgba(148, 163, 184, 0.1);
+    background: rgba(148, 163, 184, 0.12);
 }
 
 .stats-card__trend--up {
@@ -60,16 +62,17 @@
 .stats-card__value {
     display: block;
     color: var(--text-primary);
-    font-size: 1.25rem;
-    line-height: 1.2;
-    margin-bottom: 0.65rem;
+    font-size: 1.48rem;
+    font-weight: 750;
+    line-height: 1.1;
+    margin-bottom: 0.78rem;
     font-variant-numeric: tabular-nums;
 }
 
 .stats-card__details {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 0.5rem;
+    gap: 0.65rem;
     margin: 0;
 }
 
@@ -79,7 +82,7 @@
 
 .stats-card__details dt {
     color: var(--text-muted);
-    font-size: 0.63rem;
+    font-size: 0.66rem;
     font-weight: 700;
     text-transform: uppercase;
 }
@@ -87,7 +90,7 @@
 .stats-card__details dd {
     color: var(--text-secondary);
     margin: 0;
-    font-size: 0.78rem;
+    font-size: 0.80rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
@@ -160,15 +163,15 @@
 .station-context-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
-    gap: 0.75rem;
-    margin-bottom: 1rem;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
 }
 
 .season-timeline {
     position: relative;
     margin: 0;
-    padding: 0.75rem 0.85rem;
-    background: rgba(26, 34, 52, 0.76);
+    padding: 0.85rem 0.95rem;
+    background: var(--bg-elevated);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     box-shadow: 0 1px 3px rgba(0,0,0,0.24);
@@ -249,8 +252,8 @@
     gap: 0.75rem;
     min-width: 0;
     margin: 0;
-    padding: 0.75rem 0.85rem;
-    background: rgba(26, 34, 52, 0.76);
+    padding: 0.85rem 0.95rem;
+    background: var(--bg-elevated);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     box-shadow: 0 1px 3px rgba(0,0,0,0.24);
@@ -292,7 +295,7 @@
 
 .moon-summary__content span {
     color: var(--text-secondary);
-    font-size: 0.7rem;
+    font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -303,7 +306,7 @@
 
 .moon-summary__content strong {
     color: var(--text-primary);
-    font-size: 0.95rem;
+    font-size: 1rem;
     font-weight: 800;
     white-space: nowrap;
 }
@@ -325,7 +328,7 @@
 
 .moon-summary__details dt {
     color: var(--text-secondary);
-    font-size: 0.6rem;
+    font-size: 0.64rem;
     font-weight: 800;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -335,7 +338,7 @@
 .moon-summary__details dd {
     margin: 0;
     color: var(--text-secondary);
-    font-size: 0.72rem;
+    font-size: 0.76rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
