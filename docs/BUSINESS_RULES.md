@@ -107,6 +107,7 @@ Saidas:
 Regras:
 
 - login Google e opcional; o usuario publico nao deve ser obrigado a autenticar
+- o dominio publicado do GitHub Pages, como `anvmano.github.io`, deve estar cadastrado em Firebase Authentication > Configuracoes > Dominios autorizados; sem isso o login Google falha com `auth/unauthorized-domain`
 - modo publico nao deve iniciar listeners internos do Realtime Database
 - modo publico nao deve inicializar ou exibir a assistente IA
 - modo interno inicializa abas, date picker, zoom, exportacao, chat e listeners Firebase internos

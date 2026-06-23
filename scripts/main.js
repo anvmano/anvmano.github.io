@@ -600,7 +600,7 @@ function configurarAutenticacaoPublica() {
                 await ClimateAuthService.entrarComGoogle();
             } catch (erro) {
                 window.ClimateDiagnostics?.erro("Falha no login com Google.", erro);
-                window.alert("Não foi possível entrar com Google agora.");
+                window.alert(obterMensagemErroLogin(erro));
             }
         },
         onLogout: async () => {
@@ -624,6 +624,23 @@ function configurarAutenticacaoPublica() {
         window.ClimateDiagnostics?.erro("Falha ao inicializar autenticação.", erro);
         inicializarModoPublico(null, false);
     });
+}
+
+function obterMensagemErroLogin(erro) {
+    const codigo = erro?.code || "";
+    if (codigo === "auth/unauthorized-domain") {
+        return "Domínio não autorizado no Firebase Auth. Adicione anvmano.github.io em Authentication > Configurações > Domínios autorizados.";
+    }
+    if (codigo === "auth/popup-blocked") {
+        return "O navegador bloqueou a janela de login. Permita pop-ups para este site e tente novamente.";
+    }
+    if (codigo === "auth/popup-closed-by-user" || codigo === "auth/cancelled-popup-request") {
+        return "Login com Google cancelado antes de concluir.";
+    }
+    if (codigo === "auth/operation-not-allowed") {
+        return "Login com Google não está habilitado no Firebase Authentication.";
+    }
+    return "Não foi possível entrar com Google agora. Verifique as configurações do Firebase Auth.";
 }
 
 document.addEventListener("DOMContentLoaded", () => {

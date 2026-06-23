@@ -114,7 +114,7 @@
     }
 
     function carregarCssRelatorio() {
-        return carregarCssUmaVez("styles/reports/pdf-report.css?v=20260612-1", "climate-pdf-css");
+        return carregarCssUmaVez("styles/reports/pdf-report.css?v=20260623-2", "climate-pdf-css");
     }
 
     function executarQuandoOcioso(callback, timeout = 800) {

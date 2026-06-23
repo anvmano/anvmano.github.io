@@ -291,18 +291,18 @@
 .pdf-chart-card img {
     display: block;
     width: 100%;
-    max-height: 150px;
+    height: auto;
     object-fit: contain;
     background: #111827;
     border-radius: 7px;
 }
 
 .pdf-chart-card--wide img {
-    max-height: 125px;
+    max-width: 100%;
 }
 
 .pdf-chart-card--compact img {
-    max-height: 120px;
+    max-width: 100%;
 }
 
 .pdf-chart-stats {

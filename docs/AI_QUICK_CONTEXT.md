@@ -203,6 +203,7 @@ Arquivos principais:
 - Nao mudar ordem dos scripts sem revisar dependencias globais. Os scripts externos do fim do `body` usam `defer`, preservando a mesma ordem para reduzir bloqueio de renderizacao.
 - O modo publico deve funcionar sem login. Login Google e opcional; se o usuario logado nao for autorizado, continua no modo publico.
 - O dashboard interno completo so deve iniciar para `AppConfig.auth.usuariosInternosAutorizados`.
+- Para login Google em producao, o dominio publicado, como `anvmano.github.io`, precisa estar em Firebase Authentication > Configuracoes > Dominios autorizados.
 - APIs externas nao substituem Firebase interno; elas servem apenas para o modo publico por CEP/localizacao.
 - Localizacao do navegador nao deve ser persistida; usar apenas em memoria para a consulta atual.
 - Nao renomear ids do HTML sem atualizar `scripts/config.js`.
