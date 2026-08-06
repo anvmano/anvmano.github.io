@@ -703,6 +703,25 @@ Se alterada: zênite pode ficar incorreto.
 
 Criticidade: Alta.
 
+## Regra: tooltips de graficos da Estacao
+
+Arquivos: `scripts/charts/solar.js`, `scripts/views/estacao-view.js`
+
+Objetivo: manter a leitura dos graficos globais coerente com o ponto visual consultado.
+
+Regras:
+
+- no grafico Ciclo Solar do Dia, a tooltip dos eventos solares deve aparecer somente quando o cursor/toque estiver realmente sobre ou proximo do ponto solar ativo, sem ativacao por eixo X distante
+- no grafico Temperatura por Ambiente e demais comparativos da aba Estacao, a tooltip deve ordenar as series pelo valor no horario consultado, do maior para o menor, acompanhando a ordem visual das linhas
+
+Impacto: leitura de dados no hover/touch e paridade visual entre linhas e legenda flutuante.
+
+Dependencias: Chart.js, `ClimateSolar.getSolarTodayOptions`, `EstacaoView.renderizarGraficoComparativo`.
+
+Se alterada: a tooltip pode parecer deslocada ou listar ambientes fora da ordem visual.
+
+Criticidade: Baixa.
+
 ## Regra: faixa de conforto na assistente
 
 Arquivos:

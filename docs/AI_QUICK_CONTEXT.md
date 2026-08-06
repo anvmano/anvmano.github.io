@@ -127,6 +127,7 @@ Arquivos principais:
 - O eixo X do grafico Ciclo Solar do Dia usa formato abreviado em horas (`0h`, `2h`, `4h`, `24h`) para manter paridade com o projeto C#/.NET.
 - Eixo Y dos graficos deve exibir a unidade da metrica quando houver: `°C`, `%`, `hPa`, `ppm`, `NTU`.
 - Graficos comuns de series temporais usam horarios no eixo X em diagonal; graficos solares e heatmaps preservam seu layout especifico.
+- No grafico Ciclo Solar do Dia, a tooltip dos eventos solares deve aparecer somente quando o cursor/toque estiver realmente sobre ou proximo do ponto solar ativo, sem ativacao por eixo X distante. Nos graficos comparativos da aba Estacao, a tooltip deve listar as series na ordem visual das linhas no ponto consultado, do maior valor para o menor.
 - Zoom de graficos: duplo clique ou botao amplia; `Esc`, botao de fechar ou clique/toque no fundo do overlay fecha. Em mobile/touch, `pointerdown`/`touchstart` dentro do canvas ampliado nao fecha o overlay para preservar tooltip e leitura do dado.
 - Mensagens de graficos vazios devem seguir `Sem dados de <tipo_grafico> em <DD/MM/AAAA>`.
 - Aba ativa e persistida em `localStorage.activeTab`.

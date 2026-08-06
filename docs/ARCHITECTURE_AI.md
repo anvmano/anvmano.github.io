@@ -1,6 +1,6 @@
 # ARCHITECTURE_AI
 
-Base de conhecimento gerada a partir dos arquivos reais do projeto em `D:\Documentos\estacao climatica web\atualizacao claude`.
+Base de conhecimento gerada a partir dos arquivos reais do projeto em `D:\Documentos\03_Projetos\estacao climatica web\atualizacao claude`.
 
 ## Visao Geral
 

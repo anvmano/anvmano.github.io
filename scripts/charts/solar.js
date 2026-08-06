@@ -252,18 +252,19 @@
     };
 
     function getSolarTodayOptions({ tickSize = 11, labelSize = 11, defaults, colors } = {}) {
+        registrarPosicionadorTooltipSolar();
+
         return {
             responsive: true,
             maintainAspectRatio: false,
             animation: { duration: 600 },
             interaction: {
                 mode: "nearest",
-                intersect: false,
-                axis: "x"
+                intersect: true
             },
             hover: {
                 mode: "nearest",
-                intersect: false
+                intersect: true
             },
             plugins: {
                 legend: {
@@ -273,6 +274,9 @@
                 },
                 tooltip: {
                     ...defaults.plugins.tooltip,
+                    mode: "nearest",
+                    intersect: true,
+                    position: "solarEvent",
                     filter: context => context.dataset.label === "Eventos solares",
                     callbacks: {
                         title: items => items[0]?.raw?.label || "",
@@ -303,6 +307,20 @@
                     ticks: { display: false }
                 }
             }
+        };
+    }
+
+    function registrarPosicionadorTooltipSolar() {
+        const positioners = window.Chart?.Tooltip?.positioners;
+        if (!positioners || positioners.solarEvent) return;
+
+        positioners.solarEvent = function (elementos, posicaoEvento) {
+            const elementoEvento = elementos.find(item => {
+                const dataset = this.chart?.data?.datasets?.[item.datasetIndex];
+                return dataset?.label === "Eventos solares";
+            }) || elementos[0];
+
+            return elementoEvento?.element?.tooltipPosition?.() || posicaoEvento;
         };
     }
 
@@ -344,7 +362,7 @@
                         fill: true,
                         tension: 0.42,
                         pointRadius: 0,
-                        pointHitRadius: 18,
+                        pointHitRadius: 0,
                         pointHoverRadius: 0,
                         order: 2
                     },

@@ -249,6 +249,13 @@
                     labels: { color: colors.text, boxWidth: 10, boxHeight: 10 },
                 },
                 tooltip: {
+                    itemSort: (a, b) => {
+                        const valorA = Number(a.parsed.y);
+                        const valorB = Number(b.parsed.y);
+                        if (!Number.isFinite(valorA)) return 1;
+                        if (!Number.isFinite(valorB)) return -1;
+                        return valorB - valorA;
+                    },
                     callbacks: {
                         label: context => {
                             const valor = Number(context.parsed.y);

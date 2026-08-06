@@ -292,7 +292,7 @@
                         fill: true,
                         tension: 0.42,
                         pointRadius: 0,
-                        pointHitRadius: 18,
+                        pointHitRadius: 0,
                     },
                     {
                         type: "scatter",
