@@ -713,6 +713,7 @@ Regras:
 
 - no grafico Ciclo Solar do Dia, a tooltip dos eventos solares deve aparecer somente quando o cursor/toque estiver realmente sobre ou proximo do ponto solar ativo, sem ativacao por eixo X distante
 - no grafico Temperatura por Ambiente e demais comparativos da aba Estacao, a tooltip deve ordenar as series pelo valor no horario consultado, do maior para o menor, acompanhando a ordem visual das linhas
+- no grafico Nascer & Por do Sol, a tooltip deve ordenar as series pela posicao visual real no canvas, considerando que o grafico usa eixos Y distintos para eventos da manha e da tarde
 
 Impacto: leitura de dados no hover/touch e paridade visual entre linhas e legenda flutuante.
 
@@ -1113,9 +1114,9 @@ DOM + Chart.js
 
 # CODIGO MORTO
 
-Nenhum codigo morto confirmado na varredura atual.
+Nenhum codigo morto de runtime confirmado na varredura atual.
 
-Arquivos sem uso: nenhum arquivo local pode ser confirmado como sem uso; todos os `.js` principais sao carregados pelo HTML.
+Observacao: existem copias legadas de alguns scripts diretamente em `scripts/` (`scripts/analytics.js`, `scripts/aqi.js`, `scripts/chart-utils.js`, `scripts/solar.js`, `scripts/ui.js`, `scripts/zoom.js`, `scripts/pdf-report.js`, `scripts/ai-service.js` e similares). A aplicacao atual, conforme `index.html`, carrega os modulos organizados em subpastas (`scripts/data/`, `scripts/charts/`, `scripts/ui/`, `scripts/reports/`, `scripts/assistant/`, etc.). Esses arquivos legados nao participam do runtime atual, mas ainda sao validados pelo `tools/validate-project.mjs`; antes de remover ou sincronizar, revisar historico/compatibilidade do projeto.
 
 # DIVIDA TECNICA
 

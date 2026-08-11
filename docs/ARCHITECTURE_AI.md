@@ -4,9 +4,9 @@ Base de conhecimento gerada a partir dos arquivos reais do projeto em `D:\Docume
 
 ## Visao Geral
 
-Sistema web estatico para exibir dados de uma estacao climatica. O codigo existente carrega dados do Firebase Realtime Database, filtra por data selecionada, calcula estatisticas, renderiza graficos com Chart.js, mostra heatmaps climaticos, tabelas por ambiente, contexto astronomico, chat com IA e exportacao PDF/JSON.
+Sistema web estatico para exibir dados de uma estacao climatica. O codigo existente possui modo publico por CEP/localizacao e modo interno com Firebase Auth. No modo interno, carrega dados do Firebase Realtime Database, filtra por data selecionada, calcula estatisticas, renderiza graficos com Chart.js, mostra heatmaps climaticos, tabelas por ambiente, contexto astronomico, chat com IA e exportacao PDF/JSON.
 
-Usuarios nao sao definidos no codigo. Pelo codigo, o fluxo principal e visualizar uma aba global Estacao e abas por dispositivo: Sala, Quarto e Aquario, com selecao global de data.
+Usuarios internos autorizados sao definidos em `AppConfig.auth.usuariosInternosAutorizados`. Sem login, ou com usuario nao autorizado, a aplicacao mostra a tela publica por CEP/localizacao. Com usuario autorizado, mostra a aba global Estacao e abas por dispositivo: Sala, Quarto e Aquario, com selecao global de data.
 
 ## Tecnologias
 
@@ -17,8 +17,10 @@ Usuarios nao sao definidos no codigo. Pelo codigo, o fluxo principal e visualiza
 - Chart.js via CDN: `https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js`, carregado sob demanda por `scripts/runtime-loader.js`.
 - Firebase SDK modular dinamico: versao `12.13.0`, carregado por `import()` a partir de `https://www.gstatic.com/firebasejs/...`.
 - Firebase Realtime Database.
+- Firebase Auth com login/logout Google opcional.
 - Firebase App Check com reCAPTCHA Enterprise, inicializado sob demanda para recursos protegidos.
 - Firebase AI Logic com Gemini Developer API para o chat.
+- BrasilAPI/ViaCEP e Open-Meteo para CEP, geocodificacao, clima externo, AQI externo e ciclo solar publico.
 - Sem React, Angular, Vue, C#, .NET, banco SQL ou codigo Arduino no projeto analisado.
 - Sem testes funcionais automatizados e sem build tooling local completo.
 
@@ -44,14 +46,22 @@ Codigo interno novo ou refatorado deve usar nomes em PT-BR para metodos, funcoes
 │   ├── advanced-views.css
 │   ├── zoom.css
 │   ├── tables.css
+│   ├── public-weather.css
 │   ├── chat.css
-│   └── responsive.css
+│   ├── responsive.css
+│   └── reports/
+│       └── pdf-report.css
 ├── scripts/
 │   ├── config.js
 │   ├── runtime-loader.js
 │   ├── main.js
 │   ├── firebase-service.js
 │   ├── chat.js
+│   ├── auth/
+│   │   └── auth-service.js
+│   ├── external/
+│   │   ├── browser-location-service.js
+│   │   └── external-weather-service.js
 │   ├── assistant/
 │   │   ├── ai-service.js
 │   │   ├── assistant-config.js
@@ -89,24 +99,27 @@ Codigo interno novo ou refatorado deve usar nomes em PT-BR para metodos, funcoes
 │       ├── quarto-view.js
 │       ├── sala-view.js
 │       ├── aquario-view.js
-│       └── solar-view.js
-├── styles/
-│   └── reports/
-│       └── pdf-report.css
+│       ├── solar-view.js
+│       └── public-weather-view.js
 ├── package.json
 ├── tools/
 │   └── validate-project.mjs
 ```
+
+Observacao: existem copias legadas de alguns scripts diretamente em `scripts/`. O runtime atual deve ser entendido pela lista de scripts carregados em `index.html`, que usa principalmente os modulos organizados em subpastas.
 
 Responsabilidades:
 
 - `index.html`: estrutura DOM, abas, canvases, containers, toolbar de data, scripts.
 - `style.css`: manifesto de imports dos estilos modulares.
 - `styles/`: tema visual, layout, tabs, graficos, cards, tabelas, estados, heatmaps, zoom e responsividade.
-- `scripts/config.js`: configuracao Firebase, cores, ids DOM, paths Firebase, nomes de campos.
+- `scripts/config.js`: configuracao Firebase, Auth, APIs externas, cores, ids DOM, paths Firebase, nomes de campos, unidades e faixas.
 - `scripts/runtime-loader.js`: carregamento sob demanda de Chart.js, modulos da assistente, modulos do relatorio e CSS nao critico.
 - `scripts/main.js`: orquestracao da aplicacao, listeners Firebase, cache de dados, renderizacao por view, contrato de criacao de graficos, opcoes de zoom, indicadores do header e exportacao.
 - `scripts/firebase-service.js`: inicializacao Firebase, listeners `onValue`, loading bar e erros.
+- `scripts/auth/auth-service.js`: inicializacao Firebase Auth, login/logout Google, usuario atual e regra de usuario interno autorizado.
+- `scripts/external/browser-location-service.js`: localizacao do navegador para o modo publico, com fallback de cache, busca normal e alta precisao.
+- `scripts/external/external-weather-service.js`: CEP, fallback ViaCEP, geocodificacao, clima/AQI externos e eventos solares publicos via Open-Meteo.
 - `scripts/chat.js`: fachada publica leve do chat, mantendo `window.ClimateChat.setup` para o `scripts/main.js` e carregando `scripts/assistant/*` no primeiro clique.
 - `scripts/assistant/ai-service.js`: inicializacao do Firebase AI Logic e envio de prompts ao Gemini.
 - `scripts/assistant/assistant-ui.js`: painel do chat, atalhos de perguntas, mensagens, abertura/fechamento, clique/toque fora para fechar e estado ocupado.
@@ -141,6 +154,7 @@ Responsabilidades:
 - `scripts/views/sala-view.js`: renderizacao da aba Sala.
 - `scripts/views/aquario-view.js`: renderizacao da aba Aquario.
 - `scripts/views/solar-view.js`: integracao dos graficos solares usados pela visao global da aba Estacao.
+- `scripts/views/public-weather-view.js`: renderizacao do modo publico por CEP/localizacao, com cards, contexto sazonal/lunar e graficos externos.
 - `tools/validate-project.mjs`: validacao estrutural local de sintaxe, referencias, imports CSS e ids.
 - `package.json`: comando `npm run validate`.
 
@@ -158,6 +172,9 @@ Responsabilidades:
    - `scripts/charts/season.js`
    - `scripts/charts/moon.js`
    - `scripts/firebase-service.js`
+   - `scripts/auth/auth-service.js`
+   - `scripts/external/browser-location-service.js`
+   - `scripts/external/external-weather-service.js`
    - `scripts/ui/ui.js`
    - `scripts/charts/zoom.js`
    - `scripts/reports/pdf-report.js`
@@ -167,25 +184,23 @@ Responsabilidades:
    - `scripts/views/sala-view.js`
    - `scripts/views/solar-view.js`
    - `scripts/views/estacao-view.js`
+   - `scripts/views/public-weather-view.js`
    - `scripts/main.js`
 3. Cada modulo registra um objeto global em `window`.
 4. `scripts/main.js` valida a existencia dos modulos essenciais, mas nao exige Chart.js, `ClimateAIService` nem `ClimatePdfReportModules` na abertura.
 5. `DOMContentLoaded` executa:
-   - `ClimateUI.setupTabs("Tab0")`
-   - `ClimateUI.setupTabSwipe(...)`
-   - `ClimateUI.setupDateControls(...)`
-   - `ClimateUI.setupCollapsibleSections()`
-   - `ClimateZoom.setup(...)`
-   - `ClimatePdfReport.setup(...)`
-   - `ClimateChat.setup(...)`
    - `ClimateAqi.setup()`
    - `ClimateSeason.setup()`
    - `ClimateMoon.setup()`
    - `setupAstroIndicator()`
-   - `setupFirebaseListeners()` agendado apos a estrutura inicial da tela
-6. `FirebaseService.initialize()` importa SDK Firebase e conecta ao Realtime Database; `ensureAppCheckInitialized()` inicializa App Check sob demanda antes de recursos protegidos, como a IA.
-7. `FirebaseService.listenToPath()` cria listeners para quatro paths.
-8. Cada snapshot atualiza `latestData` e chama a view correspondente; a aba Estacao e rerenderizada quando qualquer fonte global muda.
+   - `configurarCicloSolarPublico()`
+   - `configurarAutenticacaoPublica()`
+6. Apos o estado do Firebase Auth:
+   - sem usuario interno autorizado: mostra `#publicApp`, oculta `#privateApp`, cancela listeners internos e mantem chat/exportacao interna desativados
+   - com usuario interno autorizado: mostra `#privateApp`, oculta `#publicApp`, inicializa tabs, swipe, date picker, colapsaveis, zoom, PDF/JSON, chat e agenda Firebase interno
+7. `FirebaseService.initialize()` importa SDK Firebase e conecta ao Realtime Database; `ensureAppCheckInitialized()` inicializa App Check sob demanda antes de recursos protegidos, como a IA.
+8. `FirebaseService.listenToPath()` cria listeners para quatro paths somente no modo interno autorizado.
+9. Cada snapshot atualiza `latestData` e chama a view correspondente; a aba Estacao e rerenderizada quando qualquer fonte global muda.
 
 ## Componentes
 
@@ -209,8 +224,11 @@ Contem:
 - `humidityComfortBand`
 - `aquariumComfortBand`
 - `firebasePaths`
+- `auth.usuariosInternosAutorizados`
+- `externalApis`
 - `ids`
 - `fields`
+- `measurementUnits`
 
 Dependencias: nenhuma.
 
@@ -282,7 +300,7 @@ Regras:
 - Extrai dados com `ClimateData.extractData`.
 - Se nao houver pontos numericos, chama `onEmpty` e retorna `null`.
 - Se Chart.js ainda nao estiver carregado, o caller deve mostrar mensagem de carregamento e acionar `ClimateAssets.carregarChart()` antes de tentar desenhar.
-- Se houver dados, chama `onReady`, cria Chart.js e aplica faixa de conforto em metricas de temperatura/sensacao com sufixo `°`.
+- Se houver dados, chama `onReady`, cria Chart.js e aplica faixa de conforto em metricas de temperatura/sensacao com sufixo `°` e em umidade com sufixo `%`.
 
 Dependencias:
 
@@ -312,7 +330,7 @@ Heatmaps:
 - calendario mensal
 - heatmap por hora do dia
 - mapa semanal por dia/hora
-- destaque visual `.is-selected` para dia selecionado, hora atual de hoje e dia/hora atual do mes exibido
+- destaque visual `.is-selected` para dia selecionado, hora atual de hoje e dia/hora atual da semana exibida
 - a assistente consegue responder consultas equivalentes aos heatmaps calculando maior/menor media diaria, por hora do dia e por dia/hora semanal sem depender do DOM
 
 ### ClimateSolar
@@ -327,7 +345,7 @@ Leitura de eventos:
 - nascer do sol: `HourNascerDoSol`/`HoraNascerDoSol` + minutos.
 - por do sol: `HoraPorDoSol`/`HourPorDoSol` + minutos.
 - anoitecer: `HourAnoitecer`/`HoraAnoitecer` + minutos.
-- zenite: `HoraZenite`, `HourZenith`, `HoraZenith`, `HourZenite`, `HoraZenite` com acento quando presente; minutos `MinuteZenite`, `MinutoZenite`, `MinuteZenith`, `MinutoZenith`, `MinutoZenite` com acento quando presente.
+- zenite: `HoraZenite`, `HourZenith`, `HoraZenith`, `HourZenite`, `HoraZênite` quando presente; minutos `MinuteZenite`, `MinutoZenite`, `MinuteZenith`, `MinutoZenith`, `MinutoZênite` quando presente.
 
 Se zenite nao existir, calcula `sunrise + ((sunset - sunrise) / 2)`.
 
@@ -335,6 +353,7 @@ Exporta:
 
 - `createSunriseSunsetChart`
 - `createSolarTodayChart`
+- `getSolarEventsForSelectedDate`
 - `getSunHistoryOptions`
 - `getSolarTodayOptions`
 - `solarDayBackgroundPlugin`
@@ -460,12 +479,15 @@ Arquivos:
 - `scripts/views/sala-view.js`
 - `scripts/views/aquario-view.js`
 - `scripts/views/solar-view.js`
+- `scripts/views/public-weather-view.js`
 
-Responsabilidade: conectar dados filtrados, graficos, tabelas e analytics aos elementos da aba.
+Responsabilidade: conectar dados filtrados, graficos, tabelas e analytics aos elementos da aba ou da tela publica.
 
 ## Fluxo de Dados
 
 ```text
+Modo interno autorizado
+↓
 Firebase Realtime Database
 ↓
 FirebaseService.listenToPath
@@ -483,6 +505,20 @@ ClimateCharts ou ClimateSolar
 DOM, Chart.js, tabelas e mensagens
 ```
 
+```text
+Modo publico
+↓
+CEP ou localizacao do navegador
+↓
+ExternalWeatherService / BrowserLocationService
+↓
+PublicWeatherView
+↓
+ClimateCharts / ClimateSolar / ClimateSeason / ClimateMoon
+↓
+DOM, Chart.js e mensagens publicas
+```
+
 ## Firebase
 
 Banco: Firebase Realtime Database.
@@ -492,7 +528,7 @@ Config em `scripts/config.js`:
 - `databaseURL`: `https://estacaometereologicaesp32-default-rtdb.firebaseio.com`
 - `projectId`: `estacaometereologicaesp32`
 
-Paths lidos:
+Paths lidos apenas no modo interno autorizado:
 
 - `historico/Temperatura`
 - `historico/NascePorDoSol`
@@ -515,11 +551,13 @@ Indices Firebase: nao existem no projeto.
 
 ## APIs Externas
 
-- Chart.js UMD por CDN jsDelivr.
+- Chart.js UMD por CDN jsDelivr, carregado sob demanda.
 - html2canvas por CDN jsDelivr para captura do relatorio, carregado sob demanda.
 - jsPDF por CDN jsDelivr para montagem manual das paginas A4, carregado sob demanda.
-- Firebase SDK por CDN Google.
+- Firebase SDK por CDN Google, carregado dinamicamente.
 - Google Fonts (`Inter`) no HTML.
+- BrasilAPI/ViaCEP para CEP.
+- Open-Meteo Forecast, Air Quality e Geocoding para modo publico.
 
 Nao ha endpoints HTTP proprios.
 
@@ -540,10 +578,21 @@ Graficos comuns:
 - tooltip customizado
 - fallback visual se nao ha pontos numericos
 - faixa de conforto entre 20 e 26 em graficos com sufixo `°` e chave contendo `temperatura` ou `sensacao`
+- faixa de conforto de umidade entre 40 e 60 em graficos com sufixo `%`
+- faixa de conforto do Aquario entre 25 e 27 para temperatura do Aquario
+- graficos comuns usam eixo X em diagonal; graficos solares preservam layout proprio
+- tooltip do Ciclo Solar do Dia ativa apenas proximo dos pontos solares
+- tooltip do Nascer & Por do Sol ordena as series pela posicao visual real no canvas, considerando dois eixos Y
+- tooltips dos comparativos da Estacao ordenam as series de cima para baixo no ponto consultado
 
 ## Eventos
 
-- `DOMContentLoaded`: inicializa aplicacao.
+- `DOMContentLoaded`: inicializa chips do header, ciclo solar publico e autenticacao.
+- `onAuthStateChanged`: decide entre modo publico e dashboard interno.
+- `click` no botao publico de login: abre login Google.
+- `click` no botao publico/header de logout: encerra sessao e volta ao modo publico.
+- `submit` no formulario publico de CEP: consulta clima publico.
+- `click` no botao de localizacao publica: consulta localizacao do navegador e clima publico.
 - `click` nos tabs: troca aba.
 - `touchstart`/`touchend` no container principal: troca aba por swipe horizontal no fluxo Estacao ⇄ Sala ⇄ Quarto ⇄ Aquario, exceto quando o gesto inicia em tabela, heatmap ou area rolavel horizontal.
 - `change` no input `#selectedDate`: converte data e rerenderiza.
@@ -558,16 +607,18 @@ Graficos comuns:
 
 ## Fluxos Criticos
 
-1. Ordem de scripts: `scripts/main.js` depende de todos os modulos anteriores.
-2. Leitura Firebase: sem dados no path, a view exibe estado vazio ou mensagem no card/grafico correspondente.
-3. Data selecionada: formato HTML `YYYY-MM-DD`, formato Firebase `DD-MM-AAAA`.
-4. Filtro por data: para Sala, Quarto e Aquario, `filterDataByDays` retorna apenas a data selecionada quando `useSelectedDate` e verdadeiro.
-5. Grafico vazio: `ClimateCharts.createLineChart` retorna `null`.
-6. Solar: `SolarView` usa historico de 365 dias e ciclo solar da data selecionada dentro da aba Estacao.
-7. Tabelas: exibem no maximo 24 linhas.
-8. Swipe de abas: usa limite minimo horizontal de 60px e rejeita gesto com desvio vertical maior que 80px.
-9. Exportacao PDF/JSON: usa dados ja carregados em `latestData` e graficos existentes em `chartInstances`; nao reconsulta Firebase.
-10. Header: chips de Estacao do ano, AQI, ciclo solar e Lua usam popovers mutuamente exclusivos.
+1. Ordem de scripts: `scripts/main.js` depende de todos os modulos essenciais anteriores.
+2. Auth: somente usuario interno autorizado inicializa dashboard interno, chat, exportacao e listeners privados.
+3. Leitura Firebase: sem dados no path, a view exibe estado vazio ou mensagem no card/grafico correspondente.
+4. Modo publico: nao inicia listeners internos, nao exibe assistente IA e usa apenas APIs externas.
+5. Data selecionada: formato HTML `YYYY-MM-DD`, formato Firebase `DD-MM-AAAA`.
+6. Filtro por data: para Sala, Quarto e Aquario, `filterDataByDays` retorna apenas a data selecionada quando `useSelectedDate` e verdadeiro.
+7. Grafico vazio: `ClimateCharts.createLineChart` retorna `null`.
+8. Solar: `SolarView` usa historico de 365 dias e ciclo solar da data selecionada dentro da aba Estacao.
+9. Tabelas: exibem no maximo 24 linhas.
+10. Swipe de abas: usa limite minimo horizontal de 60px e rejeita gesto com desvio vertical maior que 80px.
+11. Exportacao PDF/JSON: usa dados ja carregados em `latestData` e graficos existentes em `chartInstances`; nao reconsulta Firebase.
+12. Header: chips de Estacao do ano, AQI, ciclo solar e Lua usam popovers mutuamente exclusivos.
 
 ## Arquivos Mais Importantes
 
@@ -575,25 +626,26 @@ Graficos comuns:
 2. `scripts/main.js`: orquestracao geral.
 3. `scripts/config.js`: paths, ids, campos, Firebase.
 4. `scripts/firebase-service.js`: conexao Firebase.
-5. `scripts/data/data-utils.js`: data, filtro, tabela e series.
-6. `scripts/charts/chart-utils.js`: graficos comuns.
-7. `scripts/data/analytics.js`: estatisticas e heatmaps.
-8. `scripts/charts/solar.js`: regras solares.
-9. `scripts/charts/aqi.js`: AQI estimado.
-10. `scripts/charts/season.js`: estacao do ano.
-11. `scripts/charts/moon.js`: fase da lua.
-12. `scripts/views/estacao-view.js`: view global Estacao.
-13. `scripts/views/solar-view.js`: conecta solar ao DOM.
-14. `scripts/views/quarto-view.js`: view Quarto.
-15. `scripts/views/sala-view.js`: view Sala.
-16. `scripts/views/aquario-view.js`: view Aquario.
-17. `scripts/ui/ui.js`: UI generica.
-18. `scripts/charts/zoom.js`: zoom dos graficos.
-19. `scripts/reports/pdf-report.js` e `scripts/reports/pdf-report-*.js`: exportacao PDF/JSON.
-20. `styles/reports/pdf-report.css`: estilo do PDF.
-21. `style.css` e `styles/`: apresentacao visual.
-
-Nao existem 20 arquivos de codigo no projeto; a lista acima inclui todos os arquivos relevantes encontrados.
+5. `scripts/auth/auth-service.js`: autenticacao e usuarios internos.
+6. `scripts/views/public-weather-view.js`: modo publico.
+7. `scripts/external/*`: localizacao, CEP e clima externo.
+8. `scripts/data/data-utils.js`: data, filtro, tabela e series.
+9. `scripts/charts/chart-utils.js`: graficos comuns.
+10. `scripts/data/analytics.js`: estatisticas e heatmaps.
+11. `scripts/charts/solar.js`: regras solares.
+12. `scripts/charts/aqi.js`: AQI estimado/externo.
+13. `scripts/charts/season.js`: estacao do ano.
+14. `scripts/charts/moon.js`: fase da lua.
+15. `scripts/views/estacao-view.js`: view global Estacao.
+16. `scripts/views/solar-view.js`: conecta solar ao DOM.
+17. `scripts/views/quarto-view.js`: view Quarto.
+18. `scripts/views/sala-view.js`: view Sala.
+19. `scripts/views/aquario-view.js`: view Aquario.
+20. `scripts/ui/ui.js`: UI generica.
+21. `scripts/charts/zoom.js`: zoom dos graficos.
+22. `scripts/reports/pdf-report.js` e `scripts/reports/pdf-report-*.js`: exportacao PDF/JSON.
+23. `styles/reports/pdf-report.css`: estilo do PDF.
+24. `style.css` e `styles/`: apresentacao visual.
 
 ## Arquivos Complexos
 
@@ -602,6 +654,7 @@ Nao existem 20 arquivos de codigo no projeto; a lista acima inclui todos os arqu
 - `styles/advanced-views.css`: concentra colapsaveis, visualizacoes climaticas e heatmaps.
 - `styles/responsive.css`: concentra responsividade.
 - `scripts/main.js`: orquestra dependencias, listeners, indicadores globais e views.
+- `scripts/views/public-weather-view.js`: concentra o modo publico por CEP/localizacao e seus graficos externos.
 
 ## Mapa para IA
 
@@ -619,7 +672,9 @@ Para entender rapidamente:
 - Sem testes funcionais automatizados.
 - Sem build tooling ou linting completos.
 - Existe validacao estrutural local via `npm run validate`.
-- Firebase carrega paths inteiros via `onValue`; pode crescer em custo/memoria.
+- Firebase carrega paths inteiros via `onValue` somente no modo interno autorizado; pode crescer em custo/memoria conforme historico.
+- Firebase Auth e usado como portao de experiencia; regras do Realtime Database continuam sendo a seguranca real dos dados internos.
+- APIs externas do modo publico podem falhar, limitar uso ou retornar campos ausentes.
 - Variacoes de nomes de campos exigem mapeamento cuidadoso.
 - Credenciais Firebase estao no cliente, como esperado para app Firebase web, mas qualquer alteracao de regras Firebase deve considerar exposicao publica do config.
 - Tabelas limitadas a 24 linhas de forma fixa.
@@ -627,4 +682,4 @@ Para entender rapidamente:
 
 ## Resumo Executivo
 
-Projeto e um dashboard estatico para dados de estacao climatica. Ele usa Firebase Realtime Database como fonte, Chart.js como motor de graficos e modulos JavaScript globais para organizar configuracao, dados, graficos, analytics, UI, zoom e views por aba. Nao ha backend local, framework frontend, testes ou build. A principal area de risco e a dependencia de estrutura/nome dos dados no Firebase e a leitura completa dos paths monitorados.
+Projeto e uma aplicacao estatica com dois fluxos: modo publico por CEP/localizacao usando APIs externas e modo interno autorizado usando Firebase Realtime Database. Ele usa Chart.js sob demanda como motor de graficos e modulos JavaScript globais para organizar configuracao, autenticacao, dados, graficos, analytics, UI, zoom, relatorios, assistente IA e views. Nao ha backend local, framework frontend, testes funcionais automatizados ou build. As principais areas de risco sao a dependencia da estrutura/nome dos dados no Firebase, a leitura completa dos paths internos monitorados e a separacao correta entre dados publicos e dados privados.

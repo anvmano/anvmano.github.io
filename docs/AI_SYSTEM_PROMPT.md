@@ -13,10 +13,12 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Chart.js via CDN.
 - html2canvas e jsPDF via CDN.
 - Firebase SDK modular via import dinamico.
+- Firebase Auth com login Google opcional.
 - Firebase Realtime Database.
 - Firebase App Check com reCAPTCHA Enterprise.
 - Firebase AI Logic com Gemini Developer API.
-- Sem framework frontend, sem backend local, sem testes automatizados e sem build tooling.
+- APIs publicas externas BrasilAPI/ViaCEP e Open-Meteo para o modo publico.
+- Sem framework frontend, sem backend local, sem testes funcionais automatizados e sem build tooling.
 
 ## Arquivos importantes
 
@@ -24,6 +26,9 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - `scripts/config.js`: Firebase, paths, ids, campos e cores.
 - `scripts/main.js`: orquestracao, listeners Firebase e renderizacao das views.
 - `scripts/firebase-service.js`: inicializacao Firebase e `onValue`.
+- `scripts/auth/auth-service.js`: login/logout Google e usuarios internos autorizados.
+- `scripts/external/browser-location-service.js`: localizacao do navegador para modo publico.
+- `scripts/external/external-weather-service.js`: CEP, geocoding, clima e AQI externos.
 - `scripts/chat.js`: fachada publica do chat, mantendo `window.ClimateChat`.
 - `scripts/assistant/ai-service.js`: Firebase AI Logic.
 - `scripts/assistant/*.js`: UI do chat, classificacao de intencao, calculos de consulta, metricas, ciclo solar, AQI e redacao final com IA.
@@ -41,25 +46,25 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - `styles/reports/pdf-report.css`: layout do relatorio PDF.
 - `tools/validate-project.mjs`: validacao estrutural local, incluindo imports CSS.
 - `package.json`: comando `npm run validate`.
-- `scripts/views/estacao-view.js`, `scripts/views/quarto-view.js`, `scripts/views/sala-view.js`, `scripts/views/aquario-view.js`, `scripts/views/solar-view.js`: views.
+- `scripts/views/estacao-view.js`, `scripts/views/quarto-view.js`, `scripts/views/sala-view.js`, `scripts/views/aquario-view.js`, `scripts/views/solar-view.js`, `scripts/views/public-weather-view.js`: views.
 - `style.css`: manifesto de imports CSS.
 - `styles/`: layout e visual por responsabilidade.
 
 ## Fluxos principais
 
 1. Scripts carregam em ordem no final de `index.html`.
-2. `scripts/main.js` valida todos os modulos globais.
-3. `DOMContentLoaded` inicializa UI, zoom, chat e Firebase.
-   Tambem inicializa `ClimatePdfReport.setup` para o botao `#btnExportData` e controle `name="exportFormat"`.
-4. Firebase escuta quatro paths:
+2. `scripts/main.js` valida todos os modulos globais essenciais.
+3. `DOMContentLoaded` inicializa chips globais do header, ciclo solar publico e Firebase Auth.
+4. Sem usuario interno autorizado, a pagina mostra o modo publico por CEP/localizacao, oculta o dashboard interno, nao inicia listeners internos, nao inicializa exportacao interna e nao chama a assistente IA.
+5. Com usuario interno autorizado, `main.js` inicializa abas, swipe, date picker, colapsaveis, zoom, PDF/JSON, chat e agenda os listeners Firebase internos de forma progressiva.
+6. Firebase escuta quatro paths apenas no modo interno:
    - `historico/Temperatura`
    - `historico/NascePorDoSol`
    - `historico/Aquario`
    - `historico/AirQuality`
-5. Dados entram em `latestData`.
-6. Views filtram por `selectedDate` e renderizam componentes.
-7. Alterar data rerenderiza usando o cache em `latestData`.
-8. Indicadores globais do header sao inicializados por `ClimateAqi`, `ClimateSeason`, `ClimateMoon` e `setupAstroIndicator`.
+7. Dados internos entram em `latestData`.
+8. Views filtram por `selectedDate` e renderizam componentes.
+9. Alterar data rerenderiza usando o cache em `latestData`.
 
 ## Regras criticas
 
@@ -79,6 +84,10 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Header usa chips na ordem Estacao do ano, AQI, ciclo solar, fase da lua e relogio; em mobile, relogio e marca Estacao Climatica podem ser ocultados, e os chips principais devem ocupar toda a largura util do header.
 - Popovers do header sao mutuamente exclusivos: Estacao do ano, AQI, ciclo solar e Lua.
 - Estacao do ano usa data atual do navegador; fase da lua do header usa data atual e bloco lunar da aba Estacao usa data selecionada.
+- Modo publico deve funcionar sem login, por CEP ou localizacao do navegador, exibindo temperatura, sensacao, umidade, pressao, AQI externo, estacao do ano, fase da lua e ciclo solar da localizacao consultada.
+- Modo publico nao deve iniciar listeners internos do Firebase, nao deve exibir assistente IA e nao deve carregar contexto privado.
+- Somente `anvmano@gmail.com` e `clarissamikado@gmail.com` acessam o dashboard interno completo.
+- Logout no modo interno cancela listeners Firebase, limpa `latestData`, limpa AQI interno e retorna para o modo publico.
 - Exportacao PDF/JSON deve reutilizar `latestData`, `selectedDate`, aba ativa e `chartInstances`; nao deve reconsultar Firebase.
 - Chat com IA deve reutilizar `latestData`, `selectedDate` e aba ativa; nao deve enviar historicos completos ao modelo.
 - Chat deve usar Gemini para classificar a pergunta em JSON, JavaScript para validar/calcular resultados e Gemini apenas para redigir a resposta final.
@@ -86,6 +95,7 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Perguntas de comparacao solar no chat devem ser calculadas localmente em `assistant-solar.js`: duracao do dia, maior/menor duracao de luz no ano da data selecionada por padrao, maior/menor duracao de luz no mes quando um mes for informado, tendencia de nascer/por do sol e comparacao semanal.
 - Perguntas de AQI/IAQ/qualidade do ar no chat devem reutilizar `ClimateAqi.calculate` sobre dados da Sala/MQ135; CO, CO2, Acetona, Alcool, Amonia e Tolueno sao metricas exclusivas da Sala quando nenhum ambiente e citado.
 - Consultas de periodo no chat devem limitar no maximo 30 dias; `ultimos dias` usa 7 dias por padrao.
+- No grafico Ciclo Solar do Dia, tooltip so ativa proximo dos pontos solares; no grafico Nascer & Por do Sol e nos comparativos da Estacao, tooltip deve seguir a ordem visual das linhas.
 - Exportacao PDF deve montar paginas A4 manualmente com html2canvas + jsPDF, evitando paginacao automatica que pode cortar conteudo.
 - PDF deve manter tema escuro, usar resumo executivo na primeira pagina, juntar temperatura e sensacao quando possivel, usar tabela resumida por horario e respeitar o contrato por aba: Estacao com cards contextuais de Estacao do ano e Fase da lua usando rotulos proprios de detalhe, 6 cards globais, graficos comparativos e ciclo solar, sem tabela; Sala com tabela MQ135 e sem solar; Quarto sem solar; Aquario sem solar.
 - Aliases solares devem permanecer centralizados em `SOLAR_FIELD_ALIASES`.
@@ -104,12 +114,13 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 
 ## Pontos de atencao
 
-- O projeto nao usa bundler; cada arquivo depende do script anterior.
+- O projeto nao usa bundler; cada arquivo carregado no HTML depende da ordem anterior.
 - Firebase e lido no cliente.
-- `onValue` escuta paths completos.
-- Nao existe camada de autenticacao no codigo.
-- Nao existe teste automatizado.
-- CSS e grande e controla muitos estados visuais.
+- `onValue` escuta paths completos somente no modo interno autorizado.
+- Existe autenticacao Firebase Auth como portao de experiencia; regras do Firebase continuam sendo a seguranca real dos dados.
+- Nao existem testes funcionais automatizados, mas existe validacao estrutural por `npm run validate`.
+- CSS foi dividido em arquivos por responsabilidade, com `style.css` como manifesto de imports.
+- Existem copias legadas de alguns scripts na raiz de `scripts/`; a aplicacao atual carrega os modulos em subpastas conforme `index.html`.
 
 ## Estrategia recomendada para alteracoes
 

@@ -1,5 +1,19 @@
 # Plano: Login Google, Modo Interno E Modo Publico
 
+## Status Atual
+
+Plano implementado no codigo atual com ajustes em relacao ao desenho original:
+
+- login Google opcional existe em `scripts/auth/auth-service.js`;
+- os usuarios internos autorizados atuais sao `anvmano@gmail.com` e `clarissamikado@gmail.com`;
+- modo publico sem login existe em `scripts/views/public-weather-view.js`;
+- modo publico usa CEP ou localizacao do navegador;
+- modo publico usa BrasilAPI/ViaCEP e Open-Meteo;
+- dashboard interno, listeners Firebase, exportacao interna e assistente IA ficam restritos a usuarios internos autorizados;
+- logout existe no modo publico e no header interno;
+- nao foi criado `styles/auth.css`; os estilos de login ficam integrados ao header e ao modo publico em `styles/header.css`, `styles/public-weather.css` e `styles/responsive.css`;
+- o codigo atual usa e-mails autorizados em `AppConfig.auth.usuariosInternosAutorizados`, nao UID.
+
 ## Objetivo
 
 Adicionar autenticacao opcional pelo Google usando Firebase Auth e separar a experiencia em dois fluxos:
@@ -31,15 +45,14 @@ Login nao deve ser obrigatorio para uso publico. Ao abrir o site, a primeira exp
 - A implementacao deve respeitar o carregamento sob demanda atual do projeto.
 - Novos nomes internos devem seguir PT-BR, exceto contratos externos, Firebase, APIs e IDs ja existentes.
 
-## Arquivos Previstos
+## Arquivos Do Estado Atual
 
 ### Configuracao
 
 - `scripts/config.js`
-  - adicionar configuracao do Firebase Auth;
-  - adicionar lista de usuarios internos autorizados, preferencialmente por UID;
-  - manter os e-mails `anvmano@gmail.com` e `clarissamikado@gmail.com` como referencia humana/documental;
-  - adicionar URLs/configs de BrasilAPI, ViaCEP, Open-Meteo Forecast e Open-Meteo Air Quality.
+  - contem configuracao do Firebase Auth;
+  - contem lista de usuarios internos autorizados por e-mail;
+  - contem URLs/configs de BrasilAPI, ViaCEP, Open-Meteo Forecast e Open-Meteo Air Quality.
 
 ### Autenticacao
 
@@ -60,9 +73,8 @@ Login nao deve ser obrigatorio para uso publico. Ao abrir o site, a primeira exp
   - estado de carregamento;
   - mensagem de erro amigavel.
 
-- `styles/auth.css`
-  - estilos do login opcional;
-  - estados de carregamento e erro.
+- `styles/header.css`, `styles/public-weather.css` e `styles/responsive.css`
+  - estilos do login opcional, logout, modo publico e responsividade.
 
 ### Tela Publica
 
@@ -245,7 +257,7 @@ A tela publica deve apresentar os seguintes graficos:
 Regras:
 
 - Os graficos meteorologicos devem usar os dados externos retornados para a localizacao escolhida.
-- Quando a API externa fornecer serie horaria do dia, os graficos devem usar essa serie.
+- Quando a API externa fornecer serie horaria, os graficos meteorologicos devem usar a janela movel das ultimas 24h, terminando na data/hora retornada pela localizacao consultada.
 - Quando houver apenas valor atual disponivel para uma metrica, o grafico deve exibir estado apropriado ou um ponto unico sem sugerir historico inexistente.
 - O grafico de ciclo solar deve ser renderizado para a latitude/longitude escolhida.
 - Estacao do ano e fase da lua sao contexto visual adicional, nao graficos meteorologicos.
@@ -324,7 +336,7 @@ A implementacao deve respeitar a arquitetura atual sem Vite:
 - Configurar Firebase Auth.
 - Criar `auth-service.js`.
 - Adicionar login opcional, sem bloquear a tela publica.
-- Detectar usuario interno autorizado por UID ou lista equivalente.
+- Detectar usuario interno autorizado pela lista de e-mails em `AppConfig.auth.usuariosInternosAutorizados`.
 - Garantir acesso completo para `anvmano@gmail.com` e `clarissamikado@gmail.com`.
 - Validar login e logout.
 

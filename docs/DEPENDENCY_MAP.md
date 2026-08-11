@@ -144,11 +144,11 @@ Impacto da alteracao: Baixo a Medio. Pode detectar quebras de ids, referencias l
 
 ## style.css
 
-Responsabilidade: manifesto de imports dos estilos modulares em `styles/`.
+Responsabilidade: manifesto de imports dos estilos modulares criticos em `styles/`.
 
-Dependencias diretas: arquivos `styles/*.css`.
+Dependencias diretas: `tokens.css`, `base.css`, `header.css`, `layout.css`, `tabs-toolbar.css`, `feedback.css`, `stats.css`, `charts.css`, `advanced-views.css`, `tables.css`, `public-weather.css` e `responsive.css`.
 
-Dependencias indiretas: classes e ids do HTML; estados criados por JS (`is-collapsed`, `active`, `chart-message`, etc.).
+Dependencias indiretas: classes e ids do HTML; estados criados por JS (`is-collapsed`, `active`, `chart-message`, etc.). `chat.css`, `zoom.css` e `styles/reports/pdf-report.css` nao entram pelo manifesto principal; sao carregados via preload ou `scripts/runtime-loader.js`.
 
 Quem chama: navegador.
 
@@ -191,10 +191,11 @@ Arquivos:
 - `stats.css`: cards de estatisticas, faixa anual das estacoes e bloco lunar da aba Estacao.
 - `charts.css`: cards e canvases de graficos.
 - `advanced-views.css`: colapsaveis, visualizacoes climaticas e heatmaps.
-- `zoom.css`: overlay de zoom.
+- `zoom.css`: overlay de zoom, carregado sob demanda apos inicializacao interna.
 - `tables.css`: tabelas.
-- `chat.css`: painel, botao flutuante, mensagens e atalhos do chat com IA.
+- `chat.css`: painel, botao flutuante, mensagens e atalhos do chat com IA; fica em preload no HTML e tambem pode ser garantido pelo loader da assistente.
 - `responsive.css`: regras mobile, incluindo header compacto com chips ocupando a largura util.
+- `reports/pdf-report.css`: layout temporario do relatorio, carregado somente ao exportar PDF.
 
 Impacto da alteracao: Medio a Alto, dependendo do arquivo e seletor.
 
@@ -264,7 +265,7 @@ Quem e chamado:
 - `ClimateSolar.getSolarEventsForSelectedDate`
 - views.
 
-Observacao: `window.ClimateDiagnostics` tambem nasce neste arquivo; logs de fallback esperado ficam ocultos por padrao e podem ser ativados com `?debug=1` ou `localStorage.climateDebug = "1"`.
+Observacao: `window.ClimateDiagnostics` nasce em `scripts/config.js`; logs de fallback esperado ficam ocultos por padrao e podem ser ativados com `?debug=1` ou `localStorage.climateDebug = "1"`.
 
 Observacao: `main.js` nao exige que Chart.js, `ClimateAIService` ou `ClimatePdfReportModules` estejam prontos na abertura. Ele chama as fachadas e o carregador sob demanda quando a acao do usuario ou o primeiro grafico precisar.
 
@@ -703,18 +704,29 @@ graph TD
     DOMContentLoaded --> SetupSeason
     DOMContentLoaded --> SetupMoon
     DOMContentLoaded --> SetupAstro
-    DOMContentLoaded --> SetupPublicView
     DOMContentLoaded --> SetupAuth
     SetupAuth --> PublicMode
     SetupAuth --> InternalMode
-    InternalMode --> SetupTabs
-    DOMContentLoaded --> SetupTabSwipe
-    DOMContentLoaded --> SetupDate
-    DOMContentLoaded --> SetupCollapsible
-    DOMContentLoaded --> SetupZoom
-    DOMContentLoaded --> SetupPdfReport
-    DOMContentLoaded --> SetupChat
     DOMContentLoaded --> SetupAqi
+    SetupAuth --> SetupPublicView
+    PublicMode --> PublicCep
+    PublicMode --> PublicLocation
+    PublicMode --> PublicSolarEvents
+    PublicCep --> ExternalWeather
+    PublicLocation --> BrowserLocation
+    BrowserLocation --> ExternalWeather
+    ExternalWeather --> PublicView
+    PublicView --> PublicCharts
+    PublicView --> PublicSolarEvents
+    PublicCharts --> ClimateAssets
+    PublicCharts --> ChartJS
+    InternalMode --> SetupTabs
+    InternalMode --> SetupTabSwipe
+    InternalMode --> SetupDate
+    InternalMode --> SetupCollapsible
+    InternalMode --> SetupZoom
+    InternalMode --> SetupPdfReport
+    InternalMode --> SetupChat
     InternalMode --> SetupFirebase
     SetupFirebase --> FirebaseInitialize
     SetupFirebase --> ListenRoom

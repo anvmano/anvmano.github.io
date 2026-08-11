@@ -129,6 +129,29 @@
         return `${context.dataset.label || ""}: ${ClimateData.formatTime(context.raw)}`;
     }
 
+    function ordenarTooltipPorPosicaoVisual(a, b) {
+        const pixelA = obterPixelTooltip(a);
+        const pixelB = obterPixelTooltip(b);
+
+        if (Number.isFinite(pixelA) && Number.isFinite(pixelB)) {
+            return pixelA - pixelB;
+        }
+
+        const valorA = Number(a.parsed?.y);
+        const valorB = Number(b.parsed?.y);
+        if (!Number.isFinite(valorA)) return 1;
+        if (!Number.isFinite(valorB)) return -1;
+        return valorB - valorA;
+    }
+
+    function obterPixelTooltip(context) {
+        const dataset = context.chart?.data?.datasets?.[context.datasetIndex];
+        const escala = context.chart?.scales?.[dataset?.yAxisID || "y"];
+        const valor = Number(context.parsed?.y);
+        if (!escala || !Number.isFinite(valor)) return null;
+        return escala.getPixelForValue(valor);
+    }
+
     function getSunHistoryOptions({ legend = true, tickSize = 11, labelSize = 11, defaults, colors } = {}) {
         return {
             responsive: true,
@@ -151,6 +174,7 @@
                 },
                 tooltip: {
                     ...defaults.plugins.tooltip,
+                    itemSort: ordenarTooltipPorPosicaoVisual,
                     callbacks: { label: tooltipLabel }
                 }
             },

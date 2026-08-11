@@ -202,9 +202,10 @@ A validação verifica:
 - Faixa de conforto térmico nos gráficos de temperatura e sensação.
 - Faixa de conforto do Aquário entre 25°C e 27°C.
 - Heatmaps e visualizações climáticas avançadas para Sala e Quarto.
-- Destaque temporal nos heatmaps: dia selecionado no calendário, hora atual no heatmap horário de hoje e dia/hora atual no mapa semanal do mês atual.
+- Destaque temporal nos heatmaps: dia selecionado no calendário, hora atual no heatmap horário de hoje e dia/hora atual no mapa semanal quando a data selecionada é hoje.
 - Ciclo solar do dia com amanhecer, nascer do sol, zênite, pôr do sol e anoitecer na aba Estação.
 - Histórico de nascer e pôr do sol na aba Estação.
+- Tooltips dos gráficos comparativos e do histórico Nascer & Pôr do Sol ordenados pela posição visual das linhas no ponto consultado.
 - Estação do ano atual no header e faixa visual na aba Estação.
 - Fase da lua atual no header e fase lunar da data selecionada na aba Estação.
 - Zoom dos gráficos.
@@ -268,6 +269,7 @@ JSON:
 - Consultas de período usam limite de 30 dias; `últimos dias` usa 7 dias por padrão. O calendário mensal pode consultar o mês completo.
 - O CSS foi dividido em arquivos por responsabilidade dentro de `styles/`.
 - Os renderizadores por aba ficam separados em `scripts/views/`.
+- A aplicação atual carrega os scripts organizados em subpastas; cópias antigas diretamente em `scripts/` são legadas e não fazem parte do runtime descrito em `index.html`.
 - A documentação técnica fica centralizada em `docs/`.
 - O validador local reduz risco de quebrar ids, imports e caminhos ao reorganizar arquivos.
 
