@@ -17,7 +17,7 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Firebase Realtime Database.
 - Firebase App Check com reCAPTCHA Enterprise.
 - Firebase AI Logic com Gemini Developer API.
-- APIs publicas externas BrasilAPI/ViaCEP e Open-Meteo para o modo publico.
+- APIs publicas externas BrasilAPI/ViaCEP e Open-Meteo para o modo publico e para insights externos opcionais da aba Estacao interna.
 - Sem framework frontend, sem backend local, sem testes funcionais automatizados e sem build tooling.
 
 ## Arquivos importantes
@@ -27,7 +27,7 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - `scripts/main.js`: orquestracao, listeners Firebase e renderizacao das views.
 - `scripts/firebase-service.js`: inicializacao Firebase e `onValue`.
 - `scripts/auth/auth-service.js`: login/logout Google e usuarios internos autorizados.
-- `scripts/external/browser-location-service.js`: localizacao do navegador para modo publico.
+- `scripts/external/browser-location-service.js`: localizacao do navegador para modo publico e para insights externos opcionais da aba Estacao interna.
 - `scripts/external/external-weather-service.js`: CEP, geocoding, clima e AQI externos.
 - `scripts/chat.js`: fachada publica do chat, mantendo `window.ClimateChat`.
 - `scripts/assistant/ai-service.js`: Firebase AI Logic.

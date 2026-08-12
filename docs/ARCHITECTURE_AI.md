@@ -75,7 +75,8 @@ Codigo interno novo ou refatorado deve usar nomes em PT-BR para metodos, funcoes
 │   │   └── assistant-ui.js
 │   ├── data/
 │   │   ├── data-utils.js
-│   │   └── analytics.js
+│   │   ├── analytics.js
+│   │   └── environmental-insights.js
 │   ├── charts/
 │   │   ├── chart-utils.js
 │   │   ├── aqi.js
@@ -118,8 +119,8 @@ Responsabilidades:
 - `scripts/main.js`: orquestracao da aplicacao, listeners Firebase, cache de dados, renderizacao por view, contrato de criacao de graficos, opcoes de zoom, indicadores do header e exportacao.
 - `scripts/firebase-service.js`: inicializacao Firebase, listeners `onValue`, loading bar e erros.
 - `scripts/auth/auth-service.js`: inicializacao Firebase Auth, login/logout Google, usuario atual e regra de usuario interno autorizado.
-- `scripts/external/browser-location-service.js`: localizacao do navegador para o modo publico, com fallback de cache, busca normal e alta precisao.
-- `scripts/external/external-weather-service.js`: CEP, fallback ViaCEP, geocodificacao, clima/AQI externos e eventos solares publicos via Open-Meteo.
+- `scripts/external/browser-location-service.js`: localizacao do navegador para o modo publico e para insights externos opcionais da aba Estacao interna, com fallback de cache, busca normal e alta precisao.
+- `scripts/external/external-weather-service.js`: CEP, fallback ViaCEP, geocodificacao, clima/AQI, chuva, UV, vento, ponto de orvalho e eventos solares externos via Open-Meteo.
 - `scripts/chat.js`: fachada publica leve do chat, mantendo `window.ClimateChat.setup` para o `scripts/main.js` e carregando `scripts/assistant/*` no primeiro clique.
 - `scripts/assistant/ai-service.js`: inicializacao do Firebase AI Logic e envio de prompts ao Gemini.
 - `scripts/assistant/assistant-ui.js`: painel do chat, atalhos de perguntas, mensagens, abertura/fechamento, clique/toque fora para fechar e estado ocupado.
@@ -134,6 +135,7 @@ Responsabilidades:
 - `scripts/data/data-utils.js`: datas, filtros, tabelas, extracao de series, conversoes e formatacao.
 - `scripts/charts/chart-utils.js`: defaults Chart.js, criacao de graficos de linha, fallback de grafico vazio, faixa de conforto.
 - `scripts/data/analytics.js`: estatisticas, cards de resumo, calendario climatico, heatmap horario e heatmap semanal.
+- `scripts/data/environmental-insights.js`: ponto de orvalho, risco estimado de mofo, chuva, indice UV e recomendacao de ventilacao compartilhados entre modos interno e publico.
 - `scripts/charts/aqi.js`: AQI estimado da Sala/MQ135, chip no header e popover.
 - `scripts/charts/season.js`: estacao do ano atual, chip no header, popover, faixa anual da aba Estacao e progresso dentro da estacao atual para o PDF.
 - `scripts/charts/moon.js`: fase da lua, chip no header, popover e estado lunar por data.
@@ -149,12 +151,12 @@ Responsabilidades:
 - `scripts/reports/pdf-report-pdf.js`: montagem A4 com html2canvas/jsPDF, paginacao e rodapes.
 - `scripts/reports/pdf-report-export.js`: setup do botao, seletor PDF/JSON, build do relatorio e download.
 - `styles/reports/pdf-report.css`: layout visual do relatorio PDF em tema escuro.
-- `scripts/views/estacao-view.js`: renderizacao da aba global Estacao, incluindo contexto sazonal/lunar, cards globais, graficos comparativos e solares.
+- `scripts/views/estacao-view.js`: renderizacao da aba global Estacao, incluindo contexto sazonal/lunar, cards globais, insights ambientais atuais, graficos comparativos e solares.
 - `scripts/views/quarto-view.js`: renderizacao da aba Quarto.
 - `scripts/views/sala-view.js`: renderizacao da aba Sala.
 - `scripts/views/aquario-view.js`: renderizacao da aba Aquario.
 - `scripts/views/solar-view.js`: integracao dos graficos solares usados pela visao global da aba Estacao.
-- `scripts/views/public-weather-view.js`: renderizacao do modo publico por CEP/localizacao, com cards, contexto sazonal/lunar e graficos externos.
+- `scripts/views/public-weather-view.js`: renderizacao do modo publico por CEP/localizacao, com cards, contexto sazonal/lunar, insights ambientais e graficos externos.
 - `tools/validate-project.mjs`: validacao estrutural local de sintaxe, referencias, imports CSS e ids.
 - `package.json`: comando `npm run validate`.
 
@@ -166,6 +168,7 @@ Responsabilidades:
    - `scripts/runtime-loader.js`
    - `scripts/data/data-utils.js`
    - `scripts/data/analytics.js`
+   - `scripts/data/environmental-insights.js`
    - `scripts/charts/solar.js`
    - `scripts/charts/chart-utils.js`
    - `scripts/charts/aqi.js`

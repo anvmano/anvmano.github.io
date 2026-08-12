@@ -8,6 +8,7 @@
     function render({ data, selectedDate, chartInstances, defaults, colors, ui, ensureChart }) {
         ui.clearChartMessage(ids.chartContainers.sunHistory);
         ui.clearChartMessage(ids.chartContainers.solarToday);
+        atualizarChipDuracaoDia(null);
 
         if (!window.Chart) {
             ui.renderChartMessage(ids.chartContainers.sunHistory, "Carregando gráfico...", "loading");
@@ -45,7 +46,19 @@
             colors,
             onEmpty: () => ui.renderChartMessage(ids.chartContainers.solarToday, `Sem dados de ciclo solar em ${selectedDate.replace(/-/g, "/")}.`)
         });
-        if (chart) chartInstances[id] = chart;
+        if (chart) {
+            chartInstances[id] = chart;
+            atualizarChipDuracaoDia(chart.$solarDayTimes);
+        }
+    }
+
+    function atualizarChipDuracaoDia(eventos) {
+        const chip = document.getElementById("solarTodayDuration");
+        if (!chip) return;
+
+        const duracao = ClimateSolar.formatarDuracaoDia(eventos);
+        chip.hidden = !duracao;
+        chip.textContent = duracao ? `Duração do dia: ${duracao}` : "";
     }
 
     window.SolarView = { render };

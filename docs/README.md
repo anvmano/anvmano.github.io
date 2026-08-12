@@ -21,6 +21,7 @@ Bibliotecas carregadas via CDN:
 - Firebase AI Logic
 - BrasilAPI/ViaCEP para CEP
 - Open-Meteo Forecast, Air Quality e Geocoding para clima público
+- Insights de ventilação, chuva, índice UV, ponto de orvalho e risco estimado de mofo
 
 ## Estrutura
 
@@ -53,7 +54,8 @@ Bibliotecas carregadas via CDN:
 │   │   └── assistant-aqi.js    Consultas AQI/qualidade do ar
 │   ├── data/
 │   │   ├── data-utils.js       Datas, filtros, tabelas e séries
-│   │   └── analytics.js        Estatísticas e heatmaps
+│   │   ├── analytics.js        Estatísticas e heatmaps
+│   │   └── environmental-insights.js Recomendações ambientais
 │   ├── charts/
 │   │   ├── chart-utils.js      Gráficos comuns e faixa de conforto
 │   │   ├── aqi.js              AQI estimado da Sala no header
@@ -87,6 +89,7 @@ Bibliotecas carregadas via CDN:
 │   ├── tabs-toolbar.css        Abas, seletor de data e exportação
 │   ├── feedback.css            Loading, mensagens e transições
 │   ├── stats.css               Cards, faixa de estações e resumo lunar
+│   ├── environment-insights.css Insights ambientais responsivos
 │   ├── charts.css              Cards e canvases dos gráficos
 │   ├── advanced-views.css      Heatmaps e visualizações climáticas
 │   ├── zoom.css                Overlay de zoom
@@ -190,6 +193,7 @@ A validação verifica:
 - Acesso interno completo somente para `anvmano@gmail.com` e `clarissamikado@gmail.com`.
 - Usuários não autorizados permanecem no modo público.
 - Tela pública com cards de temperatura, sensação térmica, umidade, pressão e AQI externo.
+- Tela pública com ventilação recomendada, chuva nas próximas 6h, índice UV e ponto de orvalho/risco estimado de mofo.
 - Tela pública com gráficos de temperatura, sensação térmica, umidade, pressão e ciclo solar.
 - Tela pública com estação do ano e fase da lua.
 - Aba global Estação e abas por dispositivo: Sala, Quarto e Aquário.
@@ -197,13 +201,14 @@ A validação verifica:
 - Seletor global de data.
 - Persistência da aba ativa em `localStorage`.
 - Gráficos globais de temperatura/umidade por ambiente na aba Estação.
+- Aba Estação com ventilação e risco de mofo a partir dos sensores internos; chuva e UV entram por consulta opcional da localização, mantida somente em memória.
 - Gráficos de temperatura, sensação térmica, umidade, pressão, qualidade do ar e aquário.
 - Cards com média, mínima, máxima, delta e tendência.
 - Faixa de conforto térmico nos gráficos de temperatura e sensação.
 - Faixa de conforto do Aquário entre 25°C e 27°C.
 - Heatmaps e visualizações climáticas avançadas para Sala e Quarto.
 - Destaque temporal nos heatmaps: dia selecionado no calendário, hora atual no heatmap horário de hoje e dia/hora atual no mapa semanal quando a data selecionada é hoje.
-- Ciclo solar do dia com amanhecer, nascer do sol, zênite, pôr do sol e anoitecer na aba Estação.
+- Ciclo solar do dia com amanhecer, nascer do sol, zênite, pôr do sol, anoitecer e duração do dia na aba Estação e no modo público.
 - Histórico de nascer e pôr do sol na aba Estação.
 - Tooltips dos gráficos comparativos e do histórico Nascer & Pôr do Sol ordenados pela posição visual das linhas no ponto consultado.
 - Estação do ano atual no header e faixa visual na aba Estação.

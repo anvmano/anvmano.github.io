@@ -125,7 +125,7 @@ Criticidade: Alta.
 
 ## Regra: clima publico por CEP ou localizacao
 
-Arquivos: `scripts/external/browser-location-service.js`, `scripts/external/external-weather-service.js`, `scripts/views/public-weather-view.js`
+Arquivos: `scripts/external/browser-location-service.js`, `scripts/external/external-weather-service.js`, `scripts/data/environmental-insights.js`, `scripts/views/public-weather-view.js`
 
 Objetivo: mostrar informacoes climaticas publicas quando nao ha usuario interno autorizado.
 
@@ -143,6 +143,10 @@ Saidas:
 - cards de temperatura, sensacao termica, umidade, pressao e AQI externo
 - graficos de temperatura, sensacao termica, umidade, pressao e ciclo solar do dia
 - contexto de estacao do ano e fase da lua
+- recomendacao de ventilacao externa
+- probabilidade e intensidade de chuva nas proximas 6h
+- indice UV atual, maxima diaria e recomendacao solar
+- ponto de orvalho e risco estimado de condensacao/mofo
 
 Regras:
 
@@ -159,12 +163,55 @@ Regras:
 - AQI publico vem de API externa e deve ser separado do AQI estimado interno da Sala/MQ135
 - no modo publico, o chip/popover AQI do header deve mostrar `AQI externo` da localizacao/CEP consultado e nao pode mencionar Sala ou MQ135
 - se nenhuma localizacao foi escolhida, mostrar estado vazio claro orientando CEP ou localizacao
+- chuva usa o maior percentual, acumulado e maior intensidade horaria dentro das proximas 6h; ausencia de previsao nao pode virar zero
+- indice UV segue as faixas `baixo`, `moderado`, `alto`, `muito alto` e `extremo`, com recomendacao proporcional
+- ponto de orvalho usa o valor da API quando disponivel e calculo de Magnus como fallback
+- risco de mofo/condensacao e orientativo e deve considerar umidade e distancia entre temperatura e ponto de orvalho
+- recomendacao de ventilacao externa considera AQI, chuva, rajadas, temperatura e umidade; nao deve recomendar abertura quando houver condicao externa limitante
 
 Impacto: experiencia publica e separacao entre dados externos e dados internos da estacao.
 
 Dependencias: APIs publicas externas e disponibilidade de rede.
 
 Se alterada: modo publico pode parecer quebrado ou misturar dados externos com sensores internos.
+
+Criticidade: Alta.
+
+## Regra: insights ambientais da aba Estacao
+
+Arquivos: `index.html`, `scripts/data/environmental-insights.js`, `scripts/views/estacao-view.js`, `scripts/external/browser-location-service.js`, `scripts/external/external-weather-service.js`, `styles/environment-insights.css`
+
+Objetivo: transformar leituras atuais em recomendacoes praticas sem misturar dados internos e externos.
+
+Entradas:
+
+- ultima temperatura e umidade da Sala e do Quarto
+- AQI estimado da Sala/MQ135
+- localizacao opcional fornecida pelo navegador
+- clima, AQI, chuva, UV e vento externos da Open-Meteo
+
+Saidas:
+
+- recomendacao de ventilacao da Sala
+- ponto de orvalho e risco estimado de mofo para Sala e Quarto
+- chuva nas proximas 6h e indice UV quando o usuario consultar a localizacao
+
+Regras:
+
+- sem localizacao, ventilacao usa somente sensores internos e informa essa limitacao
+- chuva e UV ficam indisponiveis ate o usuario acionar a consulta externa; nao usar valores internos ou zeros como fallback
+- a pagina nao deve solicitar permissao de localizacao automaticamente
+- latitude e longitude existem apenas em memoria durante a sessao e nao sao gravadas no Firebase/localStorage
+- com clima externo carregado, ventilacao combina necessidade interna e condicoes externas
+- os insights representam condicoes atuais e nao seguem a data historica selecionada no calendario
+- risco de mofo, ponto de orvalho e ventilacao sao estimativas orientativas, nao medicoes certificadas nem diagnosticos
+- as grades de insights dos modos publico e interno nao exibem uma faixa de cabecalho propria; no modo interno, o controle de localizacao e seus estados ficam incorporados ao card de chuva
+
+Impacto: leitura pratica da aba Estacao, privacidade da localizacao e separacao entre Firebase interno e APIs externas.
+
+Dependencias: `ClimateInsightsAmbientais`, dados internos ja carregados, BrowserLocationService e Open-Meteo.
+
+Se alterada: a aplicacao pode recomendar ventilacao em momento inadequado, converter ausencia de previsao em zero ou expor localizacao alem da consulta atual.
 
 Criticidade: Alta.
 
@@ -528,6 +575,38 @@ Dependencias: nomes de campos solares.
 Se alterada: grafico solar pode aparecer com dados incompletos.
 
 Criticidade: Alta.
+
+## Regra: duracao do dia no grafico solar
+
+Arquivos: `index.html`, `scripts/charts/solar.js`, `scripts/views/solar-view.js`, `scripts/views/public-weather-view.js`, `styles/charts.css`
+
+Metodos: `formatarDuracaoDia`, `createSolarTodayChart`, `renderizarGraficoSolar`
+
+Objetivo: exibir a duracao de luz diretamente no card do grafico Ciclo Solar do Dia, sem depender do popover do header.
+
+Entradas:
+
+- nascer do sol
+- por do sol
+- eventos solares internos de `historico/NascePorDoSol` ou eventos solares publicos da localizacao/CEP
+- `daylight_duration` da Open-Meteo no modo publico, quando disponivel
+
+Saidas: chip discreto no card com `Duracao do dia: <h>h<mm>`.
+
+Regras:
+
+- a duracao e calculada como por do sol menos nascer do sol; no modo publico, se `daylight_duration` existir, ele deve ser usado antes do fallback nascer/por
+- o chip deve aparecer no grafico interno da aba Estacao e no grafico publico
+- se os eventos solares forem invalidos ou ausentes, o chip deve ficar oculto para evitar dado enganoso
+- o chip fica fora do canvas e nao pode interferir no tooltip do Chart.js nem no botao de zoom
+
+Impacto: leitura rapida do tempo de luz solar no grafico principal do dia.
+
+Dependencias: `ClimateSolar.formatarDuracaoDia`, dados solares carregados e renderizacao do card solar.
+
+Se alterada: modo interno e modo publico podem divergir ou o grafico pode exibir duracao incorreta.
+
+Criticidade: Media.
 
 ## Regra: indicador astronomico do header
 

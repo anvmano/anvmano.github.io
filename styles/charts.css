@@ -103,6 +103,32 @@
     color: var(--text-secondary);
 }
 
+.chart-card__meta-chip {
+    position: absolute;
+    top: 13px;
+    right: 52px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    max-width: min(48vw, 220px);
+    min-height: 26px;
+    padding: 0 0.72rem;
+    border: 1px solid rgba(56, 189, 248, 0.28);
+    border-radius: 999px;
+    background: rgba(14, 165, 233, 0.12);
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 760;
+    line-height: 1;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.chart-card__meta-chip[hidden] {
+    display: none;
+}
+
 .plot {
     width: 100% !important;
     height: 232px !important;
@@ -112,4 +138,18 @@
 
 .chart-card--wide .plot {
     height: 260px !important;
+}
+
+@media (max-width: 640px) {
+    .chart-card__meta-chip {
+        top: 46px;
+        right: 12px;
+        max-width: calc(100% - 24px);
+        min-height: 24px;
+        font-size: 0.68rem;
+    }
+
+    .plot--solar-day {
+        margin-top: 0.6rem;
+    }
 }

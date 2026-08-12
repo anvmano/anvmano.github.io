@@ -109,10 +109,10 @@
         url.searchParams.set("longitude", longitude);
         url.searchParams.set("timezone", "auto");
         url.searchParams.set("past_days", "1");
-        url.searchParams.set("forecast_days", "1");
-        url.searchParams.set("current", "temperature_2m,relative_humidity_2m,apparent_temperature,pressure_msl");
-        url.searchParams.set("hourly", "temperature_2m,relative_humidity_2m,apparent_temperature,pressure_msl");
-        url.searchParams.set("daily", "sunrise,sunset,daylight_duration");
+        url.searchParams.set("forecast_days", "2");
+        url.searchParams.set("current", "temperature_2m,relative_humidity_2m,apparent_temperature,dew_point_2m,pressure_msl,precipitation,rain,weather_code,cloud_cover,wind_speed_10m,wind_gusts_10m,uv_index");
+        url.searchParams.set("hourly", "temperature_2m,relative_humidity_2m,apparent_temperature,dew_point_2m,pressure_msl,precipitation_probability,precipitation,rain,showers,weather_code,cloud_cover,wind_speed_10m,wind_gusts_10m,uv_index");
+        url.searchParams.set("daily", "sunrise,sunset,daylight_duration,uv_index_max,precipitation_probability_max,precipitation_sum,weather_code");
 
         const resposta = await fetch(url);
         if (!resposta.ok) throw new Error("Não foi possível consultar o clima externo.");
@@ -163,7 +163,8 @@
     function normalizarRespostaPublica({ clima, qualidadeAr, origem }) {
         const atual = clima.current || {};
         const horarioAtual = atual.time ? new Date(atual.time) : new Date();
-        const eventosSolares = obterEventosSolares(clima.daily);
+        const eventosSolares = obterEventosSolares(clima.daily, atual.time);
+        const indiceDiario = obterIndiceDiario(clima.daily, atual.time);
 
         return {
             origem,
@@ -173,6 +174,14 @@
                 sensacaoTermica: numeroOuNulo(atual.apparent_temperature),
                 umidade: numeroOuNulo(atual.relative_humidity_2m),
                 pressao: numeroOuNulo(atual.pressure_msl),
+                pontoOrvalho: numeroOuNulo(atual.dew_point_2m),
+                precipitacao: numeroOuNulo(atual.precipitation),
+                chuva: numeroOuNulo(atual.rain),
+                codigoTempo: numeroOuNulo(atual.weather_code),
+                nebulosidade: numeroOuNulo(atual.cloud_cover),
+                velocidadeVento: numeroOuNulo(atual.wind_speed_10m),
+                rajadaVento: numeroOuNulo(atual.wind_gusts_10m),
+                indiceUv: numeroOuNulo(atual.uv_index),
             },
             seriesHorarias: {
                 horarios: clima.hourly?.time || [],
@@ -180,6 +189,14 @@
                 sensacaoTermica: normalizarSerie(clima.hourly?.apparent_temperature),
                 umidade: normalizarSerie(clima.hourly?.relative_humidity_2m),
                 pressao: normalizarSerie(clima.hourly?.pressure_msl),
+                pontoOrvalho: normalizarSerie(clima.hourly?.dew_point_2m),
+            },
+            previsaoCurtoPrazo: montarPrevisaoCurtoPrazo(clima.hourly),
+            previsaoDiaria: {
+                indiceUvMaximo: numeroOuNulo(clima.daily?.uv_index_max?.[indiceDiario]),
+                probabilidadeChuvaMaxima: numeroOuNulo(clima.daily?.precipitation_probability_max?.[indiceDiario]),
+                precipitacaoTotal: numeroOuNulo(clima.daily?.precipitation_sum?.[indiceDiario]),
+                codigoTempo: numeroOuNulo(clima.daily?.weather_code?.[indiceDiario]),
             },
             aqi: {
                 valor: numeroOuNulo(qualidadeAr?.current?.us_aqi),
@@ -190,9 +207,10 @@
         };
     }
 
-    function obterEventosSolares(daily) {
-        const nascer = daily?.sunrise?.[0] ? new Date(daily.sunrise[0]) : null;
-        const por = daily?.sunset?.[0] ? new Date(daily.sunset[0]) : null;
+    function obterEventosSolares(daily, horarioAtual) {
+        const indice = obterIndiceDiario(daily, horarioAtual);
+        const nascer = daily?.sunrise?.[indice] ? new Date(daily.sunrise[indice]) : null;
+        const por = daily?.sunset?.[indice] ? new Date(daily.sunset[indice]) : null;
         if (!nascer || !por || Number.isNaN(nascer.getTime()) || Number.isNaN(por.getTime())) return null;
 
         const sunrise = horaDecimal(nascer);
@@ -200,7 +218,7 @@
         const dawn = Math.max(0, sunrise - 1);
         const dusk = Math.min(24, sunset + 1);
         const zenith = sunrise + ((sunset - sunrise) / 2);
-        const daylightDuration = Number(daily?.daylight_duration?.[0]);
+        const daylightDuration = Number(daily?.daylight_duration?.[indice]);
 
         return {
             dawn,
@@ -212,6 +230,27 @@
         };
     }
 
+    function obterIndiceDiario(daily, horarioAtual) {
+        const dataAlvo = String(horarioAtual || "").slice(0, 10);
+        const indice = (daily?.time || []).findIndex(data => String(data).slice(0, 10) === dataAlvo);
+        return indice >= 0 ? indice : 0;
+    }
+
+    function montarPrevisaoCurtoPrazo(hourly) {
+        return (hourly?.time || []).map((horario, indice) => ({
+            horario,
+            probabilidadeChuva: numeroOuNulo(hourly?.precipitation_probability?.[indice]),
+            precipitacao: numeroOuNulo(hourly?.precipitation?.[indice]),
+            chuva: numeroOuNulo(hourly?.rain?.[indice]),
+            pancadas: numeroOuNulo(hourly?.showers?.[indice]),
+            codigoTempo: numeroOuNulo(hourly?.weather_code?.[indice]),
+            nebulosidade: numeroOuNulo(hourly?.cloud_cover?.[indice]),
+            velocidadeVento: numeroOuNulo(hourly?.wind_speed_10m?.[indice]),
+            rajadaVento: numeroOuNulo(hourly?.wind_gusts_10m?.[indice]),
+            indiceUv: numeroOuNulo(hourly?.uv_index?.[indice]),
+        }));
+    }
+
     function horaDecimal(data) {
         return data.getHours() + data.getMinutes() / 60 + data.getSeconds() / 3600;
     }
@@ -221,6 +260,7 @@
     }
 
     function numeroOuNulo(valor) {
+        if (valor === null || valor === undefined || valor === "") return null;
         const numero = Number(valor);
         return Number.isFinite(numero) ? numero : null;
     }

@@ -3,6 +3,7 @@
 const AppConfig = window.AppConfig;
 const ClimateData = window.ClimateData;
 const ClimateAnalytics = window.ClimateAnalytics;
+const ClimateInsightsAmbientais = window.ClimateInsightsAmbientais;
 const ClimateSolar = window.ClimateSolar;
 const ClimateCharts = window.ClimateCharts;
 const ClimateAqi = window.ClimateAqi;
@@ -28,6 +29,7 @@ if (
     !AppConfig ||
     !ClimateData ||
     !ClimateAnalytics ||
+    !ClimateInsightsAmbientais ||
     !ClimateSolar ||
     !ClimateCharts ||
     !ClimateAqi ||

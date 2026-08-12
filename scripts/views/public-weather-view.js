@@ -114,6 +114,7 @@
     async function renderizarDados(dados) {
         await window.ClimateAssets.carregarChart();
         window.ClimateCharts.registerComfortBand();
+        const insights = analisarDadosPublicos(dados);
 
         elementos.publicResults.innerHTML = `
             <div class="public-location">
@@ -131,6 +132,7 @@
                 <section class="season-timeline public-season" id="publicSeasonTimeline"></section>
                 <section class="moon-summary public-moon" id="publicMoonSummary"></section>
             </div>
+            ${montarSecaoInsightsPublicos(insights)}
             <div class="charts-grid">
                 ${canvasCard("publicChartTemperature", "Temperatura", "Temperatura externa")}
                 ${canvasCard("publicChartFeelsLike", "Sensação Térmica", "Sensação térmica externa")}
@@ -139,6 +141,7 @@
             </div>
             <div class="chart-card chart-card--wide" id="public-solar-container">
                 <span class="chart-label">Ciclo Solar do Dia</span>
+                <span class="chart-card__meta-chip" id="publicSolarDuration" hidden></span>
                 <canvas aria-label="Ciclo solar público" class="plot plot--solar-day" id="publicChartSolar" role="img"></canvas>
             </div>
         `;
@@ -156,6 +159,90 @@
         renderizarGraficoLinha("publicChartHumidity", seriesUltimas24h.horarios, seriesUltimas24h.umidade, "Umidade", "%", window.AppConfig.colors.purple);
         renderizarGraficoLinha("publicChartPressure", seriesUltimas24h.horarios, seriesUltimas24h.pressao, "Pressão", "hPa", window.AppConfig.colors.amber);
         renderizarGraficoSolar(dados.cicloSolar);
+    }
+
+    function analisarDadosPublicos(dados) {
+        const chuva = window.ClimateInsightsAmbientais.resumirChuva(
+            dados.previsaoCurtoPrazo,
+            dados.atualizadoEm,
+            6
+        );
+        const indiceUv = window.ClimateInsightsAmbientais.analisarIndiceUv(
+            dados.climaAtual.indiceUv,
+            dados.previsaoDiaria.indiceUvMaximo
+        );
+        const riscoMofo = window.ClimateInsightsAmbientais.avaliarRiscoMofo({
+            temperatura: dados.climaAtual.temperatura,
+            umidade: dados.climaAtual.umidade,
+            pontoOrvalho: dados.climaAtual.pontoOrvalho,
+        });
+        const ventilacao = window.ClimateInsightsAmbientais.recomendarVentilacaoExterna({
+            climaAtual: dados.climaAtual,
+            aqi: dados.aqi,
+            chuva,
+        });
+
+        return { chuva, indiceUv, riscoMofo, ventilacao };
+    }
+
+    function montarSecaoInsightsPublicos({ chuva, indiceUv, riscoMofo, ventilacao }) {
+        const pontoOrvalho = riscoMofo.pontoOrvalho;
+        const valorOrvalho = Number.isFinite(pontoOrvalho) ? `${pontoOrvalho.toFixed(1)}°C` : "--";
+        const valorChuva = chuva.classe === "indisponivel" ? "--" : `${Math.round(chuva.probabilidade)}%`;
+        const valorUv = Number.isFinite(indiceUv.valor) ? indiceUv.valor.toFixed(1) : "--";
+
+        return `
+            <section class="environment-insights" aria-label="Condições e recomendações da localização">
+                <div class="environment-insights__grid">
+                    ${montarCardInsight({
+                        titulo: "Ventilação",
+                        valor: ventilacao.rotulo,
+                        status: "Agora",
+                        classe: ventilacao.classe,
+                        descricao: ventilacao.descricao,
+                        detalhe: "Baseado em clima, chuva e AQI externos",
+                    })}
+                    ${montarCardInsight({
+                        titulo: "Chuva · próximas 6h",
+                        valor: valorChuva,
+                        status: chuva.rotulo,
+                        classe: chuva.classe,
+                        descricao: chuva.descricao,
+                        detalhe: chuva.classe === "indisponivel" ? "Sem previsão horária" : `${chuva.acumulado.toFixed(1)} mm acumulados · pico ${chuva.intensidadeMaxima.toFixed(1)} mm/h`,
+                    })}
+                    ${montarCardInsight({
+                        titulo: "Índice UV",
+                        valor: valorUv,
+                        status: indiceUv.rotulo,
+                        classe: indiceUv.classe,
+                        descricao: indiceUv.descricao,
+                        detalhe: Number.isFinite(indiceUv.maximo) ? `Máxima do dia: ${indiceUv.maximo.toFixed(1)}` : "Valor atual",
+                    })}
+                    ${montarCardInsight({
+                        titulo: "Ponto de orvalho",
+                        valor: valorOrvalho,
+                        status: riscoMofo.rotulo,
+                        classe: riscoMofo.classe,
+                        descricao: riscoMofo.descricao,
+                        detalhe: "Risco estimado de condensação e mofo",
+                    })}
+                </div>
+            </section>
+        `;
+    }
+
+    function montarCardInsight({ titulo, valor, status, classe, descricao, detalhe }) {
+        return `
+            <article class="environment-insight environment-insight--${classe}">
+                <div class="environment-insight__header">
+                    <span>${titulo}</span>
+                    <small>${status}</small>
+                </div>
+                <strong>${valor}</strong>
+                <p>${descricao}</p>
+                <span class="environment-insight__detail">${detalhe}</span>
+            </article>
+        `;
     }
 
     function renderizarContextoAstronomico(dados) {
@@ -266,6 +353,7 @@
 
     function renderizarGraficoSolar(eventos) {
         const canvas = document.getElementById("publicChartSolar");
+        atualizarChipDuracaoSolarPublica(eventos);
         if (!canvas || !eventos) return;
         if (graficos.publicChartSolar) graficos.publicChartSolar.destroy();
 
@@ -313,6 +401,15 @@
             plugins: [window.ClimateSolar.solarDayBackgroundPlugin],
         });
         graficos.publicChartSolar.$solarDayTimes = eventos;
+    }
+
+    function atualizarChipDuracaoSolarPublica(eventos) {
+        const chip = document.getElementById("publicSolarDuration");
+        if (!chip) return;
+
+        const duracao = window.ClimateSolar?.formatarDuracaoDia?.(eventos);
+        chip.hidden = !duracao;
+        chip.textContent = duracao ? `Duração do dia: ${duracao}` : "";
     }
 
     function card(titulo, valor, unidade) {

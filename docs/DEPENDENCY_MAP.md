@@ -8,6 +8,7 @@ graph TD
     HTML --> Assets[ClimateAssets]
     HTML --> Data[ClimateData]
     HTML --> Analytics[ClimateAnalytics]
+    HTML --> Insights[ClimateInsightsAmbientais]
     HTML --> Solar[ClimateSolar]
     HTML --> Charts[ClimateCharts]
     HTML --> Aqi[ClimateAqi]
@@ -33,6 +34,7 @@ graph TD
     Main --> Assets
     Main --> Data
     Main --> Analytics
+    Main --> Insights
     Main --> Solar
     Main --> Charts
     Main --> Aqi
@@ -63,8 +65,12 @@ graph TD
     PublicView --> Solar
     PublicView --> Season
     PublicView --> Moon
+    PublicView --> Insights
     ExternalWeather --> BrasilAPI[BrasilAPI/ViaCEP]
     ExternalWeather --> OpenMeteo[Open-Meteo Forecast/Air Quality/Geocoding]
+    Estacao --> Insights
+    Estacao --> BrowserLocation
+    Estacao --> ExternalWeather
     Firebase --> AppCheck[Firebase App Check]
     AI --> Firebase
     AI --> FirebaseAI[Firebase AI Logic]
@@ -292,17 +298,17 @@ Impacto da alteracao: Alto. Pode bloquear donos no modo publico ou liberar dashb
 
 ## scripts/external/browser-location-service.js
 
-Responsabilidade: obter localizacao atual do navegador para o modo publico.
+Responsabilidade: obter localizacao atual do navegador para o modo publico e, sob acao explicita, para insights externos da aba Estacao interna.
 
 Dependencias diretas: `navigator.geolocation`.
 
-Quem chama: `scripts/views/public-weather-view.js`.
+Quem chama: `scripts/views/public-weather-view.js` e `scripts/views/estacao-view.js`.
 
-Impacto da alteracao: Medio. Afeta somente modo publico por localizacao.
+Impacto da alteracao: Medio. Afeta modo publico e consulta externa opcional da aba Estacao.
 
 ## scripts/external/external-weather-service.js
 
-Responsabilidade: consultar CEP, resolver coordenadas e buscar clima/AQI externos.
+Responsabilidade: consultar CEP, resolver coordenadas e buscar clima/AQI, chuva, UV, vento, ponto de orvalho e eventos solares externos.
 
 Dependencias diretas:
 
@@ -314,9 +320,19 @@ Dependencias diretas:
 - Open-Meteo Forecast
 - Open-Meteo Air Quality
 
-Quem chama: `scripts/views/public-weather-view.js`.
+Quem chama: `scripts/views/public-weather-view.js` e `scripts/views/estacao-view.js`.
 
-Impacto da alteracao: Alto para modo publico. Nao deve afetar dados internos do Firebase.
+Impacto da alteracao: Alto para modo publico e insights externos opcionais da aba Estacao. Nao deve alterar dados internos do Firebase.
+
+## scripts/data/environmental-insights.js
+
+Responsabilidade: centralizar calculos e classificacoes de ponto de orvalho, risco estimado de mofo/condensacao, chuva nas proximas 6h, indice UV e recomendacao de ventilacao interna/externa/combinada.
+
+Dependencias diretas: nenhuma biblioteca externa; recebe somente dados normalizados.
+
+Quem chama: `scripts/views/public-weather-view.js` e `scripts/views/estacao-view.js`.
+
+Impacto da alteracao: Alto. Uma mudanca de limiar afeta simultaneamente as recomendacoes publicas e internas.
 
 ## scripts/firebase-service.js
 
@@ -502,14 +518,14 @@ Impacto da alteracao: Alto para cards e visualizacoes climaticas.
 
 ## scripts/charts/solar.js
 
-Responsabilidade: extrair eventos solares e criar graficos solares.
+Responsabilidade: extrair eventos solares, formatar duracao do dia e criar graficos solares.
 
 Dependencias diretas:
 
 - `ClimateData`
 - `Chart`
 
-Quem chama: `scripts/main.js`, `scripts/views/solar-view.js`, `scripts/charts/zoom.js`.
+Quem chama: `scripts/main.js`, `scripts/views/solar-view.js`, `scripts/views/public-weather-view.js`, `scripts/charts/zoom.js`.
 
 Quem e chamado: Chart.js.
 

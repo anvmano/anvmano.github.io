@@ -4,9 +4,15 @@
     const { ids, fields, colors } = window.AppConfig;
     const canvasTemperatura = document.getElementById(ids.charts.globalTemperature).getContext("2d");
     const canvasUmidade = document.getElementById(ids.charts.globalHumidity).getContext("2d");
+    let dadosExternosAtuais = null;
+    let estadoConsultaExterna = "ocioso";
+    let mensagemConsultaExterna = "";
+    let ultimosDadosInternos = null;
 
     function render({ latestData, selectedDate, chartInstances, defaults, colors: cores, ui, ensureChart }) {
+        ultimosDadosInternos = latestData;
         renderizarResumoGlobal(latestData, selectedDate);
+        renderizarInsightsAmbientais(latestData);
         renderizarLinhaEstacoes(selectedDate);
         renderizarResumoLua(selectedDate);
         renderizarGraficoComparativo({
@@ -58,6 +64,199 @@
             ui.renderChartMessage(ids.chartContainers.sunHistory, `Sem dados de nascer e pôr do sol em ${selectedDate.replace(/-/g, "/")}.`);
             ui.renderChartMessage(ids.chartContainers.solarToday, `Sem dados de ciclo solar em ${selectedDate.replace(/-/g, "/")}.`);
         }
+    }
+
+    function renderizarInsightsAmbientais(latestData) {
+        const container = document.getElementById("environmentInsights");
+        if (!container) return;
+
+        const temperaturaSala = obterUltimoRegistro(latestData.livingRoom, fields.livingRoom.temperature)?.valor ?? null;
+        const umidadeSala = obterUltimoRegistro(latestData.livingRoom, fields.livingRoom.humidity)?.valor ?? null;
+        const temperaturaQuarto = obterUltimoRegistro(latestData.room, fields.room.temperature)?.valor ?? null;
+        const umidadeQuarto = obterUltimoRegistro(latestData.room, fields.room.humidity)?.valor ?? null;
+        const aqi = window.ClimateAqi.calculate(latestData.livingRoom)?.aqi ?? null;
+        const riscoSala = window.ClimateInsightsAmbientais.avaliarRiscoMofo({
+            temperatura: temperaturaSala,
+            umidade: umidadeSala,
+        });
+        const riscoQuarto = window.ClimateInsightsAmbientais.avaliarRiscoMofo({
+            temperatura: temperaturaQuarto,
+            umidade: umidadeQuarto,
+        });
+        const ventilacaoInterna = window.ClimateInsightsAmbientais.recomendarVentilacaoInterna({
+            temperatura: temperaturaSala,
+            umidade: umidadeSala,
+            aqi,
+            riscoMofo: riscoSala,
+        });
+
+        let chuva = null;
+        let indiceUv = null;
+        let ventilacao = ventilacaoInterna;
+        if (dadosExternosAtuais) {
+            chuva = window.ClimateInsightsAmbientais.resumirChuva(
+                dadosExternosAtuais.previsaoCurtoPrazo,
+                dadosExternosAtuais.atualizadoEm,
+                6
+            );
+            indiceUv = window.ClimateInsightsAmbientais.analisarIndiceUv(
+                dadosExternosAtuais.climaAtual.indiceUv,
+                dadosExternosAtuais.previsaoDiaria.indiceUvMaximo
+            );
+            const ventilacaoExterna = window.ClimateInsightsAmbientais.recomendarVentilacaoExterna({
+                climaAtual: dadosExternosAtuais.climaAtual,
+                aqi: dadosExternosAtuais.aqi,
+                chuva,
+            });
+            ventilacao = window.ClimateInsightsAmbientais.recomendarVentilacaoCombinada({
+                interna: ventilacaoInterna,
+                externa: ventilacaoExterna,
+            });
+        }
+
+        container.innerHTML = `
+            <div class="environment-insights__grid">
+                ${montarCardInsight({
+                    titulo: "Ventilação da Sala",
+                    valor: ventilacao.rotulo,
+                    status: dadosExternosAtuais ? "Interior + exterior" : "Sensores internos",
+                    classe: ventilacao.classe,
+                    descricao: ventilacao.descricao,
+                    detalhe: dadosExternosAtuais ? `Clima externo: ${dadosExternosAtuais.origem.rotulo}` : "Consulte a localização para combinar o clima externo",
+                })}
+                ${montarCardPrevisaoChuva(chuva)}
+                ${montarCardIndiceUv(indiceUv)}
+                ${montarCardOrvalho("Sala", riscoSala)}
+                ${montarCardOrvalho("Quarto", riscoQuarto)}
+            </div>
+        `;
+
+        document.getElementById("environmentLocationButton")?.addEventListener("click", consultarClimaExterno);
+    }
+
+    async function consultarClimaExterno() {
+        if (estadoConsultaExterna === "carregando") return;
+        estadoConsultaExterna = "carregando";
+        mensagemConsultaExterna = "Consultando clima da localização do navegador...";
+        renderizarInsightsAmbientais(ultimosDadosInternos || {});
+
+        try {
+            const localizacao = await window.BrowserLocationService.obterLocalizacaoAtual();
+            dadosExternosAtuais = await window.ExternalWeatherService.buscarPorCoordenadas({
+                latitude: localizacao.latitude,
+                longitude: localizacao.longitude,
+                origem: {
+                    tipo: "localizacao",
+                    rotulo: "Localização atual",
+                    precisao: localizacao.precisao,
+                },
+            });
+            estadoConsultaExterna = "sucesso";
+            mensagemConsultaExterna = `Clima externo atualizado às ${formatarHoraData(dadosExternosAtuais.atualizadoEm)}.`;
+        } catch (erro) {
+            estadoConsultaExterna = "erro";
+            mensagemConsultaExterna = erro?.message || "Não foi possível consultar o clima externo.";
+        }
+
+        renderizarInsightsAmbientais(ultimosDadosInternos || {});
+    }
+
+    function montarCardPrevisaoChuva(chuva) {
+        if (!chuva) {
+            return montarCardInsight({
+                titulo: "Chuva · próximas 6h",
+                valor: "--",
+                status: "Localização necessária",
+                classe: "indisponivel",
+                descricao: "Use a localização para carregar probabilidade e intensidade de chuva.",
+                detalhe: "Nenhuma localização é armazenada",
+                acao: montarAcaoLocalizacao(),
+            });
+        }
+
+        return montarCardInsight({
+            titulo: "Chuva · próximas 6h",
+            valor: chuva.classe === "indisponivel" ? "--" : `${Math.round(chuva.probabilidade)}%`,
+            status: chuva.rotulo,
+            classe: chuva.classe,
+            descricao: chuva.descricao,
+            detalhe: chuva.classe === "indisponivel" ? "Sem previsão horária" : `${chuva.acumulado.toFixed(1)} mm acumulados · pico ${chuva.intensidadeMaxima.toFixed(1)} mm/h`,
+            acao: montarAcaoLocalizacao(),
+        });
+    }
+
+    function montarCardIndiceUv(indiceUv) {
+        if (!indiceUv) {
+            return montarCardInsight({
+                titulo: "Índice UV",
+                valor: "--",
+                status: "Localização necessária",
+                classe: "indisponivel",
+                descricao: "Use a localização para carregar o índice UV e a recomendação solar.",
+                detalhe: "Nenhuma localização é armazenada",
+            });
+        }
+
+        return montarCardInsight({
+            titulo: "Índice UV",
+            valor: Number.isFinite(indiceUv.valor) ? indiceUv.valor.toFixed(1) : "--",
+            status: indiceUv.rotulo,
+            classe: indiceUv.classe,
+            descricao: indiceUv.descricao,
+            detalhe: Number.isFinite(indiceUv.maximo) ? `Máxima do dia: ${indiceUv.maximo.toFixed(1)}` : "Valor atual",
+        });
+    }
+
+    function montarCardOrvalho(ambiente, risco) {
+        const valor = Number.isFinite(risco.pontoOrvalho) ? `${risco.pontoOrvalho.toFixed(1)}°C` : "--";
+        return montarCardInsight({
+            titulo: `Ponto de orvalho · ${ambiente}`,
+            valor,
+            status: risco.rotulo,
+            classe: risco.classe,
+            descricao: risco.descricao,
+            detalhe: "Risco estimado de condensação e mofo",
+        });
+    }
+
+    function montarCardInsight({ titulo, valor, status, classe, descricao, detalhe, acao = "" }) {
+        return `
+            <article class="environment-insight environment-insight--${classe}">
+                <div class="environment-insight__header">
+                    <span>${titulo}</span>
+                    <small>${status}</small>
+                </div>
+                <strong>${valor}</strong>
+                <p>${descricao}</p>
+                <span class="environment-insight__detail">${detalhe}</span>
+                ${acao}
+            </article>
+        `;
+    }
+
+    function montarAcaoLocalizacao() {
+        const mensagem = mensagemConsultaExterna
+            ? `<span class="environment-insight__feedback environment-insight__feedback--${estadoConsultaExterna}" role="status">${mensagemConsultaExterna}</span>`
+            : "";
+
+        return `
+            <div class="environment-insight__action">
+                ${mensagem}
+                <button class="environment-insights__location" id="environmentLocationButton" type="button" ${estadoConsultaExterna === "carregando" ? "disabled" : ""}>
+                    ${textoBotaoLocalizacao()}
+                </button>
+            </div>
+        `;
+    }
+
+    function textoBotaoLocalizacao() {
+        if (estadoConsultaExterna === "carregando") return "Consultando...";
+        return dadosExternosAtuais ? "Atualizar clima externo" : "Usar localização para chuva e UV";
+    }
+
+    function formatarHoraData(data) {
+        if (!(data instanceof Date) || Number.isNaN(data.getTime())) return "--:--";
+        return `${String(data.getHours()).padStart(2, "0")}:${String(data.getMinutes()).padStart(2, "0")}`;
     }
 
     function renderizarResumoGlobal(latestData, selectedDate) {

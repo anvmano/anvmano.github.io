@@ -348,6 +348,25 @@
         };
     }
 
+    function formatarDuracaoDia(eventos) {
+        const duracaoSegundos = Number(eventos?.daylightDuration);
+        if (Number.isFinite(duracaoSegundos) && duracaoSegundos > 0) {
+            return formatarTotalMinutos(Math.round(duracaoSegundos / 60));
+        }
+
+        const nascer = Number(eventos?.sunrise);
+        const por = Number(eventos?.sunset);
+        if (!Number.isFinite(nascer) || !Number.isFinite(por) || por < nascer) return null;
+
+        return formatarTotalMinutos(Math.round((por - nascer) * 60));
+    }
+
+    function formatarTotalMinutos(totalMinutos) {
+        const horas = Math.floor(totalMinutos / 60);
+        const minutos = totalMinutos % 60;
+        return `${horas}h${String(minutos).padStart(2, "0")}`;
+    }
+
     function createSolarTodayChart({ data, selectedDate, ctx, existingChart, defaults, colors, onEmpty }) {
         const events = getSolarEventsForSelectedDate(data, selectedDate);
         if (existingChart) existingChart.destroy();
@@ -417,6 +436,7 @@
         createSunriseSunsetChart,
         createSolarTodayChart,
         getSolarEventsForSelectedDate,
+        formatarDuracaoDia,
         getSunHistoryOptions,
         getSolarTodayOptions,
         solarDayBackgroundPlugin,

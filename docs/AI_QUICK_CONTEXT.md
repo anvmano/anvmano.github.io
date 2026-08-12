@@ -34,7 +34,8 @@ Arquivos principais:
 - `scripts/firebase-service.js`: conexao e listeners Firebase.
 - `scripts/auth/auth-service.js`: Firebase Auth, login/logout Google e verificacao de usuarios internos autorizados.
 - `scripts/external/browser-location-service.js`: leitura opcional de localizacao do navegador, somente em memoria.
-- `scripts/external/external-weather-service.js`: CEP, geocodificacao e clima/AQI externos via APIs publicas.
+- `scripts/external/external-weather-service.js`: CEP, geocodificacao, clima/AQI externos, chuva, UV, vento e ponto de orvalho via APIs publicas.
+- `scripts/data/environmental-insights.js`: calculos compartilhados de ventilacao, chuva, indice UV, ponto de orvalho e risco estimado de mofo.
 - `scripts/chat.js`: fachada publica leve do chat, mantendo `window.ClimateChat` e carregando `scripts/assistant/*` somente ao abrir a assistente.
 - `scripts/assistant/`: modulos da assistente e IA.
 - `scripts/assistant/ai-service.js`: inicializacao do Firebase AI Logic.
@@ -60,7 +61,7 @@ Arquivos principais:
 - `scripts/reports/pdf-report-*.js`: modulos internos de configuracao, formatacao, dados, DOM, graficos, PDF e exportacao.
 - `styles/reports/pdf-report.css`: visual do relatorio PDF.
 - `scripts/views/estacao-view.js`, `scripts/views/quarto-view.js`, `scripts/views/sala-view.js`, `scripts/views/aquario-view.js`, `scripts/views/solar-view.js`: renderizacao por dominio.
-- `scripts/views/public-weather-view.js`: modo publico por CEP/localizacao, com cards e graficos externos.
+- `scripts/views/public-weather-view.js`: modo publico por CEP/localizacao, com cards, graficos externos e recomendacoes ambientais.
 - `tools/validate-project.mjs`: valida sintaxe JS, referencias locais, imports CSS e contratos HTML/config.
 
 ## Fluxo Principal
@@ -78,7 +79,8 @@ Arquivos principais:
    - `historico/AirQuality`
 8. Dados internos sao armazenados em `latestData`.
 9. Views filtram pela data selecionada e renderizam estatisticas/tabelas imediatamente; graficos carregam Chart.js antes do primeiro desenho real.
-10. No modo publico, CEP/localizacao consulta APIs externas e renderiza temperatura, sensacao termica, umidade, pressao, AQI externo, estacao do ano, fase da lua e graficos de temperatura, sensacao, umidade, pressao e ciclo solar. Os graficos publicos de temperatura, sensacao, umidade e pressao usam janela movel das ultimas 24h, terminando na data/hora retornada pela localizacao consultada. O card publico da fase da lua segue o mesmo contrato visual do card interno: fase, iluminacao, idade, proxima cheia e proxima nova, usando a data/hora retornada para a localizacao consultada quando disponivel.
+10. No modo publico, CEP/localizacao consulta APIs externas e renderiza temperatura, sensacao termica, umidade, pressao, AQI externo, estacao do ano, fase da lua, recomendacao de ventilacao, chuva nas proximas 6h, indice UV, ponto de orvalho/risco estimado de mofo e graficos de temperatura, sensacao, umidade, pressao e ciclo solar. Os graficos publicos de temperatura, sensacao, umidade e pressao usam janela movel das ultimas 24h, terminando na data/hora retornada pela localizacao consultada. O card publico da fase da lua segue o mesmo contrato visual do card interno: fase, iluminacao, idade, proxima cheia e proxima nova, usando a data/hora retornada para a localizacao consultada quando disponivel. Os cards de insights nao possuem uma faixa de titulo propria acima da grade.
+11. Na aba Estacao, ventilacao e risco de mofo usam os sensores internos mesmo sem localizacao. Chuva, UV e ventilacao combinada com o exterior so sao carregados quando o usuario aciona a consulta por localizacao; latitude/longitude permanecem apenas em memoria. A grade privada tambem nao possui faixa de titulo; o controle e o retorno da localizacao ficam no card de chuva.
 
 ## Componentes Criticos
 
@@ -128,7 +130,7 @@ Arquivos principais:
 - O eixo X do grafico Ciclo Solar do Dia usa formato abreviado em horas (`0h`, `2h`, `4h`, `24h`) para manter paridade com o projeto C#/.NET.
 - Eixo Y dos graficos deve exibir a unidade da metrica quando houver: `°C`, `%`, `hPa`, `ppm`, `NTU`.
 - Graficos comuns de series temporais usam horarios no eixo X em diagonal; graficos solares e heatmaps preservam seu layout especifico.
-- No grafico Ciclo Solar do Dia, a tooltip dos eventos solares deve aparecer somente quando o cursor/toque estiver realmente sobre ou proximo do ponto solar ativo, sem ativacao por eixo X distante. Nos graficos comparativos da aba Estacao, a tooltip deve listar as series na ordem visual das linhas no ponto consultado, do maior valor para o menor. No grafico Nascer & Por do Sol, a tooltip tambem deve seguir a ordem visual real das linhas no canvas, considerando seus dois eixos Y.
+- No grafico Ciclo Solar do Dia, a tooltip dos eventos solares deve aparecer somente quando o cursor/toque estiver realmente sobre ou proximo do ponto solar ativo, sem ativacao por eixo X distante. O card do grafico exibe chip `Duracao do dia: <h>h<mm>` quando nascer e por do sol existem, tanto no modo interno quanto no modo publico, calculado como por do sol menos nascer do sol. Nos graficos comparativos da aba Estacao, a tooltip deve listar as series na ordem visual das linhas no ponto consultado, do maior valor para o menor. No grafico Nascer & Por do Sol, a tooltip tambem deve seguir a ordem visual real das linhas no canvas, considerando seus dois eixos Y.
 - Zoom de graficos: duplo clique ou botao amplia; `Esc`, botao de fechar ou clique/toque no fundo do overlay fecha. Em mobile/touch, `pointerdown`/`touchstart` dentro do canvas ampliado nao fecha o overlay para preservar tooltip e leitura do dado.
 - Mensagens de graficos vazios devem seguir `Sem dados de <tipo_grafico> em <DD/MM/AAAA>`.
 - Aba ativa e persistida em `localStorage.activeTab`.
@@ -141,6 +143,7 @@ Arquivos principais:
 - Indicador de fase da lua usa `scripts/charts/moon.js`, calcula localmente a fase sem API externa, mostra apenas a animacao lunar dentro do chip e abre popover com iluminacao, idade lunar, proxima cheia e proxima nova. O icone lunar deve diferenciar crescente e minguante pelo lado sombreado. O `title` deve ficar limpo com a descricao completa, enquanto o `aria-label` preserva a informacao textual necessaria. Na aba Estacao, o bloco lunar usa a data selecionada no calendario.
 - Popovers do header sao mutuamente exclusivos: abrir Estacao do ano, AQI, Solar ou Lua fecha os demais.
 - AQI interno do header e uma estimativa local: usa categorias oficiais AQI (`0-50`, `51-100`, `101-150`, `151-200`, `201-300`, `301+`), mas o calculo vem dos gases disponiveis no MQ135 e deve ser exibido como `AQI estimado da Sala`. AQI publico vem da Open-Meteo Air Quality e deve ser exibido como `AQI externo`.
+- Insights ambientais ficam centralizados em `ClimateInsightsAmbientais`: ponto de orvalho usa aproximacao de Magnus; risco de mofo/condensacao e recomendacao de ventilacao sao estimativas orientativas, nao diagnosticos; chuva usa as proximas 6h e UV usa valor atual com maxima diaria quando disponivel.
 - Solar usa data selecionada para ciclo do dia e filtro de 365 dias para historico.
 - Exportacao PDF/JSON usa automaticamente aba ativa, data selecionada, `latestData` e `chartInstances`; nao reconsulta Firebase.
 - Exportacao PDF/JSON interna so e inicializada para usuarios internos autorizados.
@@ -207,7 +210,7 @@ Arquivos principais:
 - O dashboard interno completo so deve iniciar para `AppConfig.auth.usuariosInternosAutorizados`.
 - O modo interno deve oferecer logout no header; ao sair, listeners internos do Firebase sao cancelados e o usuario volta para o modo publico.
 - Para login Google em producao, o dominio publicado, como `anvmano.github.io`, precisa estar em Firebase Authentication > Configuracoes > Dominios autorizados.
-- APIs externas nao substituem Firebase interno; elas servem apenas para o modo publico por CEP/localizacao.
+- APIs externas nao substituem Firebase interno: atendem o modo publico por CEP/localizacao e, sob acao explicita do usuario, complementam a aba Estacao interna com chuva, UV e condicoes externas para a recomendacao de ventilacao.
 - Localizacao do navegador nao deve ser persistida; usar apenas em memoria para a consulta atual.
 - Nao renomear ids do HTML sem atualizar `scripts/config.js`.
 - Nao renomear campos Firebase sem atualizar `scripts/config.js` e, para solar, `scripts/charts/solar.js`.

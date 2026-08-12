@@ -321,7 +321,7 @@ A implementacao deve respeitar a arquitetura atual sem Vite:
 - carregar Auth de forma leve e sem bloquear a tela publica;
 - carregar Firebase Database interno apenas para usuarios internos autorizados;
 - carregar assistente IA apenas quando um usuario interno autorizado abrir o chat;
-- carregar servicos externos apenas no modo publico;
+- carregar servicos externos no modo publico e, no modo interno, somente quando o usuario solicitar chuva, UV e recomendacao de ventilacao externa na aba Estacao;
 - buscar clima externo apenas apos acao do usuario ou escolha de localizacao;
 - renderizar estacao do ano e fase da lua publicas sem esperar CEP/localizacao;
 - renderizar graficos meteorologicos publicos somente depois de obter dados externos;
