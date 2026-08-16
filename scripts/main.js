@@ -463,7 +463,7 @@ async function setupFirebaseListeners() {
 
     FirebaseService.trackLoadStart();
     try {
-        await FirebaseService.initialize();
+        await FirebaseService.initializeDatabase();
     } finally {
         FirebaseService.trackLoadEnd();
     }
@@ -608,6 +608,7 @@ function inicializarDashboardInterno() {
     renderStationData();
 
     ClimateAssets.executarQuandoOcioso(() => {
+        if (modoPublicoAtivo) return;
         ClimateAssets.carregarCssZoom()
             .catch(error => window.ClimateDiagnostics?.depurar("Falha ao carregar CSS de zoom.", error));
     }, 1200);

@@ -268,7 +268,7 @@ Quem chama: navegador via script e `DOMContentLoaded`.
 Quem e chamado:
 
 - `ClimateAuthService.observarEstado`
-- `FirebaseService.initialize`
+- `FirebaseService.initialize` para Auth/App e `FirebaseService.initializeDatabase` para listeners internos
 - `FirebaseService.listenToPath` somente quando usuario interno autorizado
 - `ClimateUI.setupTabs`
 - `ClimateUI.setupTabSwipe`
@@ -285,7 +285,7 @@ Quem e chamado:
 
 Observacao: `window.ClimateDiagnostics` nasce em `scripts/config.js`; logs de fallback esperado ficam ocultos por padrao e podem ser ativados com `?debug=1` ou `localStorage.climateDebug = "1"`.
 
-Observacao: `main.js` nao exige que Chart.js, `ClimateAIService` ou `ClimatePdfReportModules` estejam prontos na abertura. Ele chama as fachadas e o carregador sob demanda quando a acao do usuario ou o primeiro grafico precisar.
+Observacao: `main.js` nao exige que Chart.js, `ClimateAIService` ou `ClimatePdfReportModules` estejam prontos na abertura. Ele chama as fachadas e o carregador sob demanda quando a acao do usuario ou o primeiro grafico precisar. O modo publico tambem nao importa o SDK Database.
 
 Observacao: o dashboard interno e inicializado apenas quando o Firebase Auth indica usuario autorizado. Sem login, ou com usuario nao autorizado, `main.js` mantem `#publicApp` visivel, oculta `#privateApp` e nao chama `ClimateChat.setup`, `ClimatePdfReport.setup` nem listeners internos.
 
@@ -348,7 +348,7 @@ Impacto da alteracao: Alto. Uma mudanca de limiar afeta simultaneamente as recom
 
 ## scripts/firebase-service.js
 
-Responsabilidade: carregar SDK Firebase, conectar database, inicializar App Check sob demanda quando um recurso protegido precisar, criar listeners e controlar loading.
+Responsabilidade: carregar Firebase App/Auth no fluxo publico, conectar Database somente no fluxo interno autorizado, inicializar App Check sob demanda quando um recurso protegido precisar, criar listeners e controlar loading.
 
 Dependencias diretas:
 
@@ -360,7 +360,7 @@ Dependencias indiretas: Realtime Database e Firebase App Check.
 
 Quem chama: `scripts/main.js`, `scripts/assistant/ai-service.js`.
 
-Quem e chamado: Firebase SDK (`initializeApp`, `getDatabase`, `ref`, `onValue`) e Firebase App Check (`initializeAppCheck`, `ReCaptchaEnterpriseProvider`) via `ensureAppCheckInitialized()` quando o host nao e `localhost`, `127.0.0.1` ou `::1`.
+Quem e chamado: Firebase SDK (`initializeApp`) durante `initialize()`, Database (`getDatabase`, `ref`, `onValue`) durante `initializeDatabase()` e Firebase App Check (`initializeAppCheck`, `ReCaptchaEnterpriseProvider`) via `ensureAppCheckInitialized()` quando o host nao e `localhost`, `127.0.0.1` ou `::1`.
 
 Impacto da alteracao: Critico.
 

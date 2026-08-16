@@ -79,8 +79,8 @@ Arquivos principais:
 3. No `DOMContentLoaded`, inicializa chips globais do header, view publica e Firebase Auth.
 4. Se nao houver usuario interno autorizado, mostra `#publicApp`, oculta `#privateApp` e nao inicia listeners internos nem assistente IA.
 5. Se o usuario for `anvmano@gmail.com` ou `clarissamikado@gmail.com`, mostra o dashboard interno, inicializa abas/date picker/zoom/exportacao/chat, exibe o botao de logout no header e agenda Firebase.
-6. `FirebaseService.initialize()` importa SDK Firebase e cria app/database; App Check/reCAPTCHA fica sob demanda para recursos protegidos, como a IA.
-7. `FirebaseService.listenToPath()` escuta no modo interno:
+6. `FirebaseService.initialize()` importa somente o SDK Firebase App/Auth; o SDK Database e carregado por `initializeDatabase()` apenas depois que o Auth confirma usuario interno autorizado. App Check/reCAPTCHA fica sob demanda para recursos protegidos, como a IA.
+7. `FirebaseService.listenToPath()` escuta no modo interno depois de `initializeDatabase()`:
    - `historico/Temperatura`
    - `historico/NascePorDoSol`
    - `historico/Aquario`

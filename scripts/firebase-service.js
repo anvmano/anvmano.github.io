@@ -5,6 +5,8 @@
     let database = null;
     let refFn = null;
     let onValueFn = null;
+    let carregamentoApp = null;
+    let carregamentoDatabase = null;
     let pendingLoads = 0;
     let appCheckInitialized = false;
 
@@ -29,21 +31,33 @@
     }
 
     async function initialize() {
-        if (database) return;
+        if (app) return app;
+        if (carregamentoApp) return carregamentoApp;
 
-        const config = window.AppConfig.firebase;
-        const [
-            { initializeApp },
-            { getDatabase, onValue, ref }
-        ] = await Promise.all([
-            import(config.appUrl),
-            import(config.databaseUrl)
-        ]);
+        carregamentoApp = (async () => {
+            const config = window.AppConfig.firebase;
+            const { initializeApp } = await import(config.appUrl);
+            app = initializeApp(config.options);
+            return app;
+        })();
 
-        app = initializeApp(config.options);
-        database = getDatabase(app);
-        refFn = ref;
-        onValueFn = onValue;
+        return carregamentoApp;
+    }
+
+    async function initializeDatabase() {
+        if (database) return database;
+        if (carregamentoDatabase) return carregamentoDatabase;
+
+        carregamentoDatabase = (async () => {
+            await initialize();
+            const { getDatabase, onValue, ref } = await import(window.AppConfig.firebase.databaseUrl);
+            database = getDatabase(app);
+            refFn = ref;
+            onValueFn = onValue;
+            return database;
+        })();
+
+        return carregamentoDatabase;
     }
 
     async function ensureAppCheckInitialized() {
@@ -74,6 +88,9 @@
     }
 
     function listenToPath(path, onData, onError) {
+        if (!database || !refFn || !onValueFn) {
+            throw new Error("Firebase Database ainda não foi inicializado.");
+        }
         let firstLoad = true;
         trackLoadStart();
 
@@ -102,6 +119,7 @@
 
     window.FirebaseService = {
         initialize,
+        initializeDatabase,
         ensureAppCheckInitialized,
         listenToPath,
         getApp: () => app,

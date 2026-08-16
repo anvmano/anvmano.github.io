@@ -75,9 +75,11 @@ Entradas: `window.location.hostname`.
 
 Saidas:
 
-- no carregamento inicial, apenas Firebase App e Realtime Database sao inicializados
+- no carregamento inicial, apenas Firebase App/Auth sao inicializados; Realtime Database so e importado apos autorizacao interna
 - em producao/GitHub Pages, `ensureAppCheckInitialized()` tenta inicializar App Check antes da IA
 - em `localhost`, `127.0.0.1` e `::1`, App Check e ignorado para evitar warning falso de credenciais App Check invalidas
+
+Regra adicional: o modo publico nao deve importar `firebase-database.js`, criar referencias ou registrar listeners. O modo interno chama `FirebaseService.initializeDatabase()` antes de `listenToPath()`.
 
 Impacto: desenvolvimento local, limpeza do console, Lighthouse e custo de carregamento inicial.
 
@@ -109,6 +111,7 @@ Regras:
 - login Google e opcional; o usuario publico nao deve ser obrigado a autenticar
 - o dominio publicado do GitHub Pages, como `anvmano.github.io`, deve estar cadastrado em Firebase Authentication > Configuracoes > Dominios autorizados; sem isso o login Google falha com `auth/unauthorized-domain`
 - modo publico nao deve iniciar listeners internos do Realtime Database
+- modo publico nao deve importar o SDK `firebase-database.js`; `FirebaseService.initialize()` fica restrito a App/Auth e `initializeDatabase()` so e chamado no fluxo interno autorizado
 - modo publico nao deve inicializar ou exibir a assistente IA
 - modo interno inicializa abas, date picker, zoom, exportacao, chat e listeners Firebase internos
 - modo interno deve exibir opcao de logout no header
@@ -237,6 +240,8 @@ Saidas:
 - Exportacao JSON nao carrega Chart.js, CSS do PDF, html2canvas ou jsPDF.
 - Exportacao PDF carrega CSS do relatorio, Chart.js, html2canvas e jsPDF sob demanda.
 - `styles/zoom.css` nao bloqueia a primeira renderizacao; e carregado apos a inicializacao via `ClimateAssets`.
+- no modo publico vazio, Chart.js nao e carregado; uma consulta valida ou consulta restaurada do cache da sessao carrega Chart.js somente para desenhar os graficos existentes
+- uma mensagem de erro de CEP deve ser anunciada por uma unica live region; a mensagem visual nao deve criar um segundo `role="alert"`
 
 Impacto: Lighthouse mobile, TBT, LCP, tamanho de JS inicial e render-blocking CSS.
 

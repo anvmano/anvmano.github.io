@@ -124,7 +124,7 @@ Responsabilidades:
 - `scripts/schemas/contracts.js`: validacao versionada das fronteiras Firebase, assistente e relatorio.
 - `scripts/runtime-loader.js`: carregamento sob demanda de Chart.js, modulos da assistente, modulos do relatorio e CSS nao critico; `carregarCssZoom()` garante o estilo antes da abertura do dialogo.
 - `scripts/main.js`: orquestracao da aplicacao, listeners Firebase, cache de dados, renderizacao por view, contrato de criacao de graficos, opcoes de zoom, indicadores do header e exportacao.
-- `scripts/firebase-service.js`: inicializacao Firebase, listeners `onValue`, loading bar e erros.
+- `scripts/firebase-service.js`: inicializacao separada de Firebase App/Auth e Database, listeners `onValue`, loading bar e erros.
 - `scripts/auth/auth-service.js`: inicializacao Firebase Auth, login/logout Google, usuario atual e regra de usuario interno autorizado.
 - `scripts/external/browser-location-service.js`: localizacao do navegador para o modo publico e para insights externos opcionais da aba Estacao interna, com fallback de cache, busca normal e alta precisao.
 - `scripts/external/external-weather-service.js`: CEP, fallback ViaCEP, geocodificacao, clima/AQI, chuva, UV, vento, ponto de orvalho e eventos solares externos via Open-Meteo.
@@ -212,7 +212,7 @@ Responsabilidades:
 6. Apos o estado do Firebase Auth:
    - sem usuario interno autorizado: mostra `#publicApp`, oculta `#privateApp`, cancela listeners internos e mantem chat/exportacao interna desativados
    - com usuario interno autorizado: mostra `#privateApp`, oculta `#publicApp`, inicializa tabs, swipe, date picker, colapsaveis, zoom, PDF/JSON, chat e agenda Firebase interno
-7. `FirebaseService.initialize()` importa SDK Firebase e conecta ao Realtime Database; `ensureAppCheckInitialized()` inicializa App Check sob demanda antes de recursos protegidos, como a IA.
+7. `FirebaseService.initialize()` importa somente Firebase App/Auth; `initializeDatabase()` conecta ao Realtime Database apenas no fluxo interno autorizado; `ensureAppCheckInitialized()` inicializa App Check sob demanda antes de recursos protegidos, como a IA. O modo publico permanece sem o modulo Database.
 8. `FirebaseService.listenToPath()` cria listeners para quatro paths somente no modo interno autorizado.
    - os paths continuam integrais porque datas `DD-MM-AAAA` nao podem ser paginadas cronologicamente com `orderByKey`; uma otimizacao futura exige timestamp ou `AAAA-MM-DD`
 9. Cada snapshot atualiza `latestData` e chama a view correspondente; a aba Estacao e rerenderizada quando qualquer fonte global muda.

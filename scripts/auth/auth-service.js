@@ -24,6 +24,7 @@
         if (carregamentoAuth) return carregamentoAuth;
 
         carregamentoAuth = (async () => {
+            // Auth precisa apenas do App Firebase; o Database so entra no fluxo interno autorizado.
             await window.FirebaseService.initialize();
             const config = window.AppConfig.firebase;
             const { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } = await import(config.authUrl);

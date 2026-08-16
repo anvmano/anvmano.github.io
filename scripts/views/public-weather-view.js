@@ -134,9 +134,9 @@
     function renderizarMensagem(mensagem, tipo = "empty") {
         if (!elementos.publicResults) return;
         limparContextoConsultaPublica();
-        const papel = tipo === "error" ? "alert" : "status";
-        elementos.publicResults.innerHTML = `<p class="state-message state-message--${tipo}" role="${papel}">${mensagem}</p>`;
-        anunciarEstado(mensagem, papel);
+        // A live region oculta anuncia o estado; a mensagem visível evita duplicar role=alert.
+        elementos.publicResults.innerHTML = `<p class="state-message state-message--${tipo}">${mensagem}</p>`;
+        anunciarEstado(mensagem, tipo === "error" ? "alert" : "status");
     }
 
     async function renderizarDados(dados, idBusca = sequenciaBusca) {
