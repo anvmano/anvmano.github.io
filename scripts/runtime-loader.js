@@ -115,7 +115,7 @@
     }
 
     function carregarCssRelatorio() {
-        return carregarCssUmaVez("styles/reports/pdf-report.css?v=20260623-2", "climate-pdf-css");
+        return carregarCssUmaVez("styles/reports/pdf-report.css?v=20260816-1", "climate-pdf-css");
     }
 
     function carregarCssZoom() {

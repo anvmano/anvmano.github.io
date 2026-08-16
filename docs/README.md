@@ -229,8 +229,8 @@ A validação verifica:
 - Aba Estação com ventilação e risco de mofo a partir dos sensores internos; chuva e UV entram por consulta opcional da localização, mantida somente em memória.
 - Gráficos de temperatura, sensação térmica, umidade, pressão, qualidade do ar e aquário.
 - Cards com média, mínima, máxima, delta e tendência.
-- Indicadores de qualidade/cobertura; delta e tendência exigem pelo menos duas leituras válidas.
-- Estado operacional por metrica: `ok`, `parcial`, `desatualizado`, `suspeito` ou `offline`, com ultima leitura, amostras e cobertura.
+- Indicadores de qualidade/cobertura aparecem somente quando houver anormalidade ou cobertura inferior a 100%; delta e tendência exigem pelo menos duas leituras válidas.
+- Estado operacional por metrica: `ok`, `parcial`, `desatualizado`, `suspeito` ou `offline`, compartilhado entre UI, exportacao e assistente sem poluir cards integrais.
 - Faixa de conforto térmico nos gráficos de temperatura e sensação.
 - Faixa de conforto do Aquário entre 25°C e 27°C.
 - Heatmaps e visualizações climáticas avançadas para Sala e Quarto.

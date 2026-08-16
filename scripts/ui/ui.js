@@ -274,10 +274,8 @@
 
         if (dateInput) {
             dateInput.value = ClimateData.convertFirebaseDateToInput(getSelectedDate());
-            atualizarContextoTemporal(getSelectedDate());
             dateInput.addEventListener("change", () => {
                 setSelectedDate(ClimateData.convertInputDateToFirebase(dateInput.value));
-                atualizarContextoTemporal(getSelectedDate());
                 onDateChange();
             });
         }
@@ -286,20 +284,9 @@
             todayButton.addEventListener("click", () => {
                 setSelectedDate(getTodayDate());
                 if (dateInput) dateInput.value = ClimateData.convertFirebaseDateToInput(getSelectedDate());
-                atualizarContextoTemporal(getSelectedDate());
                 onDateChange();
             });
         }
-    }
-
-    function atualizarContextoTemporal(dataSelecionada) {
-        const elemento = document.getElementById("temporalContext");
-        if (!elemento) return;
-        const agora = ClimateData.dataAtual();
-        const agoraCurta = agora.split("-").slice(0, 2).join("/");
-        const consulta = String(dataSelecionada || agora).replace(/-/g, "/");
-        elemento.textContent = `Agora (${agoraCurta}) · Data consultada: ${consulta}`;
-        elemento.title = "Leituras globais usam o momento atual; gráficos, lua e ciclo solar usam a data consultada.";
     }
 
     window.ClimateUI = {
@@ -316,6 +303,5 @@
         setupTabSwipe,
         setupTabs,
         navegarAbasPorTeclado,
-        atualizarContextoTemporal,
     };
 })();

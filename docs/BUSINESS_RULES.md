@@ -474,6 +474,7 @@ Regras:
 - pH usa limites criticos, salto maximo e repeticao configurados em `AppConfig.dataQuality.metrics.PH`
 - Turbidez usa repeticao e zero constante configurados em `AppConfig.dataQuality.metrics.Turbidez`; enquanto a semantica do firmware nao for confirmada, zero e preservado e apenas sinalizado como suspeito
 - tabela preserva o valor medido e marca a celula suspeita/critica; cards e graficos recebem estado de qualidade
+- cards nao exibem estado operacional quando a qualidade estiver `adequada` e a cobertura for 100%; qualquer cobertura inferior, ausencia, desatualizacao ou leitura suspeita/critica deve tornar o aviso visivel
 - PDF, JSON e assistente devem reutilizar o mesmo resumo de qualidade, sem recalcular regras divergentes
 - a assistente nao pode responder tendencia ou delta com uma unica leitura; deve informar dados insuficientes
 
@@ -1296,7 +1297,7 @@ Observacao: copias antigas foram isoladas em `legacy/scripts/`. Elas nao partici
 
 - Toda metrica interna deve usar `ClimateDataQuality` como fonte unica de qualidade para UI, PDF/JSON e assistente.
 - Estados operacionais permitidos: `ok`, `parcial`, `desatualizado`, `suspeito` e `offline`.
-- Cards exibem ultima leitura, quantidade valida/esperada e cobertura do periodo.
+- Cards exibem ultima leitura, quantidade valida/esperada e cobertura apenas quando houver anormalidade ou cobertura inferior a 100%; o estado adequado com cobertura integral permanece visualmente silencioso.
 - `AppConfig.sensorSchemas` centraliza unidade, faixa plausivel, resolucao, sentinelas, frequencia esperada e divisor de normalizacao.
 - Valores suspeitos ou criticos permanecem visiveis com aviso; nao substituir por zero nem apagar a medicao.
 
@@ -1308,9 +1309,9 @@ Observacao: copias antigas foram isoladas em `legacy/scripts/`. Elas nao partici
 
 ## Contexto temporal
 
-- `Agora (DD/MM)` identifica estacao do ano, header e leituras globais correntes.
-- `Data consultada: DD/MM/AAAA` identifica lua, ciclo solar e series filtradas pelo calendario.
-- A interface deve explicar em tooltip curto que esses recortes podem diferir.
+- O calendario da toolbar identifica a data consultada para lua, ciclo solar, cards, tabelas e series filtradas.
+- A estacao do ano e os indicadores correntes continuam usando a data atual conforme suas regras de dominio, sem repetir os rotulos `Agora (DD/MM)` nos cards ou na faixa sazonal.
+- Nao adicionar uma segunda linha de contexto temporal ao final da toolbar; ela e redundante com o seletor de data.
 
 ## Modo publico e privacidade
 

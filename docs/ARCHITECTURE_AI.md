@@ -148,7 +148,7 @@ Responsabilidades:
 - `scripts/charts/season.js`: estacao do ano atual, chip no header, popover, faixa anual da aba Estacao e progresso dentro da estacao atual para o PDF.
 - `scripts/charts/moon.js`: fase da lua, chip no header, popover e estado lunar por data.
 - `scripts/charts/solar.js`: leitura e renderizacao dos eventos solares, historico nascer/por do sol, ciclo solar do dia, aliases solares centralizados e exposicao de eventos solares para o header.
-- `scripts/ui/ui.js`: estados vazios, mensagens, tabelas ordenaveis com CSV, tabs, swipe touch, colapsaveis, date picker e contexto temporal.
+- `scripts/ui/ui.js`: estados vazios, mensagens, tabelas ordenaveis com CSV, tabs, swipe touch, colapsaveis e date picker; o seletor e a unica referencia visual global da data consultada na toolbar.
 - `scripts/charts/zoom.js`: ampliacao de graficos por botao/duplo clique em dialogo modal acessivel, aguardando o CSS sob demanda, mantendo a rolagem da pagina, o tooltip ativo no canvas ampliado e restaurando foco ao fechar.
 - `scripts/reports/pdf-report.js`: fachada publica leve da exportacao PDF/JSON, mantendo `window.ClimatePdfReport.setup` e carregando `scripts/reports/pdf-report-*` somente ao exportar.
 - `scripts/reports/pdf-report-config.js`: configuracao das abas, metricas, tabela e inclusao de ciclo solar.

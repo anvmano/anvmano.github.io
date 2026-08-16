@@ -329,37 +329,44 @@
             valor: formatarValor(registro.valor, unidade),
             detalhePrincipal: `${registro.data.replace(/-/g, "/")} · ${registro.horario}`,
             detalheSecundario: montarDetalheQualidadeAtual(qualidade),
-            tendencia: `Agora (${formatarDataCurtaAtual()})`,
+            tendencia: "",
             classe: "stable",
             temValor: true,
         };
     }
 
     function montarDetalheQualidadeAtual(qualidade) {
-        if (!qualidade) return "Última medição";
+        if (!deveExibirQualidade(qualidade)) return "";
         const cobertura = qualidade.leiturasEsperadas > 0 ? `${qualidade.coberturaPercentual.toFixed(0)}%` : "0%";
         return `${qualidade.rotuloEstado} · ${qualidade.leiturasValidas}/${qualidade.leiturasEsperadas} · ${cobertura}`;
+    }
+
+    function deveExibirQualidade(qualidade) {
+        if (!qualidade) return false;
+        return qualidade.nivel !== "adequada" || qualidade.coberturaPercentual < 99.5;
     }
 
     function criarCardResumo(card) {
         const elemento = document.createElement("article");
         elemento.className = "stats-card station-summary-card";
+        const tendencia = card.tendencia
+            ? `<span class="stats-card__trend stats-card__trend--${card.classe}">${card.tendencia}</span>`
+            : "";
+        const detalheSecundario = card.detalheSecundario
+            ? `<span>${card.detalheSecundario}</span>`
+            : "";
         elemento.innerHTML = `
             <div class="stats-card__header">
                 <span class="stats-card__label">${card.titulo}</span>
-                <span class="stats-card__trend stats-card__trend--${card.classe}">${card.tendencia}</span>
+                ${tendencia}
             </div>
             <strong class="stats-card__value">${card.valor}</strong>
             <div class="station-summary-card__meta">
                 <span>${card.detalhePrincipal}</span>
-                <span>${card.detalheSecundario}</span>
+                ${detalheSecundario}
             </div>
         `;
         return elemento;
-    }
-
-    function formatarDataCurtaAtual() {
-        return ClimateData.dataAtual().split("-").slice(0, 2).join("/");
     }
 
     function renderizarLinhaEstacoes() {
@@ -373,7 +380,6 @@
         }
 
         container.innerHTML = `
-            <span class="station-context-badge" title="A estação do ano segue a data atual do navegador.">Agora (${formatarDataCurtaAtual()})</span>
             <div class="season-timeline__track" aria-label="Progresso anual das estações">
                 ${estado.estacoes.map(estacao => `
                     <span class="season-timeline__segment season-timeline__segment--${estacao.chave}">

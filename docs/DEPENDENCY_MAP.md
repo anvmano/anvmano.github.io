@@ -459,6 +459,8 @@ Impacto da alteracao: Alto.
 
 Responsabilidade: produzir o contrato unico de qualidade por metrica e leitura, incluindo cobertura, atualidade, faixa plausivel/critica, salto, repeticao e zero constante. Expoe estado operacional `ok`, `parcial`, `desatualizado`, `suspeito` ou `offline`, ultima leitura e cobertura.
 
+Regra visual: consumidores em cards ocultam o estado quando a analise estiver adequada e com 100% de cobertura; contratos de exportacao e assistente continuam recebendo o resumo completo.
+
 Dependencias diretas: `AppConfig.dataQuality`, `AppConfig.sensorSchemas` e utilitarios de data/normalizacao de `ClimateData`.
 
 Quem chama: `scripts/data/analytics.js`, `scripts/data/data-utils.js`, `scripts/reports/pdf-report-data.js` e `scripts/assistant/assistant-metrics.js`.

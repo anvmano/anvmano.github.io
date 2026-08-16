@@ -121,7 +121,7 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Nao existem testes funcionais automatizados, mas existe validacao estrutural por `npm run validate`.
 - CSS foi dividido em arquivos por responsabilidade, com `style.css` como manifesto de imports.
 - Copias legadas ficam isoladas em `legacy/scripts/`, fora do runtime e da validacao; a aplicacao ativa usa os caminhos de `index.html`.
-- Qualidade por metrica usa estado `ok`, `parcial`, `desatualizado`, `suspeito` ou `offline`, com ultima leitura, amostras e cobertura compartilhadas por UI, relatorio e assistente.
+- Qualidade por metrica usa estado `ok`, `parcial`, `desatualizado`, `suspeito` ou `offline`, com ultima leitura, amostras e cobertura compartilhadas por UI, relatorio e assistente; cards integrais omitem o aviso visual e so exibem qualidade quando houver anormalidade ou cobertura inferior a 100%.
 - Exportacao anuncia progresso em `aria-live`, aplica timeout de 45 segundos e oferece nova tentativa.
 - Tabelas mantem 24 registros, cabecalho fixo, ordem temporal reversivel, contador e CSV visivel.
 

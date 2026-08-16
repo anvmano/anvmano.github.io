@@ -169,7 +169,7 @@
     }
 
     function montarEstadoOperacional(qualidade) {
-        if (!qualidade) return "";
+        if (!deveExibirQualidade(qualidade)) return "";
         const cobertura = qualidade.leiturasEsperadas > 0
             ? `${qualidade.coberturaPercentual.toFixed(0)}% · ${qualidade.leiturasValidas}/${qualidade.leiturasEsperadas} amostras`
             : "0 amostras";
@@ -184,6 +184,11 @@
                 <span>Última: ${ultima}</span>
             </p>
         `;
+    }
+
+    function deveExibirQualidade(qualidade) {
+        if (!qualidade) return false;
+        return qualidade.nivel !== "adequada" || qualidade.coberturaPercentual < 99.5;
     }
 
     function formatarHorario(horario) {

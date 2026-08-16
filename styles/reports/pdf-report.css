@@ -2,10 +2,12 @@
    PDF report
    ===================================================================== */
 .pdf-render-root {
-    position: absolute;
-    left: 0;
+    position: fixed;
+    left: -10000px;
     top: 0;
     width: 720px;
+    height: auto;
+    overflow: visible;
     background: #0b1120;
     color: #f1f5f9;
     font-family: 'Inter', system-ui, sans-serif;
