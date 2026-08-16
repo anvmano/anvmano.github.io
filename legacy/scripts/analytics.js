@@ -5,27 +5,27 @@
         quarto: {
             containerId: "statsQuarto",
             metrics: [
-                { key: "Temperatura", label: "Temperatura", suffix: "°C", chartContainerId: "chart-container-temp" },
-                { key: "Sensacao termica", label: "Sensação térmica", suffix: "°C", chartContainerId: "chart-container-st" },
-                { key: "Umidade", label: "Umidade", suffix: "%", chartContainerId: "chart-container-umidade" },
+                { key: "Temperatura", label: "Temperatura", suffix: "°C" },
+                { key: "Sensacao termica", label: "Sensação", suffix: "°C" },
+                { key: "Umidade", label: "Umidade", suffix: "%" },
             ],
         },
         sala: {
             containerId: "statsSala",
             metrics: [
-                { key: "temperatura", label: "Temperatura", suffix: "°C", chartContainerId: "chart-container-temp-sala" },
-                { key: "sensacaoTermica", label: "Sensação térmica", suffix: "°C", chartContainerId: "chart-container-st-sala" },
-                { key: "umidade", label: "Umidade", suffix: "%", chartContainerId: "chart-container-umidade-sala" },
-                { key: "pressao", label: "Pressão", suffix: " hPa", chartContainerId: "chart-container-pressao-sala" },
+                { key: "temperatura", label: "Temperatura", suffix: "°C" },
+                { key: "sensacaoTermica", label: "Sensação", suffix: "°C" },
+                { key: "umidade", label: "Umidade", suffix: "%" },
+                { key: "pressao", label: "Pressão", suffix: " hPa" },
             ],
         },
         aquario: {
             containerId: "statsAquario",
             metrics: [
-                { key: "temperaturaDS18B20", label: "Temperatura", suffix: "°C", chartContainerId: "chart-container-temp-aquario" },
-                { key: "PH", label: "pH", suffix: "", chartContainerId: "chart-container-ph" },
-                { key: "TDS", label: "TDS", suffix: "ppm", chartContainerId: "chart-container-tds" },
-                { key: "Turbidez", label: "Turbidez", suffix: "NTU", chartContainerId: "chart-container-turbidez" },
+                { key: "temperaturaDS18B20", label: "Temperatura", suffix: "°C" },
+                { key: "PH", label: "PH", suffix: "" },
+                { key: "TDS", label: "TDS", suffix: "ppm" },
+                { key: "Turbidez", label: "Turbidez", suffix: "NTU" },
             ],
         },
     };
@@ -48,11 +48,9 @@
         }
 
         config.metrics.forEach(metric => {
-            const qualidade = window.ClimateDataQuality?.analisarSerie?.(data, metric.key) || null;
-            const values = qualidade?.valores || extractMetricValues(data, metric.key);
-            const stats = calculateStats(values, qualidade);
-            el.appendChild(createStatsCard(metric, stats, qualidade));
-            window.ClimateDataQuality?.aplicarAoGrafico?.(metric.chartContainerId, qualidade);
+            const values = extractMetricValues(data, metric.key);
+            const stats = calculateStats(values);
+            el.appendChild(createStatsCard(metric, stats));
         });
     }
 
@@ -81,7 +79,7 @@
         return values;
     }
 
-    function calculateStats(values, qualidade = null) {
+    function calculateStats(values) {
         if (!values.length) return null;
 
         const first = values[0];
@@ -89,7 +87,7 @@
         const min = Math.min(...values);
         const max = Math.max(...values);
         const avg = values.reduce((sum, value) => sum + value, 0) / values.length;
-        const delta = values.length >= 2 ? last - first : null;
+        const delta = last - first;
 
         return {
             avg,
@@ -97,16 +95,10 @@
             max,
             delta,
             trend: getTrend(delta),
-            leiturasValidas: qualidade?.leiturasValidas ?? values.length,
-            leiturasEsperadas: qualidade?.leiturasEsperadas ?? values.length,
-            qualidade,
         };
     }
 
     function getTrend(delta) {
-        if (!Number.isFinite(delta)) {
-            return { label: "Dados insuficientes", className: "insufficient", symbol: "!" };
-        }
         if (Math.abs(delta) < 0.05) {
             return { label: "Estável", className: "stable", symbol: "→" };
         }
@@ -116,7 +108,7 @@
         return { label: "Caindo", className: "down", symbol: "↘" };
     }
 
-    function createStatsCard(metric, stats, qualidade = null) {
+    function createStatsCard(metric, stats) {
         const card = document.createElement("article");
         card.className = "stats-card";
 
@@ -132,63 +124,23 @@
                     <div><dt>Máx</dt><dd>--</dd></div>
                     <div><dt>Delta</dt><dd>--</dd></div>
                 </dl>
-                ${montarEstadoOperacional(qualidade)}
             `;
             return card;
         }
 
-        const qualidadeEstatistica = stats.qualidade;
-        const tendencia = qualidadeEstatistica?.nivel === "critica"
-            ? { label: "Leitura crítica", className: "critical", symbol: "!" }
-            : qualidadeEstatistica?.nivel === "suspeita"
-                ? { label: "Verificar sensor", className: "suspicious", symbol: "!" }
-                : stats.trend;
-        const resumoQualidade = montarEstadoOperacional(qualidadeEstatistica);
-
         card.innerHTML = `
             <div class="stats-card__header">
                 <span class="stats-card__label">${metric.label}</span>
-                <span class="stats-card__trend stats-card__trend--${tendencia.className}">${tendencia.symbol} ${tendencia.label}</span>
+                <span class="stats-card__trend stats-card__trend--${stats.trend.className}">${stats.trend.symbol} ${stats.trend.label}</span>
             </div>
             <strong class="stats-card__value">${formatStat(stats.avg, metric.suffix)}</strong>
             <dl class="stats-card__details">
                 <div><dt>Mín</dt><dd>${formatStat(stats.min, metric.suffix)}</dd></div>
                 <div><dt>Máx</dt><dd>${formatStat(stats.max, metric.suffix)}</dd></div>
-                <div><dt>Delta</dt><dd>${Number.isFinite(stats.delta) ? formatDelta(stats.delta, metric.suffix) : "--"}</dd></div>
+                <div><dt>Delta</dt><dd>${formatDelta(stats.delta, metric.suffix)}</dd></div>
             </dl>
-            ${resumoQualidade}
         `;
         return card;
-    }
-
-    function montarResumoQualidade(qualidade) {
-        const cobertura = qualidade.leiturasEsperadas > 0
-            ? `${qualidade.leiturasValidas}/${qualidade.leiturasEsperadas} leituras`
-            : "sem leituras";
-        return `${qualidade.rotulo}: ${cobertura}`;
-    }
-
-    function montarEstadoOperacional(qualidade) {
-        if (!qualidade) return "";
-        const cobertura = qualidade.leiturasEsperadas > 0
-            ? `${qualidade.coberturaPercentual.toFixed(0)}% · ${qualidade.leiturasValidas}/${qualidade.leiturasEsperadas} amostras`
-            : "0 amostras";
-        const ultima = qualidade.ultimaLeitura
-            ? `${qualidade.ultimaLeitura.data.replace(/-/g, "/")} · ${formatarHorario(qualidade.ultimaLeitura.horario)}`
-            : "sem leitura";
-        const titulo = qualidade.avisos.join(" ") || montarResumoQualidade(qualidade);
-        return `
-            <p class="stats-card__quality stats-card__quality--${qualidade.nivel}" title="${titulo}">
-                <strong>${qualidade.rotuloEstado}</strong>
-                <span>${cobertura}</span>
-                <span>Última: ${ultima}</span>
-            </p>
-        `;
-    }
-
-    function formatarHorario(horario) {
-        const [hora, minuto = "0"] = String(horario || "").split("-");
-        return `${String(hora).padStart(2, "0")}:${String(minuto).padStart(2, "0")}`;
     }
 
     const DEFAULT_ADVANCED_CONTAINERS = {
@@ -206,9 +158,6 @@
             ...DEFAULT_ADVANCED_CONTAINERS,
             ...(options.containers || {}),
         };
-
-        if (visualizacoesEstaoRecolhidas(containers)) return;
-
         const normalizedDate = dateParts.firebaseDate;
         const monthRecords = extractClimateRecordsForSelectedMonth(data, metricKey, normalizedDate);
         const dayRecords = monthRecords.filter(record => record.firebaseDate === normalizedDate);
@@ -218,17 +167,8 @@
             renderHourlyHeatmap(dayRecords, normalizedDate, containers.hourlyHeatmap);
             renderWeeklyHeatmap(monthRecords, normalizedDate, containers.weeklyHeatmap);
         } catch (error) {
-            window.ClimateDiagnostics?.depurar("Falha ao renderizar visualizações climáticas avançadas.", error);
+            console.warn("Falha ao renderizar visualizações climáticas avançadas.", error);
         }
-    }
-
-    function visualizacoesEstaoRecolhidas(containers) {
-        const ids = [containers.monthlyCalendar, containers.hourlyHeatmap, containers.weeklyHeatmap];
-        const container = ids
-            .map(id => document.getElementById(id))
-            .find(Boolean);
-        const section = container?.closest?.(".collapsible-section");
-        return !!section?.classList.contains("is-collapsed");
     }
 
     function extractClimateRecordsForSelectedMonth(data, metricKey, selectedDate) {
@@ -514,6 +454,5 @@
     window.ClimateAnalytics = {
         renderStats,
         renderAdvancedClimateViews,
-        calculateStats,
     };
 })();

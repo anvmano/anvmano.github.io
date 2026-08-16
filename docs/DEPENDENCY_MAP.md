@@ -302,7 +302,7 @@ Dependencias diretas:
 - `AppConfig.firebase.authUrl`
 - `AppConfig.auth.usuariosInternosAutorizados`
 
-Quem chama: `scripts/main.js`.
+Quem chama: `scripts/main.js` e `scripts/views/public-weather-view.js`.
 
 Quem e chamado: Firebase Auth (`getAuth`, `GoogleAuthProvider`, `signInWithPopup`, `signOut`, `onAuthStateChanged`).
 
@@ -455,6 +455,18 @@ Quem e chamado: nenhum modulo externo.
 
 Impacto da alteracao: Alto.
 
+## scripts/data/data-quality.js
+
+Responsabilidade: produzir o contrato unico de qualidade por metrica e leitura, incluindo cobertura, atualidade, faixa plausivel/critica, salto, repeticao e zero constante. Expoe estado operacional `ok`, `parcial`, `desatualizado`, `suspeito` ou `offline`, ultima leitura e cobertura.
+
+Dependencias diretas: `AppConfig.dataQuality`, `AppConfig.sensorSchemas` e utilitarios de data/normalizacao de `ClimateData`.
+
+Quem chama: `scripts/data/analytics.js`, `scripts/data/data-utils.js`, `scripts/reports/pdf-report-data.js` e `scripts/assistant/assistant-metrics.js`.
+
+Quem e chamado: nenhum modulo externo.
+
+Impacto da alteracao: Alto. Uma mudanca afeta simultaneamente cards, tabelas, graficos, PDF/JSON e assistente.
+
 ## scripts/charts/chart-utils.js
 
 Responsabilidade: defaults Chart.js, grafico de linha, faixa de conforto, merge de opcoes.
@@ -464,7 +476,7 @@ Dependencias diretas:
 - `Chart`
 - `ClimateData`
 
-Quem chama: `scripts/main.js`.
+Quem chama: `scripts/main.js` e `scripts/views/public-weather-view.js`.
 
 Quem e chamado: Chart.js.
 
@@ -546,7 +558,7 @@ Impacto da alteracao: Alto.
 
 ## scripts/ui/ui.js
 
-Responsabilidade: estados vazios, mensagens, tabelas, tabs com foco movel e navegacao ARIA por teclado, swipe touch entre abas, colapsaveis e date picker.
+Responsabilidade: estados vazios, mensagens, tabelas com ordenacao/contador/CSV, tabs com foco movel e navegacao ARIA por teclado, swipe touch, colapsaveis, date picker e contexto `Agora/Data consultada`.
 
 Dependencias diretas:
 
@@ -578,12 +590,15 @@ Dependencias diretas:
 - Chart.js
 - `AppConfig.ids.charts.solarToday`
 - `ClimateSolar.solarDayBackgroundPlugin`
+- `ClimateAssets.carregarCssZoom`
 
-Quem chama: `scripts/main.js`.
+Quem chama: `scripts/main.js` e `scripts/views/public-weather-view.js`.
 
 Quem e chamado: Chart.js.
 
 Impacto da alteracao: Medio.
+
+Contrato de abertura: aguardar `styles/zoom.css`, manter o overlay fixo ao viewport e preservar a posicao de rolagem da pagina.
 
 ## scripts/reports/pdf-report.js e scripts/reports/pdf-report-*.js
 
@@ -612,6 +627,19 @@ Observacoes:
 - layout do PDF prioriza blocos compactos em coluna unica para reduzir cortes em A4 retrato
 - exportacao JSON inclui metadados, resumo, tabela resumida, tabela detalhada e dados brutos filtrados
 - html2canvas e jsPDF sao carregados sob demanda pelo exportador somente ao gerar PDF
+- a fachada anuncia progresso em `#exportFeedback`, aplica timeout e permite repetir a ultima tentativa
+
+## scripts/schemas/contracts.js
+
+Responsabilidade: validar fronteiras versionadas para colecoes Firebase, contexto da assistente e contexto de relatorio.
+
+Quem chama: `scripts/firebase-service.js`, `scripts/chat.js` e `scripts/reports/pdf-report.js`.
+
+Impacto da alteracao: Alto. Regras excessivamente restritivas podem bloquear leitura, chat ou exportacao legitimos.
+
+## legacy/scripts
+
+Responsabilidade: preservar copias historicas fora do runtime. O diretorio e ignorado pelo validador e nao pode ser usado como fonte da aplicacao ativa.
 
 Dependencias diretas:
 
@@ -681,10 +709,13 @@ Dependencias diretas:
 - `ClimateSolar`
 - `ClimateSeason`
 - `ClimateMoon`
+- `ClimateZoom.registrarCards`
 
 Quem chama: `scripts/main.js`.
 
 Impacto da alteracao: Alto para a experiencia publica. Nao deve inicializar assistente IA nem listeners internos.
+
+Contratos adicionais: controla concorrencia por sequencia de busca, desabilita os controles enquanto carrega, ignora resposta obsoleta, limpa AQI/solar/graficos em erro e anuncia estados via regiao `aria-live`.
 
 ## scripts/views/sala-view.js
 

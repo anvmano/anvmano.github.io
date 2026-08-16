@@ -9,7 +9,7 @@
 
     async function buscarPorCep(cepInformado) {
         const cep = limparCep(cepInformado);
-        if (cep.length !== 8) throw new Error("Informe um CEP com 8 dígitos.");
+        if (cep.length !== 8) throw criarErroEsperado("Informe um CEP com 8 dígitos.", "cep_invalido");
 
         const endereco = await buscarEnderecoPorCep(cep);
         const coordenadas = await buscarCoordenadasPorEndereco(endereco);
@@ -57,7 +57,7 @@
         const resposta = await fetch(`${config().viaCepUrl}/${cep}/json/`);
         if (!resposta.ok) throw new Error("Não foi possível consultar o CEP.");
         const dados = await resposta.json();
-        if (dados.erro) throw new Error("CEP não encontrado.");
+        if (dados.erro) throw criarErroEsperado("CEP não encontrado.", "cep_nao_encontrado");
         return normalizarEnderecoViaCep(dados);
     }
 
@@ -154,6 +154,14 @@
             bairro: dados.bairro,
             rua: dados.logradouro,
         };
+    }
+
+    function criarErroEsperado(mensagem, codigo) {
+        const erro = new Error(mensagem);
+        erro.name = "ErroConsultaPublica";
+        erro.codigo = codigo;
+        erro.esperado = true;
+        return erro;
     }
 
     function montarRotuloEndereco(endereco) {

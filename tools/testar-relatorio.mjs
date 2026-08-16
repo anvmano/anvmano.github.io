@@ -10,6 +10,14 @@ contexto.AppConfig = {
     comfortBand: { min: 20, max: 26 },
     humidityComfortBand: { min: 40, max: 60 },
     aquariumComfortBand: { min: 25, max: 27 },
+    dataQuality: {
+        expectedReadingsPerDay: 24,
+        minimumCoveragePercent: 90,
+        metrics: {
+            PH: { criticalMin: 4, criticalMax: 11, maxJump: 2, repeatedCount: 4 },
+            Turbidez: { repeatedCount: 6, flagConstantZero: true },
+        },
+    },
     measurementUnits: {
         temperaturaDS18B20: "°C",
         PH: "",
@@ -33,6 +41,7 @@ function carregar(caminhoRelativo) {
 }
 
 carregar("scripts/data/data-utils.js");
+carregar("scripts/data/data-quality.js");
 carregar("scripts/reports/pdf-report-format.js");
 carregar("scripts/reports/pdf-report-config.js");
 carregar("scripts/reports/pdf-report-data.js");
@@ -82,11 +91,16 @@ const cards = contexto.ClimatePdfReportModules.data.buildSummaryCards(
     configuracaoAquario,
     fonte.linhasNormalizadas,
     { aquarium: dadosAquario },
-    "10-08-2026"
+    "10-08-2026",
+    fonte.qualidades
 );
 const cardTemperatura = cards.find(card => card.label === "Temperatura");
 assert.equal(cardTemperatura.min, "28.06°C");
 assert.equal(cardTemperatura.max, "28.06°C");
+assert.equal(cardTemperatura.delta, "--");
+assert.equal(cardTemperatura.status, "Dados incompletos");
+assert.equal(cardTemperatura.qualidade.leiturasValidas, 1);
+assert.equal(cardTemperatura.qualidade.leiturasEsperadas, 24);
 
 const tabela = contexto.ClimatePdfReportModules.data.buildCompactTableRows(
     fonte.linhasNormalizadas,

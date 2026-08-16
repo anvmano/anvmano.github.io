@@ -3,9 +3,6 @@
 (function () {
     const HEADER_LABELS = {
         temperaturaDS18B20: "Temperatura",
-        "Sensacao termica": "Sensação térmica",
-        sensacaoTermica: "Sensação térmica",
-        PH: "pH",
         Aceton: "Acetona",
         Alcohol: "Álcool",
         NH4: "Amônia",
@@ -17,15 +14,9 @@
     }
 
     function normalizeMeasurementValue(key, value) {
-        if (value === null || value === undefined || (typeof value === "string" && value.trim() === "")) {
-            return null;
-        }
         const numericValue = Number(value);
         if (!Number.isFinite(numericValue)) return null;
 
-        const schema = window.AppConfig?.sensorSchemas?.[key];
-        if (schema?.sentinels?.includes(numericValue)) return null;
-        if (Number.isFinite(schema?.divisor) && schema.divisor !== 0) return numericValue / schema.divisor;
         if (key === "TDS") return numericValue / 10;
         if (key === "Turbidez") return numericValue / 1000;
         return numericValue;
@@ -145,13 +136,8 @@
 
     function createTables(headers, data) {
         const table = document.createElement("table");
-        table.dataset.exportName = "estacao-climatica";
-        const analisesQualidade = Object.fromEntries(headers.slice(2).map(campo => [
-            campo,
-            window.ClimateDataQuality?.analisarSerie?.(data, campo) || null,
-        ]));
 
-        const headerRow = table.createTHead().insertRow();
+        const headerRow = table.insertRow();
         headers.forEach(key => {
             const th = document.createElement("th");
             th.innerText = HEADER_LABELS[key] || key;
@@ -162,7 +148,6 @@
 
         let lastDate = null;
         let rowCount = 0;
-        const corpo = table.createTBody();
 
         for (const date of allDates) {
             if (rowCount >= 24) break;
@@ -177,29 +162,15 @@
                     if (rowCount >= 24) break;
                     const item = timeData[key];
                     if (!item || typeof item !== "object") continue;
-                    const row = corpo.insertRow();
-                    row.dataset.timestamp = `${formatarDataOrdenavel(date)}T${formatarHorarioOrdenavel(time)}`;
+                    const row = table.insertRow();
 
                     row.insertCell().innerText = date !== lastDate ? date.replace(/-/g, "/") : "";
                     const [hour, minute] = time.split("-");
                     row.insertCell().innerText = `${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
 
                     for (let i = 2; i < headers.length; i++) {
-                        const campo = headers[i];
-                        const val = item[campo];
-                        const cell = row.insertCell();
-                        const qualidade = window.ClimateDataQuality?.obterQualidadeLeitura?.(
-                            analisesQualidade[campo],
-                            date,
-                            time,
-                            key
-                        );
-                        cell.innerText = formatTableValue(campo, val);
-                        if (qualidade && qualidade.nivel !== "normal") {
-                            cell.classList.add(`table-cell--${qualidade.nivel}`);
-                            cell.title = qualidade.motivos.join(" ");
-                            cell.innerText += " ⚠";
-                        }
+                        const val = item[headers[i]];
+                        row.insertCell().innerText = formatTableValue(headers[i], val);
                     }
 
                     rowCount++;
@@ -209,16 +180,6 @@
         }
 
         return table;
-    }
-
-    function formatarDataOrdenavel(data) {
-        const [dia, mes, ano] = String(data || "").split("-");
-        return `${ano}-${mes}-${dia}`;
-    }
-
-    function formatarHorarioOrdenavel(horario) {
-        const [hora, minuto = "0"] = String(horario || "").split("-");
-        return `${String(hora).padStart(2, "0")}:${String(minuto).padStart(2, "0")}`;
     }
 
     function extractData(data, keys) {
@@ -276,7 +237,6 @@
     window.ClimateData = {
         dataAtual,
         parseFirebaseDate,
-        parseFirebaseDateTime,
         filterDataByDays,
         filterDataByRollingHours,
         convertInputDateToFirebase,

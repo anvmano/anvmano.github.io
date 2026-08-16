@@ -6,7 +6,7 @@
     const { format } = modules;
     const { buildNoDataMessage, clamp, formatValue } = format;
 
-    async function collectChartCards(tabConfig, { normalizedRows = [], latestData = {}, selectedDate } = {}) {
+    async function collectChartCards(tabConfig, { normalizedRows = [], latestData = {}, selectedDate, qualities = {} } = {}) {
         const cards = [];
         if (tabConfig.tableType === "station") {
             cards.push(createStationChartCard(
@@ -42,14 +42,15 @@
                 "°C",
                 [temperatureMetric, feelsLikeMetric],
                 normalizedRows,
-                selectedDate
+                selectedDate,
+                qualities
             ));
         } else if (temperatureMetric) {
-            cards.push(await createMetricChartCard(temperatureMetric.label, temperatureMetric.unit, [temperatureMetric], normalizedRows, selectedDate));
+            cards.push(await createMetricChartCard(temperatureMetric.label, temperatureMetric.unit, [temperatureMetric], normalizedRows, selectedDate, qualities));
         }
 
         if (humidityMetric) {
-            cards.push(await createMetricChartCard(humidityMetric.label, humidityMetric.unit, [humidityMetric], normalizedRows, selectedDate));
+            cards.push(await createMetricChartCard(humidityMetric.label, humidityMetric.unit, [humidityMetric], normalizedRows, selectedDate, qualities));
         }
 
         const individualMetrics = tabConfig.metrics.filter(metric => (
@@ -59,7 +60,7 @@
         ));
 
         for (const metric of individualMetrics) {
-            cards.push(await createMetricChartCard(metric.label, metric.unit, [metric], normalizedRows, selectedDate));
+            cards.push(await createMetricChartCard(metric.label, metric.unit, [metric], normalizedRows, selectedDate, qualities));
         }
 
         if (tabConfig.includeSolar) {
@@ -90,7 +91,7 @@
         };
     }
 
-    async function createMetricChartCard(label, unit, metrics, normalizedRows, selectedDate) {
+    async function createMetricChartCard(label, unit, metrics, normalizedRows, selectedDate, qualities = {}) {
         const series = metrics.map((metric, index) => ({
             metric,
             labels: normalizedRows.map(row => row.time),
@@ -103,7 +104,14 @@
             unit,
             image,
             emptyMessage: buildNoDataMessage(label, selectedDate),
-            stats: series.flatMap(item => buildChartStats(item.metric.label, item.values, item.metric.unit)),
+            stats: series.flatMap(item => {
+                const estatisticas = buildChartStats(item.metric.label, item.values, item.metric.unit);
+                const qualidade = qualities[item.metric.key];
+                if (qualidade && qualidade.nivel !== "adequada") {
+                    estatisticas.push(`${item.metric.label}: ${qualidade.rotulo} (${qualidade.leiturasValidas}/${qualidade.leiturasEsperadas})`);
+                }
+                return estatisticas;
+            }),
         };
     }
 

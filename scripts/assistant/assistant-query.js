@@ -187,6 +187,8 @@
             - Se o resultado tiver "tipo_resultado": "estatistica_extremo", responda somente a máxima ou mínima pedida, com data, horário, ambiente e período.
             - Se o resultado tiver "tipo_resultado": "variacao_periodo", informe valor inicial, valor final e diferença.
             - Se o resultado tiver "tipo_resultado": "tendencia_periodo", informe a tendência, valor inicial, valor final e diferença.
+            - Se o resultado tiver "tipo_resultado": "dados_insuficientes_tendencia", informe diretamente que são necessárias pelo menos duas medições válidas.
+            - Quando "qualidade_dados" indicar dados incompletos, suspeitos, críticos ou desatualizados, mencione o aviso sem descartar ou alterar a medição.
             - Se o resultado tiver "tipo_resultado": "extremo_diario", informe somente o dia mais quente/frio, a média diária, o ambiente e o período.
             - Se o resultado tiver "tipo_resultado": "resumo_metrica", faça um resumo curto da métrica sem mencionar amostras.
             - Se o resultado tiver "tipo_resultado": "analise_horaria", responda o horário/período encontrado, o valor principal e a data. Se houver "faixa_horaria_consultada", diga que a análise ficou restrita a essa faixa.
@@ -222,6 +224,7 @@
         if (firstMetric.tipo_resultado === "ciclo_solar") return formatSolarFallback(firstMetric);
         if (firstMetric.tipo_resultado?.startsWith?.("solar_")) return formatSolarAnalyticFallback(firstMetric);
         if (firstMetric.tipo_resultado === "faixa_conforto") return formatComfortBandFallback(firstMetric);
+        if (firstMetric.tipo_resultado === "dados_insuficientes_tendencia") return firstMetric.mensagem;
         if (firstMetric.sem_faixa) return firstMetric.mensagem;
 
         if (firstMetric.tipo_resultado === "consulta_horaria") {

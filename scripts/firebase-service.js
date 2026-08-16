@@ -82,7 +82,14 @@
                 trackLoadEnd();
                 firstLoad = false;
             }
-            onData(snapshot.val());
+            const dados = snapshot.val();
+            if (!window.ClimateContracts?.validarColecaoFirebase?.(dados)) {
+                const erro = new TypeError(`Estrutura Firebase inválida em ${path}.`);
+                handleError(path, erro);
+                if (onError) onError(erro);
+                return;
+            }
+            onData(dados);
         }, error => {
             if (firstLoad) {
                 trackLoadEnd();

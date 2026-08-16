@@ -129,6 +129,28 @@
     display: none;
 }
 
+.chart-quality-badge {
+    position: absolute;
+    z-index: 2;
+    top: 46px;
+    right: 12px;
+    max-width: calc(100% - 24px);
+    padding: 0.25rem 0.55rem;
+    border: 1px solid rgba(251, 191, 36, 0.34);
+    border-radius: 999px;
+    background: rgba(120, 53, 15, 0.34);
+    color: #fbbf24;
+    font-size: 0.68rem;
+    font-weight: 750;
+    pointer-events: none;
+}
+
+.chart-quality-badge--critica {
+    border-color: rgba(251, 113, 133, 0.42);
+    background: rgba(127, 29, 29, 0.38);
+    color: #fb7185;
+}
+
 .plot {
     width: 100% !important;
     height: 232px !important;

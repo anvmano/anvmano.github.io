@@ -6,8 +6,9 @@
     const { format } = modules;
     const { formatDateTime } = format;
 
-    async function generatePdf(element, fileName) {
+    async function generatePdf(element, fileName, { deveCancelar = () => false } = {}) {
         await waitForImages(element);
+        if (deveCancelar()) return;
 
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({
@@ -18,7 +19,9 @@
         });
 
         await addReportBlocks(pdf, element);
+        if (deveCancelar()) return;
         addPdfFooters(pdf);
+        if (deveCancelar()) return;
         pdf.save(fileName);
     }
 

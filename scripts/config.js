@@ -7,7 +7,7 @@
     function deveRegistrarDiagnostico() {
         try {
             return debugParams.has("debug") || window.localStorage.getItem("climateDebug") === "1";
-        } catch (erro) {
+        } catch {
             return debugParams.has("debug");
         }
     }
@@ -95,6 +95,53 @@
             min: 25,
             max: 27,
             label: "Faixa de conforto do aquário",
+        },
+        dataQuality: {
+            expectedReadingsPerDay: 24,
+            minimumCoveragePercent: 90,
+            staleAfterMinutes: 150,
+            metrics: {
+                PH: {
+                    criticalMin: 4,
+                    criticalMax: 11,
+                    maxJump: 2,
+                    repeatedCount: 4,
+                    repeatTolerance: 0.001,
+                },
+                Turbidez: {
+                    repeatedCount: 6,
+                    repeatTolerance: 0.001,
+                    flagConstantZero: true,
+                    zeroIsValidUntilConfirmed: true,
+                },
+            },
+        },
+        sensorSchemas: {
+            Temperatura: { unit: "°C", plausibleMin: -20, plausibleMax: 60, resolution: 0.01, expectedMinutes: 60, sentinels: [-127, 85] },
+            "Sensacao termica": { unit: "°C", plausibleMin: -30, plausibleMax: 70, resolution: 0.01, expectedMinutes: 60, sentinels: [] },
+            Umidade: { unit: "%", plausibleMin: 0, plausibleMax: 100, resolution: 0.01, expectedMinutes: 60, sentinels: [] },
+            temperatura: { unit: "°C", plausibleMin: -20, plausibleMax: 60, resolution: 0.01, expectedMinutes: 60, sentinels: [-127, 85] },
+            sensacaoTermica: { unit: "°C", plausibleMin: -30, plausibleMax: 70, resolution: 0.01, expectedMinutes: 60, sentinels: [] },
+            umidade: { unit: "%", plausibleMin: 0, plausibleMax: 100, resolution: 0.01, expectedMinutes: 60, sentinels: [] },
+            pressao: { unit: "hPa", plausibleMin: 850, plausibleMax: 1100, resolution: 0.01, expectedMinutes: 60, sentinels: [] },
+            temperaturaDS18B20: { unit: "°C", plausibleMin: 0, plausibleMax: 45, resolution: 0.01, expectedMinutes: 60, sentinels: [-127, 85] },
+            PH: { unit: "", plausibleMin: 0, plausibleMax: 14, resolution: 0.01, expectedMinutes: 60, sentinels: [] },
+            TDS: { unit: "ppm", plausibleMin: 0, plausibleMax: 5000, resolution: 0.1, expectedMinutes: 60, divisor: 10, sentinels: [] },
+            Turbidez: { unit: "NTU", plausibleMin: 0, plausibleMax: 4000, resolution: 0.001, expectedMinutes: 60, divisor: 1000, sentinels: [] },
+            CO: { unit: "ppm", plausibleMin: 0, plausibleMax: 1000, resolution: 0.01, expectedMinutes: 60, sentinels: [] },
+            CO2: { unit: "ppm", plausibleMin: 0, plausibleMax: 10000, resolution: 0.01, expectedMinutes: 60, sentinels: [] },
+            Aceton: { unit: "ppm", plausibleMin: 0, plausibleMax: 1000, resolution: 0.01, expectedMinutes: 60, sentinels: [] },
+            Alcohol: { unit: "ppm", plausibleMin: 0, plausibleMax: 1000, resolution: 0.01, expectedMinutes: 60, sentinels: [] },
+            NH4: { unit: "ppm", plausibleMin: 0, plausibleMax: 1000, resolution: 0.01, expectedMinutes: 60, sentinels: [] },
+            Toluen: { unit: "ppm", plausibleMin: 0, plausibleMax: 1000, resolution: 0.01, expectedMinutes: 60, sentinels: [] },
+        },
+        exports: {
+            timeoutMs: 45000,
+        },
+        publicData: {
+            sessionKey: "climatePublicLastQueryV1",
+            staleAfterMinutes: 20,
+            maxAgeMinutes: 60,
         },
         measurementUnits: {
             Temperatura: "°C",

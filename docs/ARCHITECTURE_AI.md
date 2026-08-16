@@ -75,6 +75,7 @@ Codigo interno novo ou refatorado deve usar nomes em PT-BR para metodos, funcoes
 │   │   └── assistant-ui.js
 │   ├── data/
 │   │   ├── data-utils.js
+│   │   ├── data-quality.js
 │   │   ├── analytics.js
 │   │   └── environmental-insights.js
 │   ├── charts/
@@ -105,18 +106,23 @@ Codigo interno novo ou refatorado deve usar nomes em PT-BR para metodos, funcoes
 ├── package.json
 ├── tools/
 │   ├── validate-project.mjs
-│   └── testar-assistente.mjs
+│   ├── testar-assistente.mjs
+│   ├── testar-relatorio.mjs
+│   ├── testar-acessibilidade.mjs
+│   ├── testar-qualidade-dados.mjs
+│   └── testar-modo-publico.mjs
 ```
 
-Observacao: existem copias legadas de alguns scripts diretamente em `scripts/`. O runtime atual deve ser entendido pela lista de scripts carregados em `index.html`, que usa principalmente os modulos organizados em subpastas.
+Observacao: copias legadas foram movidas para `legacy/scripts/`. Esse diretorio fica fora do runtime e da validacao; a fonte ativa e definida pelos scripts carregados em `index.html`.
 
 Responsabilidades:
 
 - `index.html`: estrutura DOM, abas, canvases, containers, toolbar de data, scripts.
 - `style.css`: manifesto de imports dos estilos modulares.
 - `styles/`: tema visual, layout, tabs, graficos, cards, tabelas, estados, heatmaps, zoom e responsividade.
-- `scripts/config.js`: configuracao Firebase, Auth, APIs externas, cores, ids DOM, paths Firebase, nomes de campos, unidades e faixas.
-- `scripts/runtime-loader.js`: carregamento sob demanda de Chart.js, modulos da assistente, modulos do relatorio e CSS nao critico.
+- `scripts/config.js`: configuracao Firebase, Auth, APIs externas, cores, ids DOM, paths, campos, unidades, schemas de sensores, timeout de exportacao e validade publica.
+- `scripts/schemas/contracts.js`: validacao versionada das fronteiras Firebase, assistente e relatorio.
+- `scripts/runtime-loader.js`: carregamento sob demanda de Chart.js, modulos da assistente, modulos do relatorio e CSS nao critico; `carregarCssZoom()` garante o estilo antes da abertura do dialogo.
 - `scripts/main.js`: orquestracao da aplicacao, listeners Firebase, cache de dados, renderizacao por view, contrato de criacao de graficos, opcoes de zoom, indicadores do header e exportacao.
 - `scripts/firebase-service.js`: inicializacao Firebase, listeners `onValue`, loading bar e erros.
 - `scripts/auth/auth-service.js`: inicializacao Firebase Auth, login/logout Google, usuario atual e regra de usuario interno autorizado.
@@ -134,6 +140,7 @@ Responsabilidades:
 - `scripts/assistant/assistant-config.js`: constantes, exemplos, ambientes e aliases da assistente.
 - `scripts/assistant/assistant-format.js`: normalizacao e formatacao compartilhadas.
 - `scripts/data/data-utils.js`: datas, filtros, tabelas, extracao de series, conversoes e formatacao.
+- `scripts/data/data-quality.js`: analise compartilhada de cobertura, atualidade, plausibilidade, saltos, repeticao e zero constante, sem modificar o valor medido.
 - `scripts/charts/chart-utils.js`: defaults Chart.js, criacao de graficos de linha, fallback de grafico vazio, faixa de conforto.
 - `scripts/data/analytics.js`: estatisticas, cards de resumo, calendario climatico, heatmap horario e heatmap semanal.
 - `scripts/data/environmental-insights.js`: ponto de orvalho, risco estimado de mofo, chuva, indice UV e recomendacao de ventilacao compartilhados entre modos interno e publico.
@@ -141,8 +148,8 @@ Responsabilidades:
 - `scripts/charts/season.js`: estacao do ano atual, chip no header, popover, faixa anual da aba Estacao e progresso dentro da estacao atual para o PDF.
 - `scripts/charts/moon.js`: fase da lua, chip no header, popover e estado lunar por data.
 - `scripts/charts/solar.js`: leitura e renderizacao dos eventos solares, historico nascer/por do sol, ciclo solar do dia, aliases solares centralizados e exposicao de eventos solares para o header.
-- `scripts/ui/ui.js`: estados vazios, mensagens em graficos, tabelas, tabs, swipe touch entre abas, colapsaveis, date picker.
-- `scripts/charts/zoom.js`: ampliacao de graficos por botao/duplo clique em dialogo modal acessivel, mantendo tooltip ativo no canvas ampliado e restaurando foco ao fechar.
+- `scripts/ui/ui.js`: estados vazios, mensagens, tabelas ordenaveis com CSV, tabs, swipe touch, colapsaveis, date picker e contexto temporal.
+- `scripts/charts/zoom.js`: ampliacao de graficos por botao/duplo clique em dialogo modal acessivel, aguardando o CSS sob demanda, mantendo a rolagem da pagina, o tooltip ativo no canvas ampliado e restaurando foco ao fechar.
 - `scripts/reports/pdf-report.js`: fachada publica leve da exportacao PDF/JSON, mantendo `window.ClimatePdfReport.setup` e carregando `scripts/reports/pdf-report-*` somente ao exportar.
 - `scripts/reports/pdf-report-config.js`: configuracao das abas, metricas, tabela e inclusao de ciclo solar.
 - `scripts/reports/pdf-report-format.js`: formatacao de datas, valores, status, mensagens e HTML seguro.
@@ -160,7 +167,8 @@ Responsabilidades:
 - `scripts/views/public-weather-view.js`: renderizacao do modo publico por CEP/localizacao, com cards, contexto sazonal/lunar, insights ambientais e graficos externos.
 - `tools/validate-project.mjs`: validacao estrutural local de sintaxe, referencias, imports CSS e ids.
 - `tools/testar-assistente.mjs`: regressao local de interpretacao de periodos, operacoes e contratos de resposta da assistente.
-- `package.json`: comandos `npm run validate` e `npm run test:assistant`.
+- `tools/testar-relatorio.mjs`, `tools/testar-pdf-artifact.mjs`, `tools/testar-acessibilidade.mjs`, `tools/testar-axe.mjs`, `tools/testar-qualidade-dados.mjs`, `tools/testar-modo-publico.mjs` e `tools/testar-tabelas.mjs`: regressao de relatorio/artefato, ARIA/contraste, qualidade, fluxo publico e tabelas.
+- `package.json`: comandos `npm run validate` e `npm run test:*`.
 
 ## Fluxo de Execucao
 
@@ -169,6 +177,7 @@ Responsabilidades:
    - `scripts/config.js`
    - `scripts/runtime-loader.js`
    - `scripts/data/data-utils.js`
+   - `scripts/data/data-quality.js`
    - `scripts/data/analytics.js`
    - `scripts/data/environmental-insights.js`
    - `scripts/charts/solar.js`
@@ -205,6 +214,7 @@ Responsabilidades:
    - com usuario interno autorizado: mostra `#privateApp`, oculta `#publicApp`, inicializa tabs, swipe, date picker, colapsaveis, zoom, PDF/JSON, chat e agenda Firebase interno
 7. `FirebaseService.initialize()` importa SDK Firebase e conecta ao Realtime Database; `ensureAppCheckInitialized()` inicializa App Check sob demanda antes de recursos protegidos, como a IA.
 8. `FirebaseService.listenToPath()` cria listeners para quatro paths somente no modo interno autorizado.
+   - os paths continuam integrais porque datas `DD-MM-AAAA` nao podem ser paginadas cronologicamente com `orderByKey`; uma otimizacao futura exige timestamp ou `AAAA-MM-DD`
 9. Cada snapshot atualiza `latestData` e chama a view correspondente; a aba Estacao e rerenderizada quando qualquer fonte global muda.
 
 ## Componentes

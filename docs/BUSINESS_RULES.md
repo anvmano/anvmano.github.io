@@ -168,6 +168,12 @@ Regras:
 - ponto de orvalho usa o valor da API quando disponivel e calculo de Magnus como fallback
 - risco de mofo/condensacao e orientativo e deve considerar umidade e distancia entre temperatura e ponto de orvalho
 - recomendacao de ventilacao externa considera AQI, chuva, rajadas, temperatura e umidade; nao deve recomendar abertura quando houver condicao externa limitante
+- durante uma consulta, campo CEP, botao Buscar e botao Usar localizacao devem ficar desabilitados e `#publicResults` deve usar `aria-busy="true"`
+- somente a consulta publica mais recente pode atualizar a tela; respostas atrasadas de uma busca anterior devem ser ignoradas
+- nova consulta ou erro deve limpar AQI, ciclo solar, contexto astronomico e graficos anteriores para nao exibir dados obsoletos
+- erros esperados de validacao, como CEP incompleto ou nao encontrado, devem aparecer na interface sem gerar `console.error`; falhas tecnicas continuam registradas
+- mensagens de carregamento, sucesso e erro devem ser anunciadas por `#publicSearchStatus` com `aria-live`; CEP invalido usa `aria-invalid` e descricao associada
+- graficos publicos renderizados dinamicamente devem receber o mesmo zoom acessivel dos graficos internos
 
 Impacto: experiencia publica e separacao entre dados externos e dados internos da estacao.
 
@@ -414,6 +420,13 @@ Entradas: dados filtrados e chave da metrica.
 
 Saidas: cards de estatisticas.
 
+Regras:
+
+- delta e tendencia exigem pelo menos duas leituras numericas validas
+- com uma unica leitura, manter media/minima/maxima, mostrar delta `--` e tendencia `Dados insuficientes`
+- o card deve exibir cobertura quando ela estiver incompleta, suspeita, critica ou desatualizada
+- rotulos visiveis usam `Sensacao termica` como `Sensação térmica` e `PH` como `pH`
+
 Impacto: resumos das abas.
 
 Dependencias: `STATS_CONFIG`.
@@ -434,6 +447,7 @@ Entradas: delta numerico.
 
 Saidas:
 
+- `Dados insuficientes` quando nao houver pelo menos duas leituras validas
 - `Estavel` se `abs(delta) < 0.05`
 - `Subindo` se delta > 0
 - `Caindo` se delta < 0
@@ -445,6 +459,31 @@ Dependencias: nenhuma externa.
 Se alterada: interpretacao visual muda.
 
 Criticidade: Media.
+
+## Regra: qualidade e cobertura das leituras
+
+Arquivos: `scripts/data/data-quality.js`, `scripts/config.js`, `scripts/data/analytics.js`, `scripts/data/data-utils.js`
+
+Objetivo: separar ausencia de dado, baixa cobertura e leitura numerica suspeita sem alterar o valor bruto normalizado.
+
+Regras:
+
+- a referencia padrao e uma leitura por hora: 24 esperadas em dia completo e hora atual + 1 no dia corrente
+- cobertura informa leituras validas/esperadas e percentual; abaixo do limite configurado em `AppConfig.dataQuality.minimumCoveragePercent` fica incompleta
+- valor ausente continua `null`; zero numerico continua zero e nunca deve ser convertido automaticamente em ausencia
+- pH usa limites criticos, salto maximo e repeticao configurados em `AppConfig.dataQuality.metrics.PH`
+- Turbidez usa repeticao e zero constante configurados em `AppConfig.dataQuality.metrics.Turbidez`; enquanto a semantica do firmware nao for confirmada, zero e preservado e apenas sinalizado como suspeito
+- tabela preserva o valor medido e marca a celula suspeita/critica; cards e graficos recebem estado de qualidade
+- PDF, JSON e assistente devem reutilizar o mesmo resumo de qualidade, sem recalcular regras divergentes
+- a assistente nao pode responder tendencia ou delta com uma unica leitura; deve informar dados insuficientes
+
+Impacto: cards, graficos, tabelas, PDF/JSON e respostas da assistente.
+
+Dependencias: `AppConfig.dataQuality`, normalizacao de campos e formato data/hora do Firebase.
+
+Se alterada: leituras validas podem ser descartadas, anomalias podem passar despercebidas ou diferentes superficies podem apresentar conclusoes contraditorias.
+
+Criticidade: Alta.
 
 ## Regra: heatmaps climaticos
 
@@ -936,7 +975,7 @@ Criticidade: Media.
 
 Arquivo: `scripts/charts/zoom.js`
 
-Metodo: `setup`, `handleZoom`, `createZoomChart`
+Metodo: `setup`, `registrarCards`, `handleZoom`, `createZoomChart`
 
 Objetivo: ampliar grafico por botao ou duplo clique.
 
@@ -956,6 +995,10 @@ Interacao:
 - clique/toque no fundo do overlay fecha o zoom
 - clique/toque dentro do card/canvas ampliado nao fecha o zoom
 - em dispositivos touch, `pointerdown`/`touchstart` dentro do canvas ampliado deve preservar a interacao do Chart.js para tooltip/leitura de dado
+- graficos criados depois da inicializacao, como os do modo publico, devem ser registrados por `registrarCards`
+- o registro dinamico deve instalar o fechamento por `Escape` mesmo quando `setup` do dashboard privado nao foi executado
+- `styles/zoom.css` deve ser carregado e aplicado por `ClimateAssets.carregarCssZoom()` antes da criacao do overlay
+- abrir o zoom deve preservar `window.scrollY`; nao usar rolagem forcada para o topo
 
 Impacto: interacao de graficos.
 
@@ -999,6 +1042,8 @@ Fonte unica do relatorio:
 - os graficos do PDF nao devem reutilizar `chartInstances` nem canvases ativos da interface, porque os graficos da tela podem representar a janela movel das ultimas 24h
 - os graficos temporarios do PDF devem ser reconstruidos com os dados filtrados da data consultada
 - minima, maxima e media do grafico devem usar exatamente os mesmos valores validos usados pelos cards e tabelas
+- cobertura, alertas de qualidade e leituras suspeitas devem ser derivados da mesma fonte normalizada e incluidos no resumo/JSON
+- uma unica leitura valida nao pode produzir delta zero ou tendencia estavel; o relatorio deve mostrar delta `--` e cobertura correspondente
 
 Contrato por aba:
 
@@ -1245,7 +1290,44 @@ DOM + Chart.js
 
 Nenhum codigo morto de runtime confirmado na varredura atual.
 
-Observacao: existem copias legadas de alguns scripts diretamente em `scripts/` (`scripts/analytics.js`, `scripts/aqi.js`, `scripts/chart-utils.js`, `scripts/solar.js`, `scripts/ui.js`, `scripts/zoom.js`, `scripts/pdf-report.js`, `scripts/ai-service.js` e similares). A aplicacao atual, conforme `index.html`, carrega os modulos organizados em subpastas (`scripts/data/`, `scripts/charts/`, `scripts/ui/`, `scripts/reports/`, `scripts/assistant/`, etc.). Esses arquivos legados nao participam do runtime atual, mas ainda sao validados pelo `tools/validate-project.mjs`; antes de remover ou sincronizar, revisar historico/compatibilidade do projeto.
+Observacao: copias antigas foram isoladas em `legacy/scripts/`. Elas nao participam do runtime nem da validacao e nao devem receber correcoes destinadas a aplicacao ativa.
+
+## Qualidade operacional dos sensores
+
+- Toda metrica interna deve usar `ClimateDataQuality` como fonte unica de qualidade para UI, PDF/JSON e assistente.
+- Estados operacionais permitidos: `ok`, `parcial`, `desatualizado`, `suspeito` e `offline`.
+- Cards exibem ultima leitura, quantidade valida/esperada e cobertura do periodo.
+- `AppConfig.sensorSchemas` centraliza unidade, faixa plausivel, resolucao, sentinelas, frequencia esperada e divisor de normalizacao.
+- Valores suspeitos ou criticos permanecem visiveis com aviso; nao substituir por zero nem apagar a medicao.
+
+## Exportacao observavel
+
+- PDF/JSON deve anunciar progresso em regiao `aria-live`: preparacao, geracao de graficos, montagem e inicio do download.
+- Exportacao acima de 45 segundos deve falhar com mensagem acionavel e opcao de tentar novamente.
+- O teste de artefato PDF deve abrir o arquivo baixado e conferir quantidade de paginas, rodapes e blocos visuais.
+
+## Contexto temporal
+
+- `Agora (DD/MM)` identifica estacao do ano, header e leituras globais correntes.
+- `Data consultada: DD/MM/AAAA` identifica lua, ciclo solar e series filtradas pelo calendario.
+- A interface deve explicar em tooltip curto que esses recortes podem diferir.
+
+## Modo publico e privacidade
+
+- CEP usa mascara progressiva `00000-000`, sem alterar os oito digitos enviados ao servico.
+- A ultima resposta pode ser mantida em `sessionStorage` por no maximo 60 minutos e fica `desatualizada` apos 20 minutos.
+- Nunca persistir latitude, longitude, precisao nem CEP nesse cache.
+
+## Tabelas
+
+- Manter limite de 24 registros, cabecalho fixo, contador explicito, ordem temporal reversivel e download CSV da tabela visivel.
+- CSV e recurso complementar; nao substitui o JSON tecnico da exportacao.
+
+## Divida tecnica Firebase
+
+- Listeners continuam lendo paths completos em tempo real.
+- As chaves `DD-MM-AAAA` nao possuem ordenacao lexicografica cronologica; `orderByKey`, `startAt` e `endAt` por intervalo nao sao seguros nesse formato.
+- Antes de paginar, migrar ou adicionar indice temporal em timestamp/`AAAA-MM-DD`, preservando compatibilidade de escrita dos dispositivos e consultas historicas da assistente.
 
 # DIVIDA TECNICA
 

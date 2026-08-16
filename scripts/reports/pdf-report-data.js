@@ -32,7 +32,11 @@
         const dadosSelecionados = ClimateData.filterDataByDays(dadosOriginais, 2, selectedDate);
         const campos = getFields(tabConfig);
         const metricas = getAllReportMetrics(tabConfig);
-        const linhasDetalhadas = extractReportRows(dadosSelecionados, metricas, campos);
+        const qualidades = Object.fromEntries(metricas.map(metrica => [
+            metrica.key,
+            window.ClimateDataQuality?.analisarSerie?.(dadosSelecionados, campos[metrica.key]) || null,
+        ]));
+        const linhasDetalhadas = extractReportRows(dadosSelecionados, metricas, campos, qualidades);
         const linhasNormalizadas = construirLinhasNormalizadas(linhasDetalhadas, metricas);
 
         return {
@@ -40,6 +44,7 @@
             dadosSelecionados,
             campos,
             metricas,
+            qualidades,
             linhasDetalhadas,
             linhasNormalizadas,
         };
@@ -96,12 +101,16 @@
                 time: row.time,
                 values,
                 numericValues,
-                status: statuses.includes("Alerta") ? "Alerta" : "Estável",
+                status: statuses.includes("Crítico")
+                    ? "Crítico"
+                    : statuses.includes("Suspeito")
+                        ? "Suspeito"
+                        : statuses.includes("Alerta") ? "Alerta" : "Estável",
             };
         });
     }
 
-    function buildDailyAlerts(rows, metrics) {
+    function buildDailyAlerts(rows, metrics, qualidades = {}) {
         const alertMetrics = metrics.filter(metric => ["temperature", "feelsLike"].includes(metric.key));
         const alerts = [];
         const normalizadas = rows.some(row => row.numericValues)
@@ -120,10 +129,15 @@
             alerts.push(`${metric.label} fora da faixa ideal entre ${first} e ${last}.`);
         });
 
+        metrics.forEach(metric => {
+            const qualidade = qualidades[metric.key];
+            qualidade?.avisos?.forEach(aviso => alerts.push(`${metric.label}: ${aviso}`));
+        });
+
         return alerts.slice(0, 4);
     }
 
-    function buildSummaryCards(tabConfig, rows, latestData = {}, selectedDate = ClimateData.dataAtual()) {
+    function buildSummaryCards(tabConfig, rows, latestData = {}, selectedDate = ClimateData.dataAtual(), qualidades = {}) {
         if (tabConfig.tableType === "station") {
             return buildStationSummaryCards(latestData, selectedDate);
         }
@@ -135,7 +149,7 @@
             const values = normalizadas
                 .map(row => row.numericValues[metric.key])
                 .filter(Number.isFinite);
-            return buildMetricSummary(metric, values);
+            return buildMetricSummary(metric, values, qualidades[metric.key]);
         });
 
         return cards;
@@ -226,7 +240,7 @@
         };
     }
 
-    function buildMetricSummary(metric, values) {
+    function buildMetricSummary(metric, values, qualidade = null) {
         if (!values.length) {
             return emptySummary(metric.label);
         }
@@ -235,21 +249,33 @@
         const last = values[values.length - 1];
         const min = Math.min(...values);
         const max = Math.max(...values);
-        const delta = last - first;
-        const status = getMetricStatus(metric, last);
+        const delta = values.length >= 2 ? last - first : null;
+        const status = qualidade?.nivel === "critica"
+            ? "Leitura crítica"
+            : qualidade && !["adequada", "sem_dados"].includes(qualidade.nivel)
+                ? qualidade.rotulo
+                : getMetricStatus(metric, last);
+        const detalhes = [
+            { label: "Mín", value: formatValue(min, metric.unit) },
+            { label: "Máx", value: formatValue(max, metric.unit) },
+            { label: "Delta", value: Number.isFinite(delta) ? formatDelta(delta, metric.unit) : "--" },
+        ];
+        if (qualidade?.leiturasEsperadas > 0) {
+            detalhes.push({
+                label: "Cobertura",
+                value: `${qualidade.leiturasValidas}/${qualidade.leiturasEsperadas}`,
+            });
+        }
 
         return {
             label: metric.label,
             current: formatValue(last, metric.unit),
             min: formatValue(min, metric.unit),
             max: formatValue(max, metric.unit),
-            delta: formatDelta(delta, metric.unit),
-            details: [
-                { label: "Mín", value: formatValue(min, metric.unit) },
-                { label: "Máx", value: formatValue(max, metric.unit) },
-                { label: "Delta", value: formatDelta(delta, metric.unit) },
-            ],
+            delta: Number.isFinite(delta) ? formatDelta(delta, metric.unit) : "--",
+            details: detalhes,
             status,
+            qualidade: window.ClimateDataQuality?.resumirParaExportacao?.(qualidade) || null,
         };
     }
 
@@ -353,7 +379,7 @@
         return `${dia}/${mes}/${data.getFullYear()}`;
     }
 
-    function extractReportRows(data, metrics, fields) {
+    function extractReportRows(data, metrics, fields, qualidades = {}) {
         const rows = [];
         const firebaseDates = Object.keys(data || {}).sort((a, b) => ClimateData.parseFirebaseDate(a) - ClimateData.parseFirebaseDate(b));
 
@@ -375,6 +401,15 @@
                         const rawValue = item[fieldName];
                         const numericValue = ClimateData.normalizeMeasurementValue(fieldName, rawValue);
                         const hasValue = numericValue !== null;
+                        const qualidadeLeitura = window.ClimateDataQuality?.obterQualidadeLeitura?.(
+                            qualidades[metric.key],
+                            firebaseDate,
+                            time,
+                            itemKey
+                        );
+                        const statusQualidade = qualidadeLeitura?.nivel === "critica"
+                            ? "Crítico"
+                            : qualidadeLeitura?.nivel === "suspeita" ? "Suspeito" : null;
                         rows.push({
                             time: metricIndex === 0 ? `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}` : "",
                             fullTime: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
@@ -382,7 +417,8 @@
                             label: metric.label,
                             numericValue: hasValue ? numericValue : null,
                             value: hasValue ? formatValue(numericValue, metric.unit) : "--",
-                            status: hasValue ? getMetricStatus(metric, numericValue) : "Sem dados",
+                            status: hasValue ? (statusQualidade || getMetricStatus(metric, numericValue)) : "Sem dados",
+                            qualidade: qualidadeLeitura || null,
                         });
                     });
                 }

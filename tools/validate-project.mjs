@@ -19,7 +19,7 @@ function listFiles(dir, extension) {
     return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
         const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory()) {
-            return entry.name === "node_modules" ? [] : listFiles(fullPath, extension);
+            return ["node_modules", "legacy"].includes(entry.name) ? [] : listFiles(fullPath, extension);
         }
         return entry.isFile() && entry.name.endsWith(extension) ? [fullPath] : [];
     });

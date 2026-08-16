@@ -4,6 +4,7 @@
     let contextoGetter = null;
     let formatoSelecionado = "pdf";
     let carregamentoRelatorio = null;
+    let ultimaTentativa = null;
 
     function setup({ buttonId, formatName = "exportFormat", getContext } = {}) {
         contextoGetter = getContext;
@@ -12,6 +13,7 @@
 
         configurarControlesFormato(botao, formatName);
         botao.addEventListener("click", () => exportarAbaAtiva(botao));
+        document.getElementById("btnRetryExport")?.addEventListener("click", () => ultimaTentativa?.());
     }
 
     async function exportarAbaAtiva(botao) {
@@ -19,34 +21,87 @@
         const textoOriginal = botao.innerText;
         botao.disabled = true;
         botao.innerText = formato === "json" ? "Gerando JSON..." : "Gerando PDF...";
+        ultimaTentativa = () => exportarAbaAtiva(botao);
+        atualizarProgresso("Preparando exportação.", "loading");
 
         try {
-            const exportador = await carregarExportador(formato);
-            const contexto = contextoGetter ? contextoGetter() : {};
-            const relatorio = await exportador.buildReport(contexto);
+            await executarComTimeout(async controle => {
+                const informar = mensagem => {
+                    if (!controle.cancelado) atualizarProgresso(mensagem, "loading");
+                };
+                const exportador = await carregarExportador(formato);
+                if (controle.cancelado) return;
+                const contexto = contextoGetter ? contextoGetter() : {};
+                if (!window.ClimateContracts?.validarContextoRelatorio?.(contexto)) {
+                    throw new TypeError("Contexto de exportação inválido.");
+                }
+                const relatorio = await exportador.buildReport(contexto, {
+                    onProgress: informar,
+                });
+                if (controle.cancelado) return;
 
-            if (formato === "json") {
-                exportador.exportJsonReport(relatorio);
-                return;
-            }
+                if (formato === "json") {
+                    exportador.exportJsonReport(relatorio);
+                    atualizarProgresso("Download iniciado.", "success");
+                    return;
+                }
 
-            await exportador.carregarBibliotecasPdf?.();
-            const raizRenderizacao = document.createElement("div");
-            raizRenderizacao.className = "pdf-render-root";
-            try {
-                raizRenderizacao.appendChild(relatorio.element);
-                document.body.appendChild(raizRenderizacao);
-                await window.ClimatePdfReportModules.pdf.generatePdf(relatorio.element, relatorio.fileNamePdf);
-            } finally {
-                raizRenderizacao.remove();
-            }
+                atualizarProgresso("Montando PDF.", "loading");
+                await exportador.carregarBibliotecasPdf?.();
+                if (controle.cancelado) return;
+                const raizRenderizacao = document.createElement("div");
+                raizRenderizacao.className = "pdf-render-root";
+                try {
+                    raizRenderizacao.appendChild(relatorio.element);
+                    document.body.appendChild(raizRenderizacao);
+                    await window.ClimatePdfReportModules.pdf.generatePdf(relatorio.element, relatorio.fileNamePdf, {
+                        deveCancelar: () => controle.cancelado,
+                    });
+                    if (controle.cancelado) return;
+                    atualizarProgresso("Download iniciado.", "success");
+                } finally {
+                    raizRenderizacao.remove();
+                }
+            });
         } catch (error) {
             window.ClimateDiagnostics?.depurar("Erro ao exportar dados.", error);
-            alert("Não foi possível exportar os dados.");
+            const mensagem = error?.name === "TimeoutError"
+                ? "A exportação demorou além do esperado. Verifique a conexão e tente novamente."
+                : "Falha ao exportar. Verifique a conexão e tente novamente.";
+            atualizarProgresso(mensagem, "error", true);
         } finally {
             botao.disabled = false;
             botao.innerText = textoOriginal || obterRotuloBotao(obterFormatoSelecionado());
         }
+    }
+
+    function executarComTimeout(acao) {
+        const limite = Number(window.AppConfig?.exports?.timeoutMs) || 45000;
+        let temporizador;
+        const controle = { cancelado: false };
+        return Promise.race([
+            Promise.resolve().then(() => acao(controle)),
+            new Promise((resolve, reject) => {
+                temporizador = setTimeout(() => {
+                    controle.cancelado = true;
+                    const erro = new Error("Tempo limite da exportação excedido.");
+                    erro.name = "TimeoutError";
+                    reject(erro);
+                }, limite);
+            }),
+        ]).finally(() => clearTimeout(temporizador));
+    }
+
+    function atualizarProgresso(mensagem, tipo, permitirNovaTentativa = false) {
+        const feedback = document.getElementById("exportFeedback");
+        const status = document.getElementById("exportStatus");
+        const repetir = document.getElementById("btnRetryExport");
+        if (!feedback || !status) return;
+        feedback.hidden = false;
+        feedback.classList.toggle("is-error", tipo === "error");
+        feedback.setAttribute("role", tipo === "error" ? "alert" : "status");
+        status.textContent = mensagem;
+        if (repetir) repetir.hidden = !permitirNovaTentativa;
     }
 
     function configurarControlesFormato(botao, formatName) {

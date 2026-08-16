@@ -2,6 +2,7 @@
 
 const AppConfig = window.AppConfig;
 const ClimateData = window.ClimateData;
+const ClimateDataQuality = window.ClimateDataQuality;
 const ClimateAnalytics = window.ClimateAnalytics;
 const ClimateInsightsAmbientais = window.ClimateInsightsAmbientais;
 const ClimateSolar = window.ClimateSolar;
@@ -28,6 +29,7 @@ const EstacaoView = window.EstacaoView;
 if (
     !AppConfig ||
     !ClimateData ||
+    !ClimateDataQuality ||
     !ClimateAnalytics ||
     !ClimateInsightsAmbientais ||
     !ClimateSolar ||
@@ -606,7 +608,7 @@ function inicializarDashboardInterno() {
     renderStationData();
 
     ClimateAssets.executarQuandoOcioso(() => {
-        ClimateAssets.carregarCssUmaVez("styles/zoom.css?v=20260623-1", "climate-zoom-css")
+        ClimateAssets.carregarCssZoom()
             .catch(error => window.ClimateDiagnostics?.depurar("Falha ao carregar CSS de zoom.", error));
     }, 1200);
 

@@ -1,8 +1,26 @@
 {
   "scripts": {
     "validate": "node tools/validate-project.mjs",
+    "lint": "eslint scripts tools",
+    "format": "prettier --write index.html style.css styles scripts tools docs/*.md",
     "test:assistant": "node tools/testar-assistente.mjs",
     "test:report": "node tools/testar-relatorio.mjs",
-    "test:accessibility": "node tools/testar-acessibilidade.mjs"
+    "test:pdf-artifact": "node tools/testar-pdf-artifact.mjs",
+    "test:export": "node tools/testar-exportacao.mjs",
+    "test:accessibility": "node tools/testar-acessibilidade.mjs",
+    "test:data-quality": "node tools/testar-qualidade-dados.mjs",
+    "test:public": "node tools/testar-modo-publico.mjs",
+    "test:axe": "node tools/testar-axe.mjs",
+    "test:tables": "node tools/testar-tabelas.mjs"
+  },
+  "devDependencies": {
+    "axe-core": "^4.13.0",
+    "eslint": "^10.8.1",
+    "globals": "^17.11.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
+    "pdfjs-dist": "^6.2.108",
+    "playwright-core": "^1.62.1",
+    "prettier": "^3.9.6"
   }
 }

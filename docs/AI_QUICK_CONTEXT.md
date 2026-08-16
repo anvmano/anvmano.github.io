@@ -21,7 +21,7 @@ O site possui modo publico sem login e modo interno com Google Firebase Auth. Se
 - Google Fonts.
 - APIs publicas externas: BrasilAPI/ViaCEP para CEP, Open-Meteo Forecast, Open-Meteo Air Quality e Open-Meteo Geocoding.
 - Sem React, Vue, Angular, .NET, SQL ou Arduino no projeto analisado.
-- `npm run validate` executa uma checagem estrutural local sem dependencias externas.
+- O projeto usa dependencias de desenvolvimento para ESLint, Prettier, axe-core, Playwright e inspecao do artefato PDF; o runtime publicado continua estatico e sem bundle obrigatorio.
 
 ## Arquitetura Resumida
 
@@ -29,6 +29,7 @@ Arquivos principais:
 
 - `index.html`: estrutura DOM, ordem dos scripts e carregamento `defer` dos scripts externos.
 - `scripts/config.js`: Firebase, paths, ids, cores, campos, unidades e diagnostico leve de console.
+- `scripts/schemas/contracts.js`: contratos versionados do Firebase, contexto da assistente e contexto do relatorio.
 - `scripts/runtime-loader.js`: carregador leve para recursos sob demanda, como Chart.js, CSS de zoom/relatorio, modulos de PDF e modulos da assistente.
 - `scripts/main.js`: orquestrador da aplicacao.
 - `scripts/firebase-service.js`: conexao e listeners Firebase.
@@ -49,6 +50,7 @@ Arquivos principais:
 - `scripts/assistant/assistant-config.js`: constantes, ambientes, metricas e aliases.
 - `scripts/assistant/assistant-format.js`: formatacao e normalizacao compartilhada.
 - `scripts/data/data-utils.js`: datas, filtros, tabelas e series.
+- `scripts/data/data-quality.js`: contrato central de cobertura, atualidade, plausibilidade, saltos e repeticao; classifica cada metrica como `ok`, `parcial`, `desatualizado`, `suspeito` ou `offline` e expoe `window.ClimateDataQuality`.
 - `scripts/charts/chart-utils.js`: Chart.js comum e faixa de conforto.
 - `scripts/charts/aqi.js`: AQI estimado da Sala/MQ135, chip do header e popover.
 - `scripts/charts/season.js`: estacao do ano atual, chip do header, popover, posicao na faixa anual e progresso dentro da estacao atual.
@@ -64,6 +66,11 @@ Arquivos principais:
 - `scripts/views/public-weather-view.js`: modo publico por CEP/localizacao, com cards, graficos externos e recomendacoes ambientais.
 - `tools/validate-project.mjs`: valida sintaxe JS, referencias locais, imports CSS e contratos HTML/config.
 - `tools/testar-assistente.mjs`: cobre regressao de periodos, operacoes, atalhos globais e respostas estruturadas da assistente; execute com `npm run test:assistant`.
+- `tools/testar-relatorio.mjs`: valida a fonte unica do PDF/JSON, valores ausentes e qualidade dos dados; execute com `npm run test:report`.
+- `tools/testar-acessibilidade.mjs`: valida abas ARIA e contrato acessivel do zoom; execute com `npm run test:accessibility`.
+- `tools/testar-qualidade-dados.mjs`: valida cobertura, amostra unica, pH suspeito e turbidez constante; execute com `npm run test:data-quality`.
+- `tools/testar-modo-publico.mjs`: valida concorrencia de consultas, estados acessiveis, limpeza de contexto e zoom publico; execute com `npm run test:public`.
+- `tools/testar-axe.mjs`, `tools/testar-tabelas.mjs`, `tools/testar-exportacao.mjs` e `tools/testar-pdf-artifact.mjs`: validam acessibilidade/contraste, ordenacao/CSV, progresso/timeout e o PDF baixado.
 
 ## Fluxo Principal
 
@@ -79,8 +86,8 @@ Arquivos principais:
    - `historico/Aquario`
    - `historico/AirQuality`
 8. Dados internos sao armazenados em `latestData`.
-9. Views filtram pela data selecionada e renderizam estatisticas/tabelas imediatamente; graficos carregam Chart.js antes do primeiro desenho real.
-10. No modo publico, CEP/localizacao consulta APIs externas e renderiza temperatura, sensacao termica, umidade, pressao, AQI externo, estacao do ano, fase da lua, recomendacao de ventilacao, chuva nas proximas 6h, indice UV, ponto de orvalho/risco estimado de mofo e graficos de temperatura, sensacao, umidade, pressao e ciclo solar. Os graficos publicos de temperatura, sensacao, umidade e pressao usam janela movel das ultimas 24h, terminando na data/hora retornada pela localizacao consultada. O card publico da fase da lua segue o mesmo contrato visual do card interno: fase, iluminacao, idade, proxima cheia e proxima nova, usando a data/hora retornada para a localizacao consultada quando disponivel. Os cards de insights nao possuem uma faixa de titulo propria acima da grade.
+9. Views filtram pela data selecionada, aplicam `ClimateDataQuality` e renderizam estatisticas/tabelas imediatamente; graficos carregam Chart.js antes do primeiro desenho real.
+10. No modo publico, CEP/localizacao consulta APIs externas e renderiza temperatura, sensacao termica, umidade, pressao, AQI externo, estacao do ano, fase da lua, recomendacao de ventilacao, chuva nas proximas 6h, indice UV, ponto de orvalho/risco estimado de mofo e graficos de temperatura, sensacao, umidade, pressao e ciclo solar. Os graficos publicos usam janela movel de 24h. O CEP recebe mascara progressiva `00000-000`. A ultima resposta pode ser restaurada em `sessionStorage` por ate 60 minutos, sem CEP, latitude, longitude ou precisao, exibindo idade e estado desatualizado apos 20 minutos.
 11. Na aba Estacao, ventilacao e risco de mofo usam os sensores internos mesmo sem localizacao. Chuva, UV e ventilacao combinada com o exterior so sao carregados quando o usuario aciona a consulta por localizacao; latitude/longitude permanecem apenas em memoria. A grade privada tambem nao possui faixa de titulo; o controle e o retorno da localizacao ficam no card de chuva.
 
 ## Componentes Criticos
@@ -104,13 +111,13 @@ Arquivos principais:
 - Solar: `scripts/charts/solar.js` e `scripts/views/solar-view.js`.
 - Tabelas: `scripts/data/data-utils.js` + views.
 - Heatmaps: `scripts/data/analytics.js`; containers em `index.html`; ids em `scripts/config.js`.
-- Zoom: `scripts/charts/zoom.js`; o overlay e um dialogo modal acessivel, move o foco para Fechar, contem `Tab`/`Shift+Tab` enquanto aberto e devolve o foco ao disparador ao fechar. Em dispositivos touch, toque dentro do canvas ampliado interage com o tooltip e nao fecha o overlay.
+- Zoom: `scripts/charts/zoom.js`; o overlay e um dialogo modal acessivel, move o foco para Fechar, contem `Tab`/`Shift+Tab` enquanto aberto e devolve o foco ao disparador ao fechar. Em dispositivos touch, toque dentro do canvas ampliado interage com o tooltip e nao fecha o overlay. `registrarCards` atende graficos criados dinamicamente no modo publico e registra `Escape` mesmo quando o dashboard privado nao foi inicializado. Antes de criar o dialogo, o modulo aguarda `ClimateAssets.carregarCssZoom()` e preserva a posicao de rolagem atual.
 - PDF: `scripts/reports/pdf-report.js`, `scripts/reports/pdf-report-*.js` e `styles/reports/pdf-report.css`.
 - Abas e date picker: `scripts/ui/ui.js`.
 - Abas seguem o padrao ARIA com foco movel: apenas a ativa usa `tabindex="0"`; `ArrowLeft`/`ArrowRight` circulam, `Home` vai para Estacao e `End` vai para Aquario, sempre sincronizando foco e `aria-selected`.
 - Login Google e fluxo publico/interno: `scripts/auth/auth-service.js`, `scripts/views/public-weather-view.js`, `scripts/external/*` e `scripts/main.js`.
 - Estilo visual: `style.css` importa os arquivos em `styles/`.
-- Alguns arquivos antigos diretamente em `scripts/` existem como copias legadas; o runtime atual usa os caminhos carregados em `index.html`, principalmente subpastas como `scripts/data/`, `scripts/charts/`, `scripts/ui/`, `scripts/reports/`, `scripts/assistant/`, `scripts/views/`, `scripts/auth/` e `scripts/external/`.
+- Copias antigas foram isoladas em `legacy/scripts/`, fora do runtime e da validacao estrutural. Os arquivos ativos ficam em `scripts/` e suas subpastas.
 
 ## Fluxos Criticos
 
@@ -122,7 +129,7 @@ Arquivos principais:
 - Chart.js nao e carregado no HTML inicial. Quando uma view encontra dados para grafico e `window.Chart` ainda nao existe, mostra `Carregando grafico...`, carrega Chart.js por `ClimateAssets.carregarChart()` e redesenha a data selecionada.
 - Se grafico comum nao tem pontos numericos, `ClimateCharts.createLineChart` limpa o canvas, retorna `null` e o caller mostra mensagem no card.
 - Cada id em `AppConfig.ids.chartContainers` deve existir no `.chart-card` individual correspondente.
-- Tabelas mostram ate 24 linhas.
+- Tabelas mostram ate 24 linhas, cabecalho fixo, contador `N de 24 horarios`, alternancia cronologica e download CSV da tabela visivel.
 - Cards e tabelas continuam filtrados pela data selecionada, mesmo quando os graficos usam a janela movel de 24h.
 - Valores das tabelas exibem unidades sem espaco antes da unidade, como `26.40°C`, `57.50%`, `8.66ppm`, `1.20NTU` e `930.60hPa`.
 - Leituras do Aquario sao normalizadas em `ClimateData.normalizeMeasurementValue`: TDS divide por 10 e Turbidez divide por 1000 antes de tabelas, cards, graficos e PDF.
@@ -133,11 +140,12 @@ Arquivos principais:
 - Eixo Y dos graficos deve exibir a unidade da metrica quando houver: `°C`, `%`, `hPa`, `ppm`, `NTU`.
 - Graficos comuns de series temporais usam horarios no eixo X em diagonal; graficos solares e heatmaps preservam seu layout especifico.
 - No grafico Ciclo Solar do Dia, a tooltip dos eventos solares deve aparecer somente quando o cursor/toque estiver realmente sobre ou proximo do ponto solar ativo, sem ativacao por eixo X distante. O card do grafico exibe chip `Duracao do dia: <h>h<mm>` quando nascer e por do sol existem, tanto no modo interno quanto no modo publico, calculado como por do sol menos nascer do sol. Nos graficos comparativos da aba Estacao, a tooltip deve listar as series na ordem visual das linhas no ponto consultado, do maior valor para o menor. No grafico Nascer & Por do Sol, a tooltip tambem deve seguir a ordem visual real das linhas no canvas, considerando seus dois eixos Y.
-- Zoom de graficos: duplo clique ou botao amplia; `Esc`, botao de fechar ou clique/toque no fundo do overlay fecha. Em mobile/touch, `pointerdown`/`touchstart` dentro do canvas ampliado nao fecha o overlay para preservar tooltip e leitura do dado.
+- Zoom de graficos: duplo clique ou botao amplia; `Esc`, botao de fechar ou clique/toque no fundo do overlay fecha. Em mobile/touch, `pointerdown`/`touchstart` dentro do canvas ampliado nao fecha o overlay para preservar tooltip e leitura do dado. Abrir o zoom nao pode mover a pagina para o topo; o overlay so e montado depois que `styles/zoom.css` estiver aplicado.
 - Mensagens de graficos vazios devem seguir `Sem dados de <tipo_grafico> em <DD/MM/AAAA>`.
 - Aba ativa e persistida em `localStorage.activeTab`.
 - Swipe touch segue o fluxo Estacao ⇄ Sala ⇄ Quarto ⇄ Aquario. Arrastar para esquerda avanca; arrastar para direita volta; extremidades nao mudam de aba. Gestos iniciados em tabelas, heatmaps ou qualquer area com rolagem horizontal nao trocam de aba.
 - A aba Estacao e a visao global do sistema: mostra faixa das estacoes do ano, fase da lua da data selecionada, cards globais, graficos comparativos de temperatura/umidade por ambiente e graficos solares. A faixa das estacoes usa a data atual do navegador, nao a data selecionada no calendario, e o marcador progride por segmento visual de estacao: Verao 0-25%, Outono 25-50%, Inverno 50-75%, Primavera 75-100%. No PDF, o card de Estacao do ano mostra o progresso dentro da estacao atual, nao a posicao anual da barra. O resumo global da Estacao nasce com placeholders/altura reservada para reduzir CLS enquanto os dados Firebase chegam.
+- A toolbar explicita os dois recortes: `Agora (DD/MM)` para contexto corrente e `Data consultada: DD/MM/AAAA` para lua, solar e series filtradas. Cards globais atuais usam o rotulo `Agora`.
 - O header exibe os chips na ordem Estacao do ano, AQI, ciclo solar, fase da lua e relogio. Os chips de Estacao do ano, AQI, ciclo solar e fase da lua devem manter apenas o icone/estado visual dentro do pill; descricoes, valores e classificacoes ficam no `title`/`aria-label` e popover. Em mobile, o relogio e a marca `Estacao Climatica` podem ser ocultados e os chips principais devem ocupar toda a largura util do header.
 - Indicador astronomico do header e um chip visual no tamanho aproximado do relogio, sem texto interno; o tooltip/`aria-label` mostra nascer e por do sol. Clique/toque abre popover com amanhecer, nascer do sol, zenite, por do sol, anoitecer, estado atual e duracao do dia. No modo interno usa `historico/NascePorDoSol`; no modo publico usa os eventos solares da localizacao/CEP consultado pela Open-Meteo. Antes de uma localizacao publica ser consultada, deve ficar em estado aguardando e orientar CEP/localizacao, sem usar fallback interno como se fosse dado real.
 - Indicador AQI do header tem dois modos. No dashboard interno usa dados mais recentes da Sala/MQ135 em `historico/AirQuality` e deve aparecer como `AQI estimado da Sala`. No modo publico usa o AQI externo da localizacao/CEP consultado e deve aparecer como `AQI externo`, sem mencionar Sala ou MQ135. O valor nao fica visivel dentro do chip, mas permanece no tooltip/`aria-label` e no popover aberto por clique/toque. O chip usa um mini medidor visual colorido, com posicao do ponteiro derivada da classificacao AQI.
@@ -151,6 +159,7 @@ Arquivos principais:
 - `scripts/reports/pdf-report-data.js` cria uma unica fonte normalizada filtrada por `selectedDate`; resumo, alertas, graficos, tabela e JSON devem derivar desse mesmo recorte.
 - Valores ausentes (`null`, `undefined` ou string vazia) permanecem `null` nas series do relatorio, geram lacunas no grafico e nao participam de media, minima ou maxima.
 - Exportacao PDF/JSON interna so e inicializada para usuarios internos autorizados.
+- A exportacao anuncia `Preparando`, `Gerando graficos`, `Montando relatorio/PDF`, `Download iniciado` ou `Falha` em regiao `aria-live`; aplica timeout de 45 segundos e oferece nova tentativa apos falha.
 - Controle `PDF/JSON` em `name="exportFormat"` altera a label do botao `#btnExportData`.
 - A fachada `ClimatePdfReport` fica carregada no inicio, mas os modulos `scripts/reports/pdf-report-*` so entram no clique de exportacao. Exportacao JSON carrega somente os modulos de relatorio; PDF tambem carrega CSS do relatorio, Chart.js, html2canvas e jsPDF sob demanda.
 - Bibliotecas de PDF (`html2canvas` e `jsPDF`) sao carregadas sob demanda apenas quando o formato PDF e executado; exportacao JSON nao deve carregar essas dependencias.
@@ -203,14 +212,15 @@ Arquivos principais:
 4. `scripts/assistant/ai-service.js`
 5. `scripts/chat.js` e `scripts/assistant/*`
 6. `scripts/data/data-utils.js`
-7. `scripts/charts/chart-utils.js`
-8. `scripts/charts/aqi.js`
-9. `scripts/charts/moon.js`
-10. `scripts/data/analytics.js`
-11. `scripts/charts/solar.js`
-12. `index.html`
-13. `style.css` e `styles/`
-14. Views por aba
+7. `scripts/data/data-quality.js`
+8. `scripts/charts/chart-utils.js`
+9. `scripts/charts/aqi.js`
+10. `scripts/charts/moon.js`
+11. `scripts/data/analytics.js`
+12. `scripts/charts/solar.js`
+13. `index.html`
+14. `style.css` e `styles/`
+15. Views por aba
 
 ## Regras Importantes
 

@@ -6,7 +6,16 @@
     let carregamentoAssistente = null;
 
     function configurar(opcoes = {}) {
-        opcoesConfiguradas = opcoes;
+        opcoesConfiguradas = {
+            ...opcoes,
+            getContext: () => {
+                const contexto = opcoes.getContext?.() || {};
+                if (!window.ClimateContracts?.validarContextoAssistente?.(contexto)) {
+                    throw new TypeError("Contexto da assistente inválido.");
+                }
+                return contexto;
+            },
+        };
 
         if (window.ClimateAssistant?.ui) {
             inicializarAssistente();

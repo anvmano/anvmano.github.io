@@ -203,6 +203,27 @@ assert.equal(montarResultado("minima").valor, 20);
 assert.equal(montarResultado("delta").diferenca, 4);
 assert.equal(montarResultado("tendencia").tendencia, "subindo");
 assert.equal("amostras" in montarResultado("media"), false);
+const estatisticaUmaMedicao = contexto.ClimateAssistant.metrics.calculateStats([28.06]);
+assert.equal(estatisticaUmaMedicao.delta, null);
+assert.equal(contexto.ClimateAssistant.metrics.trendFromDelta(estatisticaUmaMedicao.delta), "dados insuficientes");
+
+const resultadoTendenciaInsuficiente = contexto.ClimateAssistant.metrics.buildMetricResult(
+    contexto.ClimateAssistant.config.ENVIRONMENTS.aquario,
+    { label: "Temperatura", key: "temperaturaDS18B20", unit: "°C", aliases: ["temperatura"] },
+    [{
+        date: "10-08-2026",
+        dateLabel: "10/08/2026",
+        values: [28.06],
+        records: [{ value: 28.06, time: "00:00" }],
+        stats: estatisticaUmaMedicao,
+        qualidade: { nivel: "incompleta", status: "Dados incompletos", leiturasValidas: 1, leiturasEsperadas: 24, avisos: [] },
+    }],
+    ["10-08-2026"],
+    { operation: "tendencia", periodLabel: "10/08/2026" },
+    {},
+    {}
+);
+assert.equal(resultadoTendenciaInsuficiente.tipo_resultado, "dados_insuficientes_tendencia");
 
 const metricasIncompativeis = contexto.ClimateAssistant.metrics.resolveMetricsForEnvironments(
     [contexto.ClimateAssistant.config.ENVIRONMENTS.estacao],

@@ -59,6 +59,15 @@
     color: #94a3b8;
 }
 
+.stats-card__trend--insufficient,
+.stats-card__trend--suspicious {
+    color: #fbbf24;
+}
+
+.stats-card__trend--critical {
+    color: #fb7185;
+}
+
 .stats-card__value {
     display: block;
     color: var(--text-primary);
@@ -95,6 +104,47 @@
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
+
+.stats-card__quality {
+    margin: 0.7rem 0 0;
+    padding-top: 0.55rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    font-weight: 650;
+    line-height: 1.35;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.15rem 0.5rem;
+}
+
+.stats-card__quality strong { color: currentColor; }
+.stats-card__quality span:last-child { grid-column: 1 / -1; }
+
+.stats-card__quality--critica {
+    color: #fb7185;
+}
+
+.stats-card__quality--suspeita,
+.stats-card__quality--incompleta,
+.stats-card__quality--desatualizada {
+    color: #fbbf24;
+}
+
+.stats-card__quality--adequada { color: #34d399; }
+.stats-card__quality--sem_dados { color: var(--text-muted); }
+
+.station-context-badge {
+    position: absolute;
+    top: 0.3rem;
+    right: 0.55rem;
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+.season-timeline,
+.moon-summary { padding-top: 1.45rem; }
 
 .station-summary-card {
     min-width: 0;

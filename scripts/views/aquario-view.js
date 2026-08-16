@@ -41,9 +41,9 @@
             containerId: ids.chartContainers.aquariumPh,
             data: chartData,
             key: aquariumFields.ph,
-            label: "PH",
+            label: "pH",
             color: colors.teal,
-            emptyMessage: `Sem dados de PH em ${selectedDate.replace(/-/g, "/")}.`
+            emptyMessage: `Sem dados de pH em ${selectedDate.replace(/-/g, "/")}.`
         });
         createChart({
             canvasCtx: tdsChart,

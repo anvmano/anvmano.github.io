@@ -88,7 +88,7 @@
 
     function normalizarDetalhesResumo(card) {
         if (Array.isArray(card.details) && card.details.length) {
-            return card.details.slice(0, 3).map(detail => ({
+            return card.details.slice(0, 4).map(detail => ({
                 label: detail.label || "",
                 value: detail.value ?? "--",
             }));

@@ -3,6 +3,38 @@
 (function () {
     let zoomOverlay = null;
     let disparadorZoom = null;
+    let eventoEscapeRegistrado = false;
+    let carregamentoEstilosZoom = null;
+
+    function garantirEstilosZoom() {
+        if (!carregamentoEstilosZoom) {
+            carregamentoEstilosZoom = window.ClimateAssets?.carregarCssZoom?.()
+                || Promise.reject(new Error("Carregador dos estilos de zoom indisponível."));
+            carregamentoEstilosZoom = carregamentoEstilosZoom.catch(erro => {
+                carregamentoEstilosZoom = null;
+                throw erro;
+            });
+        }
+        return carregamentoEstilosZoom;
+    }
+
+    async function abrirZoom(card, zoomOptions, disparador) {
+        try {
+            await garantirEstilosZoom();
+            handleZoom(card, zoomOptions, disparador);
+        } catch (erro) {
+            window.ClimateDiagnostics?.erro("Falha ao preparar o zoom do gráfico.", erro);
+        }
+    }
+
+    function registrarFechamentoPorEscape() {
+        if (eventoEscapeRegistrado) return;
+
+        document.addEventListener("keydown", event => {
+            if (event.key === "Escape") closeZoom();
+        });
+        eventoEscapeRegistrado = true;
+    }
 
     function isTouchDevice() {
         return window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
@@ -56,16 +88,16 @@
 
     function createZoomChart({ sourceChart, targetCtx, getZoomOptions }) {
         const sourceId = sourceChart.canvas.id;
-        const solarTodayId = window.AppConfig.ids.charts.solarToday;
+        const eGraficoSolar = Boolean(sourceChart.$solarDayTimes);
         const config = {
             type: sourceChart.config.type || "line",
             data: cloneChartData(sourceChart),
-            options: getZoomOptions(sourceId),
-            plugins: sourceId === solarTodayId ? [ClimateSolar.solarDayBackgroundPlugin] : []
+            options: getZoomOptions?.(sourceId) || {},
+            plugins: eGraficoSolar ? [ClimateSolar.solarDayBackgroundPlugin] : []
         };
 
         const zoomChart = new Chart(targetCtx, config);
-        if (sourceId === solarTodayId) {
+        if (eGraficoSolar) {
             zoomChart.$solarDayTimes = sourceChart.$solarDayTimes;
         }
         if (sourceChart.$comfortBand) {
@@ -163,7 +195,6 @@
         document.body.appendChild(overlay);
         createZoomChart({ sourceChart, targetCtx: zoomCanvas.getContext("2d"), getZoomOptions });
         closeButton.focus({ preventScroll: true });
-        window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
     function createZoomButton(card, zoomOptions) {
@@ -183,24 +214,28 @@
         `;
         button.addEventListener("click", event => {
             event.stopPropagation();
-            handleZoom(card, zoomOptions, button);
+            void abrirZoom(card, zoomOptions, button);
         });
 
         card.appendChild(button);
     }
 
     function setup(zoomOptions) {
-        document.addEventListener("keydown", event => {
-            if (event.key === "Escape") closeZoom();
-        });
+        registrarFechamentoPorEscape();
+        registrarCards(document, zoomOptions);
+    }
 
-        document.querySelectorAll(".chart-card").forEach(card => {
+    function registrarCards(raiz = document, zoomOptions) {
+        registrarFechamentoPorEscape();
+        raiz.querySelectorAll(".chart-card").forEach(card => {
+            if (card.dataset.zoomRegistrado === "true") return;
+            card.dataset.zoomRegistrado = "true";
             card.classList.add("chart-card--zoomable");
             card.removeAttribute("title");
             createZoomButton(card, zoomOptions);
             card.addEventListener("dblclick", () => {
                 const botaoZoom = card.querySelector(".chart-zoom-button");
-                handleZoom(card, zoomOptions, botaoZoom || card);
+                void abrirZoom(card, zoomOptions, botaoZoom || card);
             });
         });
     }
@@ -208,5 +243,6 @@
     window.ClimateZoom = {
         closeZoom,
         setup,
+        registrarCards,
     };
 })();

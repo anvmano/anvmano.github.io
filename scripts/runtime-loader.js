@@ -9,6 +9,7 @@
         chat: "20260614-3",
         pdf: "20260622-5",
         css: "20260623-4",
+        zoomCss: "20260816-1",
     };
 
     const MODULOS_ASSISTENTE = [
@@ -17,10 +18,10 @@
         "scripts/assistant/assistant-format.js?v=20260614-1",
         "scripts/assistant/assistant-solar.js?v=20260816-2",
         "scripts/assistant/assistant-aqi.js?v=20260614-1",
-        "scripts/assistant/assistant-metrics.js?v=20260816-1",
+        "scripts/assistant/assistant-metrics.js?v=20260816-2",
         "scripts/assistant/assistant-intent.js?v=20260816-2",
         "scripts/assistant/assistant-planner.js?v=20260816-2",
-        "scripts/assistant/assistant-query.js?v=20260816-1",
+        "scripts/assistant/assistant-query.js?v=20260816-2",
         "scripts/assistant/assistant-ui.js?v=20260816-1",
     ];
 
@@ -30,8 +31,8 @@
         "scripts/reports/pdf-report-data.js?v=20260816-2",
         "scripts/reports/pdf-report-dom.js?v=20260622-1",
         "scripts/reports/pdf-report-charts.js?v=20260816-2",
-        "scripts/reports/pdf-report-pdf.js?v=20260622-2",
-        "scripts/reports/pdf-report-export.js?v=20260816-2",
+        "scripts/reports/pdf-report-pdf.js?v=20260816-1",
+        "scripts/reports/pdf-report-export.js?v=20260816-3",
     ];
 
     function carregarScriptUmaVez(url, validarGlobal) {
@@ -117,6 +118,10 @@
         return carregarCssUmaVez("styles/reports/pdf-report.css?v=20260623-2", "climate-pdf-css");
     }
 
+    function carregarCssZoom() {
+        return carregarCssUmaVez(`styles/zoom.css?v=${VERSOES.zoomCss}`, "climate-zoom-css");
+    }
+
     function executarQuandoOcioso(callback, timeout = 800) {
         if (typeof window.requestIdleCallback === "function") {
             window.requestIdleCallback(callback, { timeout });
@@ -129,6 +134,7 @@
         carregarAssistente,
         carregarChart,
         carregarCssRelatorio,
+        carregarCssZoom,
         carregarCssUmaVez,
         carregarRelatorio,
         executarQuandoOcioso,

@@ -120,7 +120,10 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Existe autenticacao Firebase Auth como portao de experiencia; regras do Firebase continuam sendo a seguranca real dos dados.
 - Nao existem testes funcionais automatizados, mas existe validacao estrutural por `npm run validate`.
 - CSS foi dividido em arquivos por responsabilidade, com `style.css` como manifesto de imports.
-- Existem copias legadas de alguns scripts na raiz de `scripts/`; a aplicacao atual carrega os modulos em subpastas conforme `index.html`.
+- Copias legadas ficam isoladas em `legacy/scripts/`, fora do runtime e da validacao; a aplicacao ativa usa os caminhos de `index.html`.
+- Qualidade por metrica usa estado `ok`, `parcial`, `desatualizado`, `suspeito` ou `offline`, com ultima leitura, amostras e cobertura compartilhadas por UI, relatorio e assistente.
+- Exportacao anuncia progresso em `aria-live`, aplica timeout de 45 segundos e oferece nova tentativa.
+- Tabelas mantem 24 registros, cabecalho fixo, ordem temporal reversivel, contador e CSV visivel.
 
 ## Estrategia recomendada para alteracoes
 

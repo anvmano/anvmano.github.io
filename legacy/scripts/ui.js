@@ -19,68 +19,7 @@
             renderEmptyState(id, emptyMessage);
             return;
         }
-        el.appendChild(criarFerramentasTabela(table));
         el.appendChild(table);
-    }
-
-    function criarFerramentasTabela(tabela) {
-        const ferramentas = document.createElement("div");
-        ferramentas.className = "table-tools";
-        const total = tabela.tBodies?.[0]?.rows?.length || Math.max(0, tabela.rows.length - 1);
-        ferramentas.innerHTML = `
-            <span class="table-tools__count">${total} de 24 horários</span>
-            <div class="table-tools__actions">
-                <button type="button" data-table-sort aria-label="Inverter ordem temporal">Mais antigos primeiro</button>
-                <button type="button" data-table-csv aria-label="Baixar tabela visível em CSV">CSV</button>
-            </div>
-        `;
-
-        let ordemAscendente = false;
-        ferramentas.querySelector("[data-table-sort]")?.addEventListener("click", evento => {
-            ordemAscendente = !ordemAscendente;
-            ordenarTabelaPorHorario(tabela, ordemAscendente);
-            evento.currentTarget.textContent = ordemAscendente ? "Mais recentes primeiro" : "Mais antigos primeiro";
-        });
-        ferramentas.querySelector("[data-table-csv]")?.addEventListener("click", () => baixarTabelaCsv(tabela));
-        return ferramentas;
-    }
-
-    function ordenarTabelaPorHorario(tabela, ordemAscendente) {
-        const corpo = tabela.tBodies?.[0];
-        if (!corpo) return;
-        const linhas = Array.from(corpo.rows).sort((a, b) => {
-            const comparacao = String(a.dataset.timestamp || "").localeCompare(String(b.dataset.timestamp || ""));
-            return ordemAscendente ? comparacao : -comparacao;
-        });
-        linhas.forEach(linha => corpo.appendChild(linha));
-        preencherDatasOcultas(corpo.rows);
-    }
-
-    function preencherDatasOcultas(linhas) {
-        let dataAtual = "";
-        Array.from(linhas).forEach(linha => {
-            const dataIso = String(linha.dataset.timestamp || "").slice(0, 10);
-            const [ano, mes, dia] = dataIso.split("-");
-            const data = ano && mes && dia ? `${dia}/${mes}/${ano}` : "";
-            linha.cells[0].textContent = data !== dataAtual ? data : "";
-            dataAtual = data;
-        });
-    }
-
-    function baixarTabelaCsv(tabela) {
-        const linhas = Array.from(tabela.rows).map(linha => Array.from(linha.cells).map(celula => {
-            const valor = celula.textContent.replace(/\s*⚠\s*$/, "").trim().replaceAll('"', '""');
-            return `"${valor}"`;
-        }).join(";"));
-        const blob = new Blob(["\uFEFF", linhas.join("\r\n")], { type: "text/csv;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `${tabela.dataset.exportName || "tabela"}-${ClimateData.dataAtual()}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(url);
     }
 
     function clearChartMessage(id) {
@@ -132,7 +71,6 @@
         document.querySelectorAll(".tablink").forEach(el => {
             el.classList.remove("active");
             el.setAttribute("aria-selected", "false");
-            el.setAttribute("tabindex", "-1");
         });
 
         const tab = document.getElementById(tabName);
@@ -145,7 +83,6 @@
         if (selectedButton) {
             selectedButton.classList.add("active");
             selectedButton.setAttribute("aria-selected", "true");
-            selectedButton.setAttribute("tabindex", "0");
         }
 
         storeActiveTab(tabName);
@@ -155,32 +92,11 @@
         const tabButtons = document.querySelectorAll(".tablink[data-tab-target]");
         tabButtons.forEach(button => {
             button.addEventListener("click", () => openTab(button.dataset.tabTarget, button));
-            button.addEventListener("keydown", evento => navegarAbasPorTeclado(evento, tabButtons));
         });
 
         const storedTab = getStoredTab();
         const initialTab = storedTab && document.getElementById(storedTab) ? storedTab : defaultTab;
         openTab(initialTab);
-    }
-
-    function navegarAbasPorTeclado(evento, tabButtons) {
-        const teclasSuportadas = ["ArrowLeft", "ArrowRight", "Home", "End"];
-        if (!teclasSuportadas.includes(evento.key)) return;
-
-        evento.preventDefault();
-        const botoes = Array.from(tabButtons);
-        const indiceAtual = botoes.indexOf(evento.currentTarget);
-        if (indiceAtual < 0) return;
-
-        let proximoIndice = indiceAtual;
-        if (evento.key === "Home") proximoIndice = 0;
-        if (evento.key === "End") proximoIndice = botoes.length - 1;
-        if (evento.key === "ArrowLeft") proximoIndice = (indiceAtual - 1 + botoes.length) % botoes.length;
-        if (evento.key === "ArrowRight") proximoIndice = (indiceAtual + 1) % botoes.length;
-
-        const proximoBotao = botoes[proximoIndice];
-        openTab(proximoBotao.dataset.tabTarget, proximoBotao);
-        proximoBotao.focus();
     }
 
     function getActiveTabName() {
@@ -259,11 +175,6 @@
             trigger.addEventListener("click", () => {
                 const isCollapsed = section.classList.toggle("is-collapsed");
                 trigger.setAttribute("aria-expanded", String(!isCollapsed));
-                if (!isCollapsed) {
-                    document.dispatchEvent(new CustomEvent("climate-collapsible-expanded", {
-                        detail: { section }
-                    }));
-                }
             });
         });
     }
@@ -274,10 +185,8 @@
 
         if (dateInput) {
             dateInput.value = ClimateData.convertFirebaseDateToInput(getSelectedDate());
-            atualizarContextoTemporal(getSelectedDate());
             dateInput.addEventListener("change", () => {
                 setSelectedDate(ClimateData.convertInputDateToFirebase(dateInput.value));
-                atualizarContextoTemporal(getSelectedDate());
                 onDateChange();
             });
         }
@@ -286,20 +195,9 @@
             todayButton.addEventListener("click", () => {
                 setSelectedDate(getTodayDate());
                 if (dateInput) dateInput.value = ClimateData.convertFirebaseDateToInput(getSelectedDate());
-                atualizarContextoTemporal(getSelectedDate());
                 onDateChange();
             });
         }
-    }
-
-    function atualizarContextoTemporal(dataSelecionada) {
-        const elemento = document.getElementById("temporalContext");
-        if (!elemento) return;
-        const agora = ClimateData.dataAtual();
-        const agoraCurta = agora.split("-").slice(0, 2).join("/");
-        const consulta = String(dataSelecionada || agora).replace(/-/g, "/");
-        elemento.textContent = `Agora (${agoraCurta}) · Data consultada: ${consulta}`;
-        elemento.title = "Leituras globais usam o momento atual; gráficos, lua e ciclo solar usam a data consultada.";
     }
 
     window.ClimateUI = {
@@ -308,14 +206,10 @@
         renderEmptyState,
         renderStartupError,
         renderTable,
-        ordenarTabelaPorHorario,
-        baixarTabelaCsv,
         getActiveTabName,
         setupCollapsibleSections,
         setupDateControls,
         setupTabSwipe,
         setupTabs,
-        navegarAbasPorTeclado,
-        atualizarContextoTemporal,
     };
 })();

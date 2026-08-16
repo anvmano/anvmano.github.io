@@ -161,6 +161,8 @@
             item.delta = card.delta;
         }
 
+        if (card.qualidade) item.qualidadeDados = card.qualidade;
+
         return item;
     }
 
@@ -191,32 +193,38 @@
     }
 
     function formatarLinhaTabelaDetalhadaJson(row) {
-        return {
+        const item = {
             horario: row.time,
             horarioCompleto: row.fullTime,
             indicador: row.label,
             valor: row.value,
             status: row.status,
         };
+        if (row.qualidade) item.qualidadeDados = row.qualidade;
+        return item;
     }
 
-    async function buildReport(context) {
+    async function buildReport(context, { onProgress } = {}) {
         const tabConfig = TAB_CONFIG[context.activeTab] || TAB_CONFIG.Tab0 || TAB_CONFIG.Tab1;
         const selectedDate = context.selectedDate || ClimateData.dataAtual();
         const generatedAt = new Date();
         const fileNameBase = `relatorio-estacao-${slug(tabConfig.label)}-${selectedDate}`;
+        onProgress?.("Preparando dados.");
         const fonte = construirFonteDadosRelatorio(tabConfig, context.latestData || {}, selectedDate);
         const rows = fonte.linhasDetalhadas;
         const tableMetrics = getPdfTableMetrics(tabConfig);
         const tableRows = buildCompactTableRows(fonte.linhasNormalizadas, tableMetrics);
-        const summaryCards = buildSummaryCards(tabConfig, fonte.linhasNormalizadas, context.latestData || {}, selectedDate);
-        const alerts = buildDailyAlerts(fonte.linhasNormalizadas, tabConfig.metrics);
+        const summaryCards = buildSummaryCards(tabConfig, fonte.linhasNormalizadas, context.latestData || {}, selectedDate, fonte.qualidades);
+        const alerts = buildDailyAlerts(fonte.linhasNormalizadas, tabConfig.metrics, fonte.qualidades);
+        onProgress?.("Gerando gráficos.");
         const chartCards = await collectChartCards(tabConfig, {
             normalizedRows: fonte.linhasNormalizadas,
             latestData: context.latestData || {},
             selectedDate,
+            qualities: fonte.qualidades,
         });
 
+        onProgress?.("Montando relatório.");
         const report = document.createElement("article");
         report.className = "pdf-report";
         report.appendChild(createHeader(tabConfig.label, selectedDate, generatedAt));
@@ -239,6 +247,7 @@
             tableMetrics,
             selectedData: fonte.dadosSelecionados,
             normalizedRows: fonte.linhasNormalizadas,
+            qualities: fonte.qualidades,
             chartCards,
         };
     }

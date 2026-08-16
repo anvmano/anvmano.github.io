@@ -25,6 +25,7 @@
         }
 
         const allValues = dailyStats.flatMap(day => day.values);
+        const qualidadeDados = combinarQualidades(dailyStats.map(day => day.qualidade).filter(Boolean));
         const base = {
             ambiente: environment.label,
             metrica: metric.label,
@@ -37,6 +38,7 @@
             datas_consultadas: periodDates.map(formatDate),
             dias_com_dados: dailyStats.map(day => day.dateLabel),
             ...(intent.hour ? {} : { amostras: allValues.length }),
+            qualidade_dados: qualidadeDados,
         };
 
         if (!allValues.length) {
@@ -81,6 +83,7 @@
             minima: round(day.stats.min),
             maxima: round(day.stats.max),
             delta: round(day.stats.delta),
+            qualidade_dados: day.qualidade,
             amostras: day.values.length,
         }));
 
@@ -106,7 +109,8 @@
     function montarResultadoEstatistico(base, dailyStats, overallStats, operacao) {
         if (!["media", "maxima", "minima", "delta", "tendencia", "resumo", "dia_mais_frio", "dia_mais_quente"].includes(operacao)) return null;
 
-        const { amostras, ...baseSemAmostras } = base;
+        const baseSemAmostras = { ...base };
+        delete baseSemAmostras.amostras;
         if (operacao === "resumo") {
             return {
                 ...baseSemAmostras,
@@ -160,6 +164,14 @@
             };
         }
 
+        if (registros.length < 2) {
+            return {
+                ...baseSemAmostras,
+                tipo_resultado: "dados_insuficientes_tendencia",
+                mensagem: `Há somente ${registros.length} medição válida; são necessárias pelo menos duas para calcular ${operacao === "tendencia" ? "tendência" : "variação"}.`,
+            };
+        }
+
         const primeiro = registros[0];
         const ultimo = registros[registros.length - 1];
         const diferenca = round(ultimo.value - primeiro.value);
@@ -206,11 +218,10 @@
             values,
             records,
             stats: calculateStats(values),
+            qualidade: window.ClimateDataQuality?.resumirParaExportacao?.(
+                window.ClimateDataQuality?.analisarSerie?.({ [date]: dayData }, metric.key)
+            ) || null,
         };
-    }
-
-    function extractMetricValues(dayData, key, hour) {
-        return extractMetricRecords(dayData, key, hour).map(record => record.value);
     }
 
     function extractMetricRecords(dayData, key, hour, date = null, hourRange = null) {
@@ -258,7 +269,8 @@
             };
         }
 
-        const { amostras, ...baseSemAmostras } = base;
+        const baseSemAmostras = { ...base };
+        delete baseSemAmostras.amostras;
         return {
             ...baseSemAmostras,
             tipo_resultado: "consulta_horaria",
@@ -751,13 +763,29 @@
     }
 
     function calculateStats(values) {
+        if (!values.length) return { avg: null, min: null, max: null, delta: null };
         const first = values[0];
         const last = values[values.length - 1];
         return {
             avg: values.reduce((sum, value) => sum + value, 0) / values.length,
             min: Math.min(...values),
             max: Math.max(...values),
-            delta: last - first,
+            delta: values.length >= 2 ? last - first : null,
+        };
+    }
+
+    function combinarQualidades(qualidades) {
+        if (!qualidades.length) return null;
+        const ordem = ["adequada", "incompleta", "desatualizada", "suspeita", "critica"];
+        const nivel = qualidades.reduce((pior, atual) => (
+            ordem.indexOf(atual.nivel) > ordem.indexOf(pior) ? atual.nivel : pior
+        ), "adequada");
+        return {
+            nivel,
+            status: qualidades.find(item => item.nivel === nivel)?.status || "Dados suficientes",
+            leiturasValidas: qualidades.reduce((total, item) => total + (item.leiturasValidas || 0), 0),
+            leiturasEsperadas: qualidades.reduce((total, item) => total + (item.leiturasEsperadas || 0), 0),
+            avisos: [...new Set(qualidades.flatMap(item => item.avisos || []))],
         };
     }
 
@@ -803,6 +831,7 @@
     }
 
     function trendFromDelta(delta) {
+        if (!Number.isFinite(delta)) return "dados insuficientes";
         if (Math.abs(delta) < 0.05) return "estável";
         return delta > 0 ? "subindo" : "caindo";
     }

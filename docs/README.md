@@ -8,6 +8,7 @@ O site também possui modo público sem login. Visitantes podem consultar clima 
 
 - Navegador moderno.
 - Acesso à internet para carregar CDNs e consultar o Firebase Realtime Database.
+- Node.js e `npm install` para executar lint, formatacao e testes locais automatizados; nao sao necessarios para abrir o site estatico em producao.
 - Node.js apenas para executar a validação local do projeto.
 
 Bibliotecas carregadas via CDN:
@@ -54,6 +55,7 @@ Bibliotecas carregadas via CDN:
 │   │   └── assistant-aqi.js    Consultas AQI/qualidade do ar
 │   ├── data/
 │   │   ├── data-utils.js       Datas, filtros, tabelas e séries
+│   │   ├── data-quality.js     Cobertura e qualidade das leituras
 │   │   ├── analytics.js        Estatísticas e heatmaps
 │   │   └── environmental-insights.js Recomendações ambientais
 │   ├── charts/
@@ -102,7 +104,9 @@ Bibliotecas carregadas via CDN:
 │   ├── validate-project.mjs    Validação estrutural local
 │   ├── testar-assistente.mjs   Regressões de intenção e respostas da assistente
 │   ├── testar-relatorio.mjs    Consistência de dados e ausências no PDF/JSON
-│   └── testar-acessibilidade.mjs Navegação das abas e contrato do zoom
+│   ├── testar-acessibilidade.mjs Navegação das abas e contrato do zoom
+│   ├── testar-qualidade-dados.mjs Cobertura, anomalias e séries constantes
+│   └── testar-modo-publico.mjs Concorrência, estados e zoom público
 └── docs/
     ├── README.md
     ├── AI_QUICK_CONTEXT.md
@@ -131,6 +135,8 @@ Pontos configuráveis:
 - `ids`: ids DOM usados por gráficos, tabelas, estados e controles.
 - `fields`: nomes dos campos esperados nos sensores.
 - `measurementUnits`: unidades exibidas nos valores das tabelas.
+- `sensorSchemas`: unidade, faixa plausivel, resolucao, sentinelas, frequencia esperada e divisor de normalizacao por campo.
+- `exports` e `publicData`: timeout da exportacao e validade/cache da consulta publica na sessao.
 - Sala/MQ135: `CO`, `CO2`, `Aceton`, `Alcohol`, `NH4` e `Toluen`; `Toluen` aparece como Tolueno.
 - AQI estimado: usa dados da Sala/MQ135 para exibir um chip no header. As categorias visuais seguem as faixas AQI, mas o cálculo é estimado e local.
 - `colors`: cores usadas pelos gráficos.
@@ -179,9 +185,16 @@ Execute:
 
 ```powershell
 npm run validate
+npm run lint
 npm run test:assistant
 npm run test:report
+npm run test:pdf-artifact
+npm run test:export
 npm run test:accessibility
+npm run test:axe
+npm run test:data-quality
+npm run test:public
+npm run test:tables
 ```
 
 A validação verifica:
@@ -195,6 +208,8 @@ A validação verifica:
 - Consistência entre a fonte normalizada, cards, tabelas, estatísticas e gráficos do relatório.
 - Preservação de valores ausentes como `null`, sem conversão indevida para zero.
 - Navegação ARIA das abas e contrato de foco do diálogo de zoom.
+- Cobertura, amostra única, pH suspeito e turbidez constante sem perda do valor medido.
+- Concorrência, estados acessíveis, limpeza de contexto e zoom dos gráficos públicos.
 
 ## Funcionalidades
 
@@ -214,6 +229,8 @@ A validação verifica:
 - Aba Estação com ventilação e risco de mofo a partir dos sensores internos; chuva e UV entram por consulta opcional da localização, mantida somente em memória.
 - Gráficos de temperatura, sensação térmica, umidade, pressão, qualidade do ar e aquário.
 - Cards com média, mínima, máxima, delta e tendência.
+- Indicadores de qualidade/cobertura; delta e tendência exigem pelo menos duas leituras válidas.
+- Estado operacional por metrica: `ok`, `parcial`, `desatualizado`, `suspeito` ou `offline`, com ultima leitura, amostras e cobertura.
 - Faixa de conforto térmico nos gráficos de temperatura e sensação.
 - Faixa de conforto do Aquário entre 25°C e 27°C.
 - Heatmaps e visualizações climáticas avançadas para Sala e Quarto.
@@ -224,7 +241,7 @@ A validação verifica:
 - Estação do ano atual no header e faixa visual na aba Estação.
 - Fase da lua atual no header e fase lunar da data selecionada na aba Estação.
 - Zoom dos gráficos.
-- Tabelas colapsáveis.
+- Tabelas colapsáveis com cabeçalho fixo, ordenação temporal, contador e CSV da visão atual.
 - Tabelas com unidades nos valores, sem espaco antes da unidade, como `26.40°C`, `57.50%`, `8.66ppm`, `1.20NTU` e `930.60hPa`.
 - Leituras do Aquário normalizadas antes da exibição: TDS dividido por 10 e Turbidez dividido por 1000.
 - Indicador astronômico no cabeçalho, alinhado ao tamanho do relógio, com estado de dia/noite e tooltip/popover com horários solares.
@@ -239,6 +256,10 @@ A exportação usa os dados já carregados na tela. Ela não reconsulta o Fireba
 Os módulos internos de relatório são carregados apenas ao exportar. Exportar JSON não carrega Chart.js, CSS do PDF, `html2canvas` ou `jsPDF`. Exportar PDF carrega CSS do relatório, Chart.js, `html2canvas` e `jsPDF` sob demanda.
 
 O relatório cria uma fonte normalizada única filtrada pela data selecionada. Resumo, alertas, gráficos, tabelas e JSON usam esse mesmo recorte; os gráficos do PDF não reutilizam os gráficos visíveis da interface, que podem representar a janela móvel das últimas 24 horas. Valores ausentes permanecem `null`, formam lacunas e não entram nos cálculos de média, mínima ou máxima.
+
+Essa fonte também inclui qualidade e cobertura por métrica. Uma única leitura válida mantém seu valor, mas não gera delta/tendência. pH fora da faixa, saltos/repetições e turbidez constante são sinalizados sem substituir ou apagar o valor original.
+
+Durante a exportacao, uma regiao `aria-live` informa o progresso. Falhas e timeout de 45 segundos exibem mensagem acionavel e botao para tentar novamente. `npm run test:pdf-artifact` baixa e abre um PDF sintetico com o mesmo paginador para validar paginas, textos e blocos graficos.
 
 PDF:
 
@@ -267,13 +288,15 @@ JSON:
 - O projeto não usa framework frontend.
 - Os módulos são scripts clássicos e expõem objetos em `window.*`.
 - As abas seguem o padrão ARIA com foco móvel: setas circulam entre as abas, `Home` abre Estação e `End` abre Aquário.
-- O zoom usa diálogo modal nomeado, contém o foco enquanto aberto e o restaura ao botão disparador ao fechar.
+- O zoom usa diálogo modal nomeado, carrega seu CSS antes de abrir, preserva a posição da página, contém o foco enquanto aberto e o restaura ao botão disparador ao fechar.
+- O modo público registra seus gráficos dinâmicos no zoom e mantém `Escape`, contenção e restauração de foco mesmo sem inicializar o dashboard privado.
+- Consultas públicas são transacionais: desabilitam controles, anunciam carregamento/erro, ignoram respostas antigas e limpam AQI/solar/gráficos obsoletos.
 - A ordem dos scripts em `index.html` é parte do contrato da aplicação.
 - Recursos pesados usam `scripts/runtime-loader.js`: Chart.js entra no primeiro gráfico com dados, a assistente entra no primeiro clique do chat e os módulos de relatório entram somente ao exportar.
 - O Firebase é lido no cliente com listeners `onValue`.
 - Firebase Auth é usado como portão de experiência: modo público sem login e modo interno para e-mails autorizados.
 - O modo público não inicia listeners internos do Realtime Database e não inicializa a assistente IA.
-- A localização do navegador no modo público é usada apenas em memória para a consulta atual.
+- A ultima resposta publica pode permanecer em `sessionStorage` durante a sessao por tempo limitado; coordenadas precisas, precisao e CEP nunca sao persistidos. A interface mostra idade e marca dados desatualizados.
 - O App Check usa reCAPTCHA Enterprise, fica sob demanda para evitar custo de carregamento inicial e deve ser validado antes de ativar enforcement.
 - O chat envia ao Gemini apenas resumo compacto de dados carregados, nunca o histórico inteiro.
 - Os módulos `scripts/assistant/*` e Firebase AI Logic não entram no carregamento inicial; `scripts/chat.js` inicializa e abre a assistente real no primeiro clique.
@@ -289,7 +312,9 @@ JSON:
 - Consultas de período usam limite de 30 dias; `últimos dias` usa 7 dias por padrão. O calendário mensal pode consultar o mês completo.
 - O CSS foi dividido em arquivos por responsabilidade dentro de `styles/`.
 - Os renderizadores por aba ficam separados em `scripts/views/`.
-- A aplicação atual carrega os scripts organizados em subpastas; cópias antigas diretamente em `scripts/` são legadas e não fazem parte do runtime descrito em `index.html`.
+- Copias antigas estao isoladas em `legacy/scripts/` e nao participam do runtime nem do validador. Arquivos ativos seguem a organizacao por responsabilidade em `scripts/`.
+- ESLint valida contratos basicos do JavaScript; Prettier esta disponivel por `npm run format`; `scripts/schemas/contracts.js` valida fronteiras Firebase, chat e relatorio.
+- Os listeners Firebase continuam em paths completos. Como as chaves usam `DD-MM-AAAA`, paginacao cronologica segura exige migracao para timestamp ou `AAAA-MM-DD`; nao aplicar `orderByKey` por intervalo no formato atual.
 - A documentação técnica fica centralizada em `docs/`.
 - O validador local reduz risco de quebrar ids, imports e caminhos ao reorganizar arquivos.
 

@@ -109,5 +109,7 @@ assert.match(codigoZoom, /aria-labelledby/);
 assert.match(codigoZoom, /conterFocoNoDialogo/);
 assert.match(codigoZoom, /closeButton\.focus/);
 assert.match(codigoZoom, /disparadorAnterior\.focus/);
+assert.match(codigoZoom, /await garantirEstilosZoom\(\)/);
+assert.doesNotMatch(codigoZoom, /window\.scrollTo/);
 
 console.log("Testes de acessibilidade de abas e zoom concluídos com sucesso.");

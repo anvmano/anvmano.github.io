@@ -13,7 +13,7 @@
         ultimosDadosInternos = latestData;
         renderizarResumoGlobal(latestData, selectedDate);
         renderizarInsightsAmbientais(latestData);
-        renderizarLinhaEstacoes(selectedDate);
+        renderizarLinhaEstacoes();
         renderizarResumoLua(selectedDate);
         renderizarGraficoComparativo({
             canvasCtx: canvasTemperatura,
@@ -310,6 +310,8 @@
 
     function montarCardUltimaMedicao(titulo, data, campo, unidade) {
         const registro = obterUltimoRegistro(data, campo);
+        const dadosHoje = ClimateData.filterDataByDays(data || {}, 1, ClimateData.dataAtual());
+        const qualidade = window.ClimateDataQuality?.analisarSerie?.(dadosHoje, campo) || null;
         if (!registro) {
             return {
                 titulo,
@@ -326,11 +328,17 @@
             titulo,
             valor: formatarValor(registro.valor, unidade),
             detalhePrincipal: `${registro.data.replace(/-/g, "/")} · ${registro.horario}`,
-            detalheSecundario: "Última medição",
-            tendencia: "Atual",
+            detalheSecundario: montarDetalheQualidadeAtual(qualidade),
+            tendencia: `Agora (${formatarDataCurtaAtual()})`,
             classe: "stable",
             temValor: true,
         };
+    }
+
+    function montarDetalheQualidadeAtual(qualidade) {
+        if (!qualidade) return "Última medição";
+        const cobertura = qualidade.leiturasEsperadas > 0 ? `${qualidade.coberturaPercentual.toFixed(0)}%` : "0%";
+        return `${qualidade.rotuloEstado} · ${qualidade.leiturasValidas}/${qualidade.leiturasEsperadas} · ${cobertura}`;
     }
 
     function criarCardResumo(card) {
@@ -350,7 +358,11 @@
         return elemento;
     }
 
-    function renderizarLinhaEstacoes(selectedDate) {
+    function formatarDataCurtaAtual() {
+        return ClimateData.dataAtual().split("-").slice(0, 2).join("/");
+    }
+
+    function renderizarLinhaEstacoes() {
         const container = document.getElementById("seasonTimeline");
         if (!container) return;
 
@@ -361,6 +373,7 @@
         }
 
         container.innerHTML = `
+            <span class="station-context-badge" title="A estação do ano segue a data atual do navegador.">Agora (${formatarDataCurtaAtual()})</span>
             <div class="season-timeline__track" aria-label="Progresso anual das estações">
                 ${estado.estacoes.map(estacao => `
                     <span class="season-timeline__segment season-timeline__segment--${estacao.chave}">
@@ -383,6 +396,7 @@
         }
 
         container.innerHTML = `
+            <span class="station-context-badge" title="A fase lunar segue a data escolhida no calendário.">Data consultada: ${selectedDate.replace(/-/g, "/")}</span>
             <div class="moon-summary__scene moon-summary__scene--${estado.fase.chave}" style="--moon-shadow: ${estado.sombra}%">
                 <span class="moon-summary__orb" aria-hidden="true"></span>
             </div>

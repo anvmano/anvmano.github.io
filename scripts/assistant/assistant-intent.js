@@ -132,7 +132,7 @@
         try {
             const parsed = JSON.parse(jsonText);
             return parsed && typeof parsed === "object" ? parsed : null;
-        } catch (error) {
+        } catch {
             window.ClimateDiagnostics?.depurar("Intenção do chat não veio em JSON válido.", answer);
             return null;
         }

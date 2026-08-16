@@ -13,6 +13,8 @@
     const graficos = {};
     let elementos = {};
     let callbacks = {};
+    let sequenciaBusca = 0;
+    let consultaRestaurada = false;
 
     function setup({ onLogin, onLogout, getUsuario, isOwner } = {}) {
         elementos = obterElementos();
@@ -26,6 +28,10 @@
             await buscarPorCep();
         });
         elementos.btnLocalizacao?.addEventListener("click", buscarPorLocalizacao);
+        elementos.cepInput?.addEventListener("input", evento => {
+            aplicarMascaraCep(evento.currentTarget);
+            limparErroCep();
+        });
 
         atualizarUsuario(getUsuario?.(), isOwner?.());
         renderizarEstadoInicial();
@@ -59,6 +65,12 @@
         elementos.chat?.classList.add("is-disabled");
         window.ClimateAqi?.updateExternal?.(null);
         publicarEventosSolares(null);
+        if (!consultaRestaurada) {
+            consultaRestaurada = true;
+            restaurarUltimaConsulta().catch(erro => {
+                window.ClimateDiagnostics?.depurar("Não foi possível restaurar a última consulta pública.", erro);
+            });
+        }
     }
 
     function ocultar() {
@@ -70,7 +82,7 @@
 
     async function buscarPorCep() {
         const cep = elementos.cepInput?.value;
-        await executarBusca(() => window.ExternalWeatherService.buscarPorCep(cep));
+        await executarBusca(() => window.ExternalWeatherService.buscarPorCep(cep), { origemCep: true });
     }
 
     async function buscarPorLocalizacao() {
@@ -88,14 +100,29 @@
         });
     }
 
-    async function executarBusca(busca) {
+    async function executarBusca(busca, { origemCep = false } = {}) {
+        const idBusca = ++sequenciaBusca;
+        definirEstadoBusca(true);
+        limparErroCep();
         renderizarMensagem("Consultando clima da localização...", "loading");
         try {
             const dados = await busca();
-            await renderizarDados(dados);
+            if (idBusca !== sequenciaBusca) return;
+            const renderizada = await renderizarDados(dados, idBusca);
+            if (!renderizada) return;
+            preservarUltimaConsulta(dados);
+            anunciarEstado(`Dados climáticos carregados para ${dados.origem?.rotulo || "a localização"}.`, "status");
         } catch (erro) {
-            window.ClimateDiagnostics?.erro("Falha na consulta pública.", erro);
+            if (idBusca !== sequenciaBusca) return;
+            if (erro?.esperado) {
+                window.ClimateDiagnostics?.depurar("Validação da consulta pública.", erro);
+            } else {
+                window.ClimateDiagnostics?.erro("Falha técnica na consulta pública.", erro);
+            }
+            if (origemCep && erro?.esperado) marcarErroCep(erro.message);
             renderizarMensagem(erro.message || "Não foi possível carregar os dados públicos.", "error");
+        } finally {
+            if (idBusca === sequenciaBusca) definirEstadoBusca(false);
         }
     }
 
@@ -106,20 +133,23 @@
 
     function renderizarMensagem(mensagem, tipo = "empty") {
         if (!elementos.publicResults) return;
-        elementos.publicResults.innerHTML = `<p class="state-message state-message--${tipo}">${mensagem}</p>`;
-        limparGraficos();
-        publicarEventosSolares(null);
+        limparContextoConsultaPublica();
+        const papel = tipo === "error" ? "alert" : "status";
+        elementos.publicResults.innerHTML = `<p class="state-message state-message--${tipo}" role="${papel}">${mensagem}</p>`;
+        anunciarEstado(mensagem, papel);
     }
 
-    async function renderizarDados(dados) {
+    async function renderizarDados(dados, idBusca = sequenciaBusca) {
         await window.ClimateAssets.carregarChart();
+        if (idBusca !== sequenciaBusca) return false;
         window.ClimateCharts.registerComfortBand();
         const insights = analisarDadosPublicos(dados);
+        const atualidade = calcularAtualidade(dados.atualizadoEm);
 
         elementos.publicResults.innerHTML = `
-            <div class="public-location">
+            <div class="public-location ${atualidade.desatualizado ? "is-stale" : ""}">
                 <span>${dados.origem.rotulo}</span>
-                <strong>Atualizado ${formatarDataHora(dados.atualizadoEm)}</strong>
+                <strong>Atualizado ${formatarDataHora(dados.atualizadoEm)} · ${atualidade.rotulo}</strong>
             </div>
             <div class="stats-grid public-stats-grid">
                 ${card("Temperatura", dados.climaAtual.temperatura, "°C")}
@@ -159,6 +189,11 @@
         renderizarGraficoLinha("publicChartHumidity", seriesUltimas24h.horarios, seriesUltimas24h.umidade, "Umidade", "%", window.AppConfig.colors.purple);
         renderizarGraficoLinha("publicChartPressure", seriesUltimas24h.horarios, seriesUltimas24h.pressao, "Pressão", "hPa", window.AppConfig.colors.amber);
         renderizarGraficoSolar(dados.cicloSolar);
+        window.ClimateZoom?.registrarCards?.(elementos.publicResults, {
+            chartInstances: graficos,
+            getZoomOptions: obterOpcoesZoomPublico,
+        });
+        return true;
     }
 
     function analisarDadosPublicos(dados) {
@@ -403,6 +438,35 @@
         graficos.publicChartSolar.$solarDayTimes = eventos;
     }
 
+    function obterOpcoesZoomPublico(idGrafico) {
+        const padroes = window.ClimateCharts.createDefaults(window.AppConfig.colors);
+        if (idGrafico === "publicChartSolar") {
+            return window.ClimateSolar.getSolarTodayOptions({
+                defaults: padroes,
+                colors: window.AppConfig.colors,
+            });
+        }
+
+        const unidades = {
+            publicChartTemperature: "°C",
+            publicChartFeelsLike: "°C",
+            publicChartHumidity: "%",
+            publicChartPressure: "hPa",
+        };
+        return window.ClimateCharts.mergeDeep(padroes, {
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    title: {
+                        display: Boolean(unidades[idGrafico]),
+                        text: unidades[idGrafico] || "",
+                        color: window.AppConfig.colors.text,
+                    },
+                },
+            },
+        });
+    }
+
     function atualizarChipDuracaoSolarPublica(eventos) {
         const chip = document.getElementById("publicSolarDuration");
         if (!chip) return;
@@ -462,6 +526,97 @@
         Object.keys(graficos).forEach(chave => delete graficos[chave]);
     }
 
+    function limparContextoConsultaPublica() {
+        limparGraficos();
+        window.ClimateAqi?.updateExternal?.(null);
+        publicarEventosSolares(null);
+        renderizarContextoAstronomico(null);
+    }
+
+    function definirEstadoBusca(carregando) {
+        elementos.publicResults?.setAttribute("aria-busy", String(carregando));
+        [elementos.btnBuscar, elementos.btnLocalizacao, elementos.cepInput].forEach(controle => {
+            if (controle) controle.disabled = carregando;
+        });
+    }
+
+    function anunciarEstado(mensagem, papel = "status") {
+        if (!elementos.statusBusca) return;
+        elementos.statusBusca.setAttribute("role", papel === "alert" ? "alert" : "status");
+        elementos.statusBusca.textContent = mensagem || "";
+    }
+
+    function marcarErroCep(mensagem) {
+        if (!elementos.cepInput) return;
+        elementos.cepInput.setAttribute("aria-invalid", "true");
+        elementos.cepInput.setAttribute("aria-describedby", "publicSearchStatus");
+        anunciarEstado(mensagem, "alert");
+    }
+
+    function limparErroCep() {
+        elementos.cepInput?.removeAttribute("aria-invalid");
+        elementos.cepInput?.removeAttribute("aria-describedby");
+    }
+
+    function aplicarMascaraCep(input) {
+        if (!input) return;
+        const digitos = String(input.value || "").replace(/\D/g, "").slice(0, 8);
+        input.value = digitos.length > 5 ? `${digitos.slice(0, 5)}-${digitos.slice(5)}` : digitos;
+    }
+
+    function preservarUltimaConsulta(dados) {
+        const chave = window.AppConfig?.publicData?.sessionKey;
+        if (!chave || !dados) return;
+        try {
+            const copia = {
+                ...dados,
+                origem: {
+                    tipo: dados.origem?.tipo || "consulta",
+                    rotulo: dados.origem?.rotulo || "Última consulta",
+                },
+            };
+            sessionStorage.setItem(chave, JSON.stringify({
+                salvoEm: new Date().toISOString(),
+                dados: copia,
+            }, (nome, valor) => ["latitude", "longitude", "precisao", "cep"].includes(nome) ? undefined : valor));
+        } catch (erro) {
+            window.ClimateDiagnostics?.depurar("Armazenamento da consulta pública indisponível.", erro);
+        }
+    }
+
+    async function restaurarUltimaConsulta() {
+        const chave = window.AppConfig?.publicData?.sessionKey;
+        if (!chave) return;
+        let salvo;
+        try {
+            salvo = JSON.parse(sessionStorage.getItem(chave) || "null");
+        } catch {
+            return;
+        }
+        if (!salvo?.dados || !salvo.salvoEm) return;
+        const idadeMinutos = (Date.now() - new Date(salvo.salvoEm).getTime()) / 60000;
+        const limite = Number(window.AppConfig?.publicData?.maxAgeMinutes) || 60;
+        if (!Number.isFinite(idadeMinutos) || idadeMinutos > limite) {
+            sessionStorage.removeItem(chave);
+            return;
+        }
+        salvo.dados.atualizadoEm = new Date(salvo.dados.atualizadoEm);
+        const renderizada = await renderizarDados(salvo.dados);
+        if (renderizada) anunciarEstado("Última consulta desta sessão restaurada.", "status");
+    }
+
+    function calcularAtualidade(atualizadoEm) {
+        const data = atualizadoEm instanceof Date ? atualizadoEm : new Date(atualizadoEm);
+        const minutos = Number.isNaN(data.getTime()) ? Infinity : Math.max(0, Math.floor((Date.now() - data.getTime()) / 60000));
+        const limite = Number(window.AppConfig?.publicData?.staleAfterMinutes) || 20;
+        if (!Number.isFinite(minutos)) return { desatualizado: true, rotulo: "horário indisponível" };
+        if (minutos < 1) return { desatualizado: false, rotulo: "agora" };
+        return {
+            desatualizado: minutos > limite,
+            rotulo: minutos > limite ? `há ${minutos} min · desatualizado` : `há ${minutos} min`,
+        };
+    }
+
     function obterElementos() {
         return {
             publicApp: document.getElementById("publicApp"),
@@ -470,7 +625,9 @@
             publicResults: document.getElementById("publicResults"),
             formCep: document.getElementById("publicCepForm"),
             cepInput: document.getElementById("publicCepInput"),
+            btnBuscar: document.getElementById("publicCepButton"),
             btnLocalizacao: document.getElementById("publicLocationButton"),
+            statusBusca: document.getElementById("publicSearchStatus"),
             publicUserStatus: document.getElementById("publicUserStatus"),
             btnEntrar: document.getElementById("publicLoginButton"),
             btnSair: document.getElementById("publicLogoutButton"),
@@ -507,5 +664,7 @@
         mostrar,
         ocultar,
         atualizarUsuario,
+        aplicarMascaraCep,
+        calcularAtualidade,
     };
 })();
