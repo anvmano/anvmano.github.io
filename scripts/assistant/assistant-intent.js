@@ -3,6 +3,7 @@
 (function () {
     const namespace = window.ClimateAssistant || {};
     const { DEFAULT_RECENT_DAYS, MAX_PERIOD_DAYS, ENVIRONMENTS } = namespace.config;
+    const MAX_DIAS_INTERVALO_SOLAR = 367;
     const {
         normalizeText,
         hasWord,
@@ -460,6 +461,17 @@
             };
         }
 
+        const intervaloExplicito = extrairIntervaloExplicito(period, normalizedType, normalizedQuestion, explicitDates);
+        if (intervaloExplicito) {
+            const consultaSolarExtrema = operation === "solar_maior_duracao_luz"
+                || operation === "solar_menor_duracao_luz";
+            return {
+                type: consultaSolarExtrema ? "solar_range" : "range",
+                start: intervaloExplicito.inicio,
+                end: intervaloExplicito.fim,
+            };
+        }
+
         if (normalizedType === "mes_selecionado" || operation?.startsWith("calendario_dia_") || ((operation === "solar_maior_duracao_luz" || operation === "solar_menor_duracao_luz") && monthPeriodDate)) {
             return { type: "selected_month", selectedDate: monthPeriodDate || explicitDates[0] || selectedDate || window.ClimateData.dataAtual() };
         }
@@ -521,7 +533,10 @@
         if (period.type === "selected_week") return buildWeekDates(period.selectedDate);
         if (period.type === "datas") return uniqueDates(period.dates).slice(0, MAX_PERIOD_DAYS);
         if (period.type === "last_days") return buildLastDays(period.days, period.selectedDate);
-        if (period.type === "range" && period.start && period.end) return buildDateRange(period.start, period.end);
+        if (period.type === "solar_range" && period.start && period.end) {
+            return buildDateRange(period.start, period.end, MAX_DIAS_INTERVALO_SOLAR);
+        }
+        if (period.type === "range" && period.start && period.end) return buildDateRange(period.start, period.end, MAX_PERIOD_DAYS);
         return [window.ClimateData.dataAtual()];
     }
 
@@ -579,20 +594,39 @@
         });
     }
 
-    function buildDateRange(start, end) {
+    function buildDateRange(start, end, limiteDias = MAX_PERIOD_DAYS) {
         const startDate = window.ClimateData.parseFirebaseDate(start);
         const endDate = window.ClimateData.parseFirebaseDate(end);
         const dates = [];
         const direction = startDate <= endDate ? 1 : -1;
         const cursor = new Date(startDate);
 
-        while (dates.length < MAX_PERIOD_DAYS) {
+        while (dates.length < limiteDias) {
             dates.push(formatFirebaseDate(cursor));
             if (formatFirebaseDate(cursor) === formatFirebaseDate(endDate)) break;
             cursor.setDate(cursor.getDate() + direction);
         }
 
         return dates;
+    }
+
+    function extrairIntervaloExplicito(periodo, tipoNormalizado, perguntaNormalizada, datasExplicitas) {
+        const inicioClassificado = normalizeRelativeOrExplicitDate(periodo?.inicio);
+        const fimClassificado = normalizeRelativeOrExplicitDate(periodo?.fim);
+        if (inicioClassificado && fimClassificado) {
+            return { inicio: inicioClassificado, fim: fimClassificado };
+        }
+
+        const mencionaIntervalo = tipoNormalizado === "intervalo"
+            || hasWord(perguntaNormalizada, "entre")
+            || hasWord(perguntaNormalizada, "ate")
+            || hasWord(perguntaNormalizada, "intervalo");
+        if (!mencionaIntervalo || datasExplicitas.length < 2) return null;
+
+        return {
+            inicio: datasExplicitas[0],
+            fim: datasExplicitas[1],
+        };
     }
 
     function extractQuestionDates(normalizedQuestion) {

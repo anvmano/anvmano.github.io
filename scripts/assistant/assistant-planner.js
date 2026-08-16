@@ -189,7 +189,7 @@
             environments: [ENVIRONMENTS.estacao],
             metrics: ["ciclo_solar"],
             operation: pedeDiaMaisCurto ? "solar_menor_duracao_luz" : "solar_maior_duracao_luz",
-            period: montarPeriodoSolarExtremo(perguntaNormalizada, contexto?.selectedDate),
+            period: montarPeriodoSolarExtremo(perguntaNormalizada, contexto?.selectedDate, plano.period),
             needsClarification: false,
             clarificationQuestion: null,
         };
@@ -207,6 +207,8 @@
     }
 
     function aplicarComparacaoEntreDias(plano, perguntaNormalizada) {
+        if (plano.operation?.startsWith?.("solar_")) return plano;
+
         if (!temIntencaoComparacaoEntreDias(perguntaNormalizada)) {
             return plano.operation === "comparar_dias" ? { ...plano, operation: "delta" } : plano;
         }
@@ -282,11 +284,35 @@
         ].some(termo => perguntaNormalizada.includes(normalizeText(termo)));
     }
 
-    function montarPeriodoSolarExtremo(perguntaNormalizada, dataSelecionada) {
+    function montarPeriodoSolarExtremo(perguntaNormalizada, dataSelecionada, periodoAtual) {
+        if (periodoAtual?.type === "range" || periodoAtual?.type === "solar_range") {
+            return {
+                ...periodoAtual,
+                type: "solar_range",
+            };
+        }
+
+        const intervaloExplicito = extrairIntervaloSolarExplicito(perguntaNormalizada);
+        if (intervaloExplicito) return intervaloExplicito;
+
         const dataMes = obterDataMesMencionado(perguntaNormalizada, dataSelecionada);
         if (dataMes) return { type: "selected_month", selectedDate: dataMes };
 
         return { type: "selected_year", selectedDate: obterDataAnoMencionado(perguntaNormalizada, dataSelecionada) };
+    }
+
+    function extrairIntervaloSolarExplicito(perguntaNormalizada) {
+        if (!hasWord(perguntaNormalizada, "entre") && !hasWord(perguntaNormalizada, "ate")) return null;
+
+        const datas = [...perguntaNormalizada.matchAll(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b/g)]
+            .map(resultado => `${resultado[1].padStart(2, "0")}-${resultado[2].padStart(2, "0")}-${resultado[3]}`);
+        if (datas.length < 2) return null;
+
+        return {
+            type: "solar_range",
+            start: datas[0],
+            end: datas[1],
+        };
     }
 
     function obterDataMesMencionado(perguntaNormalizada, dataSelecionada) {

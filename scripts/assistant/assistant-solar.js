@@ -47,10 +47,12 @@
     }
 
     function montarResultadoAnaliticoSolar(base, dadosSolaresDiarios, intencao) {
+        const baseAnalitica = compactarBaseAnalitica(base);
+
         if (intencao.operation === "solar_duracao_dia") {
             const dia = dadosSolaresDiarios[0];
             return {
-                ...base,
+                ...baseAnalitica,
                 tipo_resultado: "solar_duracao_dia",
                 data: dia.data,
                 duracao_dia: dia.duracao_dia,
@@ -69,7 +71,7 @@
             if (!melhor) return null;
 
             return {
-                ...base,
+                ...baseAnalitica,
                 tipo_resultado: "solar_extremo_duracao_luz",
                 criterio: modo === "max" ? "maior_duracao_luz" : "menor_duracao_luz",
                 data: melhor.data,
@@ -88,15 +90,29 @@
 
         if (intencao.operation === "solar_tendencia_nascer" || intencao.operation === "solar_tendencia_por") {
             const chaveEvento = intencao.operation === "solar_tendencia_nascer" ? "nascer" : "por";
-            return montarResultadoTendenciaSolar(base, dadosSolaresDiarios, chaveEvento);
+            return montarResultadoTendenciaSolar(baseAnalitica, dadosSolaresDiarios, chaveEvento);
         }
 
         if (intencao.operation === "solar_comparar_nascer" || intencao.operation === "solar_comparar_por") {
             const chaveEvento = intencao.operation === "solar_comparar_nascer" ? "nascer" : "por";
-            return montarResultadoComparacaoSolar(base, dadosSolaresDiarios, chaveEvento);
+            return montarResultadoComparacaoSolar(baseAnalitica, dadosSolaresDiarios, chaveEvento);
         }
 
         return null;
+    }
+
+    function compactarBaseAnalitica(base) {
+        const {
+            datas_consultadas: datasConsultadas = [],
+            dias_com_dados: diasComDados = [],
+            ...baseCompacta
+        } = base;
+
+        return {
+            ...baseCompacta,
+            total_dias_consultados: datasConsultadas.length,
+            total_dias_com_dados: diasComDados.length,
+        };
     }
 
     function montarResultadoTendenciaSolar(base, dadosSolaresDiarios, chaveEvento) {

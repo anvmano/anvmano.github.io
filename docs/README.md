@@ -280,7 +280,7 @@ JSON:
 - Atalhos do chat usam `data-chat-question` e reutilizam o mesmo fluxo de envio da pergunta digitada.
 - O chat usa duas etapas: Gemini classifica a intenção em JSON; JavaScript calcula os dados; Gemini apenas redige a resposta final.
 - Perguntas sobre ciclo solar no chat reutilizam o parser solar central do app, evitando leitura duplicada dos campos solares.
-- Perguntas de comparacao solar no chat calculam localmente duracao do dia, maior/menor duracao de luz no ano da data selecionada por padrao, maior/menor duracao de luz no mes quando um mes for informado, tendencia de nascer/por do sol e comparacao semanal.
+- Perguntas de comparacao solar no chat calculam localmente duracao do dia, maior/menor duracao de luz no ano da data selecionada por padrao, no mes quando informado ou entre duas datas explicitas, alem de tendencia de nascer/por do sol e comparacao semanal.
 - Perguntas sobre AQI/IAQ/qualidade do ar no chat reutilizam `ClimateAqi.calculate`; CO, CO2, Acetona, Álcool, Amônia e Tolueno são tratados como métricas da Sala/MQ135 quando nenhum ambiente é citado ou quando a aba/ambiente atual não possui essa medição.
 - Perguntas equivalentes aos heatmaps no chat calculam localmente calendário mensal por dia, hora típica do período e mapa semanal por dia/hora antes da redação da IA.
 - Heatmaps visuais de Sala/Quarto só montam o DOM quando `Visualizações Climáticas` é expandido.

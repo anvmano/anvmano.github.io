@@ -432,7 +432,7 @@ Observacao: perguntas sobre `ultimas X horas` reutilizam `ClimateData.filterData
 Observacao: perguntas com faixa horaria ou maior/menor horario sao classificadas em `assistant-intent.js`, filtradas em `assistant-query.js` e calculadas em `assistant-metrics.js` sem deixar o modelo recalcular os dados.
 Observacao: media, maxima, minima, delta e tendencia geram contratos especificos em `assistant-metrics.js`, evitando que a redacao misture estatisticas nao solicitadas.
 Observacao: perguntas equivalentes aos heatmaps usam a mesma estrutura de dados, mas calculam localmente em `assistant-metrics.js`: calendario mensal por dia, heatmap por hora do dia e mapa semanal por dia/hora.
-Observacao: comparacoes solares sao classificadas em `assistant-intent.js` e calculadas em `assistant-solar.js`, sempre reutilizando `ClimateSolar.getSolarEventsForSelectedDate`. Maior/menor duracao de luz usa o ano da data selecionada por padrao, mas usa o mes quando um mes for informado.
+Observacao: comparacoes solares sao classificadas em `assistant-intent.js`, protegidas contra reclassificacao em `assistant-planner.js` e calculadas em `assistant-solar.js`, sempre reutilizando `ClimateSolar.getSolarEventsForSelectedDate`. Maior/menor duracao de luz usa o ano da data selecionada por padrao, o mes quando informado e um `solar_range` quando duas datas delimitarem explicitamente o intervalo. O resultado analitico e compactado antes de seguir para o redator da IA.
 Observacao: `assistant-planner.js` fica entre `assistant-intent.js` e `assistant-query.js`; ele concentra correcoes de interpretacao antes da consulta, como perguntas solares extremas e ultima medicao.
 
 Quem chama: `scripts/chat.js` e outros modulos da propria pasta.

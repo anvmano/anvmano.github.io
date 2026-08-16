@@ -129,7 +129,7 @@ Responsabilidades:
 - `scripts/assistant/assistant-planner.js`: normalizacao final da intencao em plano confiavel antes da consulta.
 - `scripts/assistant/assistant-query.js`: execucao por ambiente com metricas compativeis, montagem do prompt final e fallback textual local.
 - `scripts/assistant/assistant-metrics.js`: estatisticas numericas, resultados especificos por operacao, aliases de metricas, roteamento de metricas, comparacoes e consultas equivalentes aos heatmaps.
-- `scripts/assistant/assistant-solar.js`: consultas e comparacoes solares via `ClimateSolar.getSolarEventsForSelectedDate`; maior/menor duracao de luz usa ano por padrao e mes quando um mes for informado.
+- `scripts/assistant/assistant-solar.js`: consultas e comparacoes solares via `ClimateSolar.getSolarEventsForSelectedDate`; maior/menor duracao de luz usa ano por padrao, mes quando informado e intervalo explicito quando houver duas datas delimitadoras. Resultados analiticos sao compactados antes da redacao pela IA.
 - `scripts/assistant/assistant-aqi.js`: consultas de AQI via `ClimateAqi.calculate`.
 - `scripts/assistant/assistant-config.js`: constantes, exemplos, ambientes e aliases da assistente.
 - `scripts/assistant/assistant-format.js`: normalizacao e formatacao compartilhadas.

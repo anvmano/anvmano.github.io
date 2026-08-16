@@ -32,6 +32,19 @@ contexto.ClimateData = {
         const numero = Number(valor);
         return Number.isFinite(numero) ? numero : null;
     },
+    formatTime(valor) {
+        if (!valor) return null;
+        const numero = Number(valor);
+        if (!Number.isFinite(numero)) return null;
+        const hora = Math.floor(numero);
+        const minuto = Math.round((numero - hora) * 60);
+        return `${String(hora).padStart(2, "0")}:${String(minuto).padStart(2, "0")}`;
+    },
+};
+contexto.ClimateSolar = {
+    getSolarEventsForSelectedDate(origem, data) {
+        return origem?.[data] || null;
+    },
 };
 
 vm.createContext(contexto);
@@ -47,6 +60,7 @@ function carregarScript(caminhoRelativo) {
     "scripts/assistant/assistant-metrics.js",
     "scripts/assistant/assistant-intent.js",
     "scripts/assistant/assistant-planner.js",
+    "scripts/assistant/assistant-solar.js",
     "scripts/assistant/assistant-query.js",
 ].forEach(carregarScript);
 
@@ -79,6 +93,30 @@ const quarentaOitoHoras = await resolver("Qual a média da temperatura da sala n
 assert.equal(quarentaOitoHoras.period.type, "rolling_hours");
 assert.equal(quarentaOitoHoras.period.hours, 48);
 assert.equal(quarentaOitoHoras.period.selectedDate, "15-08-2026");
+
+const perguntaIntervaloSolar = "Qual o dia mais longo entre 16/08/2025 e 16/08/2026?";
+const intencaoIntervaloSolar = await resolver(perguntaIntervaloSolar);
+const planoIntervaloSolar = contexto.ClimateAssistant.planner.planQuestionIntent(
+    intencaoIntervaloSolar,
+    perguntaIntervaloSolar,
+    contextoPergunta
+);
+const datasIntervaloSolar = contexto.ClimateAssistant.intent.resolvePeriodDates(planoIntervaloSolar.period);
+assert.equal(planoIntervaloSolar.operation, "solar_maior_duracao_luz");
+assert.equal(planoIntervaloSolar.period.type, "solar_range");
+assert.equal(datasIntervaloSolar[0], "16-08-2025");
+assert.equal(datasIntervaloSolar.at(-1), "16-08-2026");
+assert.equal(datasIntervaloSolar.length, 366);
+
+const perguntaAnoSolar = "Qual o dia mais longo desse ano?";
+const intencaoAnoSolar = await resolver(perguntaAnoSolar);
+const planoAnoSolar = contexto.ClimateAssistant.planner.planQuestionIntent(
+    intencaoAnoSolar,
+    perguntaAnoSolar,
+    contextoPergunta
+);
+assert.equal(planoAnoSolar.period.type, "selected_year");
+assert.equal(planoAnoSolar.period.selectedDate.endsWith("-2026"), true);
 
 const casosOperacao = [
     ["Qual a média da temperatura da sala nos últimos 7 dias?", "media"],
@@ -209,5 +247,28 @@ const respostaTendencia = await contexto.ClimateAssistant.query.answerQuestionDe
     contextoComDados
 );
 assert.match(respostaTendencia.answer, /tendência foi subindo/i);
+
+const contextoSolar = {
+    ...contextoPergunta,
+    activeTab: "Tab0",
+    latestData: {
+        solar: {
+            "16-08-2025": { dawn: 5, sunrise: 6, zenith: 12, sunset: 18, dusk: 19 },
+            "01-01-2026": { dawn: 4.5, sunrise: 5.75, zenith: 12.25, sunset: 18.85, dusk: 20.25 },
+            "16-08-2026": { dawn: 5, sunrise: 6.25, zenith: 12, sunset: 17.75, dusk: 19 },
+        },
+    },
+};
+const respostaIntervaloSolar = await contexto.ClimateAssistant.query.answerQuestionDetailed(
+    perguntaIntervaloSolar,
+    contextoSolar
+);
+const metricaSolar = respostaIntervaloSolar.result.results[0].metricas[0];
+assert.equal(metricaSolar.tipo_resultado, "solar_extremo_duracao_luz");
+assert.equal(metricaSolar.data, "01/01/2026");
+assert.equal(metricaSolar.periodo, "16/08/2025 a 16/08/2026");
+assert.equal("datas_consultadas" in metricaSolar, false);
+assert.match(respostaIntervaloSolar.answer, /01\/01\/2026/);
+assert.match(respostaIntervaloSolar.answer, /16\/08\/2025 a 16\/08\/2026/);
 
 console.log("Testes de regressão da assistente concluídos com sucesso.");
