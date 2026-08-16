@@ -214,13 +214,17 @@
         if (heatmapOperation) return heatmapOperation;
         const hourlyOperation = inferHourlyOperation(normalizedQuestion);
         if (hourlyOperation) return hourlyOperation;
-        if (normalizedQuestion.includes("mais fri")) return "dia_mais_frio";
-        if (normalizedQuestion.includes("mais quent")) return "dia_mais_quente";
         if (hasComfortBandIntent(normalizedQuestion)) return "status_faixa";
-        if (normalizedQuestion.includes("maxim")) return "maxima";
-        if (normalizedQuestion.includes("minim")) return "minima";
+        if (normalizedQuestion.includes("dia mais fri")) return "dia_mais_frio";
+        if (normalizedQuestion.includes("dia mais quent")) return "dia_mais_quente";
+        if (normalizedQuestion.includes("tendencia") || normalizedQuestion.includes("subindo") || normalizedQuestion.includes("caindo")) return "tendencia";
+        if (normalizedQuestion.includes("variou") || normalizedQuestion.includes("variacao") || normalizedQuestion.includes("delta")) return "delta";
+        if (normalizedQuestion.includes("maxim") || normalizedQuestion.includes("mais alta") || normalizedQuestion.includes("maior valor")) return "maxima";
+        if (normalizedQuestion.includes("minim") || normalizedQuestion.includes("mais baixa") || normalizedQuestion.includes("menor valor")) return "minima";
         if (normalizedQuestion.includes("media")) return "media";
-        if (normalizedQuestion.includes("diferenca") || normalizedQuestion.includes("diferença")) return "comparar_dias";
+        if (normalizedQuestion.includes("diferenca") || normalizedQuestion.includes("diferença")) {
+            return hasExplicitDayComparison(normalizedQuestion) ? "comparar_dias" : "delta";
+        }
         if (temIntencaoUltimaMedicao(normalizedQuestion) || operation === "valor") return "ultima_medicao";
         if (operation && operation !== "resumo") return operation;
         if (operation) return operation;
@@ -369,9 +373,11 @@
     function inferHourlyOperation(normalizedQuestion) {
         const asksTime = [
             "qual horario",
+            "qual foi o horario",
             "que horario",
             "em qual horario",
             "qual hora",
+            "qual foi a hora",
             "que hora",
             "periodo do dia",
             "faixa do dia",
@@ -441,8 +447,17 @@
         const normalizedType = normalizeText(period?.tipo);
         const monthPeriodDate = extractMonthPeriodDate(normalizedQuestion, selectedDate);
         const yearPeriodDate = extractYearPeriodDate(normalizedQuestion, selectedDate);
-        if (normalizedType === "ultimas_24h" || hasRollingHoursIntent(normalizedQuestion)) {
-            return { type: "rolling_hours", hours: 24, selectedDate: explicitDates[0] || selectedDate || window.ClimateData.dataAtual() };
+        const quantidadeHorasPergunta = extractRollingHours(normalizedQuestion);
+        if (normalizedType === "ultimas_24h" || quantidadeHorasPergunta !== null) {
+            const horasSolicitadas = quantidadeHorasPergunta || Number(period?.quantidade) || 24;
+            const horas = clampHours(horasSolicitadas);
+            return {
+                type: "rolling_hours",
+                hours: horas,
+                requestedHours: horasSolicitadas,
+                limited: horas !== horasSolicitadas,
+                selectedDate: explicitDates[0] || selectedDate || window.ClimateData.dataAtual(),
+            };
         }
 
         if (normalizedType === "mes_selecionado" || operation?.startsWith("calendario_dia_") || ((operation === "solar_maior_duracao_luz" || operation === "solar_menor_duracao_luz") && monthPeriodDate)) {
@@ -461,12 +476,21 @@
             return { type: "selected_month", selectedDate: explicitDates[0] || selectedDate || window.ClimateData.dataAtual() };
         }
 
+        if (normalizedType === "ultimos_dias" || normalizedQuestion.includes("ultim") || normalizedQuestion.includes("urtim")) {
+            const quantidadePergunta = extractLastDaysQuantity(normalizedQuestion);
+            const diasSolicitados = quantidadePergunta || Number(period?.quantidade) || DEFAULT_RECENT_DAYS;
+            const dias = clampDays(diasSolicitados);
+            return {
+                type: "last_days",
+                days: dias,
+                requestedDays: diasSolicitados,
+                limited: dias !== diasSolicitados,
+                selectedDate: explicitDates[0] || selectedDate || window.ClimateData.dataAtual(),
+            };
+        }
+
         if (explicitDates.length > 1) return { type: "datas", dates: explicitDates };
         if (explicitDates.length === 1) return { type: "datas", dates: explicitDates };
-
-        if (normalizedType === "ultimos_dias" || normalizedQuestion.includes("ultim") || normalizedQuestion.includes("urtim")) {
-            return { type: "last_days", days: clampDays(Number(period?.quantidade) || DEFAULT_RECENT_DAYS) };
-        }
 
         const rawDates = Array.isArray(period?.datas) ? period.datas : [];
         const classifiedDates = rawDates.map(normalizeRelativeOrExplicitDate).filter(Boolean);
@@ -496,7 +520,7 @@
         if (period.type === "selected_year") return buildYearDates(period.selectedDate);
         if (period.type === "selected_week") return buildWeekDates(period.selectedDate);
         if (period.type === "datas") return uniqueDates(period.dates).slice(0, MAX_PERIOD_DAYS);
-        if (period.type === "last_days") return buildLastDays(period.days);
+        if (period.type === "last_days") return buildLastDays(period.days, period.selectedDate);
         if (period.type === "range" && period.start && period.end) return buildDateRange(period.start, period.end);
         return [window.ClimateData.dataAtual()];
     }
@@ -545,8 +569,14 @@
         return uniqueDates([formatFirebaseDate(start), formatFirebaseDate(end)]);
     }
 
-    function buildLastDays(days) {
-        return Array.from({ length: clampDays(days) }, (_, index) => offsetFromToday(-(clampDays(days) - 1 - index)));
+    function buildLastDays(days, selectedDate) {
+        const quantidade = clampDays(days);
+        const dataFinal = window.ClimateData.parseFirebaseDate(selectedDate || window.ClimateData.dataAtual());
+        return Array.from({ length: quantidade }, (_, index) => {
+            const data = new Date(dataFinal);
+            data.setDate(data.getDate() - (quantidade - 1 - index));
+            return formatFirebaseDate(data);
+        });
     }
 
     function buildDateRange(start, end) {
@@ -660,9 +690,41 @@
         return start && end ? { start, end } : null;
     }
 
-    function hasRollingHoursIntent(normalizedQuestion) {
-        return /\b(ultim|urtim)[a-z]*\s+24\s*(h|hora|horas)\b/.test(normalizedQuestion)
-            || /\b24\s*(h|hora|horas)\b/.test(normalizedQuestion) && normalizedQuestion.includes("ultim");
+    function extractRollingHours(normalizedQuestion) {
+        const match = normalizedQuestion.match(/\b(?:ultim|urtim)[a-z]*\s+(.+?)\s*(?:h|hora|horas)\b/);
+        if (!match) return null;
+        return parseQuantity(match[1]);
+    }
+
+    function extractLastDaysQuantity(normalizedQuestion) {
+        const match = normalizedQuestion.match(/\b(?:ultim|urtim)[a-z]*\s+(.+?)\s+dias?\b/);
+        if (!match) return null;
+        return parseQuantity(match[1]);
+    }
+
+    function parseQuantity(value) {
+        const text = normalizeText(value).trim();
+        if (/^\d+$/.test(text)) return Number(text);
+
+        const units = {
+            um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5,
+            seis: 6, sete: 7, oito: 8, nove: 9, dez: 10, onze: 11,
+            doze: 12, treze: 13, quatorze: 14, catorze: 14, quinze: 15,
+            dezesseis: 16, dezassete: 17, dezessete: 17, dezoito: 18, dezenove: 19,
+        };
+        if (units[text]) return units[text];
+
+        const tens = { vinte: 20, trinta: 30, quarenta: 40, cinquenta: 50, sessenta: 60 };
+        const compound = text.match(/^(vinte|trinta|quarenta|cinquenta|sessenta)(?:\s+e\s+(um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove))?$/);
+        if (!compound) return null;
+        return tens[compound[1]] + (compound[2] ? units[compound[2]] : 0);
+    }
+
+    function hasExplicitDayComparison(normalizedQuestion) {
+        const mentions = ["hoje", "hj", "ontem", "anteontem", "antiontem"]
+            .filter(term => hasWord(normalizedQuestion, term));
+        const explicitDates = [...normalizedQuestion.matchAll(/\b\d{1,2}[/-]\d{1,2}[/-]\d{4}\b/g)];
+        return new Set(mentions).size + explicitDates.length >= 2 || normalizedQuestion.includes("compar");
     }
 
     function getRollingWindowEnd(selectedDate) {
@@ -721,6 +783,11 @@
     function clampDays(days) {
         if (!Number.isFinite(days) || days <= 0) return DEFAULT_RECENT_DAYS;
         return Math.min(Math.max(Math.round(days), 1), MAX_PERIOD_DAYS);
+    }
+
+    function clampHours(hours) {
+        if (!Number.isFinite(hours) || hours <= 0) return 24;
+        return Math.min(Math.max(Math.round(hours), 1), MAX_PERIOD_DAYS * 24);
     }
 
     namespace.intent = {

@@ -5,7 +5,7 @@
 
     const { config, data, dom, charts, pdf, format } = modules;
     const { TAB_CONFIG } = config;
-    const { getFields, getPdfTableMetrics, getAllReportMetrics, buildCompactTableRows, buildDailyAlerts, buildSummaryCards, extractReportRows } = data;
+    const { construirFonteDadosRelatorio, getPdfTableMetrics, buildCompactTableRows, buildDailyAlerts, buildSummaryCards } = data;
     const { createHeader, createSummarySection, createChartsSection, createTableSection } = dom;
     const { collectChartCards } = charts;
     const { generatePdf } = pdf;
@@ -205,15 +205,17 @@
         const selectedDate = context.selectedDate || ClimateData.dataAtual();
         const generatedAt = new Date();
         const fileNameBase = `relatorio-estacao-${slug(tabConfig.label)}-${selectedDate}`;
-        const data = context.latestData?.[tabConfig.dataKey] || {};
-        const selectedData = ClimateData.filterDataByDays(data, 2, selectedDate);
-        const fields = getFields(tabConfig);
-        const rows = extractReportRows(selectedData, getAllReportMetrics(tabConfig), fields);
+        const fonte = construirFonteDadosRelatorio(tabConfig, context.latestData || {}, selectedDate);
+        const rows = fonte.linhasDetalhadas;
         const tableMetrics = getPdfTableMetrics(tabConfig);
-        const tableRows = buildCompactTableRows(rows, tableMetrics);
-        const summaryCards = buildSummaryCards(tabConfig, rows, context.chartInstances || {}, context.latestData || {}, selectedDate);
-        const alerts = buildDailyAlerts(rows, tabConfig.metrics);
-        const chartCards = await collectChartCards(tabConfig, context.chartInstances || {}, selectedDate);
+        const tableRows = buildCompactTableRows(fonte.linhasNormalizadas, tableMetrics);
+        const summaryCards = buildSummaryCards(tabConfig, fonte.linhasNormalizadas, context.latestData || {}, selectedDate);
+        const alerts = buildDailyAlerts(fonte.linhasNormalizadas, tabConfig.metrics);
+        const chartCards = await collectChartCards(tabConfig, {
+            normalizedRows: fonte.linhasNormalizadas,
+            latestData: context.latestData || {},
+            selectedDate,
+        });
 
         const report = document.createElement("article");
         report.className = "pdf-report";
@@ -235,7 +237,9 @@
             rows,
             tableRows,
             tableMetrics,
-            selectedData,
+            selectedData: fonte.dadosSelecionados,
+            normalizedRows: fonte.linhasNormalizadas,
+            chartCards,
         };
     }
 

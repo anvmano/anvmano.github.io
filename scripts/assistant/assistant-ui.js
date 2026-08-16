@@ -161,6 +161,10 @@
         return mensagem;
     }
 
-    namespace.ui = { setup: configurar };
+    namespace.ui = {
+        setup: configurar,
+        open: abrirChat,
+        close: fecharChat,
+    };
     window.ClimateAssistant = namespace;
 })();

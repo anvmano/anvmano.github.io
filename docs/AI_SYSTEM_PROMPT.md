@@ -75,7 +75,7 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Graficos comuns sem pontos numericos exibem fallback.
 - Faixa de conforto: 20 a 26 em graficos de temperatura/sensacao com sufixo `°`.
 - A assistente responde perguntas de faixa/status/conforto usando resultado local `faixa_conforto`: faixa usada, dentro/fora, horarios fora e pior horario fora da faixa.
-- A assistente interpreta `ultimas 24 horas`/`ultimas 24h` como janela movel real via `ClimateData.filterDataByRollingHours`, nao como dia atual.
+- A assistente interpreta `ultimas X horas`/`ultimas Xh` como janela movel real via `ClimateData.filterDataByRollingHours`, ancorada na data selecionada, e nao como dia atual.
 - A assistente interpreta faixas horarias como `entre 8h e 18h` e perguntas de maior/menor horario, calculando localmente os registros filtrados e o maior/menor valor medio por horario antes de redigir a resposta.
 - A assistente responde consultas equivalentes aos heatmaps: calendario mensal por dia, heatmap por hora do dia e mapa semanal por dia/hora, sempre calculando localmente antes da redacao da IA.
 - Zênite solar usa campos enviados pelo Firebase quando existem; caso contrario usa meio entre nascer e por do sol.
@@ -88,13 +88,13 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Modo publico nao deve iniciar listeners internos do Firebase, nao deve exibir assistente IA e nao deve carregar contexto privado.
 - Somente `anvmano@gmail.com` e `clarissamikado@gmail.com` acessam o dashboard interno completo.
 - Logout no modo interno cancela listeners Firebase, limpa `latestData`, limpa AQI interno e retorna para o modo publico.
-- Exportacao PDF/JSON deve reutilizar `latestData`, `selectedDate`, aba ativa e `chartInstances`; nao deve reconsultar Firebase.
+- Exportacao PDF/JSON deve reutilizar `latestData`, `selectedDate` e aba ativa, sem reconsultar Firebase. Deve construir resumo, alertas, graficos, tabelas e JSON a partir de uma unica fonte normalizada da data selecionada, sem reutilizar `chartInstances` da interface.
 - Chat com IA deve reutilizar `latestData`, `selectedDate` e aba ativa; nao deve enviar historicos completos ao modelo.
 - Chat deve usar Gemini para classificar a pergunta em JSON, JavaScript para validar/calcular resultados e Gemini apenas para redigir a resposta final.
 - Perguntas de ciclo solar no chat devem reutilizar `ClimateSolar.getSolarEventsForSelectedDate` sobre `latestData.solar`.
 - Perguntas de comparacao solar no chat devem ser calculadas localmente em `assistant-solar.js`: duracao do dia, maior/menor duracao de luz no ano da data selecionada por padrao, maior/menor duracao de luz no mes quando um mes for informado, tendencia de nascer/por do sol e comparacao semanal.
 - Perguntas de AQI/IAQ/qualidade do ar no chat devem reutilizar `ClimateAqi.calculate` sobre dados da Sala/MQ135; CO, CO2, Acetona, Alcool, Amonia e Tolueno sao metricas exclusivas da Sala quando nenhum ambiente e citado.
-- Consultas de periodo no chat devem limitar no maximo 30 dias; `ultimos dias` usa 7 dias por padrao.
+- Consultas de periodo no chat devem limitar no maximo 30 dias; `ultimos X dias` reconhece quantidade em algarismos ou por extenso, termina na data selecionada e usa 7 dias por padrao quando X nao for informado.
 - No grafico Ciclo Solar do Dia, tooltip so ativa proximo dos pontos solares; no grafico Nascer & Por do Sol e nos comparativos da Estacao, tooltip deve seguir a ordem visual das linhas.
 - Exportacao PDF deve montar paginas A4 manualmente com html2canvas + jsPDF, evitando paginacao automatica que pode cortar conteudo.
 - PDF deve manter tema escuro, usar resumo executivo na primeira pagina, juntar temperatura e sensacao quando possivel, usar tabela resumida por horario e respeitar o contrato por aba: Estacao com cards contextuais de Estacao do ano e Fase da lua usando rotulos proprios de detalhe, 6 cards globais, graficos comparativos e ciclo solar, sem tabela; Sala com tabela MQ135 e sem solar; Quarto sem solar; Aquario sem solar.

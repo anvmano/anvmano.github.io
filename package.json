@@ -1,5 +1,8 @@
 {
   "scripts": {
-    "validate": "node tools/validate-project.mjs"
+    "validate": "node tools/validate-project.mjs",
+    "test:assistant": "node tools/testar-assistente.mjs",
+    "test:report": "node tools/testar-relatorio.mjs",
+    "test:accessibility": "node tools/testar-acessibilidade.mjs"
   }
 }

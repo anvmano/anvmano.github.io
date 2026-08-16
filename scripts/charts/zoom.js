@@ -2,17 +2,24 @@
 
 (function () {
     let zoomOverlay = null;
+    let disparadorZoom = null;
 
     function isTouchDevice() {
         return window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
     }
 
-    function closeZoom() {
+    function closeZoom({ restaurarFoco = true } = {}) {
         if (!zoomOverlay) return;
+        const disparadorAnterior = disparadorZoom;
         const zoomChart = zoomOverlay._chart;
         if (zoomChart) zoomChart.destroy();
         zoomOverlay.remove();
         zoomOverlay = null;
+        disparadorZoom = null;
+
+        if (restaurarFoco && disparadorAnterior?.isConnected) {
+            requestAnimationFrame(() => disparadorAnterior.focus({ preventScroll: true }));
+        }
     }
 
     function cloneChartData(sourceChart) {
@@ -69,8 +76,32 @@
         return zoomChart;
     }
 
-    function handleZoom(card, { chartInstances, getZoomOptions }) {
-        closeZoom();
+    function conterFocoNoDialogo(evento, dialogo) {
+        if (evento.key !== "Tab") return;
+
+        const focaveis = Array.from(dialogo.querySelectorAll(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )).filter(elemento => !elemento.hasAttribute("hidden"));
+        if (!focaveis.length) {
+            evento.preventDefault();
+            dialogo.focus();
+            return;
+        }
+
+        const primeiro = focaveis[0];
+        const ultimo = focaveis[focaveis.length - 1];
+        const focoAtual = document.activeElement;
+        if (evento.shiftKey && (focoAtual === primeiro || !dialogo.contains(focoAtual))) {
+            evento.preventDefault();
+            ultimo.focus();
+        } else if (!evento.shiftKey && (focoAtual === ultimo || !dialogo.contains(focoAtual))) {
+            evento.preventDefault();
+            primeiro.focus();
+        }
+    }
+
+    function handleZoom(card, { chartInstances, getZoomOptions }, disparador = document.activeElement) {
+        closeZoom({ restaurarFoco: false });
 
         const sourceCanvas = card.querySelector("canvas");
         if (!sourceCanvas) return;
@@ -80,6 +111,9 @@
 
         const overlay = document.createElement("div");
         overlay.className = "plot-zoom-overlay";
+        overlay.setAttribute("role", "dialog");
+        overlay.setAttribute("aria-modal", "true");
+        overlay.setAttribute("tabindex", "-1");
         if (isTouchDevice()) {
             overlay.classList.add("plot-zoom-overlay--touch");
         }
@@ -96,7 +130,14 @@
         zoomCanvas.setAttribute("aria-label", sourceCanvas.getAttribute("aria-label") || "Gráfico ampliado");
         zoomCanvas.setAttribute("role", "img");
 
-        if (label) clone.appendChild(label.cloneNode(true));
+        if (label) {
+            const rotuloAmpliado = label.cloneNode(true);
+            rotuloAmpliado.id = `zoom-chart-label-${sourceCanvas.id}`;
+            overlay.setAttribute("aria-labelledby", rotuloAmpliado.id);
+            clone.appendChild(rotuloAmpliado);
+        } else {
+            overlay.setAttribute("aria-label", sourceCanvas.getAttribute("aria-label") || "Gráfico ampliado");
+        }
         clone.appendChild(closeButton);
         clone.appendChild(zoomCanvas);
         overlay.appendChild(clone);
@@ -115,10 +156,13 @@
             event.stopPropagation();
             closeZoom();
         });
+        overlay.addEventListener("keydown", event => conterFocoNoDialogo(event, overlay));
 
+        disparadorZoom = disparador instanceof HTMLElement ? disparador : null;
         zoomOverlay = overlay;
         document.body.appendChild(overlay);
         createZoomChart({ sourceChart, targetCtx: zoomCanvas.getContext("2d"), getZoomOptions });
+        closeButton.focus({ preventScroll: true });
         window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
@@ -139,7 +183,7 @@
         `;
         button.addEventListener("click", event => {
             event.stopPropagation();
-            handleZoom(card, zoomOptions);
+            handleZoom(card, zoomOptions, button);
         });
 
         card.appendChild(button);
@@ -154,7 +198,10 @@
             card.classList.add("chart-card--zoomable");
             card.removeAttribute("title");
             createZoomButton(card, zoomOptions);
-            card.addEventListener("dblclick", () => handleZoom(card, zoomOptions));
+            card.addEventListener("dblclick", () => {
+                const botaoZoom = card.querySelector(".chart-zoom-button");
+                handleZoom(card, zoomOptions, botaoZoom || card);
+            });
         });
     }
 

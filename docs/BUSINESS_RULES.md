@@ -871,6 +871,31 @@ Se alterada: aba inicial pode sempre voltar para Sala.
 
 Criticidade: Baixa.
 
+## Regra: navegacao por teclado entre abas
+
+Arquivo: `scripts/ui/ui.js`
+
+Metodo: `setupTabs`, `openTab`, `navegarAbasPorTeclado`
+
+Objetivo: seguir o padrao ARIA de tabs com foco movel e navegacao completa por teclado.
+
+Saidas:
+
+- somente a aba ativa usa `tabindex="0"`; as demais usam `tabindex="-1"`
+- `ArrowLeft` abre e focaliza a aba anterior, circulando da primeira para a ultima
+- `ArrowRight` abre e focaliza a proxima aba, circulando da ultima para a primeira
+- `Home` abre e focaliza Estacao
+- `End` abre e focaliza Aquario
+- foco, `aria-selected`, classe ativa, painel visivel e aba persistida permanecem sincronizados
+
+Impacto: acessibilidade e navegacao sem mouse.
+
+Dependencias: DOM `.tablink[role="tab"]`, paineis `role="tabpanel"`, `localStorage`.
+
+Se alterada: foco visual, painel exibido e estado ARIA podem divergir.
+
+Criticidade: Media.
+
 ## Regra: navegacao touch entre abas
 
 Arquivo: `scripts/ui/ui.js`
@@ -922,6 +947,10 @@ Saidas: overlay com novo Chart.js.
 Interacao:
 
 - duplo clique ou botao do card abre o zoom
+- o overlay usa `role="dialog"`, `aria-modal="true"` e nome acessivel associado ao grafico
+- o foco e movido para o botao Fechar ao abrir
+- `Tab` e `Shift+Tab` devem permanecer contidos no dialogo enquanto ele estiver aberto
+- ao fechar, o foco e devolvido ao botao que iniciou o zoom
 - `Esc` fecha o zoom
 - botao de fechar do overlay fecha o zoom
 - clique/toque no fundo do overlay fecha o zoom
@@ -949,7 +978,6 @@ Entradas:
 - `activeTab`
 - `selectedDate`
 - `latestData`
-- `chartInstances`
 - botao `#btnExportData`
 - controle `name="exportFormat"` com opcoes `pdf` e `json`
 
@@ -963,6 +991,14 @@ Saidas:
 - ciclo solar compacto quando a aba ativa inclui ciclo solar
 - tabela resumida com uma linha por horario e status geral
 - rodape com Estacao Climatica, pagina atual/total e data/hora
+
+Fonte unica do relatorio:
+
+- `scripts/reports/pdf-report-data.js` deve filtrar `latestData` exclusivamente por `selectedDate` e produzir uma fonte normalizada unica
+- resumo, alertas, graficos, tabela resumida, tabela detalhada e JSON devem derivar dessa mesma fonte
+- os graficos do PDF nao devem reutilizar `chartInstances` nem canvases ativos da interface, porque os graficos da tela podem representar a janela movel das ultimas 24h
+- os graficos temporarios do PDF devem ser reconstruidos com os dados filtrados da data consultada
+- minima, maxima e media do grafico devem usar exatamente os mesmos valores validos usados pelos cards e tabelas
 
 Contrato por aba:
 
@@ -994,7 +1030,7 @@ Regras de layout:
 
 Impacto: relatorio/dados exportados para Estacao, Sala, Quarto e Aquario.
 
-Dependencias: URLs de `html2canvas` e `jsPDF` em `AppConfig.firebase`, `ClimateData`, `AppConfig`, `window.ClimatePdfReportModules`, canvases existentes, dados ja carregados pelo Firebase.
+Dependencias: URLs de `html2canvas` e `jsPDF` em `AppConfig.firebase`, `ClimateData`, `ClimateSolar`, `AppConfig`, `window.ClimatePdfReportModules` e dados ja carregados pelo Firebase.
 
 Se alterada: exportacao pode reconsultar dados indevidamente, perder graficos, gerar layout quebrado ou falhar no download.
 
@@ -1004,13 +1040,21 @@ Criticidade: Alta.
 
 Arquivos: `scripts/reports/pdf-report.js` e `scripts/reports/pdf-report-*.js`
 
-Metodo: `emptySummary`, `captureChartImage`, `createTableSection`
+Metodo: `construirFonteDadosRelatorio`, `construirLinhasNormalizadas`, `emptySummary` e `createTableSection`
 
 Objetivo: manter a geracao da exportacao mesmo sem dados, sem sensor ou sem grafico.
 
 Entradas: valores ausentes, canvas ausente ou data sem registros.
 
 Saidas: texto `Sem dados de <tipo_grafico> em <data>` nos graficos e `Sem dados`/`Sem dados disponíveis` nos resumos e tabelas.
+
+Regras de normalizacao:
+
+- `null`, `undefined` e strings vazias representam dado ausente e nunca podem virar zero
+- series de graficos preservam ausencias como `null`, produzindo lacunas
+- media, minima e maxima ignoram valores ausentes
+- se houver apenas uma medicao valida, o grafico deve conter apenas esse ponto e as estatisticas devem usar somente esse valor
+- para a data atual sem eventos solares processados, o PDF pode exibir `Ciclo solar ainda nao processado para hoje.`; a ausencia antes do processamento diario nao e falha do ciclo solar
 
 Impacto: robustez do relatorio.
 
@@ -1044,6 +1088,7 @@ Saidas:
 - mensagem de erro visivel quando Firebase AI Logic, App Check ou o modelo configurado nao estiverem disponiveis
 - envio da pergunta predefinida quando o usuario aciona um atalho
 - enquanto o painel estiver aberto, a rolagem da pagina de fundo deve ficar travada e a rolagem deve acontecer somente dentro da area de mensagens do chat
+- no primeiro clique, a fachada deve carregar os modulos, inicializar a UI e abrir o painel automaticamente; nao pode exigir segundo clique
 
 Regra de contexto:
 
@@ -1059,12 +1104,13 @@ Regra de contexto:
 - se a pergunta nao mencionar ambiente, mas mencionar AQI, IAQ, qualidade do ar, CO, CO2, Acetona, Alcool, Amonia ou Tolueno, usar Sala/MQ135 como ambiente alvo
 - se o ambiente classificado nao possuir a metrica pedida e essa metrica existir em apenas outro ambiente, usar o ambiente que possui a medicao em vez de cair na metrica padrao
 - se a pergunta mencionar Sala, Quarto ou Aquario, usar o ambiente mencionado como alvo, mesmo que a aba ativa seja outra
-- perguntas sobre `ultimas 24 horas` ou `ultimas 24h` devem usar janela movel real com `ClimateData.filterDataByRollingHours`, data selecionada e hora atual do navegador
-- `ultimas 24h` nao deve ser tratado como `hoje`, nem como `ultimos dias`
+- perguntas sobre `ultimas X horas` ou `ultimas Xh` devem usar janela movel real com `ClimateData.filterDataByRollingHours`, data selecionada e hora atual do navegador; o limite e 30 dias convertidos em horas
+- periodos em horas nao devem ser tratados como `hoje`, nem como `ultimos dias`
 - se a pergunta nao mencionar data, usar a data selecionada no calendario da pagina
 - se a pergunta mencionar data em `DD/MM/AAAA`, `DD-MM-AAAA`, `hoje`, `ontem` ou `anteontem`, usar essa data como alvo sem alterar o calendario da pagina
 - se a pergunta mencionar hora como `14h`, `14:00` ou `14`, o chat deve filtrar a hora correspondente e comparar corretamente com chaves Firebase no formato `14-00`
 - se houver filtro por hora, a resposta deve ser direta e conter somente o valor da metrica, ambiente, data e hora; nao deve exibir resumo do dia nem numero de amostras
+- media deve retornar somente a media e o periodo; maxima/minima devem retornar somente o extremo pedido com data/hora; delta deve retornar valor inicial, valor final e diferenca; tendencia deve retornar classificacao, valor inicial, valor final e diferenca
 - se a pergunta pedir valor atual/agora/ultima medicao, ou perguntar de forma simples `qual o/a <metrica>` sem solicitar media, maxima, minima, tendencia, faixa ou periodo inteiro, o chat deve retornar a ultima medicao disponivel da metrica no recorte consultado; essa regra vale para qualquer metrica conhecida, incluindo temperatura, sensacao termica, umidade, pressao, pH, TDS, turbidez e gases da Sala
 - se a pergunta mencionar faixa horaria como `entre 8h e 18h`, `das 8 as 18` ou `de 8h a 18h`, o chat deve considerar somente registros dentro da faixa, incluindo as horas inicial e final
 - se a pergunta comparar dias mencionados, como `ontem ou hoje`, `ontem e anteontem`, `maior que hoje` ou `mais quente que hoje`, o planner deve usar operacao `comparar_dias` e a resposta deve informar o dia com maior media diaria, o valor do dia comparado e a diferenca
@@ -1072,7 +1118,9 @@ Regra de contexto:
 - se a pergunta pedir o dia do mes de maior/menor valor, o chat deve consultar o mes completo da data selecionada e calcular o maior/menor valor medio diario
 - se a pergunta pedir a hora que costuma ter maior/menor valor, o chat deve agrupar os registros por hora do dia no periodo resolvido; quando a pergunta usar `costuma`, o periodo padrao e o mes da data selecionada
 - se a pergunta pedir dia/hora da semana ou pico semanal, o chat deve usar a semana da data selecionada, de domingo ate a data selecionada, e calcular o maior/menor valor medio por celula dia da semana/hora
-- periodos como `ultimos dias` devem usar 7 dias por padrao; periodos devem ser limitados a 30 dias
+- `ultimos X dias` deve reconhecer quantidades em algarismos ou por extenso e terminar na data selecionada no calendario; sem quantidade explicita usa 7 dias por padrao
+- periodos devem ser limitados a 30 dias; quando o usuario pedir mais, a resposta deve informar a quantidade solicitada e o limite aplicado
+- na aba Estacao, os atalhos devem usar contexto global em vez da metrica solar padrao: Resumo consulta os ambientes disponiveis, Alertas verifica faixas dos ambientes fisicos e Maxima do dia usa temperatura explicitamente
 - a classificacao de intencao pode retornar `ambientes`, `metricas`, `operacao`, `periodo`, `criterio`, `confianca`, `precisa_esclarecimento` e `solar`, mas nao deve receber historico completo nem responder a pergunta do usuario
 - as regras de ambiente e data valem para media, maxima, minima, delta, tendencia e qualquer parametro carregado no ambiente alvo
 - perguntas de ciclo solar devem usar `latestData.solar` e `ClimateSolar.getSolarEventsForSelectedDate`, sem duplicar leitura manual dos campos solares no chat
@@ -1097,7 +1145,7 @@ Criticidade: Alta.
 - Leitura de zênite em `scripts/charts/solar.js` sem revisar dados enviados pelo Arduino.
 - Ordem de scripts em `index.html`; os scripts externos podem usar `defer`, mas a sequencia relativa deve ser preservada.
 - Contrato de fallback em `ClimateCharts.createLineChart`.
-- Exportacao PDF/JSON deve reutilizar `latestData` e `chartInstances`, sem reconsultar Firebase.
+- Exportacao PDF/JSON deve reutilizar `latestData` sem reconsultar Firebase, mas deve reconstruir seus graficos a partir da fonte normalizada filtrada por `selectedDate`; nao deve reutilizar `chartInstances` da interface.
 - Chat com IA deve reutilizar `latestData`, aba ativa e data selecionada, sem reconsultar Firebase nem enviar historico completo ao modelo.
 
 # MAPA DE IMPACTO

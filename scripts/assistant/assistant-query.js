@@ -52,7 +52,6 @@
         }
 
         const environments = effectiveIntent.environments;
-        const metrics = namespace.metrics.resolveMetricsForEnvironments(environments, effectiveIntent.metrics, question);
         const periodDates = namespace.intent.resolvePeriodDates(effectiveIntent.period);
         const periodLabel = getPeriodLabel(effectiveIntent.period, periodDates);
 
@@ -70,13 +69,24 @@
             };
         }
 
-        const environmentResults = environments.map(environment => executeEnvironmentQuery(context, environment, metrics, periodDates, effectiveIntent, periodLabel));
+        const environmentResults = environments
+            .map(environment => executeEnvironmentQuery(context, environment, periodDates, effectiveIntent, periodLabel, question))
+            .filter(result => result.metricas.length);
+        const metricLabels = [...new Set(environmentResults.flatMap(result => result.metricas.map(metric => metric.metrica)))];
+
+        if (!environmentResults.length) {
+            return {
+                needsClarification: true,
+                message: "Não encontrei uma métrica compatível com o ambiente consultado.",
+            };
+        }
+
         return {
             question,
             resolvedIntent: effectiveIntent,
             intent: {
                 environments: environments.map(environment => environment.label),
-                metrics: metrics.map(metric => metric.label),
+                metrics: metricLabels,
                 operation: effectiveIntent.operation,
                 criterion: effectiveIntent.criterion,
                 period: {
@@ -90,10 +100,10 @@
         };
     }
 
-    function executeEnvironmentQuery(context, environment, requestedMetrics, periodDates, intent, periodLabel) {
+    function executeEnvironmentQuery(context, environment, periodDates, intent, periodLabel, question) {
         const sourceData = context.latestData?.[environment.dataKey] || {};
         const data = getScopedDataForPeriod(sourceData, intent.period);
-        const metrics = requestedMetrics.length ? requestedMetrics : [namespace.metrics.getDefaultMetric(environment)];
+        const metrics = namespace.metrics.resolveMetricsForEnvironments([environment], intent.metrics, question);
         const scopedDates = Object.keys(data || {}).sort((a, b) => window.ClimateData.parseFirebaseDate(a) - window.ClimateData.parseFirebaseDate(b));
         const queryDates = intent.period?.type === "rolling_hours" ? scopedDates : periodDates;
         const scopedIntent = { ...intent, periodLabel };
@@ -125,8 +135,22 @@
         if (period?.type === "selected_month") return formatMonthPeriodLabel(period.selectedDate || periodDates[0]);
         if (period?.type === "selected_year") return formatYearPeriodLabel(period.selectedDate || periodDates[0]);
         if (period?.type === "selected_week") return `semana de ${formatPeriodLabel(periodDates)}`;
+        if (period?.type === "last_days") {
+            const limite = period.limited
+                ? `; solicitados ${period.requestedDays} dias, limitado a ${period.days} dias`
+                : "";
+            return `últimos ${period.days} dias até ${formatDateLabel(period.selectedDate)} (${formatPeriodLabel(periodDates)}${limite})`;
+        }
         if (period?.type !== "rolling_hours") return formatPeriodLabel(periodDates);
-        return `últimas ${period.hours || 24} horas (${formatPeriodLabel(periodDates)})`;
+        const limite = period.limited
+            ? `; solicitadas ${period.requestedHours} horas, limitado a ${period.hours} horas`
+            : "";
+        return `últimas ${period.hours || 24} horas até ${formatDateLabel(period.selectedDate)} (${formatPeriodLabel(periodDates)}${limite})`;
+    }
+
+    function formatDateLabel(firebaseDate) {
+        return window.ClimateData.formatarDataExibicao?.(firebaseDate)
+            || String(firebaseDate || "").replace(/-/g, "/");
     }
 
     function formatMonthPeriodLabel(firebaseDate) {
@@ -159,12 +183,20 @@
             - Se o resultado for de qualidade do ar, informe AQI estimado, classificação e poluente dominante quando existirem.
             - Se o resultado for de faixa de conforto, diga se ficou dentro ou fora da faixa, informe a faixa usada, quantas horas ficaram fora e o pior horário fora da faixa quando existir.
             - Se o resultado tiver "tipo_resultado": "consulta_horaria", responda somente o valor da métrica, ambiente, data e hora. Não mostre média, mínima, máxima, delta nem número de amostras.
+            - Se o resultado tiver "tipo_resultado": "estatistica_media", responda somente a média, a métrica, o ambiente e o período.
+            - Se o resultado tiver "tipo_resultado": "estatistica_extremo", responda somente a máxima ou mínima pedida, com data, horário, ambiente e período.
+            - Se o resultado tiver "tipo_resultado": "variacao_periodo", informe valor inicial, valor final e diferença.
+            - Se o resultado tiver "tipo_resultado": "tendencia_periodo", informe a tendência, valor inicial, valor final e diferença.
+            - Se o resultado tiver "tipo_resultado": "extremo_diario", informe somente o dia mais quente/frio, a média diária, o ambiente e o período.
+            - Se o resultado tiver "tipo_resultado": "resumo_metrica", faça um resumo curto da métrica sem mencionar amostras.
             - Se o resultado tiver "tipo_resultado": "analise_horaria", responda o horário/período encontrado, o valor principal e a data. Se houver "faixa_horaria_consultada", diga que a análise ficou restrita a essa faixa.
             - Se o resultado tiver "tipo_resultado": "analise_calendario_mensal", responda o dia do mês encontrado, o valor principal e o período consultado.
             - Se o resultado tiver "tipo_resultado": "analise_heatmap_horario", responda a hora do dia encontrada, o valor principal e o período consultado.
             - Se o resultado tiver "tipo_resultado": "analise_heatmap_semanal", responda o dia da semana/hora encontrados, o valor principal e o período consultado.
             - Se o resultado tiver "tipo_resultado": "comparacao_dias", responda qual dia venceu, a diferença e o critério usado.
             - Não mencione número de amostras, exceto se o usuário perguntar explicitamente.
+            - Se existirem vários ambientes ou métricas no resultado, não descarte os demais: resuma cada resultado relevante.
+            - Se o período tiver sido limitado pelo sistema, informe claramente o limite aplicado.
             - Quando útil, informe o período consultado.
             - Se não houver dados, diga isso diretamente.
 
@@ -179,8 +211,12 @@
     }
 
     function formatResultFallback(result) {
-        const firstMetric = result.results?.[0]?.metricas?.[0];
-        if (!firstMetric) return "Não encontrei dados suficientes para responder.";
+        const metricas = result.results?.flatMap(item => item.metricas || []) || [];
+        if (!metricas.length) return "Não encontrei dados suficientes para responder.";
+        return metricas.map(formatMetricFallback).filter(Boolean).join("\n\n");
+    }
+
+    function formatMetricFallback(firstMetric) {
         if (firstMetric.sem_dados) return firstMetric.mensagem;
 
         if (firstMetric.tipo_resultado === "ciclo_solar") return formatSolarFallback(firstMetric);
@@ -194,6 +230,30 @@
             const classification = firstMetric.classificacao ? ` (${firstMetric.classificacao})` : "";
             const dominant = firstMetric.dominante ? ` Dominante: ${firstMetric.dominante}.` : "";
             return `${firstMetric.metrica} em ${firstMetric.ambiente} no dia ${dateLabel} às ${firstMetric.hora_consultada}: ${value}${classification}.${dominant}`;
+        }
+
+        if (firstMetric.tipo_resultado === "estatistica_media") {
+            return `A média de ${firstMetric.metrica} em ${firstMetric.ambiente} foi ${formatMetricValue(firstMetric.valor, firstMetric.unidade)} no período ${firstMetric.periodo}.`;
+        }
+
+        if (firstMetric.tipo_resultado === "estatistica_extremo") {
+            const descricao = firstMetric.criterio === "menor_registro" ? "mínima" : "máxima";
+            return `A ${descricao} de ${firstMetric.metrica} em ${firstMetric.ambiente} foi ${formatMetricValue(firstMetric.valor, firstMetric.unidade)} em ${firstMetric.data} às ${firstMetric.horario}. Período: ${firstMetric.periodo}.`;
+        }
+
+        if (firstMetric.tipo_resultado === "variacao_periodo" || firstMetric.tipo_resultado === "tendencia_periodo") {
+            const inicio = formatMetricValue(firstMetric.valor_inicial, firstMetric.unidade);
+            const fim = formatMetricValue(firstMetric.valor_final, firstMetric.unidade);
+            const diferenca = formatMetricValue(firstMetric.diferenca, firstMetric.unidade);
+            const tendencia = firstMetric.tipo_resultado === "tendencia_periodo"
+                ? ` A tendência foi ${firstMetric.tendencia}.`
+                : "";
+            return `${firstMetric.metrica} em ${firstMetric.ambiente} foi de ${inicio} em ${firstMetric.inicio.data} às ${firstMetric.inicio.horario} para ${fim} em ${firstMetric.fim.data} às ${firstMetric.fim.horario}, diferença de ${diferenca}.${tendencia}`;
+        }
+
+        if (firstMetric.tipo_resultado === "extremo_diario") {
+            const descricao = firstMetric.criterio === "menor_media_diaria" ? "mais frio" : "mais quente";
+            return `No período ${firstMetric.periodo}, o dia ${descricao} em ${firstMetric.ambiente} foi ${firstMetric.data}, com média de ${formatMetricValue(firstMetric.valor, firstMetric.unidade)}.`;
         }
 
         if (firstMetric.tipo_resultado === "analise_horaria") {

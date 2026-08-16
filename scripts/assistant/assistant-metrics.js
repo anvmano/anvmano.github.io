@@ -84,6 +84,9 @@
             amostras: day.values.length,
         }));
 
+        const resultadoEstatistico = montarResultadoEstatistico(base, dailyStats, overallStats, intent.operation);
+        if (resultadoEstatistico) return resultadoEstatistico;
+
         return {
             ...base,
             media: round(overallStats.avg),
@@ -98,6 +101,98 @@
             comparacao: buildComparison(dailySummaries),
             por_dia: dailySummaries,
         };
+    }
+
+    function montarResultadoEstatistico(base, dailyStats, overallStats, operacao) {
+        if (!["media", "maxima", "minima", "delta", "tendencia", "resumo", "dia_mais_frio", "dia_mais_quente"].includes(operacao)) return null;
+
+        const { amostras, ...baseSemAmostras } = base;
+        if (operacao === "resumo") {
+            return {
+                ...baseSemAmostras,
+                tipo_resultado: "resumo_metrica",
+                media: round(overallStats.avg),
+                minima: round(overallStats.min),
+                maxima: round(overallStats.max),
+                delta: round(overallStats.delta),
+                tendencia: trendFromDelta(overallStats.delta),
+            };
+        }
+
+        if (operacao === "dia_mais_frio" || operacao === "dia_mais_quente") {
+            const resumosDiarios = dailyStats.map(dia => ({
+                data: dia.dateLabel,
+                valor: dia.stats.avg,
+            }));
+            const diaSelecionado = [...resumosDiarios].sort((a, b) => (
+                operacao === "dia_mais_frio" ? a.valor - b.valor : b.valor - a.valor
+            ))[0];
+            return {
+                ...baseSemAmostras,
+                tipo_resultado: "extremo_diario",
+                criterio: operacao === "dia_mais_frio" ? "menor_media_diaria" : "maior_media_diaria",
+                data: diaSelecionado.data,
+                valor: round(diaSelecionado.valor),
+            };
+        }
+
+        if (operacao === "media") {
+            return {
+                ...baseSemAmostras,
+                tipo_resultado: "estatistica_media",
+                valor: round(overallStats.avg),
+            };
+        }
+
+        const registros = obterRegistrosOrdenados(dailyStats);
+        if (operacao === "maxima" || operacao === "minima") {
+            const registro = [...registros].sort((a, b) => (
+                operacao === "maxima" ? b.value - a.value : a.value - b.value
+            ))[0];
+
+            return {
+                ...baseSemAmostras,
+                tipo_resultado: "estatistica_extremo",
+                criterio: operacao === "maxima" ? "maior_registro" : "menor_registro",
+                valor: round(registro.value),
+                data: registro.dateLabel,
+                horario: registro.time,
+            };
+        }
+
+        const primeiro = registros[0];
+        const ultimo = registros[registros.length - 1];
+        const diferenca = round(ultimo.value - primeiro.value);
+        return {
+            ...baseSemAmostras,
+            tipo_resultado: operacao === "tendencia" ? "tendencia_periodo" : "variacao_periodo",
+            valor_inicial: round(primeiro.value),
+            valor_final: round(ultimo.value),
+            diferenca,
+            tendencia: trendFromDelta(diferenca),
+            inicio: {
+                data: primeiro.dateLabel,
+                horario: primeiro.time,
+            },
+            fim: {
+                data: ultimo.dateLabel,
+                horario: ultimo.time,
+            },
+        };
+    }
+
+    function obterRegistrosOrdenados(dailyStats) {
+        return dailyStats
+            .flatMap(dia => dia.records.map(registro => ({
+                ...registro,
+                date: dia.date,
+                dateLabel: dia.dateLabel,
+            })))
+            .sort((a, b) => {
+                const diferencaData = window.ClimateData.parseFirebaseDate(a.date) - window.ClimateData.parseFirebaseDate(b.date);
+                if (diferencaData !== 0) return diferencaData;
+                return converterHoraEmMinutos(a.time) - converterHoraEmMinutos(b.time);
+            });
     }
 
     function buildDailyStats(dayData, metric, date, hour, hourRange) {
@@ -581,7 +676,7 @@
             }
         }
 
-        return uniqueMetrics(metrics.length ? metrics : environments.map(getDefaultMetric));
+        return uniqueMetrics(metrics);
     }
 
     function inferMetricsFromQuestion(normalizedQuestion) {

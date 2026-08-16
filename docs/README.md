@@ -99,7 +99,10 @@ Bibliotecas carregadas via CDN:
 │   └── reports/
 │       └── pdf-report.css      Estilo usado na exportação PDF
 ├── tools/
-│   └── validate-project.mjs    Validação estrutural local
+│   ├── validate-project.mjs    Validação estrutural local
+│   ├── testar-assistente.mjs   Regressões de intenção e respostas da assistente
+│   ├── testar-relatorio.mjs    Consistência de dados e ausências no PDF/JSON
+│   └── testar-acessibilidade.mjs Navegação das abas e contrato do zoom
 └── docs/
     ├── README.md
     ├── AI_QUICK_CONTEXT.md
@@ -176,6 +179,9 @@ Execute:
 
 ```powershell
 npm run validate
+npm run test:assistant
+npm run test:report
+npm run test:accessibility
 ```
 
 A validação verifica:
@@ -185,6 +191,10 @@ A validação verifica:
 - Imports CSS em `style.css`.
 - IDs duplicados no HTML.
 - Contratos entre `index.html` e `scripts/config.js`.
+- Períodos, operações, atalhos e contratos de resposta da assistente.
+- Consistência entre a fonte normalizada, cards, tabelas, estatísticas e gráficos do relatório.
+- Preservação de valores ausentes como `null`, sem conversão indevida para zero.
+- Navegação ARIA das abas e contrato de foco do diálogo de zoom.
 
 ## Funcionalidades
 
@@ -228,6 +238,8 @@ A validação verifica:
 A exportação usa os dados já carregados na tela. Ela não reconsulta o Firebase.
 Os módulos internos de relatório são carregados apenas ao exportar. Exportar JSON não carrega Chart.js, CSS do PDF, `html2canvas` ou `jsPDF`. Exportar PDF carrega CSS do relatório, Chart.js, `html2canvas` e `jsPDF` sob demanda.
 
+O relatório cria uma fonte normalizada única filtrada pela data selecionada. Resumo, alertas, gráficos, tabelas e JSON usam esse mesmo recorte; os gráficos do PDF não reutilizam os gráficos visíveis da interface, que podem representar a janela móvel das últimas 24 horas. Valores ausentes permanecem `null`, formam lacunas e não entram nos cálculos de média, mínima ou máxima.
+
 PDF:
 
 - Usa resumo executivo na primeira página, com metadados, cards principais e alertas do dia.
@@ -239,6 +251,7 @@ PDF:
 - Aquário não inclui ciclo solar no PDF.
 - Aquário usa cards, gráficos e tabela de Temperatura, pH, TDS e Turbidez.
 - Usa tabela resumida com uma linha por horário e status geral.
+- Para a data atual ainda sem eventos solares processados, pode informar `Ciclo solar ainda não processado para hoje.`.
 - Mantém tema escuro com cards, bordas azuladas e destaques ciano.
 
 JSON:
@@ -253,6 +266,8 @@ JSON:
 
 - O projeto não usa framework frontend.
 - Os módulos são scripts clássicos e expõem objetos em `window.*`.
+- As abas seguem o padrão ARIA com foco móvel: setas circulam entre as abas, `Home` abre Estação e `End` abre Aquário.
+- O zoom usa diálogo modal nomeado, contém o foco enquanto aberto e o restaura ao botão disparador ao fechar.
 - A ordem dos scripts em `index.html` é parte do contrato da aplicação.
 - Recursos pesados usam `scripts/runtime-loader.js`: Chart.js entra no primeiro gráfico com dados, a assistente entra no primeiro clique do chat e os módulos de relatório entram somente ao exportar.
 - O Firebase é lido no cliente com listeners `onValue`.
@@ -261,7 +276,7 @@ JSON:
 - A localização do navegador no modo público é usada apenas em memória para a consulta atual.
 - O App Check usa reCAPTCHA Enterprise, fica sob demanda para evitar custo de carregamento inicial e deve ser validado antes de ativar enforcement.
 - O chat envia ao Gemini apenas resumo compacto de dados carregados, nunca o histórico inteiro.
-- Os módulos `scripts/assistant/*` e Firebase AI Logic não entram no carregamento inicial; `scripts/chat.js` inicializa a assistente real no primeiro clique.
+- Os módulos `scripts/assistant/*` e Firebase AI Logic não entram no carregamento inicial; `scripts/chat.js` inicializa e abre a assistente real no primeiro clique.
 - Atalhos do chat usam `data-chat-question` e reutilizam o mesmo fluxo de envio da pergunta digitada.
 - O chat usa duas etapas: Gemini classifica a intenção em JSON; JavaScript calcula os dados; Gemini apenas redige a resposta final.
 - Perguntas sobre ciclo solar no chat reutilizam o parser solar central do app, evitando leitura duplicada dos campos solares.

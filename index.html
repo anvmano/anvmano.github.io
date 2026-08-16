@@ -124,19 +124,19 @@
     <div class="app-body" id="privateApp" hidden>
         <div class="tab-toolbar">
             <nav class="tab-nav" role="tablist" aria-label="Ambientes monitorados">
-                <button class="tablink active" type="button" role="tab" aria-selected="true" aria-controls="Tab0" data-tab-target="Tab0">
+                <button class="tablink active" id="tabEstacao" type="button" role="tab" aria-selected="true" aria-controls="Tab0" tabindex="0" data-tab-target="Tab0">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/><circle cx="12" cy="12" r="4"/></svg>
                     Estação
                 </button>
-                <button class="tablink" type="button" role="tab" aria-selected="false" aria-controls="Tab1" data-tab-target="Tab1">
+                <button class="tablink" id="tabSala" type="button" role="tab" aria-selected="false" aria-controls="Tab1" tabindex="-1" data-tab-target="Tab1">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                     Sala
                 </button>
-                <button class="tablink" type="button" role="tab" aria-selected="false" aria-controls="Tab2" data-tab-target="Tab2">
+                <button class="tablink" id="tabQuarto" type="button" role="tab" aria-selected="false" aria-controls="Tab2" tabindex="-1" data-tab-target="Tab2">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
                     Quarto
                 </button>
-                <button class="tablink" type="button" role="tab" aria-selected="false" aria-controls="Tab3" data-tab-target="Tab3">
+                <button class="tablink" id="tabAquario" type="button" role="tab" aria-selected="false" aria-controls="Tab3" tabindex="-1" data-tab-target="Tab3">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     Aquário
                 </button>
@@ -182,7 +182,7 @@
         <div class="loading-bar" id="loadingBar"></div>
         <main class="container">
             <!-- Estação -->
-            <div class="tabcontent" id="Tab0" role="tabpanel">
+            <div class="tabcontent" id="Tab0" role="tabpanel" aria-labelledby="tabEstacao">
                 <div class="station-context-row">
                     <section class="season-timeline" id="seasonTimeline" aria-label="Estação do ano atual"></section>
                     <section class="moon-summary" id="moonSummary" aria-label="Fase da lua da data consultada"></section>
@@ -218,7 +218,7 @@
             </div>
 
             <!-- Sala -->
-            <div class="tabcontent" id="Tab1" role="tabpanel">
+            <div class="tabcontent" id="Tab1" role="tabpanel" aria-labelledby="tabSala">
                 <div class="stats-grid" id="statsSala" aria-label="Resumo dos dados da sala"></div>
                 <div class="charts-grid">
                     <div class="chart-card" id="chart-container-temp-sala">
@@ -268,7 +268,7 @@
             </div>
 
             <!-- Quarto -->
-            <div class="tabcontent" id="Tab2" role="tabpanel">
+            <div class="tabcontent" id="Tab2" role="tabpanel" aria-labelledby="tabQuarto">
                 <div class="stats-grid" id="statsQuarto" aria-label="Resumo dos dados do quarto"></div>
                 <div class="charts-grid">
                     <div class="chart-card" id="chart-container-temp">
@@ -314,7 +314,7 @@
             </div>
 
             <!-- Aquário -->
-            <div class="tabcontent" id="Tab3" role="tabpanel">
+            <div class="tabcontent" id="Tab3" role="tabpanel" aria-labelledby="tabAquario">
                 <div class="stats-grid" id="statsAquario" aria-label="Resumo dos dados do aquário"></div>
                 <div class="charts-grid">
                     <div class="chart-card" id="chart-container-temp-aquario">
@@ -364,7 +364,7 @@
             <div class="ai-chat__quick-actions" aria-label="Perguntas rápidas">
                 <button type="button" data-chat-question="Faça um resumo da data selecionada.">Resumo da data</button>
                 <button type="button" data-chat-question="Qual foi a temperatura média da data selecionada?">Temperatura média</button>
-                <button type="button" data-chat-question="Qual foi a máxima da data selecionada?">Máxima do dia</button>
+                <button type="button" data-chat-question="Qual foi a temperatura máxima da data selecionada?">Máxima do dia</button>
                 <button type="button" data-chat-question="Quais indicadores ficaram fora da faixa ideal?">Alertas</button>
             </div>
             <div class="ai-chat__messages" id="aiChatMessages" role="log" aria-live="polite"></div>
@@ -387,8 +387,8 @@
     </script>
 
     <script defer src="scripts/config.js?v=20260622-2"></script>
-    <script defer src="scripts/runtime-loader.js?v=20260623-4"></script>
-    <script defer src="scripts/data/data-utils.js?v=20260612-1"></script>
+    <script defer src="scripts/runtime-loader.js?v=20260816-2"></script>
+    <script defer src="scripts/data/data-utils.js?v=20260816-2"></script>
     <script defer src="scripts/data/analytics.js?v=20260612-1"></script>
     <script defer src="scripts/data/environmental-insights.js?v=20260812-1"></script>
     <script defer src="scripts/charts/solar.js?v=20260812-1"></script>
@@ -400,10 +400,10 @@
     <script defer src="scripts/auth/auth-service.js?v=20260623-1"></script>
     <script defer src="scripts/external/browser-location-service.js?v=20260623-2"></script>
     <script defer src="scripts/external/external-weather-service.js?v=20260812-1"></script>
-    <script defer src="scripts/ui/ui.js?v=20260612-1"></script>
-    <script defer src="scripts/charts/zoom.js?v=20260615-1"></script>
+    <script defer src="scripts/ui/ui.js?v=20260816-2"></script>
+    <script defer src="scripts/charts/zoom.js?v=20260816-2"></script>
     <script defer src="scripts/reports/pdf-report.js?v=20260623-1"></script>
-    <script defer src="scripts/chat.js?v=20260623-1"></script>
+    <script defer src="scripts/chat.js?v=20260816-1"></script>
     <script defer src="scripts/views/quarto-view.js?v=20260602-1"></script>
     <script defer src="scripts/views/aquario-view.js?v=20260528-1"></script>
     <script defer src="scripts/views/sala-view.js?v=20260602-1"></script>

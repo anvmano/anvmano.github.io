@@ -71,6 +71,7 @@
         document.querySelectorAll(".tablink").forEach(el => {
             el.classList.remove("active");
             el.setAttribute("aria-selected", "false");
+            el.setAttribute("tabindex", "-1");
         });
 
         const tab = document.getElementById(tabName);
@@ -83,6 +84,7 @@
         if (selectedButton) {
             selectedButton.classList.add("active");
             selectedButton.setAttribute("aria-selected", "true");
+            selectedButton.setAttribute("tabindex", "0");
         }
 
         storeActiveTab(tabName);
@@ -92,11 +94,32 @@
         const tabButtons = document.querySelectorAll(".tablink[data-tab-target]");
         tabButtons.forEach(button => {
             button.addEventListener("click", () => openTab(button.dataset.tabTarget, button));
+            button.addEventListener("keydown", evento => navegarAbasPorTeclado(evento, tabButtons));
         });
 
         const storedTab = getStoredTab();
         const initialTab = storedTab && document.getElementById(storedTab) ? storedTab : defaultTab;
         openTab(initialTab);
+    }
+
+    function navegarAbasPorTeclado(evento, tabButtons) {
+        const teclasSuportadas = ["ArrowLeft", "ArrowRight", "Home", "End"];
+        if (!teclasSuportadas.includes(evento.key)) return;
+
+        evento.preventDefault();
+        const botoes = Array.from(tabButtons);
+        const indiceAtual = botoes.indexOf(evento.currentTarget);
+        if (indiceAtual < 0) return;
+
+        let proximoIndice = indiceAtual;
+        if (evento.key === "Home") proximoIndice = 0;
+        if (evento.key === "End") proximoIndice = botoes.length - 1;
+        if (evento.key === "ArrowLeft") proximoIndice = (indiceAtual - 1 + botoes.length) % botoes.length;
+        if (evento.key === "ArrowRight") proximoIndice = (indiceAtual + 1) % botoes.length;
+
+        const proximoBotao = botoes[proximoIndice];
+        openTab(proximoBotao.dataset.tabTarget, proximoBotao);
+        proximoBotao.focus();
     }
 
     function getActiveTabName() {
@@ -216,5 +239,6 @@
         setupDateControls,
         setupTabSwipe,
         setupTabs,
+        navegarAbasPorTeclado,
     };
 })();

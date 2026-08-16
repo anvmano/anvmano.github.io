@@ -27,84 +27,135 @@
         });
     }
 
-    function buildCompactTableRows(rows, metrics) {
-        const grouped = new Map();
+    function construirFonteDadosRelatorio(tabConfig, latestData, selectedDate) {
+        const dadosOriginais = latestData?.[tabConfig.dataKey] || {};
+        const dadosSelecionados = ClimateData.filterDataByDays(dadosOriginais, 2, selectedDate);
+        const campos = getFields(tabConfig);
+        const metricas = getAllReportMetrics(tabConfig);
+        const linhasDetalhadas = extractReportRows(dadosSelecionados, metricas, campos);
+        const linhasNormalizadas = construirLinhasNormalizadas(linhasDetalhadas, metricas);
+
+        return {
+            dadosOriginais,
+            dadosSelecionados,
+            campos,
+            metricas,
+            linhasDetalhadas,
+            linhasNormalizadas,
+        };
+    }
+
+    function construirLinhasNormalizadas(rows, metrics) {
+        const agrupadas = new Map();
+
         rows.forEach(row => {
             if (!row.fullTime || !metrics.some(metric => metric.key === row.metricKey)) return;
-
-            if (!grouped.has(row.fullTime)) {
-                grouped.set(row.fullTime, {
+            if (!agrupadas.has(row.fullTime)) {
+                agrupadas.set(row.fullTime, {
                     time: row.fullTime,
+                    numericValues: {},
                     values: {},
-                    statuses: [],
+                    statuses: {},
                 });
             }
 
-            const group = grouped.get(row.fullTime);
-            group.values[row.metricKey] = row.value;
-            group.statuses.push(row.status);
+            const grupo = agrupadas.get(row.fullTime);
+            if (!(row.metricKey in grupo.numericValues)) {
+                grupo.numericValues[row.metricKey] = null;
+                grupo.values[row.metricKey] = "--";
+                grupo.statuses[row.metricKey] = "Sem dados";
+            }
+            if (!Number.isFinite(row.numericValue)) return;
+
+            grupo.numericValues[row.metricKey] = row.numericValue;
+            grupo.values[row.metricKey] = row.value;
+            grupo.statuses[row.metricKey] = row.status;
         });
 
-        return Array.from(grouped.values())
-            .sort((a, b) => a.time.localeCompare(b.time))
-            .map(group => ({
-                time: group.time,
-                values: group.values,
-                status: group.statuses.includes("Alerta") ? "Alerta" : "Estável",
-            }));
+        return Array.from(agrupadas.values()).sort((a, b) => a.time.localeCompare(b.time));
+    }
+
+    function buildCompactTableRows(rows, metrics) {
+        const normalizadas = rows.some(row => row.numericValues)
+            ? rows
+            : construirLinhasNormalizadas(rows, metrics);
+
+        return normalizadas.map(row => {
+            const values = {};
+            const numericValues = {};
+            const statuses = [];
+            metrics.forEach(metric => {
+                values[metric.key] = row.values[metric.key] || "--";
+                numericValues[metric.key] = Number.isFinite(row.numericValues[metric.key])
+                    ? row.numericValues[metric.key]
+                    : null;
+                statuses.push(row.statuses[metric.key] || "Sem dados");
+            });
+
+            return {
+                time: row.time,
+                values,
+                numericValues,
+                status: statuses.includes("Alerta") ? "Alerta" : "Estável",
+            };
+        });
     }
 
     function buildDailyAlerts(rows, metrics) {
         const alertMetrics = metrics.filter(metric => ["temperature", "feelsLike"].includes(metric.key));
         const alerts = [];
+        const normalizadas = rows.some(row => row.numericValues)
+            ? rows
+            : construirLinhasNormalizadas(rows, metrics);
 
         alertMetrics.forEach(metric => {
-            const alertRows = rows
-                .filter(row => row.metricKey === metric.key && row.status === "Alerta" && row.fullTime)
-                .sort((a, b) => a.fullTime.localeCompare(b.fullTime));
+            const alertRows = normalizadas
+                .filter(row => row.statuses[metric.key] === "Alerta")
+                .sort((a, b) => a.time.localeCompare(b.time));
 
             if (!alertRows.length) return;
 
-            const first = alertRows[0].fullTime;
-            const last = alertRows[alertRows.length - 1].fullTime;
+            const first = alertRows[0].time;
+            const last = alertRows[alertRows.length - 1].time;
             alerts.push(`${metric.label} fora da faixa ideal entre ${first} e ${last}.`);
         });
 
         return alerts.slice(0, 4);
     }
 
-    function buildSummaryCards(tabConfig, rows, chartInstances, latestData = {}, selectedDate = ClimateData.dataAtual()) {
+    function buildSummaryCards(tabConfig, rows, latestData = {}, selectedDate = ClimateData.dataAtual()) {
         if (tabConfig.tableType === "station") {
             return buildStationSummaryCards(latestData, selectedDate);
         }
 
+        const normalizadas = rows.some(row => row.numericValues)
+            ? rows
+            : construirLinhasNormalizadas(rows, getAllReportMetrics(tabConfig));
         const cards = tabConfig.metrics.map(metric => {
-            const values = rows
-                .filter(row => row.metricKey === metric.key && Number.isFinite(row.numericValue))
-                .map(row => row.numericValue);
+            const values = normalizadas
+                .map(row => row.numericValues[metric.key])
+                .filter(Number.isFinite);
             return buildMetricSummary(metric, values);
         });
-
-        if (tabConfig.includeSolar) {
-            const solarChart = chartInstances[AppConfig.ids.charts.solarToday];
-            cards.push(buildSolarSummary(solarChart));
-        }
 
         return cards;
     }
 
     function buildStationSummaryCards(latestData, selectedDate) {
         const campos = AppConfig.fields;
+        const dadosSala = ClimateData.filterDataByDays(latestData.livingRoom || {}, 2, selectedDate);
+        const dadosQuarto = ClimateData.filterDataByDays(latestData.room || {}, 2, selectedDate);
+        const dadosAquario = ClimateData.filterDataByDays(latestData.aquarium || {}, 2, selectedDate);
 
         return [
             buildStationSeasonCard(),
             buildStationMoonCard(selectedDate),
-            buildStationAqiCard(latestData.livingRoom),
-            buildStationLatestCard("Temp. Sala", latestData.livingRoom, campos.livingRoom.temperature, "°C"),
-            buildStationLatestCard("Temp. Quarto", latestData.room, campos.room.temperature, "°C"),
-            buildStationLatestCard("Temp. Aquário", latestData.aquarium, campos.aquarium.temperature, "°C"),
-            buildStationLatestCard("Umidade Sala", latestData.livingRoom, campos.livingRoom.humidity, "%"),
-            buildStationLatestCard("Umidade Quarto", latestData.room, campos.room.humidity, "%"),
+            buildStationAqiCard(dadosSala),
+            buildStationLatestCard("Temp. Sala", dadosSala, campos.livingRoom.temperature, "°C"),
+            buildStationLatestCard("Temp. Quarto", dadosQuarto, campos.room.temperature, "°C"),
+            buildStationLatestCard("Temp. Aquário", dadosAquario, campos.aquarium.temperature, "°C"),
+            buildStationLatestCard("Umidade Sala", dadosSala, campos.livingRoom.humidity, "%"),
+            buildStationLatestCard("Umidade Quarto", dadosQuarto, campos.room.humidity, "%"),
         ];
     }
 
@@ -342,6 +393,8 @@
     }
 
     modules.data = {
+        construirFonteDadosRelatorio,
+        construirLinhasNormalizadas,
         getFields,
         getPdfTableMetrics,
         getAllReportMetrics,

@@ -132,7 +132,7 @@ Dependencias diretas: Node.js local.
 
 Quem chama: desenvolvedor.
 
-Quem e chamado: `tools/validate-project.mjs`.
+Quem e chamado: `tools/validate-project.mjs` e `tools/testar-assistente.mjs`.
 
 Impacto da alteracao: Baixo. Nao altera runtime da pagina.
 
@@ -147,6 +147,18 @@ Quem chama: `npm run validate` ou `node tools/validate-project.mjs`.
 Quem e chamado: nenhum modulo da aplicacao em runtime.
 
 Impacto da alteracao: Baixo a Medio. Pode detectar quebras de ids, referencias locais ou sintaxe antes de abrir a pagina.
+
+## tools/testar-assistente.mjs
+
+Responsabilidade: validar regressao da assistente sem acessar Firebase ou Gemini reais, cobrindo periodos, data selecionada, operacoes, atalhos contextuais e contratos de resposta.
+
+Dependencias diretas: modulos nativos Node.js (`assert`, `fs`, `path`, `vm`) e scripts de `scripts/assistant/`.
+
+Quem chama: `npm run test:assistant` ou `node tools/testar-assistente.mjs`.
+
+Quem e chamado: nenhum modulo da aplicacao em runtime.
+
+Impacto da alteracao: Baixo a Medio. Pode detectar regressao da assistente antes do deploy.
 
 ## style.css
 
@@ -383,7 +395,7 @@ Dependencias indiretas: todos os modulos de `scripts/assistant/`.
 
 Quem chama: `scripts/main.js`.
 
-Quem e chamado: `ClimateAssistant.ui.setup` depois que os modulos da pasta `scripts/assistant/` forem carregados sob demanda.
+Quem e chamado: `ClimateAssistant.ui.setup` e `ClimateAssistant.ui.open` depois que os modulos da pasta `scripts/assistant/` forem carregados sob demanda.
 
 Impacto da alteracao: Medio. Quebrar este arquivo impede o chat de inicializar, mesmo que os modulos internos estejam corretos.
 
@@ -416,8 +428,9 @@ Dependencias diretas:
 
 Dependencias indiretas: `latestData`, aba ativa, data selecionada, data/periodo mencionados na pergunta, ambiente mencionado na pergunta, classificacao curta do Gemini, eventos solares carregados e dados de Sala/MQ135 para AQI estimado.
 
-Observacao: perguntas sobre `ultimas 24h` reutilizam `ClimateData.filterDataByRollingHours` para consultar a mesma janela movel usada pelos graficos comuns.
+Observacao: perguntas sobre `ultimas X horas` reutilizam `ClimateData.filterDataByRollingHours`; `ultimos X dias` e ancorado na data selecionada e limitado a 30 dias.
 Observacao: perguntas com faixa horaria ou maior/menor horario sao classificadas em `assistant-intent.js`, filtradas em `assistant-query.js` e calculadas em `assistant-metrics.js` sem deixar o modelo recalcular os dados.
+Observacao: media, maxima, minima, delta e tendencia geram contratos especificos em `assistant-metrics.js`, evitando que a redacao misture estatisticas nao solicitadas.
 Observacao: perguntas equivalentes aos heatmaps usam a mesma estrutura de dados, mas calculam localmente em `assistant-metrics.js`: calendario mensal por dia, heatmap por hora do dia e mapa semanal por dia/hora.
 Observacao: comparacoes solares sao classificadas em `assistant-intent.js` e calculadas em `assistant-solar.js`, sempre reutilizando `ClimateSolar.getSolarEventsForSelectedDate`. Maior/menor duracao de luz usa o ano da data selecionada por padrao, mas usa o mes quando um mes for informado.
 Observacao: `assistant-planner.js` fica entre `assistant-intent.js` e `assistant-query.js`; ele concentra correcoes de interpretacao antes da consulta, como perguntas solares extremas e ultima medicao.
@@ -533,7 +546,7 @@ Impacto da alteracao: Alto.
 
 ## scripts/ui/ui.js
 
-Responsabilidade: estados vazios, mensagens, tabelas, tabs, swipe touch entre abas, colapsaveis, date picker.
+Responsabilidade: estados vazios, mensagens, tabelas, tabs com foco movel e navegacao ARIA por teclado, swipe touch entre abas, colapsaveis e date picker.
 
 Dependencias diretas:
 
@@ -541,6 +554,13 @@ Dependencias diretas:
 - `ClimateData`
 - `AppConfig` em `renderStartupError`
 - `localStorage`
+
+Contratos das abas:
+
+- apenas a aba ativa usa `tabindex="0"`
+- `ArrowLeft`/`ArrowRight` circulam entre as abas
+- `Home` e `End` abrem a primeira e a ultima aba
+- foco e `aria-selected` sao sincronizados por `openTab`
 
 Quem chama: `scripts/main.js`, views, `scripts/views/solar-view.js`.
 
@@ -550,7 +570,7 @@ Impacto da alteracao: Medio a Alto.
 
 ## scripts/charts/zoom.js
 
-Responsabilidade: zoom dos graficos.
+Responsabilidade: zoom dos graficos em overlay com semantica de dialogo modal e gerenciamento de foco.
 
 Dependencias diretas:
 
@@ -567,14 +587,14 @@ Impacto da alteracao: Medio.
 
 ## scripts/reports/pdf-report.js e scripts/reports/pdf-report-*.js
 
-Responsabilidade: exportar PDF A4 ou JSON da aba ativa usando dados e graficos ja carregados.
+Responsabilidade: exportar PDF A4 ou JSON da aba ativa usando os dados ja carregados e filtrados pela data selecionada.
 
 Organizacao:
 
 - `pdf-report.js`: fachada publica `window.ClimatePdfReport.setup`.
 - `pdf-report-config.js`: contrato das abas e metricas do relatorio.
 - `pdf-report-format.js`: valores, datas, status, slug e HTML seguro.
-- `pdf-report-data.js`: coleta, linhas, cards, alertas e tabela compacta.
+- `pdf-report-data.js`: fonte normalizada unica, linhas, cards, alertas e tabela compacta.
 - `pdf-report-dom.js`: HTML temporario do relatorio.
 - `pdf-report-charts.js`: imagens dos graficos e ciclo solar compacto.
 - `pdf-report-pdf.js`: captura, paginacao A4, rodapes e jsPDF.
@@ -586,6 +606,9 @@ Observacoes:
 - PDF junta Temperatura e Sensacao termica no mesmo grafico quando possivel
 - PDF tem contrato por aba: Estacao inclui cards contextuais de Estacao do ano e Fase da lua com rotulos proprios de detalhe, 6 cards globais, graficos comparativos e ciclo solar, sem tabela; Sala usa tabela MQ135 e nao inclui solar; Quarto nao inclui solar; Aquario nao inclui solar.
 - JSON inclui `resumo` com detalhes, `tabelaResumida`, `tabelaDetalhada`, `dadosBrutos` e mantem `tabela` como alias de compatibilidade da tabela detalhada antiga.
+- resumo, alertas, graficos, tabelas e JSON derivam do mesmo recorte normalizado de `selectedDate`
+- graficos do PDF sao temporarios e nao reutilizam `chartInstances`, pois os graficos visiveis podem estar na janela movel das ultimas 24h
+- valores ausentes permanecem `null`, formam lacunas e sao excluidos das estatisticas
 - layout do PDF prioriza blocos compactos em coluna unica para reduzir cortes em A4 retrato
 - exportacao JSON inclui metadados, resumo, tabela resumida, tabela detalhada e dados brutos filtrados
 - html2canvas e jsPDF sao carregados sob demanda pelo exportador somente ao gerar PDF
@@ -597,9 +620,9 @@ Dependencias diretas:
 - Blob/URL nativos do navegador para JSON
 - `AppConfig`
 - `ClimateData`
+- `ClimateSolar`
 - `ClimateUI.getActiveTabName`
 - `latestData` recebido via `scripts/main.js`
-- `chartInstances` recebido via `scripts/main.js`
 
 Quem chama: `scripts/main.js`.
 

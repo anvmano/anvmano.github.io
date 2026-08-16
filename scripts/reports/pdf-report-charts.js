@@ -6,21 +6,28 @@
     const { format } = modules;
     const { buildNoDataMessage, clamp, formatValue } = format;
 
-    async function collectChartCards(tabConfig, chartInstances, selectedDate) {
+    async function collectChartCards(tabConfig, { normalizedRows = [], latestData = {}, selectedDate } = {}) {
         const cards = [];
         if (tabConfig.tableType === "station") {
-            cards.push(createExistingChartCard(
+            cards.push(createStationChartCard(
                 "Temperatura por Ambiente",
                 "°C",
-                AppConfig.ids.charts.globalTemperature,
-                chartInstances,
+                [
+                    { label: "Sala", dataKey: "livingRoom", field: AppConfig.fields.livingRoom.temperature },
+                    { label: "Quarto", dataKey: "room", field: AppConfig.fields.room.temperature },
+                    { label: "Aquário", dataKey: "aquarium", field: AppConfig.fields.aquarium.temperature },
+                ],
+                latestData,
                 selectedDate
             ));
-            cards.push(createExistingChartCard(
+            cards.push(createStationChartCard(
                 "Umidade por Ambiente",
                 "%",
-                AppConfig.ids.charts.globalHumidity,
-                chartInstances,
+                [
+                    { label: "Sala", dataKey: "livingRoom", field: AppConfig.fields.livingRoom.humidity },
+                    { label: "Quarto", dataKey: "room", field: AppConfig.fields.room.humidity },
+                ],
+                latestData,
                 selectedDate
             ));
         }
@@ -34,15 +41,15 @@
                 "Temperatura x Sensação Térmica",
                 "°C",
                 [temperatureMetric, feelsLikeMetric],
-                chartInstances,
+                normalizedRows,
                 selectedDate
             ));
         } else if (temperatureMetric) {
-            cards.push(await createMetricChartCard(temperatureMetric.label, temperatureMetric.unit, [temperatureMetric], chartInstances, selectedDate));
+            cards.push(await createMetricChartCard(temperatureMetric.label, temperatureMetric.unit, [temperatureMetric], normalizedRows, selectedDate));
         }
 
         if (humidityMetric) {
-            cards.push(await createMetricChartCard(humidityMetric.label, humidityMetric.unit, [humidityMetric], chartInstances, selectedDate));
+            cards.push(await createMetricChartCard(humidityMetric.label, humidityMetric.unit, [humidityMetric], normalizedRows, selectedDate));
         }
 
         const individualMetrics = tabConfig.metrics.filter(metric => (
@@ -52,19 +59,20 @@
         ));
 
         for (const metric of individualMetrics) {
-            cards.push(await createMetricChartCard(metric.label, metric.unit, [metric], chartInstances, selectedDate));
+            cards.push(await createMetricChartCard(metric.label, metric.unit, [metric], normalizedRows, selectedDate));
         }
 
         if (tabConfig.includeSolar) {
-            const solarChartId = AppConfig.ids.charts.solarToday;
-            const solarChart = chartInstances[solarChartId];
+            const temposSolares = window.ClimateSolar?.getSolarEventsForSelectedDate?.(latestData.solar || {}, selectedDate);
             cards.push({
                 label: "Ciclo solar compacto",
                 unit: "h",
-                image: createSolarCompactImage(solarChart),
+                image: createSolarCompactImage(temposSolares),
                 compact: true,
-                emptyMessage: buildNoDataMessage("ciclo solar", selectedDate),
-                stats: buildSolarChartStats(solarChart),
+                emptyMessage: selectedDate === ClimateData.dataAtual()
+                    ? "Ciclo solar ainda não processado para hoje."
+                    : buildNoDataMessage("ciclo solar", selectedDate),
+                stats: buildSolarChartStats(temposSolares),
             });
         }
 
@@ -82,45 +90,35 @@
         };
     }
 
-    async function createMetricChartCard(label, unit, metrics, chartInstances, selectedDate) {
-        const image = createMetricChartImage(label, unit, metrics, chartInstances);
+    async function createMetricChartCard(label, unit, metrics, normalizedRows, selectedDate) {
+        const series = metrics.map((metric, index) => ({
+            metric,
+            labels: normalizedRows.map(row => row.time),
+            values: normalizedRows.map(row => Number.isFinite(row.numericValues?.[metric.key]) ? row.numericValues[metric.key] : null),
+            color: getPdfChartColor(index),
+        }));
+        const image = createMetricChartImage(label, unit, series);
         return {
             label,
             unit,
             image,
             emptyMessage: buildNoDataMessage(label, selectedDate),
-            stats: metrics.flatMap(metric => {
-                const chart = chartInstances[AppConfig.ids.charts[metric.chart]];
-                return buildChartStats(metric.label, getChartValues(chart), metric.unit);
-            }),
+            stats: series.flatMap(item => buildChartStats(item.metric.label, item.values, item.metric.unit)),
         };
     }
 
-    function createMetricChartImage(title, unit, metrics, chartInstances) {
-        if (typeof Chart !== "function") return captureFirstMetricImage(metrics, chartInstances);
+    function createMetricChartImage(title, unit, series) {
+        if (typeof Chart !== "function") return null;
 
-        const series = metrics
-            .map((metric, index) => {
-                const chart = chartInstances[AppConfig.ids.charts[metric.chart]];
-                const labels = getChartLabels(chart);
-                const values = getChartValues(chart);
-                return {
-                    metric,
-                    labels,
-                    values,
-                    color: getPdfChartColor(index),
-                };
-            })
-            .filter(item => item.labels.length && item.values.some(Number.isFinite));
+        const seriesNormalizadas = normalizarSeries(series);
+        if (!seriesNormalizadas.length) return null;
 
-        if (!series.length) return captureFirstMetricImage(metrics, chartInstances);
-
-        const labels = series[0].labels;
+        const labels = seriesNormalizadas[0].labels;
         const canvas = document.createElement("canvas");
         canvas.width = 1200;
         canvas.height = 520;
 
-        const datasets = series.flatMap(item => {
+        const datasets = seriesNormalizadas.flatMap(item => {
             const stats = calculateSeriesStats(item.values);
             const normalizedValues = labels.map((_, index) => item.values[index] ?? null);
             return [
@@ -147,8 +145,8 @@
             ];
         });
 
-        const comfortBand = getPdfComfortBand(metrics);
-        const yBounds = calculatePdfYBounds(series);
+        const comfortBand = getPdfComfortBand(seriesNormalizadas.map(item => item.metric));
+        const yBounds = calculatePdfYBounds(seriesNormalizadas);
         const chart = new Chart(canvas.getContext("2d"), {
             type: "line",
             data: { labels, datasets },
@@ -161,6 +159,65 @@
         const image = canvas.toDataURL("image/png", 1);
         chart.destroy();
         return image;
+    }
+
+    function normalizarSeries(series) {
+        const rotulos = [...new Set(series.flatMap(item => item.labels || []))].sort();
+        if (!rotulos.length) return [];
+
+        return series
+            .map(item => {
+                const valoresPorRotulo = new Map((item.labels || []).map((rotulo, index) => [rotulo, item.values?.[index] ?? null]));
+                return {
+                    ...item,
+                    labels: rotulos,
+                    values: rotulos.map(rotulo => {
+                        const valor = valoresPorRotulo.get(rotulo);
+                        return Number.isFinite(valor) ? valor : null;
+                    }),
+                };
+            })
+            .filter(item => item.values.some(Number.isFinite));
+    }
+
+    function createStationChartCard(label, unit, definitions, latestData, selectedDate) {
+        const series = definitions.map((definition, index) => ({
+            metric: { label: definition.label, unit },
+            ...extrairSeriePorHorario(latestData?.[definition.dataKey] || {}, selectedDate, definition.field),
+            color: getPdfChartColor(index),
+        }));
+
+        return {
+            label,
+            unit,
+            image: createMetricChartImage(label, unit, series),
+            emptyMessage: buildNoDataMessage(label, selectedDate),
+            stats: series.flatMap(item => buildChartStats(item.metric.label, item.values, unit)),
+        };
+    }
+
+    function extrairSeriePorHorario(data, selectedDate, field) {
+        const dadosSelecionados = ClimateData.filterDataByDays(data, 2, selectedDate);
+        const valoresPorHorario = new Map();
+
+        for (const dadosData of Object.values(dadosSelecionados)) {
+            for (const [horarioFirebase, dadosHorario] of Object.entries(dadosData || {})) {
+                const valores = Object.values(dadosHorario || {})
+                    .map(item => ClimateData.normalizeMeasurementValue(field, item?.[field]))
+                    .filter(Number.isFinite);
+                if (!valores.length) continue;
+
+                const [hora, minuto = "0"] = horarioFirebase.split("-");
+                const horario = `${String(hora).padStart(2, "0")}:${String(minuto).padStart(2, "0")}`;
+                valoresPorHorario.set(horario, valores.reduce((soma, valor) => soma + valor, 0) / valores.length);
+            }
+        }
+
+        const labels = [...valoresPorHorario.keys()].sort();
+        return {
+            labels,
+            values: labels.map(horario => valoresPorHorario.get(horario)),
+        };
     }
 
     function captureFirstMetricImage(metrics, chartInstances) {
@@ -294,8 +351,8 @@
         };
     }
 
-    function createSolarCompactImage(chart) {
-        const times = chart?.$solarDayTimes;
+    function createSolarCompactImage(source) {
+        const times = source?.$solarDayTimes || source;
         if (!times || typeof Chart !== "function" || !window.ClimateSolar || !window.ClimateCharts) return null;
 
         const canvas = document.createElement("canvas");
@@ -387,6 +444,7 @@
         const data = chart?.data?.datasets?.[0]?.data || [];
         return data.map(point => {
             const value = typeof point === "object" && point !== null ? point.y : point;
+            if (value === null || value === undefined || (typeof value === "string" && value.trim() === "")) return null;
             const number = Number(value);
             return Number.isFinite(number) ? number : null;
         });
@@ -422,8 +480,8 @@
         ];
     }
 
-    function buildSolarChartStats(chart) {
-        const times = chart?.$solarDayTimes;
+    function buildSolarChartStats(source) {
+        const times = source?.$solarDayTimes || source;
         if (!times) return [];
 
         return [
@@ -445,6 +503,7 @@
     function extractDatasetValues(dataset) {
         return (dataset?.data || []).map(point => {
             const value = typeof point === "object" && point !== null ? point.y : point;
+            if (value === null || value === undefined || (typeof value === "string" && value.trim() === "")) return null;
             const number = Number(value);
             return Number.isFinite(number) ? number : null;
         });
@@ -466,6 +525,9 @@
         collectChartCards,
         createMetricChartCard,
         createMetricChartImage,
+        normalizarSeries,
+        createStationChartCard,
+        extrairSeriePorHorario,
         captureFirstMetricImage,
         createPdfChartOptions,
         pdfChartBackgroundPlugin,

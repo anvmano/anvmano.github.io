@@ -14,6 +14,9 @@
     }
 
     function normalizeMeasurementValue(key, value) {
+        if (value === null || value === undefined || (typeof value === "string" && value.trim() === "")) {
+            return null;
+        }
         const numericValue = Number(value);
         if (!Number.isFinite(numericValue)) return null;
 

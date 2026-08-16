@@ -14,11 +14,93 @@
         let plano = { ...intencao };
 
         plano = aplicarMemoriaCurta(plano, perguntaNormalizada, contexto?.chatMemory);
+        plano = aplicarAtalhosContextuais(plano, perguntaNormalizada, contexto);
+        plano = aplicarOperacaoDeterministica(plano, perguntaNormalizada);
         plano = aplicarConsultaSolarExtrema(plano, perguntaNormalizada, contexto);
         plano = aplicarConsultaDeUltimaMedicao(plano, perguntaNormalizada);
         plano = aplicarComparacaoEntreDias(plano, perguntaNormalizada);
 
         return plano;
+    }
+
+    function aplicarAtalhosContextuais(plano, perguntaNormalizada, contexto) {
+        const pedeResumo = perguntaNormalizada.includes("resumo da data")
+            || perguntaNormalizada.includes("resumo dos dados")
+            || perguntaNormalizada === "resumo";
+        const pedeAlertas = perguntaNormalizada.includes("alerta")
+            || perguntaNormalizada.includes("indicadores ficaram fora")
+            || perguntaNormalizada.includes("indicadores estao fora");
+        const pedeMediaTemperatura = perguntaNormalizada.includes("temperatura media da data selecionada");
+        const pedeMaximaTemperatura = perguntaNormalizada.includes("temperatura maxima da data selecionada");
+        if (!pedeResumo && !pedeAlertas && !pedeMediaTemperatura && !pedeMaximaTemperatura) return plano;
+
+        const abaEstacao = contexto?.activeTab === "Tab0";
+        const atalhoTemperatura = pedeMediaTemperatura || pedeMaximaTemperatura;
+        const ambientes = abaEstacao
+            ? (atalhoTemperatura || pedeAlertas
+                ? [ENVIRONMENTS.sala, ENVIRONMENTS.quarto, ENVIRONMENTS.aquario]
+                : (pedeResumo
+                ? [ENVIRONMENTS.estacao, ENVIRONMENTS.sala, ENVIRONMENTS.quarto, ENVIRONMENTS.aquario]
+                : [ENVIRONMENTS.sala, ENVIRONMENTS.quarto, ENVIRONMENTS.aquario]))
+            : plano.environments;
+
+        return {
+            ...plano,
+            environments: ambientes,
+            metrics: atalhoTemperatura
+                ? ["temperatura"]
+                : pedeAlertas
+                ? ["temperatura", "sensacao_termica", "umidade"]
+                : ["temperatura", "sensacao_termica", "umidade", "pressao", "qualidade_ar", "ph", "tds", "turbidez", "ciclo_solar"],
+            operation: pedeMediaTemperatura
+                ? "media"
+                : pedeMaximaTemperatura
+                    ? "maxima"
+                    : pedeAlertas ? "status_faixa" : "resumo",
+            needsClarification: false,
+            clarificationQuestion: null,
+        };
+    }
+
+    function aplicarOperacaoDeterministica(plano, perguntaNormalizada) {
+        if (temIntencaoFaixa(perguntaNormalizada)) return { ...plano, operation: "status_faixa" };
+
+        const operacaoHoraria = obterOperacaoHoraria(perguntaNormalizada);
+        if (operacaoHoraria) return { ...plano, operation: operacaoHoraria };
+
+        if (perguntaNormalizada.includes("tendencia") || perguntaNormalizada.includes("subindo") || perguntaNormalizada.includes("caindo")) {
+            return { ...plano, operation: "tendencia" };
+        }
+        if (perguntaNormalizada.includes("variou") || perguntaNormalizada.includes("variacao") || perguntaNormalizada.includes("delta")) {
+            return { ...plano, operation: "delta" };
+        }
+        if (perguntaNormalizada.includes("maxim") || perguntaNormalizada.includes("mais alta") || perguntaNormalizada.includes("maior valor")) {
+            return { ...plano, operation: "maxima" };
+        }
+        if (perguntaNormalizada.includes("minim") || perguntaNormalizada.includes("mais baixa") || perguntaNormalizada.includes("menor valor")) {
+            return { ...plano, operation: "minima" };
+        }
+        if (perguntaNormalizada.includes("media")) return { ...plano, operation: "media" };
+
+        return plano;
+    }
+
+    function temIntencaoFaixa(perguntaNormalizada) {
+        return ["faixa", "conforto", "ideal", "quantas horas fora", "pior horario fora"]
+            .some(termo => perguntaNormalizada.includes(termo));
+    }
+
+    function obterOperacaoHoraria(perguntaNormalizada) {
+        const pedeHorario = ["qual horario", "qual foi o horario", "que horario", "em qual horario", "qual hora", "qual foi a hora", "que hora"]
+            .some(termo => perguntaNormalizada.includes(termo));
+        if (!pedeHorario) return null;
+        if (["mais quent", "maior", "maxim", "mais alto", "pico"].some(termo => perguntaNormalizada.includes(termo))) {
+            return "horario_maior_valor";
+        }
+        if (["mais fri", "menor", "minim", "mais baixo"].some(termo => perguntaNormalizada.includes(termo))) {
+            return "horario_menor_valor";
+        }
+        return null;
     }
 
     function aplicarMemoriaCurta(plano, perguntaNormalizada, memoria) {
@@ -125,8 +207,9 @@
     }
 
     function aplicarComparacaoEntreDias(plano, perguntaNormalizada) {
-        if (plano.operation === "comparar_dias") return plano;
-        if (!temIntencaoComparacaoEntreDias(perguntaNormalizada)) return plano;
+        if (!temIntencaoComparacaoEntreDias(perguntaNormalizada)) {
+            return plano.operation === "comparar_dias" ? { ...plano, operation: "delta" } : plano;
+        }
 
         return {
             ...plano,
@@ -137,30 +220,19 @@
     }
 
     function temIntencaoComparacaoEntreDias(perguntaNormalizada) {
-        const mencionaDiaComparavel = [
+        const diasRelativos = [
             "hoje",
             "hj",
             "ontem",
             "anteontem",
             "antiontem",
-        ].some(termo => hasWord(perguntaNormalizada, normalizeText(termo)));
+        ].filter(termo => hasWord(perguntaNormalizada, normalizeText(termo)));
+        const datasExplicitas = [...perguntaNormalizada.matchAll(/\b\d{1,2}[/-]\d{1,2}[/-]\d{4}\b/g)];
+        const quantidadeReferencias = new Set(diasRelativos).size + datasExplicitas.length;
+        const pedeComparacaoExplicitamente = ["compar", "diferenca", "diferença"]
+            .some(termo => perguntaNormalizada.includes(normalizeText(termo)));
 
-        if (!mencionaDiaComparavel) return false;
-
-        const pedeComparacao = [
-            "ou",
-            "compar",
-            "diferenca",
-            "diferença",
-            "maior que",
-            "menor que",
-            "mais quent",
-            "mais fri",
-            "mais alto",
-            "mais baixo",
-        ].some(termo => perguntaNormalizada.includes(normalizeText(termo)));
-
-        return pedeComparacao;
+        return quantidadeReferencias >= 2 || pedeComparacaoExplicitamente;
     }
 
     function temIntencaoUltimaMedicao(perguntaNormalizada) {

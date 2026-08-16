@@ -63,6 +63,7 @@ Arquivos principais:
 - `scripts/views/estacao-view.js`, `scripts/views/quarto-view.js`, `scripts/views/sala-view.js`, `scripts/views/aquario-view.js`, `scripts/views/solar-view.js`: renderizacao por dominio.
 - `scripts/views/public-weather-view.js`: modo publico por CEP/localizacao, com cards, graficos externos e recomendacoes ambientais.
 - `tools/validate-project.mjs`: valida sintaxe JS, referencias locais, imports CSS e contratos HTML/config.
+- `tools/testar-assistente.mjs`: cobre regressao de periodos, operacoes, atalhos globais e respostas estruturadas da assistente; execute com `npm run test:assistant`.
 
 ## Fluxo Principal
 
@@ -103,9 +104,10 @@ Arquivos principais:
 - Solar: `scripts/charts/solar.js` e `scripts/views/solar-view.js`.
 - Tabelas: `scripts/data/data-utils.js` + views.
 - Heatmaps: `scripts/data/analytics.js`; containers em `index.html`; ids em `scripts/config.js`.
-- Zoom: `scripts/charts/zoom.js`; em dispositivos touch, toque dentro do canvas ampliado interage com o tooltip e nao fecha o overlay.
+- Zoom: `scripts/charts/zoom.js`; o overlay e um dialogo modal acessivel, move o foco para Fechar, contem `Tab`/`Shift+Tab` enquanto aberto e devolve o foco ao disparador ao fechar. Em dispositivos touch, toque dentro do canvas ampliado interage com o tooltip e nao fecha o overlay.
 - PDF: `scripts/reports/pdf-report.js`, `scripts/reports/pdf-report-*.js` e `styles/reports/pdf-report.css`.
 - Abas e date picker: `scripts/ui/ui.js`.
+- Abas seguem o padrao ARIA com foco movel: apenas a ativa usa `tabindex="0"`; `ArrowLeft`/`ArrowRight` circulam, `Home` vai para Estacao e `End` vai para Aquario, sempre sincronizando foco e `aria-selected`.
 - Login Google e fluxo publico/interno: `scripts/auth/auth-service.js`, `scripts/views/public-weather-view.js`, `scripts/external/*` e `scripts/main.js`.
 - Estilo visual: `style.css` importa os arquivos em `styles/`.
 - Alguns arquivos antigos diretamente em `scripts/` existem como copias legadas; o runtime atual usa os caminhos carregados em `index.html`, principalmente subpastas como `scripts/data/`, `scripts/charts/`, `scripts/ui/`, `scripts/reports/`, `scripts/assistant/`, `scripts/views/`, `scripts/auth/` e `scripts/external/`.
@@ -145,7 +147,9 @@ Arquivos principais:
 - AQI interno do header e uma estimativa local: usa categorias oficiais AQI (`0-50`, `51-100`, `101-150`, `151-200`, `201-300`, `301+`), mas o calculo vem dos gases disponiveis no MQ135 e deve ser exibido como `AQI estimado da Sala`. AQI publico vem da Open-Meteo Air Quality e deve ser exibido como `AQI externo`.
 - Insights ambientais ficam centralizados em `ClimateInsightsAmbientais`: ponto de orvalho usa aproximacao de Magnus; risco de mofo/condensacao e recomendacao de ventilacao sao estimativas orientativas, nao diagnosticos; chuva usa as proximas 6h e UV usa valor atual com maxima diaria quando disponivel.
 - Solar usa data selecionada para ciclo do dia e filtro de 365 dias para historico.
-- Exportacao PDF/JSON usa automaticamente aba ativa, data selecionada, `latestData` e `chartInstances`; nao reconsulta Firebase.
+- Exportacao PDF/JSON usa automaticamente aba ativa, data selecionada e `latestData`; nao reconsulta Firebase nem reutiliza as series ativas da interface, pois os graficos visiveis podem representar a janela movel de 24h.
+- `scripts/reports/pdf-report-data.js` cria uma unica fonte normalizada filtrada por `selectedDate`; resumo, alertas, graficos, tabela e JSON devem derivar desse mesmo recorte.
+- Valores ausentes (`null`, `undefined` ou string vazia) permanecem `null` nas series do relatorio, geram lacunas no grafico e nao participam de media, minima ou maxima.
 - Exportacao PDF/JSON interna so e inicializada para usuarios internos autorizados.
 - Controle `PDF/JSON` em `name="exportFormat"` altera a label do botao `#btnExportData`.
 - A fachada `ClimatePdfReport` fica carregada no inicio, mas os modulos `scripts/reports/pdf-report-*` so entram no clique de exportacao. Exportacao JSON carrega somente os modulos de relatorio; PDF tambem carrega CSS do relatorio, Chart.js, html2canvas e jsPDF sob demanda.
@@ -153,13 +157,15 @@ Arquivos principais:
 - PDF usa primeira pagina como resumo executivo, com metadados, cards principais e alertas do dia.
 - PDF junta Temperatura e Sensacao termica no mesmo grafico quando a aba possui as duas metricas.
 - PDF usa contrato por aba: Estacao mostra no resumo os cards contextuais de Estacao do ano e Fase da lua com rotulos proprios de detalhe, alem dos 6 cards globais da propria aba (AQI estimado, Temp. Sala, Temp. Quarto, Temp. Aquario, Umidade Sala e Umidade Quarto), graficos comparativos de temperatura/umidade por ambiente e ciclo solar, sem tabela; Sala mostra temperatura, sensacao, umidade e pressao, mas tabela MQ135; Quarto mostra temperatura, sensacao e umidade; Aquario mostra apenas temperatura, PH, TDS e Turbidez, sem ciclo solar.
-- PDF renderiza o ciclo solar compacto em um Chart.js offscreen a partir de `$solarDayTimes`, usando `ClimateSolar.getSolarTodayOptions` e `solarDayBackgroundPlugin` para manter o visual da pagina sem depender de canvas oculto ou vazio da interface.
+- PDF renderiza o ciclo solar compacto em um Chart.js offscreen a partir dos eventos solares de `latestData.solar` filtrados pela data selecionada, usando `ClimateSolar.getSolarTodayOptions` e `solarDayBackgroundPlugin` para manter o visual da pagina sem depender do estado da interface.
+- Na data atual, quando os eventos solares ainda nao tiverem sido processados, o relatorio pode informar `Ciclo solar ainda nao processado para hoje.`.
 - PDF usa tabela resumida por horario, com status geral por linha. JSON exporta `resumo` com `detalhes`, `tabelaResumida`, `tabelaDetalhada`, `dadosBrutos` e mantem `tabela` como alias de compatibilidade para a tabela detalhada antiga.
 - PDF e montado manualmente em paginas A4; resumo, graficos e tabela iniciam em paginas proprias, com rodape em todas as paginas.
 - Chat usa `latestData`, aba ativa, data selecionada e intenção classificada para selecionar dados. Nao envia o Firebase inteiro ao modelo.
 - Chat/assistente IA e exclusivo para usuarios internos autorizados. No modo publico, `#aiChat` fica oculto e `ClimateChat.setup` nao e chamado.
-- `scripts/chat.js` carrega a assistente real sob demanda no primeiro clique do botao. Antes disso, os modulos `scripts/assistant/*` e o Firebase AI Logic nao entram na carga inicial.
+- `scripts/chat.js` carrega a assistente real sob demanda no primeiro clique do botao e abre o painel assim que a inicializacao termina, sem exigir um segundo clique. Antes disso, os modulos `scripts/assistant/*` e o Firebase AI Logic nao entram na carga inicial.
 - Chat tem atalhos em `data-chat-question`; eles reutilizam o mesmo fluxo de envio da pergunta digitada.
+- Na aba Estacao, os atalhos nao usam ciclo solar como fallback implicito: Resumo consulta a visao global, Alertas avalia as faixas dos ambientes fisicos, Temperatura media consulta os ambientes compativeis e Maxima do dia pede explicitamente temperatura. Em Sala/Quarto/Aquario, Resumo inclui as metricas compativeis da aba.
 - Chat abre e fecha com transicao gradual em `styles/chat.css`; `scripts/assistant/assistant-ui.js` so aplica `hidden` depois da animacao de fechamento. Quando aberto, clique/toque fora de `#aiChat` fecha o painel, preservando cliques dentro do chat. A rolagem da pagina de fundo fica travada enquanto o chat esta aberto; apenas a area `#aiChatMessages` deve rolar.
 - Chat resolve intencao antes de responder: ambiente mencionado vence a aba ativa; data/periodo mencionado vence o calendario sem alterar a pagina; se ambiente/data nao forem mencionados, usa aba ativa e calendario.
 - Chat usa `assistant-planner.js` entre classificacao e consulta para corrigir/normalizar a intencao em um plano confiavel. Essa camada deve concentrar defesas de interpretacao, como forcar ciclo solar em perguntas de dia mais longo/curto e transformar perguntas simples de valor em `ultima_medicao`.
@@ -168,19 +174,21 @@ Arquivos principais:
 - Chat calcula AQI estimado reutilizando `ClimateAqi.calculate` sobre o recorte de data/hora consultado; a resposta pode incluir AQI, classificacao, impacto, dominante e subindices principais.
 - Chat aceita filtro por hora em perguntas como `14h`, `14:00`, `14` e tambem compara corretamente com chaves Firebase no formato `14-00`.
 - Quando a pergunta filtra uma hora especifica, o chat deve responder somente o dado necessario daquela hora, sem resumo de media/minima/maxima/delta do dia e sem numero de amostras.
+- Respostas de media, maxima, minima, delta e tendencia respeitam a operacao solicitada: media retorna somente a media; maxima/minima retornam o extremo com data/hora; delta retorna valores inicial/final e diferenca; tendencia retorna classificacao, valores inicial/final e diferenca. O numero de amostras nao e exibido sem pedido explicito.
 - Quando a pergunta pedir valor atual/agora/ultima medicao, ou perguntar de forma simples `qual o/a <metrica>` sem pedir media, maxima, minima, tendencia, faixa ou periodo inteiro, o chat deve retornar a ultima medicao disponivel da metrica no recorte consultado. Isso vale para qualquer metrica conhecida, como temperatura, sensacao termica, umidade, pressao, pH, TDS, turbidez e gases da Sala.
 - Chat aceita faixa horaria em perguntas como `entre 8h e 18h`, `das 8 as 18` ou `de 8h a 18h`; os calculos de media/maxima/minima/delta/tendencia devem considerar somente registros dentro dessa faixa, inclusive as horas inicial e final.
 - Chat entende comparacoes simples entre dias mencionados, como `ontem ou hoje`, `ontem e anteontem`, `maior que hoje` ou `mais quente que hoje`, e deve retornar o dia com maior media diaria, o valor do dia comparado e a diferenca.
 - Chat responde analise por horario para perguntas como `qual horario foi mais quente?`, `qual horario teve maior umidade?` ou `qual periodo do dia teve menor pressao?`, calculando localmente o maior/menor valor medio por horario antes da redacao da IA.
 - Chat responde consultas equivalentes aos heatmaps: `qual dia do mes foi mais quente?` usa o calendario mensal da data selecionada; `qual hora costuma ser mais fria?` agrega por hora do dia no mes selecionado; `qual dia/hora da semana teve pico?` usa a semana da data selecionada, de domingo ate a data selecionada.
 - Chat responde perguntas de faixa/status/conforto para metricas com faixa configurada: temperatura/sensacao usam 20°C a 26°C, umidade usa 40% a 60%, e temperatura do Aquario usa 25°C a 27°C. A resposta calculada deve informar se ficou dentro/fora da faixa, faixa usada, quantidade de horarios fora e pior horario fora da faixa.
-- Chat entende `ultimas 24 horas`/`ultimas 24h` como janela movel real, reutilizando `ClimateData.filterDataByRollingHours` com a data selecionada e a hora atual do navegador; nao deve tratar isso como `hoje` nem como `ultimos dias`.
+- Chat entende `ultimas X horas`/`ultimas Xh` como janela movel real, reutilizando `ClimateData.filterDataByRollingHours` com a data selecionada e a hora atual do navegador; nao deve tratar horas como `hoje` nem como `ultimos dias`. O limite e 30 dias convertidos em horas.
+- Chat reconhece a quantidade de `ultimos X dias` em algarismos ou por extenso. A janela termina na data selecionada no calendario, usa 7 dias quando a quantidade nao for informada e limita pedidos maiores a 30 dias, informando o corte na resposta.
 - Chat usa arquitetura em etapas: Gemini classifica a pergunta em JSON com schema fixo; JavaScript transforma a intencao em plano de consulta, valida, limita periodo, seleciona dados e calcula media/maxima/minima/delta/tendencia/comparacoes; Gemini redige a resposta usando apenas o resultado calculado.
 - Chat responde perguntas de ciclo solar usando `ClimateSolar.getSolarEventsForSelectedDate` sobre `latestData.solar`, reutilizando aliases solares e fallback de zenite do modulo solar.
 - Chat responde comparacoes solares: duracao do dia, maior/menor duracao de luz no ano da data selecionada por padrao, maior/menor duracao de luz no mes quando um mes for informado, tendencia de nascer do sol/por do sol na semana selecionada e comparacao de nascer/por do sol por dia no periodo.
 - Termos como `tempo de luz`, `luz solar`, `duracao de luz`, `duracao do dia`, `dia mais longo` e `dia mais curto` devem ser tratados como consulta solar de duracao do dia.
 - Quando a pergunta tiver intencao solar, o chat deve forcar metrica `ciclo_solar`, mesmo se a classificacao da IA sugerir outra metrica por engano.
-- Periodos suportados incluem data unica, hoje, ontem, anteontem, datas relativas, intervalo, ultimas 24h reais, ultimos dias, mes selecionado, semana selecionada e ano selecionado para consultas solares anuais. `Ultimos dias` usa 7 dias por padrao e consultas de periodo sao limitadas a 30 dias, exceto calendario mensal que pode consultar o mes completo e comparacoes solares anuais que podem consultar o ano inteiro.
+- Periodos suportados incluem data unica, hoje, ontem, anteontem, datas relativas, intervalo, ultimas X horas reais, ultimos X dias, mes selecionado, semana selecionada e ano selecionado para consultas solares anuais. Consultas de periodo sao limitadas a 30 dias, exceto calendario mensal que pode consultar o mes completo e comparacoes solares anuais que podem consultar o ano inteiro.
 - Heatmaps destacam contexto temporal com `.is-selected`: calendario mensal destaca o dia selecionado, heatmap horario destaca a hora atual quando a data selecionada e hoje, e mapa semanal destaca dia da semana/hora atual quando a data selecionada e hoje.
 - O mapa semanal reinicia no domingo e considera apenas registros da semana da data selecionada, do domingo ate a data selecionada. Ele nao agrega semanas anteriores do mes.
 - Heatmaps de Sala/Quarto so montam o DOM quando a secao `Visualizacoes Climaticas` esta expandida; a abertura do colapsavel dispara novo render da data selecionada.

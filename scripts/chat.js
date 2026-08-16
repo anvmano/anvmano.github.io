@@ -37,7 +37,7 @@
         try {
             await carregarAssistente();
             inicializarAssistente();
-            window.setTimeout(() => botao?.click(), 0);
+            window.ClimateAssistant?.ui?.open();
         } catch (error) {
             window.ClimateDiagnostics?.erro("Falha ao carregar assistente.", error);
             alert("Não foi possível carregar a assistente agora.");

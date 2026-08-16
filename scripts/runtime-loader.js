@@ -17,21 +17,21 @@
         "scripts/assistant/assistant-format.js?v=20260614-1",
         "scripts/assistant/assistant-solar.js?v=20260614-1",
         "scripts/assistant/assistant-aqi.js?v=20260614-1",
-        "scripts/assistant/assistant-metrics.js?v=20260614-1",
-        "scripts/assistant/assistant-intent.js?v=20260614-1",
-        "scripts/assistant/assistant-planner.js?v=20260614-3",
-        "scripts/assistant/assistant-query.js?v=20260614-4",
-        "scripts/assistant/assistant-ui.js?v=20260614-3",
+        "scripts/assistant/assistant-metrics.js?v=20260816-1",
+        "scripts/assistant/assistant-intent.js?v=20260816-1",
+        "scripts/assistant/assistant-planner.js?v=20260816-1",
+        "scripts/assistant/assistant-query.js?v=20260816-1",
+        "scripts/assistant/assistant-ui.js?v=20260816-1",
     ];
 
     const MODULOS_RELATORIO = [
         "scripts/reports/pdf-report-config.js?v=20260612-1",
         "scripts/reports/pdf-report-format.js?v=20260612-1",
-        "scripts/reports/pdf-report-data.js?v=20260622-5",
+        "scripts/reports/pdf-report-data.js?v=20260816-2",
         "scripts/reports/pdf-report-dom.js?v=20260622-1",
-        "scripts/reports/pdf-report-charts.js?v=20260622-1",
+        "scripts/reports/pdf-report-charts.js?v=20260816-2",
         "scripts/reports/pdf-report-pdf.js?v=20260622-2",
-        "scripts/reports/pdf-report-export.js?v=20260622-5",
+        "scripts/reports/pdf-report-export.js?v=20260816-2",
     ];
 
     function carregarScriptUmaVez(url, validarGlobal) {
