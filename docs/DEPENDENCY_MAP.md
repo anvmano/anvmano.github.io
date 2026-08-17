@@ -699,7 +699,7 @@ Impacto da alteracao: Alto para a visao global, graficos comparativos, contexto 
 
 ## scripts/views/public-weather-view.js
 
-Responsabilidade: renderizar modo publico por CEP/localizacao.
+Responsabilidade: renderizar modo publico por CEP/localizacao. Para temperatura, sensacao termica, umidade e pressao, monta uma janela unica com 24h observadas e 12h previstas a partir das series horarias do Open-Meteo. Mantem datasets `Medido`/`Previsao`, marcador `Agora`, tooltips de origem e configuracao responsiva; registra esses metadados em `ClimateZoom` para preservar o comportamento no grafico ampliado.
 
 Dependencias diretas:
 

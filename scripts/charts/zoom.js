@@ -65,6 +65,7 @@
                     : dataset.data,
                 yAxisID: dataset.yAxisID,
                 borderColor: dataset.borderColor,
+                borderDash: dataset.borderDash,
                 backgroundColor: Array.isArray(dataset.backgroundColor) || typeof dataset.backgroundColor === "string"
                     ? dataset.backgroundColor
                     : "transparent",
@@ -80,8 +81,10 @@
                 pointHoverBorderColor: dataset.pointHoverBorderColor,
                 pointHoverBorderWidth: dataset.pointHoverBorderWidth,
                 showLine: dataset.showLine,
+                spanGaps: dataset.spanGaps,
                 order: dataset.order,
                 parsing: dataset.parsing,
+                tipoDado: dataset.tipoDado,
             }))
         };
     }
@@ -89,11 +92,14 @@
     function createZoomChart({ sourceChart, targetCtx, getZoomOptions }) {
         const sourceId = sourceChart.canvas.id;
         const eGraficoSolar = Boolean(sourceChart.$solarDayTimes);
+        const plugins = [];
+        if (eGraficoSolar) plugins.push(ClimateSolar.solarDayBackgroundPlugin);
+        if (Array.isArray(sourceChart.$zoomPlugins)) plugins.push(...sourceChart.$zoomPlugins);
         const config = {
             type: sourceChart.config.type || "line",
             data: cloneChartData(sourceChart),
             options: getZoomOptions?.(sourceId) || {},
-            plugins: eGraficoSolar ? [ClimateSolar.solarDayBackgroundPlugin] : []
+            plugins,
         };
 
         const zoomChart = new Chart(targetCtx, config);
@@ -103,6 +109,10 @@
         if (sourceChart.$comfortBand) {
             zoomChart.$comfortBand = sourceChart.$comfortBand;
             zoomChart.update();
+        }
+        if (sourceChart.$marcadorAgora) {
+            zoomChart.$marcadorAgora = { ...sourceChart.$marcadorAgora };
+            zoomChart.update("none");
         }
         zoomOverlay._chart = zoomChart;
         return zoomChart;

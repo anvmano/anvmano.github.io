@@ -11,6 +11,41 @@
     ];
 
     const graficos = {};
+    const HORAS_PREVISAO_GRAFICOS = 12;
+    const marcadorAgoraPlugin = {
+        id: "marcadorAgoraPublico",
+        afterDraw(grafico) {
+            const marcador = grafico.$marcadorAgora;
+            const escalaX = grafico.scales?.x;
+            const area = grafico.chartArea;
+            if (!marcador || !escalaX || !area || marcador.indice < 0) return;
+
+            const x = escalaX.getPixelForValue(marcador.indice);
+            if (!Number.isFinite(x) || x < area.left || x > area.right) return;
+
+            const contexto = grafico.ctx;
+            contexto.save();
+            contexto.strokeStyle = "rgba(148, 163, 184, 0.65)";
+            contexto.lineWidth = 1;
+            contexto.setLineDash([4, 4]);
+            contexto.beginPath();
+            contexto.moveTo(x, area.top);
+            contexto.lineTo(x, area.bottom);
+            contexto.stroke();
+
+            contexto.setLineDash([]);
+            contexto.font = "600 10px sans-serif";
+            contexto.textAlign = "center";
+            contexto.textBaseline = "top";
+            const larguraTexto = contexto.measureText("Agora").width;
+            const centroSeguro = Math.min(Math.max(x, area.left + larguraTexto / 2 + 7), area.right - larguraTexto / 2 - 7);
+            contexto.fillStyle = "rgba(15, 23, 42, 0.88)";
+            contexto.fillRect(centroSeguro - larguraTexto / 2 - 5, area.top + 4, larguraTexto + 10, 17);
+            contexto.fillStyle = "#cbd5e1";
+            contexto.fillText("Agora", centroSeguro, area.top + 7);
+            contexto.restore();
+        },
+    };
     let elementos = {};
     let callbacks = {};
     let sequenciaBusca = 0;
@@ -183,11 +218,11 @@
             atualizadoEm: dados.atualizadoEm,
         });
         publicarEventosSolares(dados);
-        const seriesUltimas24h = filtrarSeriesUltimas24h(dados.seriesHorarias, dados.atualizadoEm);
-        renderizarGraficoLinha("publicChartTemperature", seriesUltimas24h.horarios, seriesUltimas24h.temperatura, "Temperatura", "°C", window.AppConfig.colors.blue);
-        renderizarGraficoLinha("publicChartFeelsLike", seriesUltimas24h.horarios, seriesUltimas24h.sensacaoTermica, "Sensação térmica", "°C", window.AppConfig.colors.green);
-        renderizarGraficoLinha("publicChartHumidity", seriesUltimas24h.horarios, seriesUltimas24h.umidade, "Umidade", "%", window.AppConfig.colors.purple);
-        renderizarGraficoLinha("publicChartPressure", seriesUltimas24h.horarios, seriesUltimas24h.pressao, "Pressão", "hPa", window.AppConfig.colors.amber);
+        const janelaGraficos = montarJanelaObservadaEPrevista(dados.seriesHorarias, dados.atualizadoEm);
+        renderizarGraficoLinha("publicChartTemperature", janelaGraficos, "temperatura", "Temperatura", "°C", window.AppConfig.colors.blue);
+        renderizarGraficoLinha("publicChartFeelsLike", janelaGraficos, "sensacaoTermica", "Sensação térmica", "°C", window.AppConfig.colors.green);
+        renderizarGraficoLinha("publicChartHumidity", janelaGraficos, "umidade", "Umidade", "%", window.AppConfig.colors.purple);
+        renderizarGraficoLinha("publicChartPressure", janelaGraficos, "pressao", "Pressão", "hPa", window.AppConfig.colors.amber);
         renderizarGraficoSolar(dados.cicloSolar);
         window.ClimateZoom?.registrarCards?.(elementos.publicResults, {
             chartInstances: graficos,
@@ -318,72 +353,163 @@
         }
     }
 
-    function renderizarGraficoLinha(id, horarios, valores, label, unidade, cor) {
+    function renderizarGraficoLinha(id, janela, chaveMetrica, label, unidade, cor) {
         const canvas = document.getElementById(id);
         if (!canvas) return;
         if (graficos[id]) graficos[id].destroy();
 
-        const pontos = (valores || []).map((valor, indice) => ({ horario: horarios[indice], valor }))
-            .filter(ponto => ponto.valor !== null);
+        const valores = janela?.[chaveMetrica] || [];
+        const valoresMedidos = valores.map((valor, indice) => janela.tipos[indice] === "medido" ? valor : null);
+        const valoresPrevistos = valores.map((valor, indice) => janela.tipos[indice] === "previsao" ? valor : null);
+        const valorTransicao = valoresMedidos[janela.indiceAgora];
+        if (janela.indiceAgora >= 0 && numeroValido(valorTransicao) !== null && valoresPrevistos.some(valor => numeroValido(valor) !== null)) {
+            valoresPrevistos[janela.indiceAgora] = valorTransicao;
+        }
 
-        if (!pontos.length) return;
+        const temMedicao = valoresMedidos.some(valor => numeroValido(valor) !== null);
+        const temPrevisao = valoresPrevistos.some((valor, indice) => indice > janela.indiceAgora && numeroValido(valor) !== null);
+        if (!temMedicao && !temPrevisao) return;
 
         const ctx = canvas.getContext("2d");
-        graficos[id] = new Chart(ctx, {
+        const corPrevisao = corComTransparencia(cor, 0.58);
+        const datasets = [];
+        if (temMedicao) {
+            datasets.push({
+                label: "Medido",
+                tipoDado: "medido",
+                data: valoresMedidos,
+                borderColor: cor,
+                backgroundColor: `${cor}22`,
+                fill: true,
+                tension: 0.35,
+                pointRadius: 0,
+                pointHitRadius: 18,
+                spanGaps: false,
+            });
+        }
+        if (temPrevisao) {
+            datasets.push({
+                label: "Previsão",
+                tipoDado: "previsao",
+                data: valoresPrevistos,
+                borderColor: corPrevisao,
+                backgroundColor: corComTransparencia(cor, 0.05),
+                borderDash: [6, 4],
+                fill: false,
+                tension: 0.35,
+                pointRadius: 0,
+                pointHitRadius: 18,
+                spanGaps: false,
+            });
+        }
+
+        const opcoes = criarOpcoesGraficoPublico({ janela, unidade });
+        const grafico = new Chart(ctx, {
             type: "line",
             data: {
-                labels: pontos.map(ponto => formatarHoraIso(ponto.horario)),
-                datasets: [{
-                    label,
-                    data: pontos.map(ponto => ponto.valor),
-                    borderColor: cor,
-                    backgroundColor: `${cor}22`,
-                    fill: true,
-                    tension: 0.35,
-                    pointRadius: 0,
-                    pointHitRadius: 18,
-                }],
+                labels: janela.horarios.map(formatarHoraIso),
+                datasets,
             },
-            options: window.ClimateCharts.mergeDeep(window.ClimateCharts.createDefaults(window.AppConfig.colors), {
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: contexto => `${label}: ${Number(contexto.parsed.y).toFixed(2)}${unidade}`,
-                        },
+            options: opcoes,
+            plugins: [marcadorAgoraPlugin],
+        });
+        grafico.$marcadorAgora = { indice: janela.indiceAgora };
+        grafico.$zoomPlugins = [marcadorAgoraPlugin];
+        grafico.update("none");
+        graficos[id] = grafico;
+    }
+
+    function criarOpcoesGraficoPublico({ janela, unidade }) {
+        const limiteTicks = window.matchMedia?.("(max-width: 600px)")?.matches ? 7 : 13;
+        return window.ClimateCharts.mergeDeep(window.ClimateCharts.createDefaults(window.AppConfig.colors), {
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: {
+                        color: window.AppConfig.colors.text,
+                        boxWidth: 18,
+                        boxHeight: 2,
+                        padding: 12,
                     },
                 },
-                scales: {
-                    y: {
-                        title: { display: true, text: unidade, color: window.AppConfig.colors.text },
+                tooltip: {
+                    filter: contexto => !(contexto.dataset.tipoDado === "previsao" && contexto.dataIndex <= janela.indiceAgora),
+                    callbacks: {
+                        title: itens => formatarDataHoraTooltip(janela.horarios[itens[0]?.dataIndex]),
+                        label: contexto => `${contexto.dataset.label}: ${Number(contexto.parsed.y).toFixed(2)}${unidade}`,
                     },
                 },
-            }),
+            },
+            scales: {
+                x: {
+                    ticks: { maxTicksLimit: limiteTicks },
+                },
+                y: {
+                    title: { display: true, text: unidade, color: window.AppConfig.colors.text },
+                },
+            },
         });
     }
 
-    function filtrarSeriesUltimas24h(series, atualizadoEm) {
+    function montarJanelaObservadaEPrevista(series, atualizadoEm, horasPrevisao = HORAS_PREVISAO_GRAFICOS) {
         const fim = atualizadoEm instanceof Date && !Number.isNaN(atualizadoEm.getTime()) ? atualizadoEm : new Date();
         const inicio = new Date(fim.getTime() - 24 * 60 * 60 * 1000);
+        const inicioPrevisao = new Date(fim);
+        inicioPrevisao.setMinutes(0, 0, 0);
+        inicioPrevisao.setHours(inicioPrevisao.getHours() + 1);
+        const fimPrevisao = new Date(inicioPrevisao.getTime() + horasPrevisao * 60 * 60 * 1000);
         const resultado = {
             horarios: [],
+            tipos: [],
             temperatura: [],
             sensacaoTermica: [],
             umidade: [],
             pressao: [],
+            indiceAgora: -1,
         };
 
         (series?.horarios || []).forEach((horario, indice) => {
             const dataHora = new Date(horario);
-            if (Number.isNaN(dataHora.getTime()) || dataHora < inicio || dataHora > fim) return;
+            if (Number.isNaN(dataHora.getTime())) return;
+            const eMedido = dataHora >= inicio && dataHora <= fim;
+            const ePrevisao = dataHora >= inicioPrevisao && dataHora < fimPrevisao;
+            if (!eMedido && !ePrevisao) return;
 
             resultado.horarios.push(horario);
+            resultado.tipos.push(eMedido ? "medido" : "previsao");
             resultado.temperatura.push(series.temperatura?.[indice] ?? null);
             resultado.sensacaoTermica.push(series.sensacaoTermica?.[indice] ?? null);
             resultado.umidade.push(series.umidade?.[indice] ?? null);
             resultado.pressao.push(series.pressao?.[indice] ?? null);
+            if (eMedido) resultado.indiceAgora = resultado.horarios.length - 1;
         });
 
         return resultado;
+    }
+
+    function numeroValido(valor) {
+        if (valor === null || valor === undefined || valor === "") return null;
+        const numero = Number(valor);
+        return Number.isFinite(numero) ? numero : null;
+    }
+
+    function corComTransparencia(cor, alpha) {
+        const hexadecimal = String(cor || "").replace("#", "");
+        if (!/^[0-9a-f]{6}$/i.test(hexadecimal)) return cor;
+        const vermelho = Number.parseInt(hexadecimal.slice(0, 2), 16);
+        const verde = Number.parseInt(hexadecimal.slice(2, 4), 16);
+        const azul = Number.parseInt(hexadecimal.slice(4, 6), 16);
+        return `rgba(${vermelho}, ${verde}, ${azul}, ${alpha})`;
+    }
+
+    function formatarDataHoraTooltip(valor) {
+        const data = new Date(valor);
+        if (Number.isNaN(data.getTime())) return "--";
+        const dia = String(data.getDate()).padStart(2, "0");
+        const mes = String(data.getMonth() + 1).padStart(2, "0");
+        const hora = String(data.getHours()).padStart(2, "0");
+        const minuto = String(data.getMinutes()).padStart(2, "0");
+        return `${dia}/${mes} ${hora}:${minuto}`;
     }
 
     function renderizarGraficoSolar(eventos) {
@@ -453,13 +579,31 @@
             publicChartHumidity: "%",
             publicChartPressure: "hPa",
         };
+        const unidade = unidades[idGrafico] || "";
         return window.ClimateCharts.mergeDeep(padroes, {
             maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: {
+                        color: window.AppConfig.colors.text,
+                        boxWidth: 18,
+                        boxHeight: 2,
+                        padding: 12,
+                    },
+                },
+                tooltip: {
+                    filter: contexto => !(contexto.dataset.tipoDado === "previsao" && contexto.dataIndex <= contexto.chart.$marcadorAgora?.indice),
+                    callbacks: {
+                        label: contexto => `${contexto.dataset.label}: ${Number(contexto.parsed.y).toFixed(2)}${unidade}`,
+                    },
+                },
+            },
             scales: {
                 y: {
                     title: {
-                        display: Boolean(unidades[idGrafico]),
-                        text: unidades[idGrafico] || "",
+                        display: Boolean(unidade),
+                        text: unidade,
                         color: window.AppConfig.colors.text,
                     },
                 },
@@ -666,5 +810,6 @@
         atualizarUsuario,
         aplicarMascaraCep,
         calcularAtualidade,
+        montarJanelaObservadaEPrevista,
     };
 })();

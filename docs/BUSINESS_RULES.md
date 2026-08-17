@@ -157,8 +157,11 @@ Regras:
 - localizacao do navegador deve ficar somente em memoria e nao deve ser armazenada
 - localizacao do navegador deve tentar primeiro posicao em cache, depois busca normal com timeout maior e por fim alta precisao antes de retornar erro
 - CEP e resolvido para cidade/UF e depois para coordenadas via geocodificacao externa
-- graficos publicos de temperatura, sensacao termica, umidade e pressao devem mostrar janela movel das ultimas 24h, terminando na data/hora retornada pela localizacao consultada
-- a consulta Open-Meteo publica deve trazer dados horarios recentes suficientes para montar essa janela, sem exibir previsoes futuras nos graficos de serie temporal
+- graficos publicos de temperatura, sensacao termica, umidade e pressao devem combinar as ultimas 24h observadas com as 12h seguintes de previsao
+- a parte observada termina na data/hora retornada pela localizacao consultada; a previsao comeca somente na proxima hora completa, sem duplicar a hora atual, e inclui exatamente 12 pontos horarios quando todos estiverem disponiveis
+- medicao usa a cor principal e linha continua; previsao usa a mesma familia de cor com menor opacidade e linha tracejada; o marcador vertical `Agora` separa visualmente os periodos
+- tooltips identificam `Medido` ou `Previsao`; no mobile todos os pontos permanecem, mas o eixo X reduz a quantidade de rotulos
+- a consulta Open-Meteo publica deve trazer dados horarios suficientes para montar tanto o historico quanto a previsao; o ciclo solar continua independente e nao recebe prolongamento meteorologico
 - ciclo solar publico usa coordenadas da localizacao/CEP, nao `historico/NascePorDoSol`
 - no modo publico, o chip/popover solar do header deve usar os eventos solares da localizacao/CEP consultado; antes da consulta, deve orientar CEP/localizacao em vez de apresentar fallback interno como se fosse dado real
 - o card publico de fase da lua deve seguir o mesmo comportamento do card interno: fase, iluminacao, idade, proxima cheia e proxima nova; ele nao deve exibir horarios solares como nascer ou por do sol

@@ -164,7 +164,7 @@ Responsabilidades:
 - `scripts/views/sala-view.js`: renderizacao da aba Sala.
 - `scripts/views/aquario-view.js`: renderizacao da aba Aquario.
 - `scripts/views/solar-view.js`: integracao dos graficos solares usados pela visao global da aba Estacao.
-- `scripts/views/public-weather-view.js`: renderizacao do modo publico por CEP/localizacao, com cards, contexto sazonal/lunar, insights ambientais e graficos externos.
+- `scripts/views/public-weather-view.js`: renderizacao do modo publico por CEP/localizacao, com cards, contexto sazonal/lunar, insights ambientais e graficos externos; as series meteorologicas separam 24h observadas e 12h previstas, com marcador temporal e datasets distintos preservados no zoom.
 - `tools/validate-project.mjs`: validacao estrutural local de sintaxe, referencias, imports CSS e ids.
 - `tools/testar-assistente.mjs`: regressao local de interpretacao de periodos, operacoes e contratos de resposta da assistente.
 - `tools/testar-relatorio.mjs`, `tools/testar-pdf-artifact.mjs`, `tools/testar-acessibilidade.mjs`, `tools/testar-axe.mjs`, `tools/testar-qualidade-dados.mjs`, `tools/testar-modo-publico.mjs` e `tools/testar-tabelas.mjs`: regressao de relatorio/artefato, ARIA/contraste, qualidade, fluxo publico e tabelas.

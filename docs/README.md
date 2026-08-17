@@ -219,7 +219,7 @@ A validação verifica:
 - Usuários não autorizados permanecem no modo público.
 - Tela pública com cards de temperatura, sensação térmica, umidade, pressão e AQI externo.
 - Tela pública com ventilação recomendada, chuva nas próximas 6h, índice UV e ponto de orvalho/risco estimado de mofo.
-- Tela pública com gráficos de temperatura, sensação térmica, umidade, pressão e ciclo solar.
+- Tela pública com gráficos de temperatura, sensação térmica, umidade e pressão combinando 24h observadas e 12h de previsão, além do ciclo solar. A previsão começa na próxima hora completa e aparece mais clara e tracejada após o marcador `Agora`.
 - Tela pública com estação do ano e fase da lua.
 - Aba global Estação e abas por dispositivo: Sala, Quarto e Aquário.
 - Navegação por clique e swipe touch horizontal, sem capturar a rolagem lateral de tabelas e heatmaps.
