@@ -19,6 +19,10 @@ assert.match(view, /ClimateAqi\?\.updateExternal\?\.\(null\)/);
 assert.match(view, /ClimateZoom\?\.registrarCards/);
 assert.match(view, /aria-invalid/);
 assert.match(view, /function aplicarMascaraCep/);
+assert.match(view, /function alterarModoBusca/);
+assert.match(view, /function renderizarOpcoesCidades/);
+assert.match(view, /ExternalWeatherService\.pesquisarCidades/);
+assert.match(view, /ExternalWeatherService\.buscarPorCidade/);
 assert.match(view, /sessionStorage\.setItem/);
 assert.match(view, /\["latitude", "longitude", "precisao", "cep"\]/);
 assert.match(view, /desatualizado/);
@@ -31,6 +35,10 @@ assert.match(view, /id: "marcadorAgoraPublico"/);
 assert.match(service, /erro\.esperado = true/);
 assert.match(service, /cep_invalido/);
 assert.match(service, /cep_nao_encontrado/);
+assert.match(service, /function pesquisarCidades/);
+assert.match(service, /function buscarPorCidade/);
+assert.match(service, /cidade_invalida/);
+assert.match(service, /cidade_nao_encontrada/);
 assert.match(zoom, /registrarCards/);
 assert.match(zoom, /registrarFechamentoPorEscape\(\);\s*raiz\.querySelectorAll/);
 assert.match(zoom, /ClimateAssets\?\.carregarCssZoom/);
@@ -40,6 +48,51 @@ assert.match(zoom, /sourceChart\.\$marcadorAgora/);
 assert.match(loader, /function carregarCssZoom\(\)/);
 assert.match(html, /id="publicSearchStatus"[^>]*role="status"[^>]*aria-live="polite"/);
 assert.match(html, /id="publicResults"[^>]*aria-busy="false"/);
+assert.match(html, /id="publicSearchModeCep"[^>]*aria-pressed="true"/);
+assert.match(html, /id="publicSearchModeCity"[^>]*aria-pressed="false"/);
+assert.match(html, /id="publicSearchInput"[^>]*inputmode="numeric"/);
+assert.match(html, /id="publicCityResults"[^>]*hidden/);
+
+let respostaGeocodificacao = {
+    results: [
+        { id: 1, name: "Campinas", admin1: "São Paulo", country: "Brasil", country_code: "BR", latitude: -22.90, longitude: -47.06, timezone: "America/Sao_Paulo" },
+        { id: 2, name: "Campinas", admin1: "Santa Catarina", country: "Brasil", country_code: "BR", latitude: -27.01, longitude: -51.10, timezone: "America/Sao_Paulo" },
+    ],
+};
+const chamadasGeocodificacao = [];
+const contextoServico = {
+    URL,
+    AppConfig: {
+        externalApis: {
+            openMeteoGeocodingUrl: "https://geocoding-api.open-meteo.com/v1/search",
+        },
+    },
+    fetch: async url => {
+        chamadasGeocodificacao.push(String(url));
+        return { ok: true, json: async () => respostaGeocodificacao };
+    },
+};
+contextoServico.window = contextoServico;
+vm.runInNewContext(service, contextoServico);
+
+const cidades = await contextoServico.ExternalWeatherService.pesquisarCidades("  Campinas, SP  ");
+assert.equal(cidades.length, 2);
+assert.equal(cidades[0].rotulo, "Campinas - São Paulo");
+const urlGeocodificacao = new URL(chamadasGeocodificacao.at(-1));
+assert.equal(urlGeocodificacao.searchParams.get("name"), "Campinas, SP");
+assert.equal(urlGeocodificacao.searchParams.get("count"), "5");
+assert.equal(urlGeocodificacao.searchParams.get("countryCode"), "BR");
+assert.equal(urlGeocodificacao.searchParams.get("language"), "pt");
+
+await assert.rejects(
+    contextoServico.ExternalWeatherService.pesquisarCidades("A"),
+    erro => erro.codigo === "cidade_invalida"
+);
+respostaGeocodificacao = { results: [] };
+await assert.rejects(
+    contextoServico.ExternalWeatherService.pesquisarCidades("Cidade inexistente"),
+    erro => erro.codigo === "cidade_nao_encontrada"
+);
 
 const contextoView = { window: {}, Date };
 contextoView.window = contextoView;

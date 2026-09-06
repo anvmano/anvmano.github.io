@@ -50,6 +50,8 @@
     let callbacks = {};
     let sequenciaBusca = 0;
     let consultaRestaurada = false;
+    let modoBusca = "cep";
+    const valoresBusca = { cep: "", cidade: "" };
 
     function setup({ onLogin, onLogout, getUsuario, isOwner } = {}) {
         elementos = obterElementos();
@@ -58,15 +60,19 @@
 
         elementos.btnEntrar?.addEventListener("click", () => onLogin?.());
         elementos.btnSair?.addEventListener("click", () => onLogout?.());
-        elementos.formCep?.addEventListener("submit", async evento => {
+        elementos.formBusca?.addEventListener("submit", async evento => {
             evento.preventDefault();
-            await buscarPorCep();
+            await buscarPorEntrada();
         });
         elementos.btnLocalizacao?.addEventListener("click", buscarPorLocalizacao);
-        elementos.cepInput?.addEventListener("input", evento => {
-            aplicarMascaraCep(evento.currentTarget);
-            limparErroCep();
+        elementos.btnModoCep?.addEventListener("click", () => alterarModoBusca("cep"));
+        elementos.btnModoCidade?.addEventListener("click", () => alterarModoBusca("cidade"));
+        elementos.entradaBusca?.addEventListener("input", evento => {
+            if (modoBusca === "cep") aplicarMascaraCep(evento.currentTarget);
+            limparErroBusca();
+            ocultarOpcoesCidades();
         });
+        alterarModoBusca("cep", { focar: false });
 
         atualizarUsuario(getUsuario?.(), isOwner?.());
         renderizarEstadoInicial();
@@ -115,9 +121,49 @@
         elementos.chat?.classList.remove("is-disabled");
     }
 
-    async function buscarPorCep() {
-        const cep = elementos.cepInput?.value;
-        await executarBusca(() => window.ExternalWeatherService.buscarPorCep(cep), { origemCep: true });
+    async function buscarPorEntrada() {
+        if (modoBusca === "cidade") {
+            await pesquisarPorCidade();
+            return;
+        }
+
+        const cep = elementos.entradaBusca?.value;
+        await executarBusca(() => window.ExternalWeatherService.buscarPorCep(cep), { marcarEntradaEmErro: true });
+    }
+
+    async function pesquisarPorCidade() {
+        const idBusca = ++sequenciaBusca;
+        const termo = elementos.entradaBusca?.value;
+        definirEstadoBusca(true);
+        limparErroBusca();
+        ocultarOpcoesCidades();
+        renderizarMensagem("Procurando cidades...", "loading");
+
+        try {
+            const cidades = await window.ExternalWeatherService.pesquisarCidades(termo);
+            if (idBusca !== sequenciaBusca) return;
+
+            if (cidades.length === 1) {
+                const dados = await window.ExternalWeatherService.buscarPorCidade(cidades[0]);
+                await concluirBusca(dados, idBusca);
+                return;
+            }
+
+            renderizarMensagem("Escolha a cidade correta para continuar.", "empty");
+            renderizarOpcoesCidades(cidades);
+            anunciarEstado(`${cidades.length} cidades encontradas. Escolha uma opção.`, "status");
+        } catch (erro) {
+            if (idBusca !== sequenciaBusca) return;
+            tratarErroBusca(erro, { marcarEntradaEmErro: true });
+        } finally {
+            if (idBusca === sequenciaBusca) definirEstadoBusca(false);
+        }
+    }
+
+    async function selecionarCidade(cidade) {
+        valoresBusca.cidade = cidade.nome || cidade.rotulo || "";
+        if (elementos.entradaBusca) elementos.entradaBusca.value = valoresBusca.cidade;
+        await executarBusca(() => window.ExternalWeatherService.buscarPorCidade(cidade), { marcarEntradaEmErro: true });
     }
 
     async function buscarPorLocalizacao() {
@@ -135,34 +181,44 @@
         });
     }
 
-    async function executarBusca(busca, { origemCep = false } = {}) {
+    async function executarBusca(busca, { marcarEntradaEmErro = false } = {}) {
         const idBusca = ++sequenciaBusca;
         definirEstadoBusca(true);
-        limparErroCep();
+        limparErroBusca();
+        ocultarOpcoesCidades();
         renderizarMensagem("Consultando clima da localização...", "loading");
         try {
             const dados = await busca();
-            if (idBusca !== sequenciaBusca) return;
-            const renderizada = await renderizarDados(dados, idBusca);
-            if (!renderizada) return;
-            preservarUltimaConsulta(dados);
-            anunciarEstado(`Dados climáticos carregados para ${dados.origem?.rotulo || "a localização"}.`, "status");
+            await concluirBusca(dados, idBusca);
         } catch (erro) {
             if (idBusca !== sequenciaBusca) return;
-            if (erro?.esperado) {
-                window.ClimateDiagnostics?.depurar("Validação da consulta pública.", erro);
-            } else {
-                window.ClimateDiagnostics?.erro("Falha técnica na consulta pública.", erro);
-            }
-            if (origemCep && erro?.esperado) marcarErroCep(erro.message);
-            renderizarMensagem(erro.message || "Não foi possível carregar os dados públicos.", "error");
+            tratarErroBusca(erro, { marcarEntradaEmErro });
         } finally {
             if (idBusca === sequenciaBusca) definirEstadoBusca(false);
         }
     }
 
+    async function concluirBusca(dados, idBusca) {
+        if (idBusca !== sequenciaBusca) return false;
+        const renderizada = await renderizarDados(dados, idBusca);
+        if (!renderizada) return false;
+        preservarUltimaConsulta(dados);
+        anunciarEstado(`Dados climáticos carregados para ${dados.origem?.rotulo || "a localização"}.`, "status");
+        return true;
+    }
+
+    function tratarErroBusca(erro, { marcarEntradaEmErro = false } = {}) {
+        if (erro?.esperado) {
+            window.ClimateDiagnostics?.depurar("Validação da consulta pública.", erro);
+        } else {
+            window.ClimateDiagnostics?.erro("Falha técnica na consulta pública.", erro);
+        }
+        if (marcarEntradaEmErro) marcarErroBusca(erro.message);
+        renderizarMensagem(erro.message || "Não foi possível carregar os dados públicos.", "error");
+    }
+
     function renderizarEstadoInicial() {
-        renderizarMensagem("Informe um CEP ou permita a localização para ver clima, AQI, ciclo solar, estação do ano e fase da lua.", "empty");
+        renderizarMensagem("Informe um CEP, pesquise uma cidade ou permita a localização para ver os dados climáticos.", "empty");
         renderizarContextoAstronomico(null);
     }
 
@@ -183,7 +239,7 @@
 
         elementos.publicResults.innerHTML = `
             <div class="public-location ${atualidade.desatualizado ? "is-stale" : ""}">
-                <span>${dados.origem.rotulo}</span>
+                <span>${escaparHtml(dados.origem.rotulo)}</span>
                 <strong>Atualizado ${formatarDataHora(dados.atualizadoEm)} · ${atualidade.rotulo}</strong>
             </div>
             <div class="stats-grid public-stats-grid">
@@ -677,9 +733,86 @@
         renderizarContextoAstronomico(null);
     }
 
+    function alterarModoBusca(novoModo, { focar = true, preservarValor = true } = {}) {
+        if (!elementos.entradaBusca || !["cep", "cidade"].includes(novoModo)) return;
+        if (preservarValor) valoresBusca[modoBusca] = elementos.entradaBusca.value;
+        modoBusca = novoModo;
+
+        const buscandoCep = modoBusca === "cep";
+        elementos.btnModoCep?.setAttribute("aria-pressed", String(buscandoCep));
+        elementos.btnModoCidade?.setAttribute("aria-pressed", String(!buscandoCep));
+        elementos.btnModoCep?.classList.toggle("active", buscandoCep);
+        elementos.btnModoCidade?.classList.toggle("active", !buscandoCep);
+        elementos.rotuloBusca.textContent = buscandoCep ? "CEP" : "Cidade";
+        elementos.entradaBusca.value = valoresBusca[modoBusca];
+        elementos.entradaBusca.placeholder = buscandoCep ? "00000-000" : "Ex.: Campinas, SP";
+        elementos.entradaBusca.inputMode = buscandoCep ? "numeric" : "search";
+        elementos.entradaBusca.autocomplete = buscandoCep ? "postal-code" : "address-level2";
+        elementos.entradaBusca.maxLength = buscandoCep ? 9 : 80;
+        elementos.entradaBusca.setAttribute("aria-label", buscandoCep ? "CEP" : "Cidade");
+
+        limparErroBusca();
+        ocultarOpcoesCidades();
+        if (focar) elementos.entradaBusca.focus();
+    }
+
+    function escaparHtml(valor) {
+        const caracteres = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '\"': "&quot;",
+            "'": "&#039;",
+        };
+        return String(valor ?? "").replace(/[&<>"']/g, caractere => caracteres[caractere]);
+    }
+
+    function renderizarOpcoesCidades(cidades) {
+        const container = elementos.opcoesCidades;
+        if (!container) return;
+        container.replaceChildren();
+
+        const titulo = document.createElement("span");
+        titulo.className = "public-city-results__title";
+        titulo.textContent = "Escolha a localização";
+        container.appendChild(titulo);
+
+        const lista = document.createElement("div");
+        lista.className = "public-city-results__list";
+        lista.setAttribute("role", "list");
+        cidades.forEach(cidade => {
+            const item = document.createElement("div");
+            const botao = document.createElement("button");
+            item.setAttribute("role", "listitem");
+            botao.type = "button";
+            botao.className = "public-city-option";
+            botao.textContent = cidade.rotulo;
+            botao.setAttribute("aria-label", `Consultar clima de ${cidade.rotulo}`);
+            botao.addEventListener("click", () => selecionarCidade(cidade));
+            item.appendChild(botao);
+            lista.appendChild(item);
+        });
+        container.appendChild(lista);
+        container.hidden = false;
+
+        requestAnimationFrame(() => lista.querySelector("button")?.focus());
+    }
+
+    function ocultarOpcoesCidades() {
+        if (!elementos.opcoesCidades) return;
+        elementos.opcoesCidades.hidden = true;
+        elementos.opcoesCidades.replaceChildren();
+    }
+
     function definirEstadoBusca(carregando) {
         elementos.publicResults?.setAttribute("aria-busy", String(carregando));
-        [elementos.btnBuscar, elementos.btnLocalizacao, elementos.cepInput].forEach(controle => {
+        [
+            elementos.btnBuscar,
+            elementos.btnLocalizacao,
+            elementos.entradaBusca,
+            elementos.btnModoCep,
+            elementos.btnModoCidade,
+        ].forEach(controle => {
             if (controle) controle.disabled = carregando;
         });
     }
@@ -690,16 +823,16 @@
         elementos.statusBusca.textContent = mensagem || "";
     }
 
-    function marcarErroCep(mensagem) {
-        if (!elementos.cepInput) return;
-        elementos.cepInput.setAttribute("aria-invalid", "true");
-        elementos.cepInput.setAttribute("aria-describedby", "publicSearchStatus");
+    function marcarErroBusca(mensagem) {
+        if (!elementos.entradaBusca) return;
+        elementos.entradaBusca.setAttribute("aria-invalid", "true");
+        elementos.entradaBusca.setAttribute("aria-describedby", "publicSearchStatus");
         anunciarEstado(mensagem, "alert");
     }
 
-    function limparErroCep() {
-        elementos.cepInput?.removeAttribute("aria-invalid");
-        elementos.cepInput?.removeAttribute("aria-describedby");
+    function limparErroBusca() {
+        elementos.entradaBusca?.removeAttribute("aria-invalid");
+        elementos.entradaBusca?.removeAttribute("aria-describedby");
     }
 
     function aplicarMascaraCep(input) {
@@ -767,9 +900,13 @@
             privateApp: document.getElementById("privateApp"),
             chat: document.getElementById("aiChat"),
             publicResults: document.getElementById("publicResults"),
-            formCep: document.getElementById("publicCepForm"),
-            cepInput: document.getElementById("publicCepInput"),
-            btnBuscar: document.getElementById("publicCepButton"),
+            formBusca: document.getElementById("publicSearchForm"),
+            entradaBusca: document.getElementById("publicSearchInput"),
+            rotuloBusca: document.getElementById("publicSearchLabel"),
+            btnBuscar: document.getElementById("publicSearchButton"),
+            btnModoCep: document.getElementById("publicSearchModeCep"),
+            btnModoCidade: document.getElementById("publicSearchModeCity"),
+            opcoesCidades: document.getElementById("publicCityResults"),
             btnLocalizacao: document.getElementById("publicLocationButton"),
             statusBusca: document.getElementById("publicSearchStatus"),
             publicUserStatus: document.getElementById("publicUserStatus"),

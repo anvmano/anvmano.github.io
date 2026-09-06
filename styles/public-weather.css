@@ -111,7 +111,7 @@
 }
 
 .public-user-status button,
-.public-cep-form button,
+.public-search-form button,
 .public-location-button {
     min-height: 42px;
     border: 1px solid rgba(56, 189, 248, 0.34);
@@ -131,7 +131,7 @@
 }
 
 .public-user-status button:hover,
-.public-cep-form button:hover,
+.public-search-form button:hover,
 .public-location-button:hover {
     border-color: var(--border-hover);
     background: rgba(56, 189, 248, 0.20);
@@ -148,7 +148,42 @@
     min-height: 48px;
 }
 
-.public-cep-form {
+.public-search-mode {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: rgba(15, 23, 42, 0.66);
+}
+
+.public-search-mode button {
+    min-height: 36px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-weight: 750;
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+
+.public-search-mode button:hover {
+    color: var(--text-primary);
+}
+
+.public-search-mode button.active {
+    background: rgba(56, 189, 248, 0.16);
+    color: var(--accent);
+}
+
+.public-search-mode button:focus-visible {
+    box-shadow: var(--focus-ring);
+}
+
+.public-search-form {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 10px;
@@ -158,7 +193,7 @@
     background: rgba(15, 23, 42, 0.66);
 }
 
-.public-cep-form label {
+.public-search-form label {
     grid-column: 1 / -1;
     color: var(--text-secondary);
     font-size: 0.76rem;
@@ -168,7 +203,7 @@
     text-transform: uppercase;
 }
 
-.public-cep-form input {
+.public-search-form input {
     width: 100%;
     min-width: 0;
     min-height: 44px;
@@ -182,18 +217,65 @@
     font-variant-numeric: tabular-nums;
 }
 
-.public-cep-form input::placeholder {
+.public-search-form input::placeholder {
     color: rgba(167, 180, 200, 0.56);
 }
 
-.public-cep-form input:focus-visible {
+.public-search-form input:focus-visible {
     border-color: var(--accent);
     box-shadow: var(--focus-ring);
 }
 
-.public-cep-form button {
+.public-search-form button {
     min-width: 92px;
     padding: 0 16px;
+}
+
+.public-city-results {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: rgba(15, 23, 42, 0.66);
+}
+
+.public-city-results[hidden] {
+    display: none;
+}
+
+.public-city-results__title {
+    color: var(--text-secondary);
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.public-city-results__list {
+    display: grid;
+    gap: 6px;
+}
+
+.public-city-option {
+    width: 100%;
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 1px solid rgba(132, 163, 214, 0.18);
+    border-radius: var(--radius-md);
+    background: rgba(30, 41, 59, 0.72);
+    color: var(--text-primary);
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.public-city-option:hover,
+.public-city-option:focus-visible {
+    border-color: var(--border-hover);
+    background: rgba(56, 189, 248, 0.14);
 }
 
 .public-results {
@@ -226,7 +308,7 @@
     opacity: 0.62;
 }
 
-.public-cep-form input[aria-invalid="true"] {
+.public-search-form input[aria-invalid="true"] {
     border-color: #fb7185;
     box-shadow: 0 0 0 2px rgba(251, 113, 133, 0.12);
 }
@@ -338,11 +420,11 @@
         font-size: 0.74rem;
     }
 
-    .public-cep-form {
+    .public-search-form {
         grid-template-columns: 1fr;
     }
 
-    .public-cep-form button {
+    .public-search-form button {
         width: 100%;
     }
 

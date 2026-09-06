@@ -2,7 +2,7 @@
 
 Dashboard web estático para acompanhamento de dados climáticos da Estação, Sala, Quarto, Aquário e eventos solares. A aplicação lê dados do Firebase Realtime Database diretamente no navegador, filtra pela data selecionada e renderiza gráficos, estatísticas, tabelas, visualizações avançadas, contexto astronômico, chat com IA e exportação de dados.
 
-O site também possui modo público sem login. Visitantes podem consultar clima por CEP ou localização do navegador usando APIs públicas externas. O dashboard interno completo fica disponível somente após login Google com um dos e-mails autorizados.
+O site também possui modo público sem login. Visitantes podem consultar clima por CEP, nome de cidade brasileira ou localização do navegador usando APIs públicas externas. O dashboard interno completo fica disponível somente após login Google com um dos e-mails autorizados.
 
 ## Requisitos
 
@@ -82,7 +82,7 @@ Bibliotecas carregadas via CDN:
 │       ├── sala-view.js        Renderização da aba Sala
 │       ├── aquario-view.js     Renderização da aba Aquário
 │       ├── solar-view.js       Renderização dos gráficos solares
-│       └── public-weather-view.js Modo público por CEP/localização
+│       └── public-weather-view.js Modo público por CEP/cidade/localização
 ├── styles/
 │   ├── tokens.css              Variáveis visuais
 │   ├── base.css                Base e reset
@@ -213,7 +213,8 @@ A validação verifica:
 
 ## Funcionalidades
 
-- Modo público sem login, com consulta por CEP ou localização do navegador.
+- Modo público sem login, com consulta por CEP, nome de cidade brasileira ou localização do navegador.
+- Busca por cidade com até cinco resultados: um resultado segue direto e nomes ambíguos exibem opções com cidade e estado.
 - Login Google opcional.
 - Acesso interno completo somente para `anvmano@gmail.com` e `clarissamikado@gmail.com`.
 - Usuários não autorizados permanecem no modo público.
@@ -290,13 +291,13 @@ JSON:
 - As abas seguem o padrão ARIA com foco móvel: setas circulam entre as abas, `Home` abre Estação e `End` abre Aquário.
 - O zoom usa diálogo modal nomeado, carrega seu CSS antes de abrir, preserva a posição da página, contém o foco enquanto aberto e o restaura ao botão disparador ao fechar.
 - O modo público registra seus gráficos dinâmicos no zoom e mantém `Escape`, contenção e restauração de foco mesmo sem inicializar o dashboard privado.
-- Consultas públicas são transacionais: desabilitam controles, anunciam carregamento/erro, ignoram respostas antigas e limpam AQI/solar/gráficos obsoletos.
+- Consultas públicas são transacionais: desabilitam controles, anunciam carregamento/escolha/erro, ignoram respostas antigas e limpam AQI/solar/gráficos obsoletos.
 - A ordem dos scripts em `index.html` é parte do contrato da aplicação.
 - Recursos pesados usam `scripts/runtime-loader.js`: Chart.js entra no primeiro gráfico com dados, a assistente entra no primeiro clique do chat e os módulos de relatório entram somente ao exportar.
 - O Firebase é lido no cliente com listeners `onValue`.
 - Firebase Auth é usado como portão de experiência: modo público sem login e modo interno para e-mails autorizados.
 - O modo público não inicia listeners internos do Realtime Database e não inicializa a assistente IA.
-- A ultima resposta publica pode permanecer em `sessionStorage` durante a sessao por tempo limitado; coordenadas precisas, precisao e CEP nunca sao persistidos. A interface mostra idade e marca dados desatualizados.
+- A ultima resposta publica pode permanecer em `sessionStorage` durante a sessao por tempo limitado; coordenadas precisas, precisao, CEP e termo de cidade nunca sao persistidos. A interface mostra idade e marca dados desatualizados.
 - O App Check usa reCAPTCHA Enterprise, fica sob demanda para evitar custo de carregamento inicial e deve ser validado antes de ativar enforcement.
 - O chat envia ao Gemini apenas resumo compacto de dados carregados, nunca o histórico inteiro.
 - Os módulos `scripts/assistant/*` e Firebase AI Logic não entram no carregamento inicial; `scripts/chat.js` inicializa e abre a assistente real no primeiro clique.

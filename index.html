@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link href="style.css?v=20260816-2" rel="stylesheet" />
+    <link href="style.css?v=20260906-1" rel="stylesheet" />
     <link rel="preload" href="styles/chat.css?v=20260623-4" as="style" onload="this.onload=null;this.rel='stylesheet'" />
     <noscript><link href="styles/chat.css?v=20260623-4" rel="stylesheet" /></noscript>
 </head>
@@ -92,7 +92,7 @@
                 <div class="public-hero__content">
                     <span class="public-eyebrow">Modo público</span>
                     <h2>Clima por localização</h2>
-                    <p>Consulte uma cidade por CEP ou use a localização do navegador para ver clima atual, chuva, índice UV, qualidade do ar e recomendações ambientais.</p>
+                    <p>Consulte por CEP, nome da cidade ou use a localização do navegador para ver clima atual, chuva, índice UV, qualidade do ar e recomendações ambientais.</p>
                     <div class="public-feature-list" aria-label="Dados exibidos no modo público">
                         <span>Temperatura</span>
                         <span>Sensação</span>
@@ -108,11 +108,16 @@
                     </div>
                     <div class="public-controls" aria-label="Consulta pública de clima">
                         <button class="toolbar-button public-location-button" type="button" id="publicLocationButton">Usar localização</button>
-                        <form class="public-cep-form" id="publicCepForm">
-                            <label for="publicCepInput">CEP</label>
-                            <input id="publicCepInput" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000" />
-                            <button class="toolbar-button" id="publicCepButton" type="submit">Buscar</button>
+                        <div class="public-search-mode" role="group" aria-label="Forma de busca">
+                            <button class="active" id="publicSearchModeCep" type="button" aria-pressed="true">CEP</button>
+                            <button id="publicSearchModeCity" type="button" aria-pressed="false">Cidade</button>
+                        </div>
+                        <form class="public-search-form" id="publicSearchForm">
+                            <label id="publicSearchLabel" for="publicSearchInput">CEP</label>
+                            <input id="publicSearchInput" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000" />
+                            <button class="toolbar-button" id="publicSearchButton" type="submit">Buscar</button>
                         </form>
+                        <div class="public-city-results" id="publicCityResults" aria-label="Cidades encontradas" hidden></div>
                     </div>
                     <p class="public-search-status" id="publicSearchStatus" role="status" aria-live="polite" aria-atomic="true"></p>
                 </div>
@@ -406,7 +411,7 @@
     <script defer src="scripts/firebase-service.js?v=20260816-2"></script>
     <script defer src="scripts/auth/auth-service.js?v=20260623-1"></script>
     <script defer src="scripts/external/browser-location-service.js?v=20260623-2"></script>
-    <script defer src="scripts/external/external-weather-service.js?v=20260816-1"></script>
+    <script defer src="scripts/external/external-weather-service.js?v=20260906-1"></script>
     <script defer src="scripts/ui/ui.js?v=20260816-4"></script>
     <script defer src="scripts/charts/zoom.js?v=20260816-5"></script>
     <script defer src="scripts/reports/pdf-report.js?v=20260816-1"></script>
@@ -416,7 +421,7 @@
     <script defer src="scripts/views/sala-view.js?v=20260602-1"></script>
     <script defer src="scripts/views/solar-view.js?v=20260812-1"></script>
     <script defer src="scripts/views/estacao-view.js?v=20260816-3"></script>
-    <script defer src="scripts/views/public-weather-view.js?v=20260817-1"></script>
+    <script defer src="scripts/views/public-weather-view.js?v=20260906-1"></script>
     <script defer src="scripts/main.js?v=20260816-2"></script>
 </body>
 

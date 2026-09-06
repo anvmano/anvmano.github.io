@@ -4,9 +4,9 @@ Base de conhecimento gerada a partir dos arquivos reais do projeto em `D:\Docume
 
 ## Visao Geral
 
-Sistema web estatico para exibir dados de uma estacao climatica. O codigo existente possui modo publico por CEP/localizacao e modo interno com Firebase Auth. No modo interno, carrega dados do Firebase Realtime Database, filtra por data selecionada, calcula estatisticas, renderiza graficos com Chart.js, mostra heatmaps climaticos, tabelas por ambiente, contexto astronomico, chat com IA e exportacao PDF/JSON.
+Sistema web estatico para exibir dados de uma estacao climatica. O codigo existente possui modo publico por CEP/cidade/localizacao e modo interno com Firebase Auth. No modo interno, carrega dados do Firebase Realtime Database, filtra por data selecionada, calcula estatisticas, renderiza graficos com Chart.js, mostra heatmaps climaticos, tabelas por ambiente, contexto astronomico, chat com IA e exportacao PDF/JSON.
 
-Usuarios internos autorizados sao definidos em `AppConfig.auth.usuariosInternosAutorizados`. Sem login, ou com usuario nao autorizado, a aplicacao mostra a tela publica por CEP/localizacao. Com usuario autorizado, mostra a aba global Estacao e abas por dispositivo: Sala, Quarto e Aquario, com selecao global de data.
+Usuarios internos autorizados sao definidos em `AppConfig.auth.usuariosInternosAutorizados`. Sem login, ou com usuario nao autorizado, a aplicacao mostra a tela publica por CEP/cidade/localizacao. Com usuario autorizado, mostra a aba global Estacao e abas por dispositivo: Sala, Quarto e Aquario, com selecao global de data.
 
 ## Tecnologias
 
@@ -127,7 +127,7 @@ Responsabilidades:
 - `scripts/firebase-service.js`: inicializacao separada de Firebase App/Auth e Database, listeners `onValue`, loading bar e erros.
 - `scripts/auth/auth-service.js`: inicializacao Firebase Auth, login/logout Google, usuario atual e regra de usuario interno autorizado.
 - `scripts/external/browser-location-service.js`: localizacao do navegador para o modo publico e para insights externos opcionais da aba Estacao interna, com fallback de cache, busca normal e alta precisao.
-- `scripts/external/external-weather-service.js`: CEP, fallback ViaCEP, geocodificacao, clima/AQI, chuva, UV, vento, ponto de orvalho e eventos solares externos via Open-Meteo.
+- `scripts/external/external-weather-service.js`: CEP, fallback ViaCEP, pesquisa de cidades brasileiras, geocodificacao, clima/AQI, chuva, UV, vento, ponto de orvalho e eventos solares externos via Open-Meteo.
 - `scripts/chat.js`: fachada publica leve do chat, mantendo `window.ClimateChat.setup` para o `scripts/main.js`, carregando `scripts/assistant/*` no primeiro clique e abrindo o painel apos a inicializacao.
 - `scripts/assistant/ai-service.js`: inicializacao do Firebase AI Logic e envio de prompts ao Gemini.
 - `scripts/assistant/assistant-ui.js`: painel do chat, atalhos de perguntas, mensagens, abertura/fechamento, clique/toque fora para fechar e estado ocupado.
@@ -164,7 +164,7 @@ Responsabilidades:
 - `scripts/views/sala-view.js`: renderizacao da aba Sala.
 - `scripts/views/aquario-view.js`: renderizacao da aba Aquario.
 - `scripts/views/solar-view.js`: integracao dos graficos solares usados pela visao global da aba Estacao.
-- `scripts/views/public-weather-view.js`: renderizacao do modo publico por CEP/localizacao, com cards, contexto sazonal/lunar, insights ambientais e graficos externos; as series meteorologicas separam 24h observadas e 12h previstas, com marcador temporal e datasets distintos preservados no zoom.
+- `scripts/views/public-weather-view.js`: renderizacao do modo publico por CEP/cidade/localizacao, controle segmentado do modo de busca, escolha acessivel de cidades homonimas, cards, contexto sazonal/lunar, insights ambientais e graficos externos; as series meteorologicas separam 24h observadas e 12h previstas, com marcador temporal e datasets distintos preservados no zoom.
 - `tools/validate-project.mjs`: validacao estrutural local de sintaxe, referencias, imports CSS e ids.
 - `tools/testar-assistente.mjs`: regressao local de interpretacao de periodos, operacoes e contratos de resposta da assistente.
 - `tools/testar-relatorio.mjs`, `tools/testar-pdf-artifact.mjs`, `tools/testar-acessibilidade.mjs`, `tools/testar-axe.mjs`, `tools/testar-qualidade-dados.mjs`, `tools/testar-modo-publico.mjs` e `tools/testar-tabelas.mjs`: regressao de relatorio/artefato, ARIA/contraste, qualidade, fluxo publico e tabelas.
@@ -532,7 +532,7 @@ DOM, Chart.js, tabelas e mensagens
 ```text
 Modo publico
 ↓
-CEP ou localizacao do navegador
+CEP, cidade brasileira ou localizacao do navegador
 ↓
 ExternalWeatherService / BrowserLocationService
 ↓
@@ -615,7 +615,9 @@ Graficos comuns:
 - `onAuthStateChanged`: decide entre modo publico e dashboard interno.
 - `click` no botao publico de login: abre login Google.
 - `click` no botao publico/header de logout: encerra sessao e volta ao modo publico.
-- `submit` no formulario publico de CEP: consulta clima publico.
+- `click` nos modos CEP/Cidade: alterna a interpretacao do campo publico.
+- `submit` no formulario publico: resolve CEP ou pesquisa cidade; um resultado segue direto e varios aguardam escolha.
+- `click` em uma opcao de cidade: consulta o clima pelas coordenadas do resultado escolhido.
 - `click` no botao de localizacao publica: consulta localizacao do navegador e clima publico.
 - `click` nos tabs: troca aba.
 - `keydown` nos tabs: `ArrowLeft`/`ArrowRight` circulam, `Home` abre Estacao e `End` abre Aquario.
@@ -679,7 +681,7 @@ Graficos comuns:
 - `styles/advanced-views.css`: concentra colapsaveis, visualizacoes climaticas e heatmaps.
 - `styles/responsive.css`: concentra responsividade.
 - `scripts/main.js`: orquestra dependencias, listeners, indicadores globais e views.
-- `scripts/views/public-weather-view.js`: concentra o modo publico por CEP/localizacao e seus graficos externos.
+- `scripts/views/public-weather-view.js`: concentra o modo publico por CEP/cidade/localizacao e seus graficos externos.
 
 ## Mapa para IA
 
@@ -708,4 +710,4 @@ Para entender rapidamente:
 
 ## Resumo Executivo
 
-Projeto e uma aplicacao estatica com dois fluxos: modo publico por CEP/localizacao usando APIs externas e modo interno autorizado usando Firebase Realtime Database. Ele usa Chart.js sob demanda como motor de graficos e modulos JavaScript globais para organizar configuracao, autenticacao, dados, graficos, analytics, UI, zoom, relatorios, assistente IA e views. Nao ha backend local, framework frontend, testes funcionais automatizados ou build. As principais areas de risco sao a dependencia da estrutura/nome dos dados no Firebase, a leitura completa dos paths internos monitorados e a separacao correta entre dados publicos e dados privados.
+Projeto e uma aplicacao estatica com dois fluxos: modo publico por CEP/cidade/localizacao usando APIs externas e modo interno autorizado usando Firebase Realtime Database. Ele usa Chart.js sob demanda como motor de graficos e modulos JavaScript globais para organizar configuracao, autenticacao, dados, graficos, analytics, UI, zoom, relatorios, assistente IA e views. Nao ha backend local, framework frontend, testes funcionais automatizados ou build. As principais areas de risco sao a dependencia da estrutura/nome dos dados no Firebase, a leitura completa dos paths internos monitorados e a separacao correta entre dados publicos e dados privados.

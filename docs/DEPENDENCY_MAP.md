@@ -320,7 +320,7 @@ Impacto da alteracao: Medio. Afeta modo publico e consulta externa opcional da a
 
 ## scripts/external/external-weather-service.js
 
-Responsabilidade: consultar CEP, resolver coordenadas e buscar clima/AQI, chuva, UV, vento, ponto de orvalho e eventos solares externos.
+Responsabilidade: consultar CEP, pesquisar cidades brasileiras, resolver coordenadas e buscar clima/AQI, chuva, UV, vento, ponto de orvalho e eventos solares externos.
 
 Dependencias diretas:
 
@@ -699,11 +699,11 @@ Impacto da alteracao: Alto para a visao global, graficos comparativos, contexto 
 
 ## scripts/views/public-weather-view.js
 
-Responsabilidade: renderizar modo publico por CEP/localizacao. Para temperatura, sensacao termica, umidade e pressao, monta uma janela unica com 24h observadas e 12h previstas a partir das series horarias do Open-Meteo. Mantem datasets `Medido`/`Previsao`, marcador `Agora`, tooltips de origem e configuracao responsiva; registra esses metadados em `ClimateZoom` para preservar o comportamento no grafico ampliado.
+Responsabilidade: renderizar modo publico por CEP/cidade/localizacao. Alterna o campo entre CEP e cidade, solicita ate cinco cidades brasileiras ao `ExternalWeatherService`, segue diretamente com resultado unico ou renderiza uma lista acessivel para desambiguacao. Para temperatura, sensacao termica, umidade e pressao, monta uma janela unica com 24h observadas e 12h previstas a partir das series horarias do Open-Meteo. Mantem datasets `Medido`/`Previsao`, marcador `Agora`, tooltips de origem e configuracao responsiva; registra esses metadados em `ClimateZoom` para preservar o comportamento no grafico ampliado.
 
 Dependencias diretas:
 
-- DOM `#publicApp`, `#privateApp`, `#publicCepForm`, `#publicLocationButton`, `#publicResults`
+- DOM `#publicApp`, `#privateApp`, `#publicSearchForm`, `#publicSearchModeCep`, `#publicSearchModeCity`, `#publicSearchInput`, `#publicCityResults`, `#publicLocationButton`, `#publicResults`
 - `BrowserLocationService`
 - `ExternalWeatherService`
 - `ClimateAssets.carregarChart`

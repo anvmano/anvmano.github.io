@@ -23,6 +23,45 @@
         });
     }
 
+    async function pesquisarCidades(nomeInformado) {
+        const termo = normalizarTermoCidade(nomeInformado);
+        if (termo.length < 2) {
+            throw criarErroEsperado("Informe pelo menos 2 caracteres para pesquisar a cidade.", "cidade_invalida");
+        }
+
+        const resultados = await consultarGeocodificacao(termo, 5);
+        const cidades = resultados
+            .map(normalizarCidadeOpenMeteo)
+            .filter(cidade => Number.isFinite(cidade.latitude) && Number.isFinite(cidade.longitude));
+
+        const cidadesUnicas = Array.from(new Map(
+            cidades.map(cidade => [`${cidade.id || ""}:${cidade.latitude}:${cidade.longitude}`, cidade])
+        ).values());
+
+        if (!cidadesUnicas.length) {
+            throw criarErroEsperado("Cidade não encontrada. Confira o nome e tente novamente.", "cidade_nao_encontrada");
+        }
+
+        return cidadesUnicas;
+    }
+
+    async function buscarPorCidade(cidade) {
+        const latitude = Number(cidade?.latitude);
+        const longitude = Number(cidade?.longitude);
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+            throw criarErroEsperado("Selecione uma cidade válida.", "cidade_invalida");
+        }
+
+        return buscarPorCoordenadas({
+            latitude,
+            longitude,
+            origem: {
+                tipo: "cidade",
+                rotulo: cidade.rotulo || montarRotuloCidade(cidade),
+            },
+        });
+    }
+
     async function buscarPorCoordenadas({ latitude, longitude, origem = {} }) {
         if (!Number.isFinite(Number(latitude)) || !Number.isFinite(Number(longitude))) {
             throw new Error("Coordenadas inválidas.");
@@ -90,17 +129,22 @@
     }
 
     async function buscarCoordenadaOpenMeteo(termo) {
+        const resultados = await consultarGeocodificacao(termo, 1);
+        return resultados[0] || null;
+    }
+
+    async function consultarGeocodificacao(termo, quantidade) {
         const url = new URL(config().openMeteoGeocodingUrl);
         url.searchParams.set("name", termo);
-        url.searchParams.set("count", "1");
+        url.searchParams.set("count", String(quantidade));
         url.searchParams.set("language", "pt");
         url.searchParams.set("format", "json");
         url.searchParams.set("countryCode", "BR");
 
         const resposta = await fetch(url);
-        if (!resposta.ok) return null;
+        if (!resposta.ok) throw new Error("Não foi possível pesquisar a localização.");
         const dados = await resposta.json();
-        return dados.results?.[0] || null;
+        return dados.results || [];
     }
 
     async function buscarClima(latitude, longitude) {
@@ -154,6 +198,30 @@
             bairro: dados.bairro,
             rua: dados.logradouro,
         };
+    }
+
+    function normalizarCidadeOpenMeteo(dados) {
+        const cidade = {
+            id: dados?.id,
+            nome: String(dados?.name || "").trim(),
+            estado: String(dados?.admin1 || "").trim(),
+            regiao: String(dados?.admin2 || "").trim(),
+            pais: String(dados?.country || "Brasil").trim(),
+            codigoPais: String(dados?.country_code || "BR").trim(),
+            latitude: numeroOuNulo(dados?.latitude),
+            longitude: numeroOuNulo(dados?.longitude),
+            fusoHorario: String(dados?.timezone || "").trim(),
+        };
+        cidade.rotulo = montarRotuloCidade(cidade);
+        return cidade;
+    }
+
+    function montarRotuloCidade(cidade) {
+        return [cidade?.nome, cidade?.estado].filter(Boolean).join(" - ") || "Cidade selecionada";
+    }
+
+    function normalizarTermoCidade(valor) {
+        return String(valor || "").trim().replace(/\s+/g, " ");
     }
 
     function criarErroEsperado(mensagem, codigo) {
@@ -275,6 +343,8 @@
 
     window.ExternalWeatherService = {
         buscarPorCep,
+        pesquisarCidades,
+        buscarPorCidade,
         buscarPorCoordenadas,
     };
 })();

@@ -101,10 +101,10 @@ Entradas:
 
 Saidas:
 
-- sem login: exibe modo publico por CEP/localizacao
+- sem login: exibe modo publico por CEP/cidade/localizacao
 - login com `anvmano@gmail.com`: exibe dashboard interno completo
 - login com `clarissamikado@gmail.com`: exibe dashboard interno completo
-- login com qualquer outro usuario: mantem modo publico por CEP/localizacao
+- login com qualquer outro usuario: mantem modo publico por CEP/cidade/localizacao
 
 Regras:
 
@@ -126,7 +126,7 @@ Se alterada: usuarios publicos podem ver recursos internos ou donos podem cair i
 
 Criticidade: Alta.
 
-## Regra: clima publico por CEP ou localizacao
+## Regra: clima publico por CEP, cidade ou localizacao
 
 Arquivos: `scripts/external/browser-location-service.js`, `scripts/external/external-weather-service.js`, `scripts/data/environmental-insights.js`, `scripts/views/public-weather-view.js`
 
@@ -135,6 +135,7 @@ Objetivo: mostrar informacoes climaticas publicas quando nao ha usuario interno 
 Entradas:
 
 - CEP informado pelo usuario
+- nome de cidade brasileira informado pelo usuario
 - localizacao opcional fornecida pelo navegador
 - BrasilAPI ou ViaCEP
 - Open-Meteo Geocoding
@@ -153,32 +154,36 @@ Saidas:
 
 Regras:
 
-- o site deve abrir pedindo CEP ou permissao de localizacao, sem exigir login
+- o site deve abrir oferecendo CEP, cidade ou permissao de localizacao, sem exigir login
 - localizacao do navegador deve ficar somente em memoria e nao deve ser armazenada
 - localizacao do navegador deve tentar primeiro posicao em cache, depois busca normal com timeout maior e por fim alta precisao antes de retornar erro
 - CEP e resolvido para cidade/UF e depois para coordenadas via geocodificacao externa
+- a entrada publica alterna explicitamente entre os modos `CEP` e `Cidade`, preservando o valor digitado em cada modo durante a troca
+- cidade exige pelo menos dois caracteres e usa Open-Meteo Geocoding com `countryCode=BR`, idioma portugues e no maximo cinco resultados
+- um unico resultado de cidade inicia a consulta climatica diretamente; resultados ambiguos devem ser apresentados como botoes acessiveis para escolha do usuario, com cidade e estado no rotulo
+- a cidade escolhida reutiliza exatamente o mesmo fluxo por coordenadas de clima, AQI, insights e ciclo solar usado por CEP/localizacao
 - graficos publicos de temperatura, sensacao termica, umidade e pressao devem combinar as ultimas 24h observadas com as 12h seguintes de previsao
 - a parte observada termina na data/hora retornada pela localizacao consultada; a previsao comeca somente na proxima hora completa, sem duplicar a hora atual, e inclui exatamente 12 pontos horarios quando todos estiverem disponiveis
 - medicao usa a cor principal e linha continua; previsao usa a mesma familia de cor com menor opacidade e linha tracejada; o marcador vertical `Agora` separa visualmente os periodos
 - tooltips identificam `Medido` ou `Previsao`; no mobile todos os pontos permanecem, mas o eixo X reduz a quantidade de rotulos
 - a consulta Open-Meteo publica deve trazer dados horarios suficientes para montar tanto o historico quanto a previsao; o ciclo solar continua independente e nao recebe prolongamento meteorologico
 - ciclo solar publico usa coordenadas da localizacao/CEP, nao `historico/NascePorDoSol`
-- no modo publico, o chip/popover solar do header deve usar os eventos solares da localizacao/CEP consultado; antes da consulta, deve orientar CEP/localizacao em vez de apresentar fallback interno como se fosse dado real
+- no modo publico, o chip/popover solar do header deve usar os eventos solares da localizacao consultada por CEP, cidade ou navegador; antes da consulta, deve orientar os meios publicos de busca em vez de apresentar fallback interno como se fosse dado real
 - o card publico de fase da lua deve seguir o mesmo comportamento do card interno: fase, iluminacao, idade, proxima cheia e proxima nova; ele nao deve exibir horarios solares como nascer ou por do sol
 - quando houver clima externo carregado, o card publico de fase da lua deve usar a data/hora da localizacao consultada; sem dados externos, usa a data atual do navegador como fallback visual
 - AQI publico vem de API externa e deve ser separado do AQI estimado interno da Sala/MQ135
 - no modo publico, o chip/popover AQI do header deve mostrar `AQI externo` da localizacao/CEP consultado e nao pode mencionar Sala ou MQ135
-- se nenhuma localizacao foi escolhida, mostrar estado vazio claro orientando CEP ou localizacao
+- se nenhuma localizacao foi escolhida, mostrar estado vazio claro orientando CEP, cidade ou localizacao
 - chuva usa o maior percentual, acumulado e maior intensidade horaria dentro das proximas 6h; ausencia de previsao nao pode virar zero
 - indice UV segue as faixas `baixo`, `moderado`, `alto`, `muito alto` e `extremo`, com recomendacao proporcional
 - ponto de orvalho usa o valor da API quando disponivel e calculo de Magnus como fallback
 - risco de mofo/condensacao e orientativo e deve considerar umidade e distancia entre temperatura e ponto de orvalho
 - recomendacao de ventilacao externa considera AQI, chuva, rajadas, temperatura e umidade; nao deve recomendar abertura quando houver condicao externa limitante
-- durante uma consulta, campo CEP, botao Buscar e botao Usar localizacao devem ficar desabilitados e `#publicResults` deve usar `aria-busy="true"`
+- durante uma consulta, campo de busca, modos CEP/Cidade, botao Buscar e botao Usar localizacao devem ficar desabilitados e `#publicResults` deve usar `aria-busy="true"`
 - somente a consulta publica mais recente pode atualizar a tela; respostas atrasadas de uma busca anterior devem ser ignoradas
 - nova consulta ou erro deve limpar AQI, ciclo solar, contexto astronomico e graficos anteriores para nao exibir dados obsoletos
-- erros esperados de validacao, como CEP incompleto ou nao encontrado, devem aparecer na interface sem gerar `console.error`; falhas tecnicas continuam registradas
-- mensagens de carregamento, sucesso e erro devem ser anunciadas por `#publicSearchStatus` com `aria-live`; CEP invalido usa `aria-invalid` e descricao associada
+- erros esperados de validacao, como CEP incompleto, cidade curta ou local nao encontrado, devem aparecer na interface sem gerar `console.error`; falhas tecnicas continuam registradas
+- mensagens de carregamento, escolha, sucesso e erro devem ser anunciadas por `#publicSearchStatus` com `aria-live`; entrada invalida usa `aria-invalid` e descricao associada; a primeira opcao de cidade recebe foco quando a lista e exibida
 - graficos publicos renderizados dinamicamente devem receber o mesmo zoom acessivel dos graficos internos
 
 Impacto: experiencia publica e separacao entre dados externos e dados internos da estacao.
