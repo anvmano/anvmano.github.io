@@ -160,7 +160,8 @@ Regras:
 - CEP e resolvido para cidade/UF e depois para coordenadas via geocodificacao externa
 - a entrada publica alterna explicitamente entre os modos `CEP` e `Cidade`, preservando o valor digitado em cada modo durante a troca
 - cidade exige pelo menos dois caracteres e usa Open-Meteo Geocoding com `countryCode=BR`, idioma portugues e no maximo cinco resultados
-- um unico resultado de cidade inicia a consulta climatica diretamente; resultados ambiguos devem ser apresentados como botoes acessiveis para escolha do usuario, com cidade e estado no rotulo
+- um unico resultado de cidade inicia a consulta climatica diretamente; resultados ambiguos devem ser apresentados como botoes acessiveis para escolha do usuario
+- correspondencias exatas do nome pesquisado devem aparecer antes de resultados parciais; localidades homonimas devem incluir a regiao administrativa entre parenteses quando ela for diferente do nome e do estado
 - a cidade escolhida reutiliza exatamente o mesmo fluxo por coordenadas de clima, AQI, insights e ciclo solar usado por CEP/localizacao
 - graficos publicos de temperatura, sensacao termica, umidade e pressao devem combinar as ultimas 24h observadas com as 12h seguintes de previsao
 - a parte observada termina na data/hora retornada pela localizacao consultada; a previsao comeca somente na proxima hora completa, sem duplicar a hora atual, e inclui exatamente 12 pontos horarios quando todos estiverem disponiveis

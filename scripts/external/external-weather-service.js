@@ -29,7 +29,7 @@
             throw criarErroEsperado("Informe pelo menos 2 caracteres para pesquisar a cidade.", "cidade_invalida");
         }
 
-        const resultados = await consultarGeocodificacao(termo, 5);
+        const resultados = await consultarGeocodificacao(termo, 10);
         const cidades = resultados
             .map(normalizarCidadeOpenMeteo)
             .filter(cidade => Number.isFinite(cidade.latitude) && Number.isFinite(cidade.longitude));
@@ -42,7 +42,14 @@
             throw criarErroEsperado("Cidade não encontrada. Confira o nome e tente novamente.", "cidade_nao_encontrada");
         }
 
-        return cidadesUnicas;
+        const nomePesquisado = normalizarComparacaoCidade(termo.split(",")[0]);
+        return cidadesUnicas
+            .sort((cidadeA, cidadeB) => {
+                const exataA = normalizarComparacaoCidade(cidadeA.nome) === nomePesquisado;
+                const exataB = normalizarComparacaoCidade(cidadeB.nome) === nomePesquisado;
+                return Number(exataB) - Number(exataA);
+            })
+            .slice(0, 5);
     }
 
     async function buscarPorCidade(cidade) {
@@ -217,11 +224,26 @@
     }
 
     function montarRotuloCidade(cidade) {
-        return [cidade?.nome, cidade?.estado].filter(Boolean).join(" - ") || "Cidade selecionada";
+        const nome = String(cidade?.nome || "").trim();
+        const estado = String(cidade?.estado || "").trim();
+        const regiao = String(cidade?.regiao || "").trim();
+        const regiaoDiferente = regiao
+            && normalizarComparacaoCidade(regiao) !== normalizarComparacaoCidade(nome)
+            && normalizarComparacaoCidade(regiao) !== normalizarComparacaoCidade(estado);
+        const localidade = regiaoDiferente ? `${nome} (${regiao})` : nome;
+        return [localidade, estado].filter(Boolean).join(" - ") || "Cidade selecionada";
     }
 
     function normalizarTermoCidade(valor) {
         return String(valor || "").trim().replace(/\s+/g, " ");
+    }
+
+    function normalizarComparacaoCidade(valor) {
+        return String(valor || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .trim()
+            .toLocaleLowerCase("pt-BR");
     }
 
     function criarErroEsperado(mensagem, codigo) {

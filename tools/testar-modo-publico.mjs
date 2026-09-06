@@ -55,8 +55,9 @@ assert.match(html, /id="publicCityResults"[^>]*hidden/);
 
 let respostaGeocodificacao = {
     results: [
-        { id: 1, name: "Campinas", admin1: "São Paulo", country: "Brasil", country_code: "BR", latitude: -22.90, longitude: -47.06, timezone: "America/Sao_Paulo" },
-        { id: 2, name: "Campinas", admin1: "Santa Catarina", country: "Brasil", country_code: "BR", latitude: -27.01, longitude: -51.10, timezone: "America/Sao_Paulo" },
+        { id: 3, name: "Campinas Velha", admin1: "São Paulo", admin2: "Campinas", country: "Brasil", country_code: "BR", latitude: -22.91, longitude: -47.07, timezone: "America/Sao_Paulo" },
+        { id: 1, name: "Campinas", admin1: "São Paulo", admin2: "Campinas", country: "Brasil", country_code: "BR", latitude: -22.90, longitude: -47.06, timezone: "America/Sao_Paulo" },
+        { id: 2, name: "Campinas", admin1: "Santa Catarina", admin2: "São José", country: "Brasil", country_code: "BR", latitude: -27.01, longitude: -51.10, timezone: "America/Sao_Paulo" },
     ],
 };
 const chamadasGeocodificacao = [];
@@ -76,11 +77,13 @@ contextoServico.window = contextoServico;
 vm.runInNewContext(service, contextoServico);
 
 const cidades = await contextoServico.ExternalWeatherService.pesquisarCidades("  Campinas, SP  ");
-assert.equal(cidades.length, 2);
+assert.equal(cidades.length, 3);
 assert.equal(cidades[0].rotulo, "Campinas - São Paulo");
+assert.equal(cidades[1].rotulo, "Campinas (São José) - Santa Catarina");
+assert.equal(cidades[2].rotulo, "Campinas Velha (Campinas) - São Paulo");
 const urlGeocodificacao = new URL(chamadasGeocodificacao.at(-1));
 assert.equal(urlGeocodificacao.searchParams.get("name"), "Campinas, SP");
-assert.equal(urlGeocodificacao.searchParams.get("count"), "5");
+assert.equal(urlGeocodificacao.searchParams.get("count"), "10");
 assert.equal(urlGeocodificacao.searchParams.get("countryCode"), "BR");
 assert.equal(urlGeocodificacao.searchParams.get("language"), "pt");
 
