@@ -977,6 +977,7 @@ Saidas:
 - gestos iniciados em tabelas, heatmaps ou areas com rolagem horizontal nao trocam de aba
 - no mobile, as abas devem ocupar toda a largura horizontal em quatro colunas equivalentes e ter aparencia clara de abas/controle segmentado, distinguindo navegacao de conteudo da pagina
 - a aba ativa deve se integrar visualmente ao conteudo abaixo com destaque e transicao suave, evitando aparencia de botao quadrado isolado
+- em celulares em paisagem com altura reduzida, as abas devem continuar em quatro colunas na largura total, mas a toolbar de data/exportacao deve ocupar uma linha separada para nao disputar espaco horizontal com a navegacao
 
 Impacto: navegacao mobile por touch.
 

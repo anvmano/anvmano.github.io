@@ -57,6 +57,28 @@ try {
 
     const canvasesSemNome = await pagina.locator("canvas:not([aria-label])").count();
     assert.equal(canvasesSemNome, 0, "Todos os canvases devem possuir nome acessível.");
+
+    const paginaPaisagem = await navegador.newPage({ viewport: { width: 720, height: 360 } });
+    await paginaPaisagem.goto(`http://127.0.0.1:${porta}/`, { waitUntil: "domcontentloaded" });
+    const layoutPaisagem = await paginaPaisagem.evaluate(() => {
+        document.getElementById("privateApp")?.removeAttribute("hidden");
+        const abas = document.querySelector(".tab-nav")?.getBoundingClientRect();
+        const toolbar = document.querySelector(".toolbar")?.getBoundingClientRect();
+        const grupoToolbar = document.querySelector(".toolbar-group");
+        return {
+            colunas: getComputedStyle(document.querySelector(".tab-nav")).gridTemplateColumns.split(" ").length,
+            larguraAbas: abas?.width ?? 0,
+            larguraToolbar: toolbar?.width ?? 0,
+            abasAntesDoToolbar: (abas?.bottom ?? 0) <= (toolbar?.top ?? 0),
+            toolbarSemEstouro: grupoToolbar?.scrollWidth === grupoToolbar?.clientWidth,
+        };
+    });
+    assert.equal(layoutPaisagem.colunas, 4, "Paisagem deve manter as quatro abas em colunas equivalentes.");
+    assert.ok(layoutPaisagem.abasAntesDoToolbar, "Em paisagem, abas e toolbar devem ocupar linhas separadas.");
+    assert.ok(Math.abs(layoutPaisagem.larguraAbas - layoutPaisagem.larguraToolbar) < 1, "Abas e toolbar devem usar toda a largura útil.");
+    assert.ok(layoutPaisagem.toolbarSemEstouro, "A toolbar em paisagem não deve criar rolagem horizontal.");
+    await paginaPaisagem.close();
+
     console.log("Testes axe, contraste e nomes acessíveis concluídos com sucesso.");
 } finally {
     await navegador.close();
