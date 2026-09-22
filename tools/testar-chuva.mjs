@@ -67,7 +67,16 @@ try {
             <canvas class="plot plot--solar-day"></canvas>
             <button class="chart-zoom-button" aria-label="Ampliar gráfico"></button>
         </div>
+        <div class="chart-card chart-card--wide" id="cartaoChuvaOculto" hidden>
+            <span class="chart-label">Chuva · 24h + previsão 12h</span>
+            <canvas class="plot"></canvas>
+        </div>
     `);
+    verificar.equal(
+        await pagina.locator("#cartaoChuvaOculto").evaluate(elemento => getComputedStyle(elemento).display),
+        "none",
+        "O card privado de chuva deve permanecer oculto antes da consulta de localização."
+    );
     const caixas = await pagina.evaluate(() => {
         const caixa = seletor => {
             const retangulo = document.querySelector(seletor).getBoundingClientRect();

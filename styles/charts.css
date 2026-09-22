@@ -23,6 +23,10 @@
     overflow: hidden;
 }
 
+.chart-card[hidden] {
+    display: none;
+}
+
 .chart-card::before {
     content: '';
     position: absolute;

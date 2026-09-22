@@ -78,6 +78,13 @@ function validarContratosHtml() {
     const idsGraficos = obterValoresTextoObjeto(obterBlocoConfiguracao(textoConfiguracao, "charts", "advancedViews"));
     const idsGraficosAusentes = idsGraficos.filter(id => !ids.includes(id));
     verificar(!idsGraficosAusentes.length, `charts sem canvas no HTML: ${idsGraficosAusentes.join(", ")}`);
+
+    const cartaoChuvaOculto = /id="chart-container-rain"[^>]*\bhidden\b/.test(html);
+    verificar(cartaoChuvaOculto, "O gráfico privado de chuva deve iniciar oculto até a localização ser consultada.");
+
+    const estilosGraficos = lerArquivo("styles/charts.css");
+    const atributoOcultoRespeitado = /\.chart-card\[hidden\]\s*\{[^}]*display\s*:\s*none\s*;/s.test(estilosGraficos);
+    verificar(atributoOcultoRespeitado, "O CSS deve preservar o atributo hidden nos cards de gráfico.");
 }
 
 const arquivosAnalisados = validarSintaxeJavaScript();
