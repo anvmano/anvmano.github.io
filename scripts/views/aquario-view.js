@@ -1,75 +1,79 @@
 'use strict';
 
 (function () {
-    const { ids, fields } = window.AppConfig;
-    const aquariumFields = fields.aquarium;
-    const temperatureChart = document.getElementById(ids.charts.aquariumTemperature).getContext("2d");
-    const phChart = document.getElementById(ids.charts.aquariumPh).getContext("2d");
-    const tdsChart = document.getElementById(ids.charts.aquariumTds).getContext("2d");
-    const turbidityChart = document.getElementById(ids.charts.aquariumTurbidity).getContext("2d");
+    const { ids, fields: campos } = window.AppConfig;
+    const camposAquario = campos.aquarium;
+    const graficoTemperatura = document.getElementById(ids.charts.aquariumTemperature).getContext("2d");
+    const graficoPh = document.getElementById(ids.charts.aquariumPh).getContext("2d");
+    const graficoTds = document.getElementById(ids.charts.aquariumTds).getContext("2d");
+    const graficoTurbidez = document.getElementById(ids.charts.aquariumTurbidity).getContext("2d");
 
-    function createTable(data) {
+    function criarTabela(dados) {
         return ClimateData.createTables([
-            aquariumFields.date,
-            aquariumFields.time,
-            aquariumFields.temperature,
-            aquariumFields.ph,
-            aquariumFields.tds,
-            aquariumFields.turbidity,
-        ], data);
+            camposAquario.date,
+            camposAquario.time,
+            camposAquario.temperature,
+            camposAquario.ph,
+            camposAquario.tds,
+            camposAquario.turbidity,
+        ], dados);
     }
 
-    function render({ data, selectedDate, createChart, colors, ui }) {
-        const filteredData = ClimateData.filterDataByDays(data, 2, selectedDate);
-        const chartData = ClimateData.filterDataByRollingHours(data, selectedDate, 24);
-        ClimateAnalytics.renderStats("aquario", filteredData, selectedDate);
+    function renderizar({ data: dados, selectedDate: dataSelecionada, createChart: criarGrafico, colors: cores, ui: interfaceUsuario }) {
+        const dadosFiltrados = ClimateData.filterDataByDays(dados, 2, dataSelecionada);
+        const dadosGrafico = ClimateData.filterDataByRollingHours(dados, dataSelecionada, 24);
+        ClimateAnalytics.renderStats("aquario", dadosFiltrados, dataSelecionada);
 
-        createChart({
-            canvasCtx: temperatureChart,
+        criarGrafico({
+            canvasCtx: graficoTemperatura,
             containerId: ids.chartContainers.aquariumTemperature,
-            data: chartData,
-            key: aquariumFields.temperature,
+            data: dadosGrafico,
+            key: camposAquario.temperature,
             label: "Temperatura",
-            color: colors.blue,
+            color: cores.blue,
             yAxisTitle: "(°C)",
             yAxisSuffix: "°",
             comfortBand: AppConfig.aquariumComfortBand,
-            emptyMessage: `Sem dados de temperatura do aquário em ${selectedDate.replace(/-/g, "/")}.`
+            grupoSincronizacao: "aquario",
+            emptyMessage: `Sem dados de temperatura do aquário em ${dataSelecionada.replace(/-/g, "/")}.`
         });
-        createChart({
-            canvasCtx: phChart,
+        criarGrafico({
+            canvasCtx: graficoPh,
             containerId: ids.chartContainers.aquariumPh,
-            data: chartData,
-            key: aquariumFields.ph,
+            data: dadosGrafico,
+            key: camposAquario.ph,
             label: "pH",
-            color: colors.teal,
-            emptyMessage: `Sem dados de pH em ${selectedDate.replace(/-/g, "/")}.`
+            color: cores.teal,
+            grupoSincronizacao: "aquario",
+            emptyMessage: `Sem dados de pH em ${dataSelecionada.replace(/-/g, "/")}.`
         });
-        createChart({
-            canvasCtx: tdsChart,
+        criarGrafico({
+            canvasCtx: graficoTds,
             containerId: ids.chartContainers.aquariumTds,
-            data: chartData,
-            key: aquariumFields.tds,
+            data: dadosGrafico,
+            key: camposAquario.tds,
             label: "TDS",
-            color: colors.amber,
+            color: cores.amber,
             yAxisTitle: "ppm",
             yAxisSuffix: "ppm",
-            emptyMessage: `Sem dados de TDS em ${selectedDate.replace(/-/g, "/")}.`
+            grupoSincronizacao: "aquario",
+            emptyMessage: `Sem dados de TDS em ${dataSelecionada.replace(/-/g, "/")}.`
         });
-        createChart({
-            canvasCtx: turbidityChart,
+        criarGrafico({
+            canvasCtx: graficoTurbidez,
             containerId: ids.chartContainers.aquariumTurbidity,
-            data: chartData,
-            key: aquariumFields.turbidity,
+            data: dadosGrafico,
+            key: camposAquario.turbidity,
             label: "Turbidez",
-            color: colors.rose,
+            color: cores.rose,
             yAxisTitle: "NTU",
             yAxisSuffix: "NTU",
-            emptyMessage: `Sem dados de turbidez em ${selectedDate.replace(/-/g, "/")}.`
+            grupoSincronizacao: "aquario",
+            emptyMessage: `Sem dados de turbidez em ${dataSelecionada.replace(/-/g, "/")}.`
         });
 
-        ui.renderTable(ids.tables.aquarium, createTable(filteredData), `Sem registros do aquário em ${selectedDate.replace(/-/g, "/")}.`);
+        interfaceUsuario.renderTable(ids.tables.aquarium, criarTabela(dadosFiltrados), `Sem registros do aquário em ${dataSelecionada.replace(/-/g, "/")}.`);
     }
 
-    window.AquarioView = { render };
+    window.AquarioView = { render: renderizar };
 })();

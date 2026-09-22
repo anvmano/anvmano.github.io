@@ -8,12 +8,17 @@
     }
 
     function validarContextoRelatorio(contexto) {
-        return Boolean(
+        const contextoBasicoValido = Boolean(
             contexto
             && typeof contexto === "object"
             && /^\d{2}-\d{2}-\d{4}$/.test(String(contexto.selectedDate || ""))
             && contexto.latestData
             && typeof contexto.latestData === "object"
+        );
+        return contextoBasicoValido && (
+            contexto.dadosClimaExterno === undefined ||
+            contexto.dadosClimaExterno === null ||
+            typeof contexto.dadosClimaExterno === "object"
         );
     }
 

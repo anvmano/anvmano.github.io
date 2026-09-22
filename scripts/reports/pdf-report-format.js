@@ -1,48 +1,48 @@
 'use strict';
 
 (function () {
-    const modules = window.ClimatePdfReportModules = window.ClimatePdfReportModules || {};
+    const modulos = window.ClimatePdfReportModules = window.ClimatePdfReportModules || {};
 
-    function buildNoDataMessage(label, selectedDate) {
-        return `Sem dados de ${label.toLowerCase()} em ${formatFirebaseDate(selectedDate)}.`;
+    function montarMensagemSemDados(rotulo, dataSelecionada) {
+        return `Sem dados de ${rotulo.toLowerCase()} em ${formatarDataFirebaseRelatorio(dataSelecionada)}.`;
     }
 
-    function clamp(value, min, max) {
-        return Math.min(Math.max(value, min), max);
+    function limitar(valor, minimo, maximo) {
+        return Math.min(Math.max(valor, minimo), maximo);
     }
 
-    function getMetricStatus(metric, value) {
-        if (!Number.isFinite(value)) return "Sem dados";
-        if (["temperature", "feelsLike", "humidity"].includes(metric.key)) {
-            const band = metric.comfortBand || AppConfig.comfortBand;
-            return value < band.min || value > band.max ? "Alerta" : "Estável";
+    function obterEstadoMetrica(metrica, valor) {
+        if (!Number.isFinite(valor)) return "Sem dados";
+        if (["temperature", "feelsLike", "humidity"].includes(metrica.key)) {
+            const faixa = metrica.comfortBand || AppConfig.comfortBand;
+            return valor < faixa.min || valor > faixa.max ? "Alerta" : "Estável";
         }
         return "Estável";
     }
 
-    function getStatusClass(status) {
-        if (status === "Alerta") return "alert";
-        if (status === "Sem dados") return "empty";
+    function obterClasseEstado(estado) {
+        if (estado === "Alerta") return "alert";
+        if (estado === "Sem dados") return "empty";
         return "stable";
     }
 
-    function formatValue(value, unit) {
-        if (!Number.isFinite(value)) return "--";
-        return `${value.toFixed(2)}${unit}`;
+    function formatarValorRelatorio(valor, unidade) {
+        if (!Number.isFinite(valor)) return "--";
+        return `${valor.toFixed(2)}${unidade}`;
     }
 
-    function formatDelta(value, unit) {
-        if (!Number.isFinite(value)) return "--";
-        const sign = value > 0 ? "+" : "";
-        return `${sign}${value.toFixed(2)}${unit}`;
+    function formatarDiferenca(valor, unidade) {
+        if (!Number.isFinite(valor)) return "--";
+        const sinal = valor > 0 ? "+" : "";
+        return `${sinal}${valor.toFixed(2)}${unidade}`;
     }
 
-    function formatFirebaseDate(date) {
-        return date ? date.replace(/-/g, "/") : "--";
+    function formatarDataFirebaseRelatorio(dataReferencia) {
+        return dataReferencia ? dataReferencia.replace(/-/g, "/") : "--";
     }
 
-    function formatDateTime(date) {
-        return date.toLocaleString("pt-BR", {
+    function formatarDataHoraRelatorio(dataReferencia) {
+        return dataReferencia.toLocaleString("pt-BR", {
             day: "2-digit",
             month: "2-digit",
             year: "numeric",
@@ -51,8 +51,8 @@
         });
     }
 
-    function escapeHtml(value) {
-        return String(value)
+    function escaparTextoHtml(valor) {
+        return String(valor)
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
@@ -60,8 +60,8 @@
             .replace(/'/g, "&#039;");
     }
 
-    function slug(value) {
-        return value
+    function gerarIdentificadorUrl(valor) {
+        return valor
             .normalize("NFD")
             .replace(/[\u0300-\u036f]/g, "")
             .toLowerCase()
@@ -69,16 +69,16 @@
             .replace(/(^-|-$)/g, "");
     }
 
-    modules.format = {
-        buildNoDataMessage,
-        clamp,
-        getMetricStatus,
-        getStatusClass,
-        formatValue,
-        formatDelta,
-        formatFirebaseDate,
-        formatDateTime,
-        escapeHtml,
-        slug,
+    modulos.format = {
+        buildNoDataMessage: montarMensagemSemDados,
+        clamp: limitar,
+        getMetricStatus: obterEstadoMetrica,
+        getStatusClass: obterClasseEstado,
+        formatValue: formatarValorRelatorio,
+        formatDelta: formatarDiferenca,
+        formatFirebaseDate: formatarDataFirebaseRelatorio,
+        formatDateTime: formatarDataHoraRelatorio,
+        escapeHtml: escaparTextoHtml,
+        slug: gerarIdentificadorUrl,
     };
 })();

@@ -28,34 +28,34 @@
     const MODULOS_RELATORIO = [
         "scripts/reports/pdf-report-config.js?v=20260612-1",
         "scripts/reports/pdf-report-format.js?v=20260612-1",
-        "scripts/reports/pdf-report-data.js?v=20260816-2",
+        "scripts/reports/pdf-report-data.js?v=20260922-3",
         "scripts/reports/pdf-report-dom.js?v=20260622-1",
-        "scripts/reports/pdf-report-charts.js?v=20260816-2",
+        "scripts/reports/pdf-report-charts.js?v=20260922-3",
         "scripts/reports/pdf-report-pdf.js?v=20260816-1",
-        "scripts/reports/pdf-report-export.js?v=20260816-3",
+        "scripts/reports/pdf-report-export.js?v=20260922-3",
     ];
 
     function carregarScriptUmaVez(url, validarGlobal) {
         if (typeof validarGlobal === "function" && validarGlobal()) return Promise.resolve();
         if (scriptsCarregados.has(url)) return scriptsCarregados.get(url);
 
-        const carregamento = new Promise((resolve, reject) => {
+        const carregamento = new Promise((resolver, rejeitar) => {
             const existente = document.querySelector(`script[src="${url}"]`);
             if (existente) {
                 if (existente.dataset.carregado === "true" || existente.sheet) {
-                    resolve();
+                    resolver();
                     return;
                 }
-                existente.addEventListener("load", resolve, { once: true });
-                existente.addEventListener("error", reject, { once: true });
+                existente.addEventListener("load", resolver, { once: true });
+                existente.addEventListener("error", rejeitar, { once: true });
                 return;
             }
 
             const script = document.createElement("script");
             script.src = url;
             script.async = false;
-            script.onload = resolve;
-            script.onerror = () => reject(new Error(`Falha ao carregar ${url}.`));
+            script.onload = resolver;
+            script.onerror = () => rejeitar(new Error(`Falha ao carregar ${url}.`));
             document.head.appendChild(script);
         });
 
@@ -68,28 +68,28 @@
         if (estilosCarregados.has(chave)) return estilosCarregados.get(chave);
         if (id && document.getElementById(id)) return Promise.resolve();
 
-        const carregamento = new Promise((resolve, reject) => {
+        const carregamento = new Promise((resolver, rejeitar) => {
             const existente = document.querySelector(`link[href="${url}"]`);
             if (existente) {
                 if (existente.dataset.carregado === "true" || existente.sheet) {
-                    resolve();
+                    resolver();
                     return;
                 }
-                existente.addEventListener("load", resolve, { once: true });
-                existente.addEventListener("error", reject, { once: true });
+                existente.addEventListener("load", resolver, { once: true });
+                existente.addEventListener("error", rejeitar, { once: true });
                 return;
             }
 
-            const link = document.createElement("link");
-            if (id) link.id = id;
-            link.rel = "stylesheet";
-            link.href = url;
-            link.onload = () => {
-                link.dataset.carregado = "true";
-                resolve();
+            const ligacao = document.createElement("link");
+            if (id) ligacao.id = id;
+            ligacao.rel = "stylesheet";
+            ligacao.href = url;
+            ligacao.onload = () => {
+                ligacao.dataset.carregado = "true";
+                resolver();
             };
-            link.onerror = () => reject(new Error(`Falha ao carregar ${url}.`));
-            document.head.appendChild(link);
+            ligacao.onerror = () => rejeitar(new Error(`Falha ao carregar ${url}.`));
+            document.head.appendChild(ligacao);
         });
 
         estilosCarregados.set(chave, carregamento);
@@ -122,12 +122,12 @@
         return carregarCssUmaVez(`styles/zoom.css?v=${VERSOES.zoomCss}`, "climate-zoom-css");
     }
 
-    function executarQuandoOcioso(callback, timeout = 800) {
+    function executarQuandoOcioso(aoConcluir, tempoLimite = 800) {
         if (typeof window.requestIdleCallback === "function") {
-            window.requestIdleCallback(callback, { timeout });
+            window.requestIdleCallback(aoConcluir, { timeout: tempoLimite });
             return;
         }
-        window.setTimeout(callback, Math.min(timeout, 250));
+        window.setTimeout(aoConcluir, Math.min(tempoLimite, 250));
     }
 
     window.ClimateAssets = {

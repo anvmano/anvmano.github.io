@@ -18,6 +18,8 @@ Impacto: legibilidade e consistencia com o dominio do projeto.
 
 Criticidade: Media.
 
+Estado verificado em 08/09/2026: uma rodada transversal atualizou os vínculos internos e os testes, preservando aliases nas fronteiras existentes. Chaves como `activeTab`, `selectedDate`, `latestData`, `chartInstances`, `result`, `records`, `status` e `aliases` continuam inalteradas quando fazem parte de contextos ou payloads compartilhados. O inventário de renomeações, as exceções e a regressão completa estão em `docs/nomenclatura-pt-br/RELATORIO.md`.
+
 ## Regra: formato da data atual Firebase
 
 Arquivo: `scripts/data/data-utils.js`
@@ -856,6 +858,50 @@ Se alterada: a tooltip pode parecer deslocada ou listar ambientes fora da ordem 
 
 Criticidade: Baixa.
 
+## Regra: sincronizacao temporal entre graficos
+
+Arquivos: `scripts/charts/chart-utils.js`, `scripts/charts/chart-sync.js`, views por ambiente e `scripts/views/public-weather-view.js`.
+
+Objetivo: permitir comparar metricas no mesmo horario sem selecionar manualmente cada grafico.
+
+Regras:
+
+- hover ou toque em um grafico temporal deve propagar o indice horario para os demais graficos do mesmo grupo
+- grupos validos: Sala, Quarto, Aquario, comparativos da Estacao e graficos meteorologicos do modo publico
+- o grupo nao pode sincronizar dados entre abas/visoes distintas
+- pontos ausentes devem limpar o destaque naquele grafico; `null`, `undefined` e string vazia nunca podem virar zero
+- ao sair do grafico de origem, os destaques sincronizados devem ser limpos
+- ciclos solares e historico Nascer & Por do Sol ficam fora da sincronizacao, pois usam escalas e regras de tooltip distintas
+- zoom mantem o comportamento individual do grafico ampliado e nao deve alterar a sincronizacao da tela de fundo
+- quando fontes distintas nao possuem o mesmo minuto, a sincronizacao pode usar a leitura temporal mais proxima ate o limite de 45 minutos; fora desse limite o destaque deve ser limpo
+
+Impacto: leitura comparativa de temperatura, sensacao, umidade, pressao e metricas do aquario.
+
+Dependencias: Chart.js, `ClimateCharts.createDefaults` e `ClimateChartSync`.
+
+Se alterada: tooltips podem divergir entre metricas, reintroduzir zeros artificiais ou misturar dados de abas diferentes.
+
+Criticidade: Media.
+
+## Regra: chuva atual e historico/previsao
+
+Arquivos: `scripts/charts/rain.js`, `scripts/external/external-weather-service.js`, `scripts/views/public-weather-view.js` e `scripts/views/estacao-view.js`.
+
+Regras obrigatorias:
+
+- o card de chuva deve distinguir `Chovendo agora`, `Sem chuva agora` e condicao indisponivel usando precipitacao, chuva e codigo meteorologico atuais
+- a previsao resumida continua cobrindo as proximas 6 horas, com maior probabilidade, acumulado e pico em milimetros
+- o grafico cobre as ultimas 24 horas e as proximas 12 horas
+- barras distinguem precipitacao registrada e prevista em milimetros; a linha percentual representa somente a chance futura de chuva
+- no modo publico o grafico aparece apos qualquer consulta valida; no privado aparece na aba Estacao somente depois da consulta opcional de localizacao
+- coordenadas continuam apenas em memoria e nao devem ser persistidas
+- quando houver clima externo em memoria, o PDF/JSON da Estacao deve incluir card de chuva atual/previsao; o PDF deve reconstruir o grafico de 24h + 12h sem capturar o canvas da tela
+- sem consulta de localizacao, o PDF/JSON preserva o contrato anterior e nao inventa dados de chuva
+
+Impacto: modo publico, aba Estacao, recomendacao de ventilacao e sincronizacao temporal.
+
+Criticidade: Media.
+
 ## Regra: faixa de conforto na assistente
 
 Arquivos:
@@ -1057,6 +1103,8 @@ Fonte unica do relatorio:
 - resumo, alertas, graficos, tabela resumida, tabela detalhada e JSON devem derivar dessa mesma fonte
 - os graficos do PDF nao devem reutilizar `chartInstances` nem canvases ativos da interface, porque os graficos da tela podem representar a janela movel das ultimas 24h
 - os graficos temporarios do PDF devem ser reconstruidos com os dados filtrados da data consultada
+- dados externos opcionais devem vir do snapshot normalizado mantido em memoria; o exportador nao deve refazer a consulta de localizacao nem persistir coordenadas
+- quando o snapshot externo existir, a Estacao inclui card `Chuva externa` e grafico temporario de precipitacao/probabilidade; o JSON inclui `climaExterno`
 - minima, maxima e media do grafico devem usar exatamente os mesmos valores validos usados pelos cards e tabelas
 - cobertura, alertas de qualidade e leituras suspeitas devem ser derivados da mesma fonte normalizada e incluidos no resumo/JSON
 - uma unica leitura valida nao pode produzir delta zero ou tendencia estavel; o relatorio deve mostrar delta `--` e cobertura correspondente

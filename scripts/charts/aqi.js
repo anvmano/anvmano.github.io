@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-    const AQI_CATEGORIES = [
+    const CATEGORIAS_AQI = [
         { min: 0, max: 50, label: "Boa", className: "good", impact: "Ar satisfatório, risco mínimo." },
         { min: 51, max: 100, label: "Moderado", className: "moderate", impact: "Aceitável, mas pode haver risco moderado para grupos sensíveis." },
         { min: 101, max: 150, label: "Insalubre para grupos sensíveis", className: "sensitive", impact: "Grupos de risco podem apresentar sintomas." },
@@ -10,7 +10,7 @@
         { min: 301, max: 500, label: "Perigoso", className: "hazardous", impact: "Condições de emergência; toda a população é severamente afetada." },
     ];
 
-    const POLLUTANTS = [
+    const POLUENTES = [
         {
             key: "CO",
             label: "CO",
@@ -91,185 +91,185 @@
         },
     ];
 
-    let indicator = null;
-    let popover = null;
+    let indicador = null;
+    let janelaDetalhes = null;
 
-    function setup({ indicatorId = "aqiIndicator", popoverId = "aqiPopover" } = {}) {
-        indicator = document.getElementById(indicatorId);
-        popover = document.getElementById(popoverId);
-        if (!indicator || !popover) return;
+    function configurarModulo({ indicatorId: idIndicador = "aqiIndicator", popoverId: idJanelaDetalhes = "aqiPopover" } = {}) {
+        indicador = document.getElementById(idIndicador);
+        janelaDetalhes = document.getElementById(idJanelaDetalhes);
+        if (!indicador || !janelaDetalhes) return;
 
-        indicator.addEventListener("click", event => {
-            event.stopPropagation();
-            togglePopover();
+        indicador.addEventListener("click", evento => {
+            evento.stopPropagation();
+            alternarDetalhes();
         });
 
-        document.addEventListener("click", event => {
-            if (!popover || popover.hidden) return;
-            if (popover.contains(event.target) || indicator.contains(event.target)) return;
-            closePopover();
+        document.addEventListener("click", evento => {
+            if (!janelaDetalhes || janelaDetalhes.hidden) return;
+            if (janelaDetalhes.contains(evento.target) || indicador.contains(evento.target)) return;
+            fecharDetalhes();
         });
 
-        document.addEventListener("keydown", event => {
-            if (event.key === "Escape") closePopover();
+        document.addEventListener("keydown", evento => {
+            if (evento.key === "Escape") fecharDetalhes();
         });
-        window.addEventListener("header-popover-open", event => {
-            if (event.detail?.source !== "aqi") closePopover();
+        window.addEventListener("header-popover-open", evento => {
+            if (evento.detail?.source !== "aqi") fecharDetalhes();
         });
 
-        renderUnavailable();
+        renderizarIndisponibilidade();
     }
 
-    function update(data) {
-        if (!indicator || !popover) return;
+    function atualizarModulo(dados) {
+        if (!indicador || !janelaDetalhes) return;
 
-        const result = calculate(data);
-        if (!result) {
-            renderUnavailable("interno");
+        const resultado = calcularIndice(dados);
+        if (!resultado) {
+            renderizarIndisponibilidade("interno");
             return;
         }
 
-        const valueEl = indicator.querySelector(".aqi-indicator__value");
-        const statusEl = indicator.querySelector(".aqi-indicator__status");
-        const title = `AQI ${result.aqi}. AQI estimado da Sala: ${result.category.label}. Dominante: ${result.dominant.label}.`;
+        const elementoValor = indicador.querySelector(".aqi-indicator__value");
+        const elementoEstado = indicador.querySelector(".aqi-indicator__status");
+        const titulo = `AQI ${resultado.aqi}. AQI estimado da Sala: ${resultado.category.label}. Dominante: ${resultado.dominant.label}.`;
 
-        indicator.className = `aqi-indicator aqi-indicator--${result.category.className}`;
-        indicator.title = title;
-        indicator.setAttribute("aria-label", title);
-        if (valueEl) valueEl.textContent = result.aqi;
-        if (statusEl) statusEl.textContent = result.category.label;
+        indicador.className = `aqi-indicator aqi-indicator--${resultado.category.className}`;
+        indicador.title = titulo;
+        indicador.setAttribute("aria-label", titulo);
+        if (elementoValor) elementoValor.textContent = resultado.aqi;
+        if (elementoEstado) elementoEstado.textContent = resultado.category.label;
 
-        renderPopover(result);
+        renderizarDetalhes(resultado);
     }
 
-    function updateExternal(dados) {
-        if (!indicator || !popover) return;
+    function atualizarExterno(dados) {
+        if (!indicador || !janelaDetalhes) return;
 
         const valor = Number(dados?.valor);
         if (!Number.isFinite(valor)) {
-            renderUnavailable("publico");
+            renderizarIndisponibilidade("publico");
             return;
         }
 
         const aqi = Math.min(500, Math.max(0, Math.round(valor)));
-        const category = getCategory(aqi);
+        const categoria = obterCategoria(aqi);
         const origem = dados?.origem || "localização consultada";
         const atualizadoEm = dados?.atualizadoEm instanceof Date ? dados.atualizadoEm : null;
-        const title = `AQI ${aqi}. AQI externo de ${origem}: ${category.label}.`;
-        const valueEl = indicator.querySelector(".aqi-indicator__value");
-        const statusEl = indicator.querySelector(".aqi-indicator__status");
+        const titulo = `AQI ${aqi}. AQI externo de ${origem}: ${categoria.label}.`;
+        const elementoValor = indicador.querySelector(".aqi-indicator__value");
+        const elementoEstado = indicador.querySelector(".aqi-indicator__status");
 
-        indicator.className = `aqi-indicator aqi-indicator--${category.className}`;
-        indicator.title = title;
-        indicator.setAttribute("aria-label", title);
-        indicator.setAttribute("aria-expanded", "false");
-        if (valueEl) valueEl.textContent = aqi;
-        if (statusEl) statusEl.textContent = category.label;
+        indicador.className = `aqi-indicator aqi-indicator--${categoria.className}`;
+        indicador.title = titulo;
+        indicador.setAttribute("aria-label", titulo);
+        indicador.setAttribute("aria-expanded", "false");
+        if (elementoValor) elementoValor.textContent = aqi;
+        if (elementoEstado) elementoEstado.textContent = categoria.label;
 
-        renderExternalPopover({
+        renderizarDetalhesExternos({
             aqi,
-            category,
+            category: categoria,
             origem,
             atualizadoEm,
         });
     }
 
-    function calculate(data) {
-        const latest = findLatestRecord(data);
-        if (!latest) return null;
+    function calcularIndice(dados) {
+        const maisRecente = encontrarUltimoRegistro(dados);
+        if (!maisRecente) return null;
 
-        const subIndexes = POLLUTANTS
-            .map(pollutant => calculatePollutantIndex(pollutant, latest.item))
+        const subindices = POLUENTES
+            .map(poluente => calcularIndicePoluente(poluente, maisRecente.item))
             .filter(Boolean)
             .sort((a, b) => b.aqi - a.aqi);
 
-        if (!subIndexes.length) return null;
+        if (!subindices.length) return null;
 
-        const dominant = subIndexes[0];
-        const aqi = Math.min(500, Math.max(0, Math.round(dominant.aqi)));
-        const category = getCategory(aqi);
+        const dominante = subindices[0];
+        const aqi = Math.min(500, Math.max(0, Math.round(dominante.aqi)));
+        const categoria = obterCategoria(aqi);
 
         return {
             aqi,
-            category,
-            dominant,
-            subIndexes,
-            timestamp: latest.timestamp,
+            category: categoria,
+            dominant: dominante,
+            subIndexes: subindices,
+            timestamp: maisRecente.timestamp,
         };
     }
 
-    function findLatestRecord(data) {
-        let latest = null;
+    function encontrarUltimoRegistro(dados) {
+        let maisRecente = null;
 
-        for (const date of Object.keys(data || {})) {
-            const dateData = data[date];
-            if (!dateData || typeof dateData !== "object") continue;
+        for (const dataReferencia of Object.keys(dados || {})) {
+            const dadosData = dados[dataReferencia];
+            if (!dadosData || typeof dadosData !== "object") continue;
 
-            for (const time of Object.keys(dateData)) {
-                const timestamp = parseTimestamp(date, time);
-                if (!timestamp) continue;
+            for (const horario of Object.keys(dadosData)) {
+                const instanteRegistro = interpretarInstanteRegistro(dataReferencia, horario);
+                if (!instanteRegistro) continue;
 
-                const timeData = dateData[time];
-                if (!timeData || typeof timeData !== "object") continue;
+                const dadosHorario = dadosData[horario];
+                if (!dadosHorario || typeof dadosHorario !== "object") continue;
 
-                for (const itemKey of Object.keys(timeData)) {
-                    const item = timeData[itemKey];
+                for (const chaveItem of Object.keys(dadosHorario)) {
+                    const item = dadosHorario[chaveItem];
                     if (!item || typeof item !== "object") continue;
-                    if (!latest || timestamp > latest.timestamp) latest = { timestamp, item };
+                    if (!maisRecente || instanteRegistro > maisRecente.timestamp) maisRecente = { timestamp: instanteRegistro, item };
                 }
             }
         }
 
-        return latest;
+        return maisRecente;
     }
 
-    function parseTimestamp(date, time) {
-        const [day, month, year] = String(date || "").split("-").map(Number);
-        const [hour, minute = 0] = String(time || "").split("-").map(Number);
-        if (![day, month, year, hour, minute].every(Number.isFinite)) return null;
-        return new Date(year, month - 1, day, hour, minute, 0, 0);
+    function interpretarInstanteRegistro(dataReferencia, horario) {
+        const [dia, mes, ano] = String(dataReferencia || "").split("-").map(Number);
+        const [hora, minuto = 0] = String(horario || "").split("-").map(Number);
+        if (![dia, mes, ano, hora, minuto].every(Number.isFinite)) return null;
+        return new Date(ano, mes - 1, dia, hora, minuto, 0, 0);
     }
 
-    function calculatePollutantIndex(pollutant, item) {
-        const concentration = Number(item[pollutant.key]);
-        if (!Number.isFinite(concentration)) return null;
+    function calcularIndicePoluente(poluente, item) {
+        const concentracao = Number(item[poluente.key]);
+        if (!Number.isFinite(concentracao)) return null;
 
-        const breakpoint = pollutant.breakpoints.find(([low, high]) => concentration >= low && concentration <= high)
-            || pollutant.breakpoints[pollutant.breakpoints.length - 1];
-        const [bpLow, bpHigh, indexLow, indexHigh] = breakpoint;
-        const boundedConcentration = Math.min(bpHigh, Math.max(bpLow, concentration));
-        const aqi = ((indexHigh - indexLow) / (bpHigh - bpLow)) * (boundedConcentration - bpLow) + indexLow;
+        const limiteFaixa = poluente.breakpoints.find(([inferior, superior]) => concentracao >= inferior && concentracao <= superior)
+            || poluente.breakpoints[poluente.breakpoints.length - 1];
+        const [limiteInferiorFaixa, limiteSuperiorFaixa, indiceInferior, indiceSuperior] = limiteFaixa;
+        const concentracaoLimitada = Math.min(limiteSuperiorFaixa, Math.max(limiteInferiorFaixa, concentracao));
+        const aqi = ((indiceSuperior - indiceInferior) / (limiteSuperiorFaixa - limiteInferiorFaixa)) * (concentracaoLimitada - limiteInferiorFaixa) + indiceInferior;
 
         return {
-            ...pollutant,
-            value: concentration,
+            ...poluente,
+            value: concentracao,
             aqi,
         };
     }
 
-    function getCategory(aqi) {
-        return AQI_CATEGORIES.find(category => aqi >= category.min && aqi <= category.max) || AQI_CATEGORIES[AQI_CATEGORIES.length - 1];
+    function obterCategoria(aqi) {
+        return CATEGORIAS_AQI.find(categoria => aqi >= categoria.min && aqi <= categoria.max) || CATEGORIAS_AQI[CATEGORIAS_AQI.length - 1];
     }
 
-    function renderUnavailable(mode = "interno") {
-        const isPublic = mode === "publico";
-        const titulo = isPublic ? "AQI externo" : "AQI estimado da Sala";
-        const texto = isPublic
+    function renderizarIndisponibilidade(modo = "interno") {
+        const ehPublico = modo === "publico";
+        const titulo = ehPublico ? "AQI externo" : "AQI estimado da Sala";
+        const texto = ehPublico
             ? "Informe um CEP ou permita a localização para consultar o AQI externo."
             : "Sem dados suficientes do MQ135.";
 
-        indicator.className = "aqi-indicator aqi-indicator--unknown";
-        indicator.title = isPublic ? "AQI externo indisponível" : "AQI estimado indisponível";
-        indicator.setAttribute("aria-label", `AQI --. ${indicator.title}.`);
-        indicator.setAttribute("aria-expanded", "false");
+        indicador.className = "aqi-indicator aqi-indicator--unknown";
+        indicador.title = ehPublico ? "AQI externo indisponível" : "AQI estimado indisponível";
+        indicador.setAttribute("aria-label", `AQI --. ${indicador.title}.`);
+        indicador.setAttribute("aria-expanded", "false");
 
-        const valueEl = indicator.querySelector(".aqi-indicator__value");
-        const statusEl = indicator.querySelector(".aqi-indicator__status");
-        if (valueEl) valueEl.textContent = "--";
-        if (statusEl) statusEl.textContent = "--";
+        const elementoValor = indicador.querySelector(".aqi-indicator__value");
+        const elementoEstado = indicador.querySelector(".aqi-indicator__status");
+        if (elementoValor) elementoValor.textContent = "--";
+        if (elementoEstado) elementoEstado.textContent = "--";
 
-        popover.hidden = true;
-        popover.innerHTML = `
+        janelaDetalhes.hidden = true;
+        janelaDetalhes.innerHTML = `
             <div class="aqi-popover__header">
                 <span>${titulo}</span>
                 <strong>--</strong>
@@ -278,8 +278,8 @@
         `;
     }
 
-    function renderPopover(result) {
-        const topPollutants = result.subIndexes.slice(0, 3).map(item => `
+    function renderizarDetalhes(resultado) {
+        const principaisPoluentes = resultado.subIndexes.slice(0, 3).map(item => `
             <li>
                 <span>${item.label}</span>
                 <strong>${item.value.toFixed(2)}${item.unit}</strong>
@@ -287,67 +287,67 @@
             </li>
         `).join("");
 
-        popover.innerHTML = `
+        janelaDetalhes.innerHTML = `
             <div class="aqi-popover__header">
                 <span>AQI estimado da Sala</span>
-                <strong>${result.aqi}</strong>
+                <strong>${resultado.aqi}</strong>
             </div>
-            <div class="aqi-popover__badge aqi-popover__badge--${result.category.className}">
-                ${result.category.label}
+            <div class="aqi-popover__badge aqi-popover__badge--${resultado.category.className}">
+                ${resultado.category.label}
             </div>
-            <p class="aqi-popover__text">${result.category.impact}</p>
+            <p class="aqi-popover__text">${resultado.category.impact}</p>
             <dl class="aqi-popover__meta">
-                <div><dt>Dominante</dt><dd>${result.dominant.label}</dd></div>
-                <div><dt>Atualizado</dt><dd>${formatTimestamp(result.timestamp)}</dd></div>
+                <div><dt>Dominante</dt><dd>${resultado.dominant.label}</dd></div>
+                <div><dt>Atualizado</dt><dd>${formatarInstanteRegistro(resultado.timestamp)}</dd></div>
             </dl>
-            <ul class="aqi-popover__list">${topPollutants}</ul>
+            <ul class="aqi-popover__list">${principaisPoluentes}</ul>
             <p class="aqi-popover__note">Estimativa pelo MQ135; categorias visuais seguem as faixas AQI.</p>
         `;
     }
 
-    function renderExternalPopover(result) {
-        popover.hidden = true;
-        popover.innerHTML = `
+    function renderizarDetalhesExternos(resultado) {
+        janelaDetalhes.hidden = true;
+        janelaDetalhes.innerHTML = `
             <div class="aqi-popover__header">
                 <span>AQI externo</span>
-                <strong>${result.aqi}</strong>
+                <strong>${resultado.aqi}</strong>
             </div>
-            <div class="aqi-popover__badge aqi-popover__badge--${result.category.className}">
-                ${result.category.label}
+            <div class="aqi-popover__badge aqi-popover__badge--${resultado.category.className}">
+                ${resultado.category.label}
             </div>
-            <p class="aqi-popover__text">${result.category.impact}</p>
+            <p class="aqi-popover__text">${resultado.category.impact}</p>
             <dl class="aqi-popover__meta">
-                <div><dt>Origem</dt><dd>${result.origem}</dd></div>
-                <div><dt>Atualizado</dt><dd>${result.atualizadoEm ? formatTimestamp(result.atualizadoEm) : "--"}</dd></div>
+                <div><dt>Origem</dt><dd>${resultado.origem}</dd></div>
+                <div><dt>Atualizado</dt><dd>${resultado.atualizadoEm ? formatarInstanteRegistro(resultado.atualizadoEm) : "--"}</dd></div>
             </dl>
             <p class="aqi-popover__note">Dado externo da API Open-Meteo Air Quality; não usa sensores internos da estação.</p>
         `;
     }
 
-    function togglePopover() {
-        if (popover.hidden) {
+    function alternarDetalhes() {
+        if (janelaDetalhes.hidden) {
             window.dispatchEvent(new CustomEvent("header-popover-open", { detail: { source: "aqi" } }));
-            popover.hidden = false;
-            indicator.setAttribute("aria-expanded", "true");
+            janelaDetalhes.hidden = false;
+            indicador.setAttribute("aria-expanded", "true");
         } else {
-            closePopover();
+            fecharDetalhes();
         }
     }
 
-    function closePopover() {
-        if (!popover || !indicator) return;
-        popover.hidden = true;
-        indicator.setAttribute("aria-expanded", "false");
+    function fecharDetalhes() {
+        if (!janelaDetalhes || !indicador) return;
+        janelaDetalhes.hidden = true;
+        indicador.setAttribute("aria-expanded", "false");
     }
 
-    function formatTimestamp(timestamp) {
-        return `${String(timestamp.getDate()).padStart(2, "0")}/${String(timestamp.getMonth() + 1).padStart(2, "0")} ${String(timestamp.getHours()).padStart(2, "0")}:${String(timestamp.getMinutes()).padStart(2, "0")}`;
+    function formatarInstanteRegistro(instanteRegistro) {
+        return `${String(instanteRegistro.getDate()).padStart(2, "0")}/${String(instanteRegistro.getMonth() + 1).padStart(2, "0")} ${String(instanteRegistro.getHours()).padStart(2, "0")}:${String(instanteRegistro.getMinutes()).padStart(2, "0")}`;
     }
 
     window.ClimateAqi = {
-        setup,
-        update,
-        updateExternal,
-        calculate,
+        setup: configurarModulo,
+        update: atualizarModulo,
+        updateExternal: atualizarExterno,
+        calculate: calcularIndice,
     };
 })();

@@ -1,14 +1,14 @@
 'use strict';
 
 (function () {
-    const firebaseSdkVersion = "12.13.0";
-    const debugParams = new URLSearchParams(window.location.search);
+    const versaoSdkFirebase = "12.13.0";
+    const parametrosDepuracao = new URLSearchParams(window.location.search);
 
     function deveRegistrarDiagnostico() {
         try {
-            return debugParams.has("debug") || window.localStorage.getItem("climateDebug") === "1";
+            return parametrosDepuracao.has("debug") || window.localStorage.getItem("climateDebug") === "1";
         } catch {
-            return debugParams.has("debug");
+            return parametrosDepuracao.has("debug");
         }
     }
 
@@ -37,12 +37,12 @@
 
     window.AppConfig = {
         firebase: {
-            sdkVersion: firebaseSdkVersion,
-            appUrl: `https://www.gstatic.com/firebasejs/${firebaseSdkVersion}/firebase-app.js`,
-            databaseUrl: `https://www.gstatic.com/firebasejs/${firebaseSdkVersion}/firebase-database.js`,
-            authUrl: `https://www.gstatic.com/firebasejs/${firebaseSdkVersion}/firebase-auth.js`,
-            appCheckUrl: `https://www.gstatic.com/firebasejs/${firebaseSdkVersion}/firebase-app-check.js`,
-            aiUrl: `https://www.gstatic.com/firebasejs/${firebaseSdkVersion}/firebase-ai.js`,
+            sdkVersion: versaoSdkFirebase,
+            appUrl: `https://www.gstatic.com/firebasejs/${versaoSdkFirebase}/firebase-app.js`,
+            databaseUrl: `https://www.gstatic.com/firebasejs/${versaoSdkFirebase}/firebase-database.js`,
+            authUrl: `https://www.gstatic.com/firebasejs/${versaoSdkFirebase}/firebase-auth.js`,
+            appCheckUrl: `https://www.gstatic.com/firebasejs/${versaoSdkFirebase}/firebase-app-check.js`,
+            aiUrl: `https://www.gstatic.com/firebasejs/${versaoSdkFirebase}/firebase-ai.js`,
             html2canvasUrl: "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js",
             jsPdfUrl: "https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js",
             recaptchaEnterpriseSiteKey: "6Le5eg0tAAAAAAtn_VdxKOV82oq1sNr2tJlFiULj",
@@ -189,6 +189,7 @@
                 livingRoomPressure: "chart-container-pressao-sala",
                 globalTemperature: "chart-container-global-temp",
                 globalHumidity: "chart-container-global-umidade",
+                rain: "chart-container-rain",
             },
             charts: {
                 roomTemperature: "plotsTemp",
@@ -206,6 +207,7 @@
                 livingRoomPressure: "plotsPressaoSala",
                 globalTemperature: "plotGlobalTemperature",
                 globalHumidity: "plotGlobalHumidity",
+                rain: "plotRain",
             },
             advancedViews: {
                 room: {

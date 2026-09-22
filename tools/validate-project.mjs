@@ -1,86 +1,86 @@
-import fs from "node:fs";
-import path from "node:path";
-import vm from "node:vm";
+import arquivos from "node:fs";
+import caminho from "node:path";
+import maquinaVirtual from "node:vm";
 import { fileURLToPath } from "node:url";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const raiz = caminho.resolve(caminho.dirname(fileURLToPath(import.meta.url)), "..");
 
-function read(file) {
-    return fs.readFileSync(path.join(root, file), "utf8");
+function lerArquivo(arquivo) {
+    return arquivos.readFileSync(caminho.join(raiz, arquivo), "utf8");
 }
 
-function assert(condition, message) {
-    if (!condition) {
-        throw new Error(message);
+function verificar(condicao, mensagem) {
+    if (!condicao) {
+        throw new Error(mensagem);
     }
 }
 
-function listFiles(dir, extension) {
-    return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-            return ["node_modules", "legacy"].includes(entry.name) ? [] : listFiles(fullPath, extension);
+function listarArquivos(diretorio, extensao) {
+    return arquivos.readdirSync(diretorio, { withFileTypes: true }).flatMap(entrada => {
+        const caminhoCompleto = caminho.join(diretorio, entrada.name);
+        if (entrada.isDirectory()) {
+            return ["node_modules", "legacy"].includes(entrada.name) ? [] : listarArquivos(caminhoCompleto, extensao);
         }
-        return entry.isFile() && entry.name.endsWith(extension) ? [fullPath] : [];
+        return entrada.isFile() && entrada.name.endsWith(extensao) ? [caminhoCompleto] : [];
     });
 }
 
-function validateJavaScriptSyntax() {
-    const jsFiles = listFiles(root, ".js");
-    jsFiles.forEach(file => {
-        const relativePath = path.relative(root, file);
-        new vm.Script(fs.readFileSync(file, "utf8"), { filename: relativePath });
+function validarSintaxeJavaScript() {
+    const arquivosJavaScript = listarArquivos(raiz, ".js");
+    arquivosJavaScript.forEach(arquivo => {
+        const caminhoRelativo = caminho.relative(raiz, arquivo);
+        new maquinaVirtual.Script(arquivos.readFileSync(arquivo, "utf8"), { filename: caminhoRelativo });
     });
-    return jsFiles.length;
+    return arquivosJavaScript.length;
 }
 
-function getHtmlIds(html) {
-    return [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
+function obterIdsHtml(html) {
+    return [...html.matchAll(/\bid="([^"]+)"/g)].map(correspondencia => correspondencia[1]);
 }
 
-function getLocalRefs(html) {
+function obterReferenciasLocais(html) {
     return [...html.matchAll(/(?:src|href)="(?!https?:\/\/)([^"]+)"/g)]
-        .map(match => match[1].split("?")[0]);
+        .map(correspondencia => correspondencia[1].split("?")[0]);
 }
 
-function getCssImports(cssText) {
-    return [...cssText.matchAll(/@import\s+url\(["']?([^"')]+)["']?\)/g)]
-        .map(match => match[1].split("?")[0]);
+function obterImportsCss(textoCss) {
+    return [...textoCss.matchAll(/@import\s+url\(["']?([^"')]+)["']?\)/g)]
+        .map(correspondencia => correspondencia[1].split("?")[0]);
 }
 
-function getConfigBlock(configText, startKey, nextKey) {
-    const pattern = new RegExp(`${startKey}:\\s*{([\\s\\S]*?)\\n\\s*},\\n\\s*${nextKey}:`);
-    return configText.match(pattern)?.[1] || "";
+function obterBlocoConfiguracao(textoConfiguracao, chaveInicial, proximaChave) {
+    const padrao = new RegExp(`${chaveInicial}:\\s*{([\\s\\S]*?)\\n\\s*},\\n\\s*${proximaChave}:`);
+    return textoConfiguracao.match(padrao)?.[1] || "";
 }
 
-function getObjectStringValues(block) {
-    return [...block.matchAll(/:\s*"([^"]+)"/g)].map(match => match[1]);
+function obterValoresTextoObjeto(bloco) {
+    return [...bloco.matchAll(/:\s*"([^"]+)"/g)].map(correspondencia => correspondencia[1]);
 }
 
-function validateHtmlContracts() {
-    const html = read("index.html");
-    const ids = getHtmlIds(html);
-    const duplicateIds = [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))];
-    assert(!duplicateIds.length, `IDs duplicados no HTML: ${duplicateIds.join(", ")}`);
+function validarContratosHtml() {
+    const html = lerArquivo("index.html");
+    const ids = obterIdsHtml(html);
+    const idsDuplicados = [...new Set(ids.filter((id, indice) => ids.indexOf(id) !== indice))];
+    verificar(!idsDuplicados.length, `IDs duplicados no HTML: ${idsDuplicados.join(", ")}`);
 
-    const missingRefs = getLocalRefs(html).filter(ref => !fs.existsSync(path.join(root, ref)));
-    assert(!missingRefs.length, `Arquivos referenciados ausentes: ${missingRefs.join(", ")}`);
+    const referenciasAusentes = obterReferenciasLocais(html).filter(ref => !arquivos.existsSync(caminho.join(raiz, ref)));
+    verificar(!referenciasAusentes.length, `Arquivos referenciados ausentes: ${referenciasAusentes.join(", ")}`);
 
-    const cssImports = getCssImports(read("style.css"));
-    const missingCssImports = cssImports.filter(ref => !fs.existsSync(path.join(root, ref)));
-    assert(!missingCssImports.length, `CSS imports ausentes: ${missingCssImports.join(", ")}`);
+    const importsCss = obterImportsCss(lerArquivo("style.css"));
+    const importsCssAusentes = importsCss.filter(ref => !arquivos.existsSync(caminho.join(raiz, ref)));
+    verificar(!importsCssAusentes.length, `CSS imports ausentes: ${importsCssAusentes.join(", ")}`);
 
-    const configText = read("scripts/config.js");
-    const chartContainerIds = getObjectStringValues(getConfigBlock(configText, "chartContainers", "charts"));
-    const missingChartContainers = chartContainerIds.filter(id => !ids.includes(id));
-    assert(!missingChartContainers.length, `chartContainers sem id no HTML: ${missingChartContainers.join(", ")}`);
+    const textoConfiguracao = lerArquivo("scripts/config.js");
+    const idsRecipientesGraficos = obterValoresTextoObjeto(obterBlocoConfiguracao(textoConfiguracao, "chartContainers", "charts"));
+    const recipientesGraficosAusentes = idsRecipientesGraficos.filter(id => !ids.includes(id));
+    verificar(!recipientesGraficosAusentes.length, `chartContainers sem id no HTML: ${recipientesGraficosAusentes.join(", ")}`);
 
-    const chartIds = getObjectStringValues(getConfigBlock(configText, "charts", "advancedViews"));
-    const missingChartIds = chartIds.filter(id => !ids.includes(id));
-    assert(!missingChartIds.length, `charts sem canvas no HTML: ${missingChartIds.join(", ")}`);
+    const idsGraficos = obterValoresTextoObjeto(obterBlocoConfiguracao(textoConfiguracao, "charts", "advancedViews"));
+    const idsGraficosAusentes = idsGraficos.filter(id => !ids.includes(id));
+    verificar(!idsGraficosAusentes.length, `charts sem canvas no HTML: ${idsGraficosAusentes.join(", ")}`);
 }
 
-const parsedFiles = validateJavaScriptSyntax();
-validateHtmlContracts();
+const arquivosAnalisados = validarSintaxeJavaScript();
+validarContratosHtml();
 
-console.log(`OK: ${parsedFiles} arquivos JS validados; contratos HTML/config e imports CSS conferidos.`);
+console.log(`OK: ${arquivosAnalisados} arquivos JS validados; contratos HTML/config e imports CSS conferidos.`);

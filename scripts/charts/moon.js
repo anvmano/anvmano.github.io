@@ -17,13 +17,13 @@
     const REFERENCIA_LUA_NOVA_UTC = Date.UTC(2000, 0, 6, 18, 14, 0);
 
     let indicador = null;
-    let popover = null;
+    let janelaDetalhes = null;
 
-    function setup({ indicatorId = "moonIndicator", popoverId = "moonPopover" } = {}) {
-        indicador = document.getElementById(indicatorId);
-        popover = document.getElementById(popoverId);
+    function configurarModulo({ indicatorId: idIndicador = "moonIndicator", popoverId: idJanelaDetalhes = "moonPopover" } = {}) {
+        indicador = document.getElementById(idIndicador);
+        janelaDetalhes = document.getElementById(idJanelaDetalhes);
 
-        if (!indicador || !popover) return;
+        if (!indicador || !janelaDetalhes) return;
 
         indicador.addEventListener("click", evento => {
             evento.stopPropagation();
@@ -31,8 +31,8 @@
         });
 
         document.addEventListener("click", evento => {
-            if (!popover || popover.hidden) return;
-            if (popover.contains(evento.target) || indicador.contains(evento.target)) return;
+            if (!janelaDetalhes || janelaDetalhes.hidden) return;
+            if (janelaDetalhes.contains(evento.target) || indicador.contains(evento.target)) return;
             fecharPopover();
         });
 
@@ -44,13 +44,13 @@
             if (evento.detail?.source !== "moon") fecharPopover();
         });
 
-        update();
+        atualizarModulo();
     }
 
-    function update(dataFirebase = window.ClimateData?.dataAtual?.()) {
-        if (!indicador || !popover) return;
+    function atualizarModulo(dataFirebase = window.ClimateData?.dataAtual?.()) {
+        if (!indicador || !janelaDetalhes) return;
 
-        const estado = getState(dataFirebase);
+        const estado = obterEstado(dataFirebase);
         if (!estado) {
             renderizarIndisponivel();
             return;
@@ -68,11 +68,11 @@
         renderizarPopover(estado);
     }
 
-    function getState(dataFirebase = window.ClimateData?.dataAtual?.()) {
-        const data = parseDataFirebase(dataFirebase);
-        if (!data) return null;
+    function obterEstado(dataFirebase = window.ClimateData?.dataAtual?.()) {
+        const dados = interpretarDadosFirebase(dataFirebase);
+        if (!dados) return null;
 
-        const meioDiaLocal = new Date(data.getFullYear(), data.getMonth(), data.getDate(), 12, 0, 0, 0);
+        const meioDiaLocal = new Date(dados.getFullYear(), dados.getMonth(), dados.getDate(), 12, 0, 0, 0);
         const diasDesdeReferencia = (meioDiaLocal.getTime() - REFERENCIA_LUA_NOVA_UTC) / 86400000;
         const idade = normalizarModulo(diasDesdeReferencia, DURACAO_CICLO_LUNAR);
         const fracao = idade / DURACAO_CICLO_LUNAR;
@@ -83,7 +83,7 @@
         const sombra = calcularSombraVisual(fracao);
 
         return {
-            data,
+            data: dados,
             fase,
             fracao,
             idade,
@@ -92,8 +92,8 @@
             minguante,
             sombra,
             nomeCurto: fase.nome.replace("Lua ", "").replace("Quarto ", "Q. "),
-            proximaNova: calcularProximaFase(data, idade, DURACAO_CICLO_LUNAR),
-            proximaCheia: calcularProximaCheia(data, idade),
+            proximaNova: calcularProximaFase(dados, idade, DURACAO_CICLO_LUNAR),
+            proximaCheia: calcularProximaCheia(dados, idade),
         };
     }
 
@@ -106,8 +106,8 @@
         const valor = indicador.querySelector(".moon-indicator__value");
         if (valor) valor.textContent = "--";
 
-        popover.hidden = true;
-        popover.innerHTML = `
+        janelaDetalhes.hidden = true;
+        janelaDetalhes.innerHTML = `
             <div class="moon-popover__header">
                 <span>Fase da lua</span>
                 <strong>--</strong>
@@ -117,7 +117,7 @@
     }
 
     function renderizarPopover(estado) {
-        popover.innerHTML = `
+        janelaDetalhes.innerHTML = `
             <div class="moon-popover__header">
                 <span>Fase da lua</span>
                 <strong>${estado.fase.nome}</strong>
@@ -132,12 +132,12 @@
     }
 
     function alternarPopover() {
-        if (!indicador || !popover) return;
+        if (!indicador || !janelaDetalhes) return;
 
-        if (popover.hidden) {
+        if (janelaDetalhes.hidden) {
             window.dispatchEvent(new CustomEvent("header-popover-open", { detail: { source: "moon" } }));
-            update();
-            popover.hidden = false;
+            atualizarModulo();
+            janelaDetalhes.hidden = false;
             indicador.setAttribute("aria-expanded", "true");
         } else {
             fecharPopover();
@@ -145,8 +145,8 @@
     }
 
     function fecharPopover() {
-        if (!indicador || !popover) return;
-        popover.hidden = true;
+        if (!indicador || !janelaDetalhes) return;
+        janelaDetalhes.hidden = true;
         indicador.setAttribute("aria-expanded", "false");
     }
 
@@ -154,10 +154,10 @@
         return FASES_LUNARES.find(fase => fracao >= fase.min && fracao < fase.max) || FASES_LUNARES[0];
     }
 
-    function parseDataFirebase(valor) {
+    function interpretarDadosFirebase(valor) {
         if (window.ClimateData?.parseFirebaseDate && valor) {
-            const data = window.ClimateData.parseFirebaseDate(valor);
-            if (data instanceof Date && !Number.isNaN(data.getTime())) return data;
+            const dados = window.ClimateData.parseFirebaseDate(valor);
+            if (dados instanceof Date && !Number.isNaN(dados.getTime())) return dados;
         }
 
         const dataAtual = new Date();
@@ -173,30 +173,30 @@
         return Math.round(distanciaDaCheia * 100);
     }
 
-    function calcularProximaFase(data, idade, idadeAlvo) {
+    function calcularProximaFase(dados, idade, idadeAlvo) {
         const diasRestantes = idadeAlvo - idade;
-        const proxima = new Date(data);
+        const proxima = new Date(dados);
         proxima.setDate(proxima.getDate() + Math.max(0, Math.ceil(diasRestantes)));
         return proxima;
     }
 
-    function calcularProximaCheia(data, idade) {
+    function calcularProximaCheia(dados, idade) {
         const idadeCheia = DURACAO_CICLO_LUNAR / 2;
         const diasRestantes = idade <= idadeCheia
             ? idadeCheia - idade
             : DURACAO_CICLO_LUNAR - idade + idadeCheia;
-        const proxima = new Date(data);
+        const proxima = new Date(dados);
         proxima.setDate(proxima.getDate() + Math.max(0, Math.ceil(diasRestantes)));
         return proxima;
     }
 
-    function formatarDataCompleta(data) {
-        return `${String(data.getDate()).padStart(2, "0")}/${String(data.getMonth() + 1).padStart(2, "0")}/${data.getFullYear()}`;
+    function formatarDataCompleta(dados) {
+        return `${String(dados.getDate()).padStart(2, "0")}/${String(dados.getMonth() + 1).padStart(2, "0")}/${dados.getFullYear()}`;
     }
 
     window.ClimateMoon = {
-        setup,
-        update,
-        getState,
+        setup: configurarModulo,
+        update: atualizarModulo,
+        getState: obterEstado,
     };
 })();

@@ -1,112 +1,112 @@
 'use strict';
 
 (function () {
-    const namespace = window.ClimateAssistant || {};
-    const { METRIC_ALIASES } = namespace.config;
+    const espacoNomes = window.ClimateAssistant || {};
+    const { METRIC_ALIASES: ALIASES_METRICAS } = espacoNomes.config;
     const {
-        normalizeText,
-        hasWord,
-        normalizeHourFilter,
-        formatDate,
-        formatPeriodLabel,
-        formatHourLabel,
-        formatHourRangeLabel,
-    } = namespace.format;
+        normalizeText: normalizarTextoConsulta,
+        hasWord: temPalavraConsulta,
+        normalizeHourFilter: normalizarFiltroHoraConsulta,
+        formatDate: formatarDataConsulta,
+        formatPeriodLabel: formatarRotuloPeriodoConsulta,
+        formatHourLabel: formatarRotuloHoraGrafico,
+        formatHourRangeLabel: formatarRotuloFaixaHoraria,
+    } = espacoNomes.format;
 
-    function buildMetricResult(environment, metric, dailyStats, periodDates, intent, data, context) {
-        if (metric.key === "cicloSolar") {
-            return namespace.solar.buildSolarCycleResult(environment, context, periodDates, intent);
+    function montarResultadoMetrica(ambiente, metrica, estatisticasDiarias, datasPeriodo, intencao, dados, contexto) {
+        if (metrica.key === "cicloSolar") {
+            return espacoNomes.solar.buildSolarCycleResult(ambiente, contexto, datasPeriodo, intencao);
         }
-        if (metric.key === "qualidadeAr") {
-            return namespace.aqi.buildAirQualityResult(environment, metric, periodDates, intent, data);
+        if (metrica.key === "qualidadeAr") {
+            return espacoNomes.aqi.buildAirQualityResult(ambiente, metrica, datasPeriodo, intencao, dados);
         }
-        if (intent.operation === "status_faixa") {
-            return buildComfortBandResult(environment, metric, dailyStats, periodDates, intent);
+        if (intencao.operation === "status_faixa") {
+            return montarResultadoFaixaConforto(ambiente, metrica, estatisticasDiarias, datasPeriodo, intencao);
         }
 
-        const allValues = dailyStats.flatMap(day => day.values);
-        const qualidadeDados = combinarQualidades(dailyStats.map(day => day.qualidade).filter(Boolean));
+        const todosValores = estatisticasDiarias.flatMap(dia => dia.values);
+        const qualidadeDados = combinarQualidades(estatisticasDiarias.map(dia => dia.qualidade).filter(Boolean));
         const base = {
-            ambiente: environment.label,
-            metrica: metric.label,
-            unidade: metric.unit,
-            operacao: intent.operation,
-            criterio: intent.criterion || defaultCriterionForOperation(intent.operation),
-            periodo: intent.periodLabel || formatPeriodLabel(periodDates),
-            hora_consultada: intent.hour ? formatHourLabel(intent.hour) : null,
-            faixa_horaria_consultada: intent.hourRange ? formatHourRangeLabel(intent.hourRange) : null,
-            datas_consultadas: periodDates.map(formatDate),
-            dias_com_dados: dailyStats.map(day => day.dateLabel),
-            ...(intent.hour ? {} : { amostras: allValues.length }),
+            ambiente: ambiente.label,
+            metrica: metrica.label,
+            unidade: metrica.unit,
+            operacao: intencao.operation,
+            criterio: intencao.criterion || criterioPadraoOperacao(intencao.operation),
+            periodo: intencao.periodLabel || formatarRotuloPeriodoConsulta(datasPeriodo),
+            hora_consultada: intencao.hour ? formatarRotuloHoraGrafico(intencao.hour) : null,
+            faixa_horaria_consultada: intencao.hourRange ? formatarRotuloFaixaHoraria(intencao.hourRange) : null,
+            datas_consultadas: datasPeriodo.map(formatarDataConsulta),
+            dias_com_dados: estatisticasDiarias.map(dia => dia.dateLabel),
+            ...(intencao.hour ? {} : { amostras: todosValores.length }),
             qualidade_dados: qualidadeDados,
         };
 
-        if (!allValues.length) {
+        if (!todosValores.length) {
             return {
                 ...base,
                 sem_dados: true,
-                mensagem: buildNoDataMessage(metric, environment, periodDates, intent),
+                mensagem: montarMensagemSemDados(metrica, ambiente, datasPeriodo, intencao),
             };
         }
 
-        if (intent.operation === "horario_maior_valor" || intent.operation === "horario_menor_valor") {
-            return buildHourlyExtremeResult(base, metric, dailyStats, intent);
+        if (intencao.operation === "horario_maior_valor" || intencao.operation === "horario_menor_valor") {
+            return montarResultadoExtremoHorario(base, metrica, estatisticasDiarias, intencao);
         }
-        if (intent.operation === "calendario_dia_maior_valor" || intent.operation === "calendario_dia_menor_valor") {
-            return buildCalendarDayExtremeResult(base, dailyStats, intent);
+        if (intencao.operation === "calendario_dia_maior_valor" || intencao.operation === "calendario_dia_menor_valor") {
+            return montarResultadoExtremoDiaCalendario(base, estatisticasDiarias, intencao);
         }
-        if (intent.operation === "heatmap_hora_maior_valor" || intent.operation === "heatmap_hora_menor_valor") {
-            return buildHourOfDayExtremeResult(base, dailyStats, intent);
+        if (intencao.operation === "heatmap_hora_maior_valor" || intencao.operation === "heatmap_hora_menor_valor") {
+            return montarResultadoExtremoHoraDia(base, estatisticasDiarias, intencao);
         }
-        if (intent.operation === "heatmap_semana_maior_valor" || intent.operation === "heatmap_semana_menor_valor") {
-            return buildWeeklySlotExtremeResult(base, dailyStats, intent);
+        if (intencao.operation === "heatmap_semana_maior_valor" || intencao.operation === "heatmap_semana_menor_valor") {
+            return montarResultadoExtremoFaixaSemanal(base, estatisticasDiarias, intencao);
         }
-        if (intent.operation === "ultima_medicao") {
-            return montarResultadoUltimaMedicao(base, dailyStats);
+        if (intencao.operation === "ultima_medicao") {
+            return montarResultadoUltimaMedicao(base, estatisticasDiarias);
         }
-        if (intent.operation === "comparar_dias") {
-            return montarResultadoComparacaoDias(base, dailyStats);
+        if (intencao.operation === "comparar_dias") {
+            return montarResultadoComparacaoDias(base, estatisticasDiarias);
         }
 
-        const overallStats = calculateStats(allValues);
-        if (intent.hour) {
+        const estatisticasGerais = calcularEstatisticas(todosValores);
+        if (intencao.hour) {
             return {
                 ...base,
                 tipo_resultado: "consulta_horaria",
-                valor: round(overallStats.avg),
+                valor: arredondar(estatisticasGerais.avg),
             };
         }
 
-        const dailySummaries = dailyStats.map(day => ({
-            data: day.dateLabel,
-            media: round(day.stats.avg),
-            minima: round(day.stats.min),
-            maxima: round(day.stats.max),
-            delta: round(day.stats.delta),
-            qualidade_dados: day.qualidade,
-            amostras: day.values.length,
+        const resumosDiarios = estatisticasDiarias.map(dia => ({
+            data: dia.dateLabel,
+            media: arredondar(dia.stats.avg),
+            minima: arredondar(dia.stats.min),
+            maxima: arredondar(dia.stats.max),
+            delta: arredondar(dia.stats.delta),
+            qualidade_dados: dia.qualidade,
+            amostras: dia.values.length,
         }));
 
-        const resultadoEstatistico = montarResultadoEstatistico(base, dailyStats, overallStats, intent.operation);
+        const resultadoEstatistico = montarResultadoEstatistico(base, estatisticasDiarias, estatisticasGerais, intencao.operation);
         if (resultadoEstatistico) return resultadoEstatistico;
 
         return {
             ...base,
-            media: round(overallStats.avg),
-            minima: round(overallStats.min),
-            maxima: round(overallStats.max),
-            delta: round(overallStats.delta),
-            tendencia: trendFromDelta(overallStats.delta),
-            dia_mais_frio: pickDay(dailySummaries, "media", "min"),
-            dia_mais_quente: pickDay(dailySummaries, "media", "max"),
-            menor_registro: pickDay(dailySummaries, "minima", "min"),
-            maior_registro: pickDay(dailySummaries, "maxima", "max"),
-            comparacao: buildComparison(dailySummaries),
-            por_dia: dailySummaries,
+            media: arredondar(estatisticasGerais.avg),
+            minima: arredondar(estatisticasGerais.min),
+            maxima: arredondar(estatisticasGerais.max),
+            delta: arredondar(estatisticasGerais.delta),
+            tendencia: tendenciaDaDiferenca(estatisticasGerais.delta),
+            dia_mais_frio: selecionarDia(resumosDiarios, "media", "min"),
+            dia_mais_quente: selecionarDia(resumosDiarios, "media", "max"),
+            menor_registro: selecionarDia(resumosDiarios, "minima", "min"),
+            maior_registro: selecionarDia(resumosDiarios, "maxima", "max"),
+            comparacao: montarComparacao(resumosDiarios),
+            por_dia: resumosDiarios,
         };
     }
 
-    function montarResultadoEstatistico(base, dailyStats, overallStats, operacao) {
+    function montarResultadoEstatistico(base, estatisticasDiarias, estatisticasGerais, operacao) {
         if (!["media", "maxima", "minima", "delta", "tendencia", "resumo", "dia_mais_frio", "dia_mais_quente"].includes(operacao)) return null;
 
         const baseSemAmostras = { ...base };
@@ -115,16 +115,16 @@
             return {
                 ...baseSemAmostras,
                 tipo_resultado: "resumo_metrica",
-                media: round(overallStats.avg),
-                minima: round(overallStats.min),
-                maxima: round(overallStats.max),
-                delta: round(overallStats.delta),
-                tendencia: trendFromDelta(overallStats.delta),
+                media: arredondar(estatisticasGerais.avg),
+                minima: arredondar(estatisticasGerais.min),
+                maxima: arredondar(estatisticasGerais.max),
+                delta: arredondar(estatisticasGerais.delta),
+                tendencia: tendenciaDaDiferenca(estatisticasGerais.delta),
             };
         }
 
         if (operacao === "dia_mais_frio" || operacao === "dia_mais_quente") {
-            const resumosDiarios = dailyStats.map(dia => ({
+            const resumosDiarios = estatisticasDiarias.map(dia => ({
                 data: dia.dateLabel,
                 valor: dia.stats.avg,
             }));
@@ -136,7 +136,7 @@
                 tipo_resultado: "extremo_diario",
                 criterio: operacao === "dia_mais_frio" ? "menor_media_diaria" : "maior_media_diaria",
                 data: diaSelecionado.data,
-                valor: round(diaSelecionado.valor),
+                valor: arredondar(diaSelecionado.valor),
             };
         }
 
@@ -144,11 +144,11 @@
             return {
                 ...baseSemAmostras,
                 tipo_resultado: "estatistica_media",
-                valor: round(overallStats.avg),
+                valor: arredondar(estatisticasGerais.avg),
             };
         }
 
-        const registros = obterRegistrosOrdenados(dailyStats);
+        const registros = obterRegistrosOrdenados(estatisticasDiarias);
         if (operacao === "maxima" || operacao === "minima") {
             const registro = [...registros].sort((a, b) => (
                 operacao === "maxima" ? b.value - a.value : a.value - b.value
@@ -158,7 +158,7 @@
                 ...baseSemAmostras,
                 tipo_resultado: "estatistica_extremo",
                 criterio: operacao === "maxima" ? "maior_registro" : "menor_registro",
-                valor: round(registro.value),
+                valor: arredondar(registro.value),
                 data: registro.dateLabel,
                 horario: registro.time,
             };
@@ -174,14 +174,14 @@
 
         const primeiro = registros[0];
         const ultimo = registros[registros.length - 1];
-        const diferenca = round(ultimo.value - primeiro.value);
+        const diferenca = arredondar(ultimo.value - primeiro.value);
         return {
             ...baseSemAmostras,
             tipo_resultado: operacao === "tendencia" ? "tendencia_periodo" : "variacao_periodo",
-            valor_inicial: round(primeiro.value),
-            valor_final: round(ultimo.value),
+            valor_inicial: arredondar(primeiro.value),
+            valor_final: arredondar(ultimo.value),
             diferenca,
-            tendencia: trendFromDelta(diferenca),
+            tendencia: tendenciaDaDiferenca(diferenca),
             inicio: {
                 data: primeiro.dateLabel,
                 horario: primeiro.time,
@@ -193,8 +193,8 @@
         };
     }
 
-    function obterRegistrosOrdenados(dailyStats) {
-        return dailyStats
+    function obterRegistrosOrdenados(estatisticasDiarias) {
+        return estatisticasDiarias
             .flatMap(dia => dia.records.map(registro => ({
                 ...registro,
                 date: dia.date,
@@ -207,52 +207,52 @@
             });
     }
 
-    function buildDailyStats(dayData, metric, date, hour, hourRange) {
-        const records = extractMetricRecords(dayData, metric.key, hour, date, hourRange);
-        const values = records.map(record => record.value);
-        if (!values.length) return null;
+    function montarEstatisticasDiarias(dadosDia, metrica, dataReferencia, hora, faixaHoraria) {
+        const registros = extrairRegistrosMetrica(dadosDia, metrica.key, hora, dataReferencia, faixaHoraria);
+        const valores = registros.map(registro => registro.value);
+        if (!valores.length) return null;
 
         return {
-            date,
-            dateLabel: formatDate(date),
-            values,
-            records,
-            stats: calculateStats(values),
+            date: dataReferencia,
+            dateLabel: formatarDataConsulta(dataReferencia),
+            values: valores,
+            records: registros,
+            stats: calcularEstatisticas(valores),
             qualidade: window.ClimateDataQuality?.resumirParaExportacao?.(
-                window.ClimateDataQuality?.analisarSerie?.({ [date]: dayData }, metric.key)
+                window.ClimateDataQuality?.analisarSerie?.({ [dataReferencia]: dadosDia }, metrica.key)
             ) || null,
         };
     }
 
-    function extractMetricRecords(dayData, key, hour, date = null, hourRange = null) {
-        const values = [];
-        for (const time of Object.keys(dayData || {}).sort()) {
-            const normalizedTimeHour = normalizeHourFilter(time);
-            if (hour && normalizedTimeHour !== hour) continue;
-            if (hourRange && !isHourInRange(normalizedTimeHour, hourRange)) continue;
+    function extrairRegistrosMetrica(dadosDia, chave, hora, dataReferencia = null, faixaHoraria = null) {
+        const valores = [];
+        for (const horario of Object.keys(dadosDia || {}).sort()) {
+            const horaNormalizada = normalizarFiltroHoraConsulta(horario);
+            if (hora && horaNormalizada !== hora) continue;
+            if (faixaHoraria && !horaEstaNaFaixa(horaNormalizada, faixaHoraria)) continue;
 
-            const timeData = dayData[time];
-            if (!timeData || typeof timeData !== "object") continue;
+            const dadosHorario = dadosDia[horario];
+            if (!dadosHorario || typeof dadosHorario !== "object") continue;
 
-            for (const itemKey of Object.keys(timeData).sort()) {
-                const item = timeData[itemKey];
+            for (const chaveItem of Object.keys(dadosHorario).sort()) {
+                const item = dadosHorario[chaveItem];
                 if (!item || typeof item !== "object") continue;
 
-                const value = window.ClimateData.normalizeMeasurementValue(key, item[key]);
-                if (value !== null) {
-                    values.push({
-                        value,
-                        time: formatFirebaseTime(time),
-                        date,
+                const valor = window.ClimateData.normalizeMeasurementValue(chave, item[chave]);
+                if (valor !== null) {
+                    valores.push({
+                        value: valor,
+                        time: formatarHorarioFirebase(horario),
+                        date: dataReferencia,
                     });
                 }
             }
         }
-        return values;
+        return valores;
     }
 
-    function montarResultadoUltimaMedicao(base, dailyStats) {
-        const registros = dailyStats.flatMap(dia => (
+    function montarResultadoUltimaMedicao(base, estatisticasDiarias) {
+        const registros = estatisticasDiarias.flatMap(dia => (
             dia.records.map(registro => ({
                 ...registro,
                 date: dia.date,
@@ -275,7 +275,7 @@
             ...baseSemAmostras,
             tipo_resultado: "consulta_horaria",
             operacao: "ultima_medicao",
-            valor: round(registroMaisRecente.value),
+            valor: arredondar(registroMaisRecente.value),
             hora_consultada: registroMaisRecente.time,
             datas_consultadas: [registroMaisRecente.dateLabel],
             periodo: registroMaisRecente.dateLabel,
@@ -284,8 +284,8 @@
 
     function selecionarRegistroMaisRecente(registros) {
         return [...registros].sort((a, b) => {
-            const dateDiff = window.ClimateData.parseFirebaseDate(b.date) - window.ClimateData.parseFirebaseDate(a.date);
-            if (dateDiff !== 0) return dateDiff;
+            const diferencaDatas = window.ClimateData.parseFirebaseDate(b.date) - window.ClimateData.parseFirebaseDate(a.date);
+            if (diferencaDatas !== 0) return diferencaDatas;
             return converterHoraEmMinutos(b.time) - converterHoraEmMinutos(a.time);
         })[0] || null;
     }
@@ -295,13 +295,13 @@
         return (Number.isFinite(horas) ? horas : 0) * 60 + (Number.isFinite(minutos) ? minutos : 0);
     }
 
-    function montarResultadoComparacaoDias(base, dailyStats) {
-        const resumos = dailyStats.map(dia => ({
+    function montarResultadoComparacaoDias(base, estatisticasDiarias) {
+        const resumos = estatisticasDiarias.map(dia => ({
             data: dia.dateLabel,
-            media: round(dia.stats.avg),
-            minima: round(dia.stats.min),
-            maxima: round(dia.stats.max),
-            delta: round(dia.stats.delta),
+            media: arredondar(dia.stats.avg),
+            minima: arredondar(dia.stats.min),
+            maxima: arredondar(dia.stats.max),
+            delta: arredondar(dia.stats.delta),
         }));
 
         if (resumos.length < 2) {
@@ -322,20 +322,20 @@
             criterio: "maior_media_diaria",
             vencedor,
             comparado_com: referencia,
-            diferenca: round(vencedor.media - referencia.media),
+            diferenca: arredondar(vencedor.media - referencia.media),
             por_dia: ordenados,
         };
     }
 
-    function buildHourlyExtremeResult(base, metric, dailyStats, intent) {
-        const records = dailyStats.flatMap(day => (
-            day.records.map(record => ({ ...record, date: day.date, dateLabel: day.dateLabel }))
+    function montarResultadoExtremoHorario(base, metrica, estatisticasDiarias, intencao) {
+        const registros = estatisticasDiarias.flatMap(dia => (
+            dia.records.map(registro => ({ ...registro, date: dia.date, dateLabel: dia.dateLabel }))
         ));
-        const grouped = groupRecordsByTimeSlot(records);
-        const mode = intent.operation === "horario_menor_valor" ? "min" : "max";
-        const best = pickHourlySlot(grouped, mode);
+        const agrupado = agruparRegistrosPorFaixaHoraria(registros);
+        const modo = intencao.operation === "horario_menor_valor" ? "min" : "max";
+        const melhor = selecionarFaixaHoraria(agrupado, modo);
 
-        if (!best) {
+        if (!melhor) {
             return {
                 ...base,
                 sem_dados: true,
@@ -346,431 +346,431 @@
         return {
             ...base,
             tipo_resultado: "analise_horaria",
-            criterio: mode === "max" ? "maior_media_horaria" : "menor_media_horaria",
-            horario: best.time,
-            data: best.dateLabel,
-            valor: round(best.average),
-            minima_no_horario: round(best.stats.min),
-            maxima_no_horario: round(best.stats.max),
-            registros_no_horario: best.values.length,
-            por_horario: grouped.map(slot => ({
-                data: slot.dateLabel,
-                horario: slot.time,
-                media: round(slot.average),
-                minima: round(slot.stats.min),
-                maxima: round(slot.stats.max),
+            criterio: modo === "max" ? "maior_media_horaria" : "menor_media_horaria",
+            horario: melhor.time,
+            data: melhor.dateLabel,
+            valor: arredondar(melhor.average),
+            minima_no_horario: arredondar(melhor.stats.min),
+            maxima_no_horario: arredondar(melhor.stats.max),
+            registros_no_horario: melhor.values.length,
+            por_horario: agrupado.map(faixaHorario => ({
+                data: faixaHorario.dateLabel,
+                horario: faixaHorario.time,
+                media: arredondar(faixaHorario.average),
+                minima: arredondar(faixaHorario.stats.min),
+                maxima: arredondar(faixaHorario.stats.max),
             })).sort((a, b) => (
-                mode === "max" ? b.media - a.media : a.media - b.media
+                modo === "max" ? b.media - a.media : a.media - b.media
             )).slice(0, 6),
         };
     }
 
-    function buildCalendarDayExtremeResult(base, dailyStats, intent) {
-        const mode = intent.operation === "calendario_dia_menor_valor" ? "min" : "max";
-        const days = dailyStats.map(day => ({
-            data: day.dateLabel,
-            valor: day.stats.avg,
-            minima: day.stats.min,
-            maxima: day.stats.max,
-            amostras: day.values.length,
+    function montarResultadoExtremoDiaCalendario(base, estatisticasDiarias, intencao) {
+        const modo = intencao.operation === "calendario_dia_menor_valor" ? "min" : "max";
+        const dias = estatisticasDiarias.map(dia => ({
+            data: dia.dateLabel,
+            valor: dia.stats.avg,
+            minima: dia.stats.min,
+            maxima: dia.stats.max,
+            amostras: dia.values.length,
         }));
-        const best = pickSlot(days, "valor", mode);
+        const melhor = selecionarFaixa(dias, "valor", modo);
 
-        if (!best) return buildNoDataAnalyticResult(base, "calendário mensal");
+        if (!melhor) return montarResultadoAnaliticoSemDados(base, "calendário mensal");
 
         return {
             ...base,
             tipo_resultado: "analise_calendario_mensal",
-            criterio: mode === "max" ? "maior_media_diaria" : "menor_media_diaria",
-            data: best.data,
-            valor: round(best.valor),
-            minima_no_dia: round(best.minima),
-            maxima_no_dia: round(best.maxima),
-            ranking: days
-                .map(day => ({ ...day, valor: round(day.valor), minima: round(day.minima), maxima: round(day.maxima) }))
-                .sort((a, b) => mode === "max" ? b.valor - a.valor : a.valor - b.valor)
+            criterio: modo === "max" ? "maior_media_diaria" : "menor_media_diaria",
+            data: melhor.data,
+            valor: arredondar(melhor.valor),
+            minima_no_dia: arredondar(melhor.minima),
+            maxima_no_dia: arredondar(melhor.maxima),
+            ranking: dias
+                .map(dia => ({ ...dia, valor: arredondar(dia.valor), minima: arredondar(dia.minima), maxima: arredondar(dia.maxima) }))
+                .sort((a, b) => modo === "max" ? b.valor - a.valor : a.valor - b.valor)
                 .slice(0, 6),
         };
     }
 
-    function buildHourOfDayExtremeResult(base, dailyStats, intent) {
-        const mode = intent.operation === "heatmap_hora_menor_valor" ? "min" : "max";
-        const grouped = groupRecordsByHourOfDay(dailyStats);
-        const best = pickSlot(grouped, "valor", mode);
+    function montarResultadoExtremoHoraDia(base, estatisticasDiarias, intencao) {
+        const modo = intencao.operation === "heatmap_hora_menor_valor" ? "min" : "max";
+        const agrupado = agruparRegistrosPorHoraDia(estatisticasDiarias);
+        const melhor = selecionarFaixa(agrupado, "valor", modo);
 
-        if (!best) return buildNoDataAnalyticResult(base, "heatmap por hora");
+        if (!melhor) return montarResultadoAnaliticoSemDados(base, "heatmap por hora");
 
         return {
             ...base,
             tipo_resultado: "analise_heatmap_horario",
-            criterio: mode === "max" ? "maior_media_por_hora" : "menor_media_por_hora",
-            horario: best.horario,
-            valor: round(best.valor),
-            minima_no_horario: round(best.minima),
-            maxima_no_horario: round(best.maxima),
-            dias_com_dados_no_horario: best.diasComDados,
-            ranking: grouped
-                .map(slot => ({ ...slot, valor: round(slot.valor), minima: round(slot.minima), maxima: round(slot.maxima) }))
-                .sort((a, b) => mode === "max" ? b.valor - a.valor : a.valor - b.valor)
+            criterio: modo === "max" ? "maior_media_por_hora" : "menor_media_por_hora",
+            horario: melhor.horario,
+            valor: arredondar(melhor.valor),
+            minima_no_horario: arredondar(melhor.minima),
+            maxima_no_horario: arredondar(melhor.maxima),
+            dias_com_dados_no_horario: melhor.diasComDados,
+            ranking: agrupado
+                .map(faixaHorario => ({ ...faixaHorario, valor: arredondar(faixaHorario.valor), minima: arredondar(faixaHorario.minima), maxima: arredondar(faixaHorario.maxima) }))
+                .sort((a, b) => modo === "max" ? b.valor - a.valor : a.valor - b.valor)
                 .slice(0, 6),
         };
     }
 
-    function buildWeeklySlotExtremeResult(base, dailyStats, intent) {
-        const mode = intent.operation === "heatmap_semana_menor_valor" ? "min" : "max";
-        const grouped = groupRecordsByWeekdayHour(dailyStats);
-        const best = pickSlot(grouped, "valor", mode);
+    function montarResultadoExtremoFaixaSemanal(base, estatisticasDiarias, intencao) {
+        const modo = intencao.operation === "heatmap_semana_menor_valor" ? "min" : "max";
+        const agrupado = agruparRegistrosPorDiaSemanaHora(estatisticasDiarias);
+        const melhor = selecionarFaixa(agrupado, "valor", modo);
 
-        if (!best) return buildNoDataAnalyticResult(base, "mapa semanal");
+        if (!melhor) return montarResultadoAnaliticoSemDados(base, "mapa semanal");
 
         return {
             ...base,
             tipo_resultado: "analise_heatmap_semanal",
-            criterio: mode === "max" ? "maior_media_dia_hora" : "menor_media_dia_hora",
-            dia_semana: best.diaSemana,
-            horario: best.horario,
-            valor: round(best.valor),
-            minima_no_periodo: round(best.minima),
-            maxima_no_periodo: round(best.maxima),
-            datas: best.datas,
-            ranking: grouped
-                .map(slot => ({ ...slot, valor: round(slot.valor), minima: round(slot.minima), maxima: round(slot.maxima) }))
-                .sort((a, b) => mode === "max" ? b.valor - a.valor : a.valor - b.valor)
+            criterio: modo === "max" ? "maior_media_dia_hora" : "menor_media_dia_hora",
+            dia_semana: melhor.diaSemana,
+            horario: melhor.horario,
+            valor: arredondar(melhor.valor),
+            minima_no_periodo: arredondar(melhor.minima),
+            maxima_no_periodo: arredondar(melhor.maxima),
+            datas: melhor.datas,
+            ranking: agrupado
+                .map(faixaHorario => ({ ...faixaHorario, valor: arredondar(faixaHorario.valor), minima: arredondar(faixaHorario.minima), maxima: arredondar(faixaHorario.maxima) }))
+                .sort((a, b) => modo === "max" ? b.valor - a.valor : a.valor - b.valor)
                 .slice(0, 6),
         };
     }
 
-    function groupRecordsByTimeSlot(records) {
-        const groups = new Map();
+    function agruparRegistrosPorFaixaHoraria(registros) {
+        const grupos = new Map();
 
-        for (const record of records) {
-            const key = `${record.dateLabel || formatDate(record.date)}|${record.time}`;
-            if (!groups.has(key)) {
-                groups.set(key, {
-                    date: record.date,
-                    dateLabel: record.dateLabel || formatDate(record.date),
-                    time: record.time,
+        for (const registro of registros) {
+            const chave = `${registro.dateLabel || formatarDataConsulta(registro.date)}|${registro.time}`;
+            if (!grupos.has(chave)) {
+                grupos.set(chave, {
+                    date: registro.date,
+                    dateLabel: registro.dateLabel || formatarDataConsulta(registro.date),
+                    time: registro.time,
                     values: [],
                 });
             }
-            groups.get(key).values.push(record.value);
+            grupos.get(chave).values.push(registro.value);
         }
 
-        return [...groups.values()].map(group => ({
-            ...group,
-            stats: calculateStats(group.values),
-            average: calculateStats(group.values).avg,
+        return [...grupos.values()].map(grupo => ({
+            ...grupo,
+            stats: calcularEstatisticas(grupo.values),
+            average: calcularEstatisticas(grupo.values).avg,
         }));
     }
 
-    function pickHourlySlot(groupedSlots, mode) {
-        if (!groupedSlots.length) return null;
-        const sorted = [...groupedSlots].sort((a, b) => (
-            mode === "max" ? b.average - a.average : a.average - b.average
+    function selecionarFaixaHoraria(faixasAgrupadas, modo) {
+        if (!faixasAgrupadas.length) return null;
+        const ordenado = [...faixasAgrupadas].sort((a, b) => (
+            modo === "max" ? b.average - a.average : a.average - b.average
         ));
-        return sorted[0];
+        return ordenado[0];
     }
 
-    function groupRecordsByHourOfDay(dailyStats) {
-        const groups = new Map();
+    function agruparRegistrosPorHoraDia(estatisticasDiarias) {
+        const grupos = new Map();
 
-        for (const day of dailyStats) {
-            for (const record of day.records) {
-                const hour = String(record.time || "").slice(0, 2);
-                if (!groups.has(hour)) groups.set(hour, { hour, values: [], dates: new Set() });
-                const group = groups.get(hour);
-                group.values.push(record.value);
-                group.dates.add(day.dateLabel);
+        for (const dia of estatisticasDiarias) {
+            for (const registro of dia.records) {
+                const hora = String(registro.time || "").slice(0, 2);
+                if (!grupos.has(hora)) grupos.set(hora, { hour: hora, values: [], dates: new Set() });
+                const grupo = grupos.get(hora);
+                grupo.values.push(registro.value);
+                grupo.dates.add(dia.dateLabel);
             }
         }
 
-        return [...groups.values()].map(group => {
-            const stats = calculateStats(group.values);
+        return [...grupos.values()].map(grupo => {
+            const estatisticas = calcularEstatisticas(grupo.values);
             return {
-                horario: `${group.hour}:00`,
-                valor: stats.avg,
-                minima: stats.min,
-                maxima: stats.max,
-                diasComDados: group.dates.size,
+                horario: `${grupo.hour}:00`,
+                valor: estatisticas.avg,
+                minima: estatisticas.min,
+                maxima: estatisticas.max,
+                diasComDados: grupo.dates.size,
             };
         });
     }
 
-    function groupRecordsByWeekdayHour(dailyStats) {
-        const weekLabels = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
-        const groups = new Map();
+    function agruparRegistrosPorDiaSemanaHora(estatisticasDiarias) {
+        const rotulosSemana = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+        const grupos = new Map();
 
-        for (const day of dailyStats) {
-            const date = window.ClimateData.parseFirebaseDate(day.date);
-            const weekday = date.getDay();
-            for (const record of day.records) {
-                const hour = String(record.time || "").slice(0, 2);
-                const key = `${weekday}-${hour}`;
-                if (!groups.has(key)) {
-                    groups.set(key, {
-                        weekday,
-                        hour,
+        for (const dia of estatisticasDiarias) {
+            const dataReferencia = window.ClimateData.parseFirebaseDate(dia.date);
+            const diaSemana = dataReferencia.getDay();
+            for (const registro of dia.records) {
+                const hora = String(registro.time || "").slice(0, 2);
+                const chave = `${diaSemana}-${hora}`;
+                if (!grupos.has(chave)) {
+                    grupos.set(chave, {
+                        weekday: diaSemana,
+                        hour: hora,
                         values: [],
                         dates: new Set(),
                     });
                 }
-                const group = groups.get(key);
-                group.values.push(record.value);
-                group.dates.add(day.dateLabel);
+                const grupo = grupos.get(chave);
+                grupo.values.push(registro.value);
+                grupo.dates.add(dia.dateLabel);
             }
         }
 
-        return [...groups.values()].map(group => {
-            const stats = calculateStats(group.values);
+        return [...grupos.values()].map(grupo => {
+            const estatisticas = calcularEstatisticas(grupo.values);
             return {
-                diaSemana: weekLabels[group.weekday],
-                horario: `${group.hour}:00`,
-                valor: stats.avg,
-                minima: stats.min,
-                maxima: stats.max,
-                datas: [...group.dates],
+                diaSemana: rotulosSemana[grupo.weekday],
+                horario: `${grupo.hour}:00`,
+                valor: estatisticas.avg,
+                minima: estatisticas.min,
+                maxima: estatisticas.max,
+                datas: [...grupo.dates],
             };
         });
     }
 
-    function pickSlot(slots, field, mode) {
-        if (!slots.length) return null;
-        return [...slots].sort((a, b) => mode === "max" ? b[field] - a[field] : a[field] - b[field])[0];
+    function selecionarFaixa(faixasHorarios, campo, modo) {
+        if (!faixasHorarios.length) return null;
+        return [...faixasHorarios].sort((a, b) => modo === "max" ? b[campo] - a[campo] : a[campo] - b[campo])[0];
     }
 
-    function buildNoDataAnalyticResult(base, label) {
+    function montarResultadoAnaliticoSemDados(base, rotulo) {
         return {
             ...base,
             sem_dados: true,
-            mensagem: `Sem dados de ${base.metrica} em ${base.ambiente} para análise de ${label} no período ${base.periodo}.`,
+            mensagem: `Sem dados de ${base.metrica} em ${base.ambiente} para análise de ${rotulo} no período ${base.periodo}.`,
         };
     }
 
-    function isHourInRange(hour, hourRange) {
-        const current = Number(hour);
-        const start = Number(hourRange?.start);
-        const end = Number(hourRange?.end);
-        if (![current, start, end].every(Number.isFinite)) return true;
-        if (start <= end) return current >= start && current <= end;
-        return current >= start || current <= end;
+    function horaEstaNaFaixa(hora, faixaHoraria) {
+        const atual = Number(hora);
+        const inicio = Number(faixaHoraria?.start);
+        const fim = Number(faixaHoraria?.end);
+        if (![atual, inicio, fim].every(Number.isFinite)) return true;
+        if (inicio <= fim) return atual >= inicio && atual <= fim;
+        return atual >= inicio || atual <= fim;
     }
 
-    function buildComfortBandResult(environment, metric, dailyStats, periodDates, intent) {
-        const band = getComfortBandForMetric(environment, metric);
+    function montarResultadoFaixaConforto(ambiente, metrica, estatisticasDiarias, datasPeriodo, intencao) {
+        const faixa = obterFaixaConfortoMetrica(ambiente, metrica);
         const base = {
-            ambiente: environment.label,
-            metrica: metric.label,
-            unidade: metric.unit,
-            operacao: intent.operation,
+            ambiente: ambiente.label,
+            metrica: metrica.label,
+            unidade: metrica.unit,
+            operacao: intencao.operation,
             criterio: "faixa_de_conforto",
-            periodo: intent.periodLabel || formatPeriodLabel(periodDates),
-            hora_consultada: intent.hour ? formatHourLabel(intent.hour) : null,
-            datas_consultadas: periodDates.map(formatDate),
-            dias_com_dados: dailyStats.map(day => day.dateLabel),
+            periodo: intencao.periodLabel || formatarRotuloPeriodoConsulta(datasPeriodo),
+            hora_consultada: intencao.hour ? formatarRotuloHoraGrafico(intencao.hour) : null,
+            datas_consultadas: datasPeriodo.map(formatarDataConsulta),
+            dias_com_dados: estatisticasDiarias.map(dia => dia.dateLabel),
         };
 
-        if (!band) {
+        if (!faixa) {
             return {
                 ...base,
                 sem_faixa: true,
-                mensagem: `Não há faixa de conforto configurada para ${metric.label} em ${environment.label}.`,
+                mensagem: `Não há faixa de conforto configurada para ${metrica.label} em ${ambiente.label}.`,
             };
         }
 
-        const records = dailyStats.flatMap(day => (
-            day.records.map(record => ({ ...record, date: day.date, dateLabel: day.dateLabel }))
+        const registros = estatisticasDiarias.flatMap(dia => (
+            dia.records.map(registro => ({ ...registro, date: dia.date, dateLabel: dia.dateLabel }))
         ));
 
-        if (!records.length) {
+        if (!registros.length) {
             return {
                 ...base,
                 sem_dados: true,
-                faixa: formatBand(band, metric.unit),
-                mensagem: buildNoDataMessage(metric, environment, periodDates, intent),
+                faixa: formatarFaixa(faixa, metrica.unit),
+                mensagem: montarMensagemSemDados(metrica, ambiente, datasPeriodo, intencao),
             };
         }
 
-        const outside = records.filter(record => isOutsideBand(record.value, band));
-        const inside = records.filter(record => !isOutsideBand(record.value, band));
-        const worst = outside
-            .map(record => ({ ...record, distance: distanceFromBand(record.value, band) }))
+        const fora = registros.filter(registro => estaForaDaFaixa(registro.value, faixa));
+        const dentro = registros.filter(registro => !estaForaDaFaixa(registro.value, faixa));
+        const pior = fora
+            .map(registro => ({ ...registro, distance: distanciaDaFaixa(registro.value, faixa) }))
             .sort((a, b) => b.distance - a.distance)[0] || null;
-        const hoursOutside = uniqueSlots(outside);
+        const horasFora = faixasUnicas(fora);
 
         return {
             ...base,
             tipo_resultado: "faixa_conforto",
-            faixa: formatBand(band, metric.unit),
-            limite_minimo: band.min,
-            limite_maximo: band.max,
-            status: outside.length ? "fora_da_faixa" : "dentro_da_faixa",
-            total_registros: records.length,
-            registros_dentro: inside.length,
-            registros_fora: outside.length,
-            percentual_dentro: round((inside.length / records.length) * 100),
-            horas_fora: hoursOutside.length,
-            horarios_fora: hoursOutside.slice(0, 12),
-            pior_horario_fora: worst ? {
-                data: worst.dateLabel,
-                horario: worst.time,
-                valor: round(worst.value),
-                distancia: round(worst.distance),
-                direcao: worst.value < band.min ? "abaixo" : "acima",
+            faixa: formatarFaixa(faixa, metrica.unit),
+            limite_minimo: faixa.min,
+            limite_maximo: faixa.max,
+            status: fora.length ? "fora_da_faixa" : "dentro_da_faixa",
+            total_registros: registros.length,
+            registros_dentro: dentro.length,
+            registros_fora: fora.length,
+            percentual_dentro: arredondar((dentro.length / registros.length) * 100),
+            horas_fora: horasFora.length,
+            horarios_fora: horasFora.slice(0, 12),
+            pior_horario_fora: pior ? {
+                data: pior.dateLabel,
+                horario: pior.time,
+                valor: arredondar(pior.value),
+                distancia: arredondar(pior.distance),
+                direcao: pior.value < faixa.min ? "abaixo" : "acima",
             } : null,
         };
     }
 
-    function getComfortBandForMetric(environment, metric) {
+    function obterFaixaConfortoMetrica(ambiente, metrica) {
         if (!window.AppConfig) return null;
-        if (metric.key === "humidity" || metric.key === "Umidade" || metric.key === "umidade") {
+        if (metrica.key === "humidity" || metrica.key === "Umidade" || metrica.key === "umidade") {
             return window.AppConfig.humidityComfortBand;
         }
-        if (metric.key === "temperature" || metric.key === "feelsLike" || metric.key === "Temperatura" || metric.key === "Sensacao termica" || metric.key === "temperatura" || metric.key === "sensacaoTermica") {
+        if (metrica.key === "temperature" || metrica.key === "feelsLike" || metrica.key === "Temperatura" || metrica.key === "Sensacao termica" || metrica.key === "temperatura" || metrica.key === "sensacaoTermica") {
             return window.AppConfig.comfortBand;
         }
-        if (environment.dataKey === "aquarium" && metric.key === "temperaturaDS18B20") {
+        if (ambiente.dataKey === "aquarium" && metrica.key === "temperaturaDS18B20") {
             return window.AppConfig.aquariumComfortBand;
         }
         return null;
     }
 
-    function isOutsideBand(value, band) {
-        return value < band.min || value > band.max;
+    function estaForaDaFaixa(valor, faixa) {
+        return valor < faixa.min || valor > faixa.max;
     }
 
-    function distanceFromBand(value, band) {
-        if (value < band.min) return band.min - value;
-        if (value > band.max) return value - band.max;
+    function distanciaDaFaixa(valor, faixa) {
+        if (valor < faixa.min) return faixa.min - valor;
+        if (valor > faixa.max) return valor - faixa.max;
         return 0;
     }
 
-    function formatBand(band, unit) {
-        return `${round(band.min)}${unit} a ${round(band.max)}${unit}`;
+    function formatarFaixa(faixa, unidade) {
+        return `${arredondar(faixa.min)}${unidade} a ${arredondar(faixa.max)}${unidade}`;
     }
 
-    function buildNoDataMessage(metric, environment, periodDates, intent) {
-        const period = intent.periodLabel || formatPeriodLabel(periodDates);
-        if (intent.hour) {
-            return `Sem dados de ${metric.label} em ${environment.label} para ${period} às ${formatHourLabel(intent.hour)}.`;
+    function montarMensagemSemDados(metrica, ambiente, datasPeriodo, intencao) {
+        const periodo = intencao.periodLabel || formatarRotuloPeriodoConsulta(datasPeriodo);
+        if (intencao.hour) {
+            return `Sem dados de ${metrica.label} em ${ambiente.label} para ${periodo} às ${formatarRotuloHoraGrafico(intencao.hour)}.`;
         }
-        if (intent.hourRange) {
-            return `Sem dados de ${metric.label} em ${environment.label} para ${period} entre ${formatHourRangeLabel(intent.hourRange)}.`;
+        if (intencao.hourRange) {
+            return `Sem dados de ${metrica.label} em ${ambiente.label} para ${periodo} entre ${formatarRotuloFaixaHoraria(intencao.hourRange)}.`;
         }
-        return `Sem dados de ${metric.label} em ${environment.label} para ${period}.`;
+        return `Sem dados de ${metrica.label} em ${ambiente.label} para ${periodo}.`;
     }
 
-    function uniqueSlots(records) {
-        const seen = new Set();
-        return records
-            .map(record => `${record.dateLabel || formatDate(record.date)} ${record.time}`)
-            .filter(slot => {
-                if (seen.has(slot)) return false;
-                seen.add(slot);
+    function faixasUnicas(registros) {
+        const vistos = new Set();
+        return registros
+            .map(registro => `${registro.dateLabel || formatarDataConsulta(registro.date)} ${registro.time}`)
+            .filter(faixaHorario => {
+                if (vistos.has(faixaHorario)) return false;
+                vistos.add(faixaHorario);
                 return true;
             });
     }
 
-    function formatFirebaseTime(time) {
-        const [hour, minute = "0"] = String(time || "").split("-");
-        return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+    function formatarHorarioFirebase(horario) {
+        const [hora, minuto = "0"] = String(horario || "").split("-");
+        return `${String(hora).padStart(2, "0")}:${String(minuto).padStart(2, "0")}`;
     }
 
-    function resolveMetricsForEnvironments(environments, requestedMetrics, question) {
-        const normalizedQuestion = normalizeText(question);
-        const requested = requestedMetrics.length ? requestedMetrics : inferMetricsFromQuestion(normalizedQuestion);
-        const metrics = [];
+    function resolverMetricasAmbientes(ambientes, metricasSolicitadas, pergunta) {
+        const perguntaNormalizada = normalizarTextoConsulta(pergunta);
+        const solicitado = metricasSolicitadas.length ? metricasSolicitadas : inferirMetricasPergunta(perguntaNormalizada);
+        const metricas = [];
 
-        for (const environment of environments) {
-            for (const metric of environment.metrics.map(toMetricObject)) {
-                if (!requested.length || requested.some(value => metricMatches(metric, value))) {
-                    metrics.push(metric);
+        for (const ambiente of ambientes) {
+            for (const metrica of ambiente.metrics.map(converterParaObjetoMetrica)) {
+                if (!solicitado.length || solicitado.some(valor => correspondenciasMetricas(metrica, valor))) {
+                    metricas.push(metrica);
                 }
             }
         }
 
-        return uniqueMetrics(metrics);
+        return metricasUnicas(metricas);
     }
 
-    function inferMetricsFromQuestion(normalizedQuestion) {
-        if (hasAirQualityIntent(normalizedQuestion)) return ["qualidade_ar"];
-        if (normalizedQuestion.includes("temperatura") || normalizedQuestion.includes("temp")) return ["temperatura"];
-        if (normalizedQuestion.includes("sensacao") || normalizedQuestion.includes("termica")) return ["sensacao_termica"];
-        if (normalizedQuestion.includes("fri") || normalizedQuestion.includes("quent") || normalizedQuestion.includes("calor")) return ["temperatura"];
-        if (hasSolarIntent(normalizedQuestion)) return ["ciclo_solar"];
-        if (normalizedQuestion.includes("umid") || normalizedQuestion.includes("humid")) return ["umidade"];
-        if (normalizedQuestion.includes("press")) return ["pressao"];
-        if (hasWord(normalizedQuestion, "co2")) return ["co2"];
-        if (hasWord(normalizedQuestion, "co")) return ["co"];
-        if (normalizedQuestion.includes("acetona") || normalizedQuestion.includes("aceton")) return ["acetona"];
-        if (normalizedQuestion.includes("alcool") || normalizedQuestion.includes("alcohol")) return ["alcool"];
-        if (normalizedQuestion.includes("amonia") || normalizedQuestion.includes("nh4")) return ["amonia"];
-        if (normalizedQuestion.includes("toluen")) return ["tolueno"];
-        if (normalizedQuestion.includes("ph")) return ["ph"];
-        if (normalizedQuestion.includes("tds")) return ["tds"];
-        if (normalizedQuestion.includes("turb")) return ["turbidez"];
+    function inferirMetricasPergunta(perguntaNormalizada) {
+        if (temIntencaoQualidadeAr(perguntaNormalizada)) return ["qualidade_ar"];
+        if (perguntaNormalizada.includes("temperatura") || perguntaNormalizada.includes("temp")) return ["temperatura"];
+        if (perguntaNormalizada.includes("sensacao") || perguntaNormalizada.includes("termica")) return ["sensacao_termica"];
+        if (perguntaNormalizada.includes("fri") || perguntaNormalizada.includes("quent") || perguntaNormalizada.includes("calor")) return ["temperatura"];
+        if (temIntencaoSolar(perguntaNormalizada)) return ["ciclo_solar"];
+        if (perguntaNormalizada.includes("umid") || perguntaNormalizada.includes("humid")) return ["umidade"];
+        if (perguntaNormalizada.includes("press")) return ["pressao"];
+        if (temPalavraConsulta(perguntaNormalizada, "co2")) return ["co2"];
+        if (temPalavraConsulta(perguntaNormalizada, "co")) return ["co"];
+        if (perguntaNormalizada.includes("acetona") || perguntaNormalizada.includes("aceton")) return ["acetona"];
+        if (perguntaNormalizada.includes("alcool") || perguntaNormalizada.includes("alcohol")) return ["alcool"];
+        if (perguntaNormalizada.includes("amonia") || perguntaNormalizada.includes("nh4")) return ["amonia"];
+        if (perguntaNormalizada.includes("toluen")) return ["tolueno"];
+        if (perguntaNormalizada.includes("ph")) return ["ph"];
+        if (perguntaNormalizada.includes("tds")) return ["tds"];
+        if (perguntaNormalizada.includes("turb")) return ["turbidez"];
         return [];
     }
 
-    function hasAirQualityIntent(normalizedQuestion) {
+    function temIntencaoQualidadeAr(perguntaNormalizada) {
         return ["aqi", "iaq", "qualidade do ar", "qualidade ar", "indice de qualidade do ar", "indice do ar", "ar da sala"]
-            .some(term => normalizedQuestion.includes(term));
+            .some(termo => perguntaNormalizada.includes(termo));
     }
 
-    function hasSolarIntent(normalizedQuestion) {
+    function temIntencaoSolar(perguntaNormalizada) {
         return ["solar", "sol", "nascer", "por do sol", "pôr do sol", "zenite", "zênite", "amanhecer", "anoitecer", "duracao do dia", "duração do dia", "duracao de luz", "duração de luz", "tempo de luz", "luz solar", "periodo de luz", "fotoperiodo", "dia mais longo", "dia mais curto", "dia com mais tempo de luz", "dia com menos tempo de luz"]
-            .some(term => normalizedQuestion.includes(normalizeText(term)));
+            .some(termo => perguntaNormalizada.includes(normalizarTextoConsulta(termo)));
     }
 
-    function metricMatches(metric, requestedMetric) {
-        const requested = normalizeText(requestedMetric).replace(/_/g, " ");
-        const aliases = [
-            metric.label,
-            metric.key,
-            normalizeText(metric.key).replace(/([a-z])([A-Z])/g, "$1 $2"),
-            ...(METRIC_ALIASES[metric.key] || []),
-        ].map(value => normalizeText(value).replace(/_/g, " "));
+    function correspondenciasMetricas(metrica, metricaSolicitada) {
+        const solicitado = normalizarTextoConsulta(metricaSolicitada).replace(/_/g, " ");
+        const apelidos = [
+            metrica.label,
+            metrica.key,
+            normalizarTextoConsulta(metrica.key).replace(/([a-z])([A-Z])/g, "$1 $2"),
+            ...(ALIASES_METRICAS[metrica.key] || []),
+        ].map(valor => normalizarTextoConsulta(valor).replace(/_/g, " "));
 
-        if (requested === "ciclo solar" && metric.key === "cicloSolar") return true;
-        if (aliases.some(alias => alias === requested)) return true;
+        if (solicitado === "ciclo solar" && metrica.key === "cicloSolar") return true;
+        if (apelidos.some(apelido => apelido === solicitado)) return true;
 
-        return aliases.some(alias => (
-            alias.length > 3
-            && requested.length > 3
-            && (alias.includes(requested) || requested.includes(alias))
+        return apelidos.some(apelido => (
+            apelido.length > 3
+            && solicitado.length > 3
+            && (apelido.includes(solicitado) || solicitado.includes(apelido))
         ));
     }
 
-    function toMetricObject(metric) {
+    function converterParaObjetoMetrica(metrica) {
         return {
-            label: metric[0],
-            key: metric[1],
-            unit: metric[2],
+            label: metrica[0],
+            key: metrica[1],
+            unit: metrica[2],
         };
     }
 
-    function getDefaultMetric(environment) {
-        return toMetricObject(environment.metrics[0]);
+    function obterMetricaPadrao(ambiente) {
+        return converterParaObjetoMetrica(ambiente.metrics[0]);
     }
 
-    function uniqueMetrics(metrics) {
-        const seen = new Set();
-        return metrics.filter(metric => {
-            const key = metric.key;
-            if (seen.has(key)) return false;
-            seen.add(key);
+    function metricasUnicas(metricas) {
+        const vistos = new Set();
+        return metricas.filter(metrica => {
+            const chave = metrica.key;
+            if (vistos.has(chave)) return false;
+            vistos.add(chave);
             return true;
         });
     }
 
-    function calculateStats(values) {
-        if (!values.length) return { avg: null, min: null, max: null, delta: null };
-        const first = values[0];
-        const last = values[values.length - 1];
+    function calcularEstatisticas(valores) {
+        if (!valores.length) return { avg: null, min: null, max: null, delta: null };
+        const primeiro = valores[0];
+        const ultimo = valores[valores.length - 1];
         return {
-            avg: values.reduce((sum, value) => sum + value, 0) / values.length,
-            min: Math.min(...values),
-            max: Math.max(...values),
-            delta: values.length >= 2 ? last - first : null,
+            avg: valores.reduce((soma, valor) => soma + valor, 0) / valores.length,
+            min: Math.min(...valores),
+            max: Math.max(...valores),
+            delta: valores.length >= 2 ? ultimo - primeiro : null,
         };
     }
 
@@ -789,72 +789,72 @@
         };
     }
 
-    function defaultCriterionForOperation(operation) {
-        if (operation === "dia_mais_frio" || operation === "dia_mais_quente" || operation === "comparar_dias") return "media_diaria";
-        if (operation === "maxima") return "maxima_registrada";
-        if (operation === "minima") return "minima_registrada";
+    function criterioPadraoOperacao(operacao) {
+        if (operacao === "dia_mais_frio" || operacao === "dia_mais_quente" || operacao === "comparar_dias") return "media_diaria";
+        if (operacao === "maxima") return "maxima_registrada";
+        if (operacao === "minima") return "minima_registrada";
         return "valores_registrados";
     }
 
-    function pickDay(dailySummaries, field, mode) {
-        if (!dailySummaries.length) return null;
-        const sorted = [...dailySummaries].sort((a, b) => mode === "min" ? a[field] - b[field] : b[field] - a[field]);
+    function selecionarDia(resumosDiarios, campo, modo) {
+        if (!resumosDiarios.length) return null;
+        const ordenado = [...resumosDiarios].sort((a, b) => modo === "min" ? a[campo] - b[campo] : b[campo] - a[campo]);
         return {
-            data: sorted[0].data,
-            valor: sorted[0][field],
-            amostras: sorted[0].amostras,
+            data: ordenado[0].data,
+            valor: ordenado[0][campo],
+            amostras: ordenado[0].amostras,
         };
     }
 
-    function buildComparison(dailySummaries) {
-        if (dailySummaries.length < 2) return null;
-        const byAverage = [...dailySummaries].sort((a, b) => b.media - a.media);
-        const todayLabel = formatDate(window.ClimateData.dataAtual());
-        const today = dailySummaries.find(day => day.data === todayLabel);
+    function montarComparacao(resumosDiarios) {
+        if (resumosDiarios.length < 2) return null;
+        const porMedia = [...resumosDiarios].sort((a, b) => b.media - a.media);
+        const rotuloHoje = formatarDataConsulta(window.ClimateData.dataAtual());
+        const hoje = resumosDiarios.find(dia => dia.data === rotuloHoje);
 
         return {
             mais_quente_por_media: {
-                data: byAverage[0].data,
-                media: byAverage[0].media,
+                data: porMedia[0].data,
+                media: porMedia[0].media,
             },
             mais_frio_por_media: {
-                data: byAverage[byAverage.length - 1].data,
-                media: byAverage[byAverage.length - 1].media,
+                data: porMedia[porMedia.length - 1].data,
+                media: porMedia[porMedia.length - 1].media,
             },
-            hoje: today || null,
-            dias_mais_quentes_que_hoje: today ? dailySummaries.filter(day => day.media > today.media).map(day => ({
-                data: day.data,
-                media: day.media,
-                diferenca: round(day.media - today.media),
+            hoje: hoje || null,
+            dias_mais_quentes_que_hoje: hoje ? resumosDiarios.filter(dia => dia.media > hoje.media).map(dia => ({
+                data: dia.data,
+                media: dia.media,
+                diferenca: arredondar(dia.media - hoje.media),
             })) : [],
         };
     }
 
-    function trendFromDelta(delta) {
+    function tendenciaDaDiferenca(delta) {
         if (!Number.isFinite(delta)) return "dados insuficientes";
         if (Math.abs(delta) < 0.05) return "estável";
         return delta > 0 ? "subindo" : "caindo";
     }
 
-    function round(value) {
-        return Number.isFinite(value) ? Number(value.toFixed(2)) : null;
+    function arredondar(valor) {
+        return Number.isFinite(valor) ? Number(valor.toFixed(2)) : null;
     }
 
-    namespace.metrics = {
-        buildMetricResult,
-        buildDailyStats,
-        resolveMetricsForEnvironments,
-        inferMetricsFromQuestion,
-        hasAirQualityIntent,
-        hasSolarIntent,
-        metricMatches,
-        toMetricObject,
-        getDefaultMetric,
-        calculateStats,
-        buildComfortBandResult,
-        trendFromDelta,
-        round,
+    espacoNomes.metrics = {
+        buildMetricResult: montarResultadoMetrica,
+        buildDailyStats: montarEstatisticasDiarias,
+        resolveMetricsForEnvironments: resolverMetricasAmbientes,
+        inferMetricsFromQuestion: inferirMetricasPergunta,
+        hasAirQualityIntent: temIntencaoQualidadeAr,
+        hasSolarIntent: temIntencaoSolar,
+        metricMatches: correspondenciasMetricas,
+        toMetricObject: converterParaObjetoMetrica,
+        getDefaultMetric: obterMetricaPadrao,
+        calculateStats: calcularEstatisticas,
+        buildComfortBandResult: montarResultadoFaixaConforto,
+        trendFromDelta: tendenciaDaDiferenca,
+        round: arredondar,
     };
 
-    window.ClimateAssistant = namespace;
+    window.ClimateAssistant = espacoNomes;
 })();

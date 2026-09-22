@@ -34,10 +34,10 @@
     }
 
     function obterLocalizacaoComOpcoes(opcoes) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolver, rejeitar) => {
             navigator.geolocation.getCurrentPosition(
-                posicao => resolve(normalizarPosicao(posicao)),
-                erro => reject(criarErroLocalizacao(erro)),
+                posicao => resolver(normalizarPosicao(posicao)),
+                erro => rejeitar(criarErroLocalizacao(erro)),
                 opcoes
             );
         });

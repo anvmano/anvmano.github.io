@@ -9,12 +9,12 @@
     ];
 
     let indicador = null;
-    let popover = null;
-    function setup({ indicatorId = "seasonIndicator", popoverId = "seasonPopover" } = {}) {
-        indicador = document.getElementById(indicatorId);
-        popover = document.getElementById(popoverId);
+    let janelaDetalhes = null;
+    function configurarModulo({ indicatorId: idIndicador = "seasonIndicator", popoverId: idJanelaDetalhes = "seasonPopover" } = {}) {
+        indicador = document.getElementById(idIndicador);
+        janelaDetalhes = document.getElementById(idJanelaDetalhes);
 
-        if (!indicador || !popover) return;
+        if (!indicador || !janelaDetalhes) return;
 
         indicador.addEventListener("click", evento => {
             evento.stopPropagation();
@@ -22,8 +22,8 @@
         });
 
         document.addEventListener("click", evento => {
-            if (!popover || popover.hidden) return;
-            if (popover.contains(evento.target) || indicador.contains(evento.target)) return;
+            if (!janelaDetalhes || janelaDetalhes.hidden) return;
+            if (janelaDetalhes.contains(evento.target) || indicador.contains(evento.target)) return;
             fecharPopover();
         });
 
@@ -35,19 +35,19 @@
             if (evento.detail?.source !== "season") fecharPopover();
         });
 
-        update();
+        atualizarModulo();
     }
 
-    function update(dataFirebase = window.ClimateData?.dataAtual?.()) {
-        if (!indicador || !popover) return;
+    function atualizarModulo(dataFirebase = window.ClimateData?.dataAtual?.()) {
+        if (!indicador || !janelaDetalhes) return;
 
-        const data = parseDataFirebase(dataFirebase);
-        if (!data) {
+        const dados = interpretarDadosFirebase(dataFirebase);
+        if (!dados) {
             renderizarIndisponivel();
             return;
         }
 
-        const estado = obterEstadoDaEstacao(data);
+        const estado = obterEstadoDaEstacao(dados);
         const descricao = `${estado.estacao.nome}: começa em ${formatarDataCompleta(estado.estacao.inicio)}.`;
 
         indicador.className = `season-indicator season-indicator--${estado.estacao.chave}`;
@@ -69,8 +69,8 @@
         const valor = indicador.querySelector(".season-indicator__value");
         if (valor) valor.textContent = "--";
 
-        popover.hidden = true;
-        popover.innerHTML = `
+        janelaDetalhes.hidden = true;
+        janelaDetalhes.innerHTML = `
             <div class="season-header-popover__header">
                 <span>Estação do ano</span>
                 <strong>--</strong>
@@ -80,7 +80,7 @@
     }
 
     function renderizarPopover(estado) {
-        popover.innerHTML = `
+        janelaDetalhes.innerHTML = `
             <div class="season-header-popover__header">
                 <span>Estação do ano</span>
                 <strong>${estado.estacao.nome}</strong>
@@ -97,12 +97,12 @@
     }
 
     function alternarPopover() {
-        if (!indicador || !popover) return;
+        if (!indicador || !janelaDetalhes) return;
 
-        if (popover.hidden) {
+        if (janelaDetalhes.hidden) {
             window.dispatchEvent(new CustomEvent("header-popover-open", { detail: { source: "season" } }));
-            update();
-            popover.hidden = false;
+            atualizarModulo();
+            janelaDetalhes.hidden = false;
             indicador.setAttribute("aria-expanded", "true");
         } else {
             fecharPopover();
@@ -110,15 +110,15 @@
     }
 
     function fecharPopover() {
-        if (!indicador || !popover) return;
-        popover.hidden = true;
+        if (!indicador || !janelaDetalhes) return;
+        janelaDetalhes.hidden = true;
         indicador.setAttribute("aria-expanded", "false");
     }
 
-    function obterEstadoDaEstacao(data) {
-        const ano = data.getFullYear();
+    function obterEstadoDaEstacao(dados) {
+        const ano = dados.getFullYear();
         const inicioVeraoAtual = new Date(ano, 11, 21);
-        const anoFimCiclo = data >= inicioVeraoAtual ? ano + 1 : ano;
+        const anoFimCiclo = dados >= inicioVeraoAtual ? ano + 1 : ano;
         const estacoes = ESTACOES_BASE.map(estacao => ({
             ...estacao,
             inicio: new Date(estacao.chave === "verao" ? anoFimCiclo - 1 : anoFimCiclo, estacao.mes, estacao.dia),
@@ -126,13 +126,13 @@
         const proximoVerao = { ...ESTACOES_BASE[0], inicio: new Date(anoFimCiclo, 11, 21) };
         const indiceAtual = estacoes.findIndex((estacao, indice) => {
             const proxima = estacoes[indice + 1] || proximoVerao;
-            return data >= estacao.inicio && data < proxima.inicio;
+            return dados >= estacao.inicio && dados < proxima.inicio;
         });
         const indiceSeguro = indiceAtual >= 0 ? indiceAtual : 0;
         const estacao = estacoes[indiceSeguro];
         const proxima = estacoes[indiceSeguro + 1] || proximoVerao;
         const duracao = proxima.inicio - estacao.inicio || 1;
-        const progressoSegmento = Math.min(1, Math.max(0, (data - estacao.inicio) / duracao));
+        const progressoSegmento = Math.min(1, Math.max(0, (dados - estacao.inicio) / duracao));
         const progressoAno = (indiceSeguro * 25) + (progressoSegmento * 25);
 
         return {
@@ -143,28 +143,28 @@
         };
     }
 
-    function getState(dataFirebase = window.ClimateData?.dataAtual?.()) {
-        const data = parseDataFirebase(dataFirebase);
-        return data ? obterEstadoDaEstacao(data) : null;
+    function obterEstado(dataFirebase = window.ClimateData?.dataAtual?.()) {
+        const dados = interpretarDadosFirebase(dataFirebase);
+        return dados ? obterEstadoDaEstacao(dados) : null;
     }
 
-    function parseDataFirebase(valor) {
+    function interpretarDadosFirebase(valor) {
         if (window.ClimateData?.parseFirebaseDate && valor) {
-            const data = window.ClimateData.parseFirebaseDate(valor);
-            if (data instanceof Date && !Number.isNaN(data.getTime())) return data;
+            const dados = window.ClimateData.parseFirebaseDate(valor);
+            if (dados instanceof Date && !Number.isNaN(dados.getTime())) return dados;
         }
 
         const dataAtual = new Date();
         return Number.isNaN(dataAtual.getTime()) ? null : dataAtual;
     }
 
-    function formatarDataCompleta(data) {
-        return `${String(data.getDate()).padStart(2, "0")}/${String(data.getMonth() + 1).padStart(2, "0")}/${data.getFullYear()}`;
+    function formatarDataCompleta(dados) {
+        return `${String(dados.getDate()).padStart(2, "0")}/${String(dados.getMonth() + 1).padStart(2, "0")}/${dados.getFullYear()}`;
     }
 
     window.ClimateSeason = {
-        setup,
-        update,
-        getState,
+        setup: configurarModulo,
+        update: atualizarModulo,
+        getState: obterEstado,
     };
 })();

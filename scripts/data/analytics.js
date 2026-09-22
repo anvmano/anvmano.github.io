@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-    const STATS_CONFIG = {
+    const CONFIGURACAO_ESTATISTICAS = {
         quarto: {
             containerId: "statsQuarto",
             metrics: [
@@ -30,80 +30,80 @@
         },
     };
 
-    function renderStats(type, data, selectedDate) {
-        const config = STATS_CONFIG[type];
-        if (!config) return;
+    function renderizarEstatisticas(tipo, dados, dataSelecionada) {
+        const configuracao = CONFIGURACAO_ESTATISTICAS[tipo];
+        if (!configuracao) return;
 
-        const el = document.getElementById(config.containerId);
-        if (!el) return;
+        const elementoDom = document.getElementById(configuracao.containerId);
+        if (!elementoDom) return;
 
-        el.innerHTML = "";
-        const hasAnyData = Object.keys(data || {}).length > 0;
-        if (!hasAnyData) {
-            const message = document.createElement("p");
-            message.className = "state-message";
-            message.innerText = `Sem resumo disponível para ${formatFirebaseDate(selectedDate)}.`;
-            el.appendChild(message);
+        elementoDom.innerHTML = "";
+        const temAlgumDado = Object.keys(dados || {}).length > 0;
+        if (!temAlgumDado) {
+            const mensagem = document.createElement("p");
+            mensagem.className = "state-message";
+            mensagem.innerText = `Sem resumo disponível para ${formatarDataFirebaseRelatorio(dataSelecionada)}.`;
+            elementoDom.appendChild(mensagem);
             return;
         }
 
-        config.metrics.forEach(metric => {
-            const qualidade = window.ClimateDataQuality?.analisarSerie?.(data, metric.key) || null;
-            const values = qualidade?.valores || extractMetricValues(data, metric.key);
-            const stats = calculateStats(values, qualidade);
-            el.appendChild(createStatsCard(metric, stats, qualidade));
-            window.ClimateDataQuality?.aplicarAoGrafico?.(metric.chartContainerId, qualidade);
+        configuracao.metrics.forEach(metrica => {
+            const qualidade = window.ClimateDataQuality?.analisarSerie?.(dados, metrica.key) || null;
+            const valores = qualidade?.valores || extrairValoresMetrica(dados, metrica.key);
+            const estatisticas = calcularEstatisticas(valores, qualidade);
+            elementoDom.appendChild(criarCardEstatisticas(metrica, estatisticas, qualidade));
+            window.ClimateDataQuality?.aplicarAoGrafico?.(metrica.chartContainerId, qualidade);
         });
     }
 
-    function extractMetricValues(data, metricKey) {
-        const values = [];
+    function extrairValoresMetrica(dados, chaveMetrica) {
+        const valores = [];
 
-        for (const date of Object.keys(data || {}).sort((a, b) => ClimateData.parseFirebaseDate(a) - ClimateData.parseFirebaseDate(b))) {
-            const dateData = data[date];
-            if (!dateData || typeof dateData !== "object") continue;
+        for (const dataReferencia of Object.keys(dados || {}).sort((a, b) => ClimateData.parseFirebaseDate(a) - ClimateData.parseFirebaseDate(b))) {
+            const dadosData = dados[dataReferencia];
+            if (!dadosData || typeof dadosData !== "object") continue;
 
-            const times = Object.keys(dateData).sort();
-            for (const time of times) {
-                const timeData = dateData[time];
-                if (!timeData || typeof timeData !== "object") continue;
+            const horarios = Object.keys(dadosData).sort();
+            for (const horario of horarios) {
+                const dadosHorario = dadosData[horario];
+                if (!dadosHorario || typeof dadosHorario !== "object") continue;
 
-                for (const itemKey of Object.keys(timeData).sort()) {
-                    const item = timeData[itemKey];
+                for (const chaveItem of Object.keys(dadosHorario).sort()) {
+                    const item = dadosHorario[chaveItem];
                     if (!item || typeof item !== "object") continue;
 
-                    const value = ClimateData.normalizeMeasurementValue(metricKey, item[metricKey]);
-                    if (value !== null) values.push(value);
+                    const valor = ClimateData.normalizeMeasurementValue(chaveMetrica, item[chaveMetrica]);
+                    if (valor !== null) valores.push(valor);
                 }
             }
         }
 
-        return values;
+        return valores;
     }
 
-    function calculateStats(values, qualidade = null) {
-        if (!values.length) return null;
+    function calcularEstatisticas(valores, qualidade = null) {
+        if (!valores.length) return null;
 
-        const first = values[0];
-        const last = values[values.length - 1];
-        const min = Math.min(...values);
-        const max = Math.max(...values);
-        const avg = values.reduce((sum, value) => sum + value, 0) / values.length;
-        const delta = values.length >= 2 ? last - first : null;
+        const primeiro = valores[0];
+        const ultimo = valores[valores.length - 1];
+        const minimo = Math.min(...valores);
+        const maximo = Math.max(...valores);
+        const mediaCalculada = valores.reduce((soma, valor) => soma + valor, 0) / valores.length;
+        const delta = valores.length >= 2 ? ultimo - primeiro : null;
 
         return {
-            avg,
-            min,
-            max,
+            avg: mediaCalculada,
+            min: minimo,
+            max: maximo,
             delta,
-            trend: getTrend(delta),
-            leiturasValidas: qualidade?.leiturasValidas ?? values.length,
-            leiturasEsperadas: qualidade?.leiturasEsperadas ?? values.length,
+            trend: obterTendencia(delta),
+            leiturasValidas: qualidade?.leiturasValidas ?? valores.length,
+            leiturasEsperadas: qualidade?.leiturasEsperadas ?? valores.length,
             qualidade,
         };
     }
 
-    function getTrend(delta) {
+    function obterTendencia(delta) {
         if (!Number.isFinite(delta)) {
             return { label: "Dados insuficientes", className: "insufficient", symbol: "!" };
         }
@@ -116,14 +116,14 @@
         return { label: "Caindo", className: "down", symbol: "↘" };
     }
 
-    function createStatsCard(metric, stats, qualidade = null) {
+    function criarCardEstatisticas(metrica, estatisticas, qualidade = null) {
         const card = document.createElement("article");
         card.className = "stats-card";
 
-        if (!stats) {
+        if (!estatisticas) {
             card.innerHTML = `
                 <div class="stats-card__header">
-                    <span class="stats-card__label">${metric.label}</span>
+                    <span class="stats-card__label">${metrica.label}</span>
                     <span class="stats-card__trend stats-card__trend--stable">--</span>
                 </div>
                 <strong class="stats-card__value">--</strong>
@@ -137,24 +137,24 @@
             return card;
         }
 
-        const qualidadeEstatistica = stats.qualidade;
+        const qualidadeEstatistica = estatisticas.qualidade;
         const tendencia = qualidadeEstatistica?.nivel === "critica"
             ? { label: "Leitura crítica", className: "critical", symbol: "!" }
             : qualidadeEstatistica?.nivel === "suspeita"
                 ? { label: "Verificar sensor", className: "suspicious", symbol: "!" }
-                : stats.trend;
+                : estatisticas.trend;
         const resumoQualidade = montarEstadoOperacional(qualidadeEstatistica);
 
         card.innerHTML = `
             <div class="stats-card__header">
-                <span class="stats-card__label">${metric.label}</span>
+                <span class="stats-card__label">${metrica.label}</span>
                 <span class="stats-card__trend stats-card__trend--${tendencia.className}">${tendencia.symbol} ${tendencia.label}</span>
             </div>
-            <strong class="stats-card__value">${formatStat(stats.avg, metric.suffix)}</strong>
+            <strong class="stats-card__value">${formatarEstatistica(estatisticas.avg, metrica.suffix)}</strong>
             <dl class="stats-card__details">
-                <div><dt>Mín</dt><dd>${formatStat(stats.min, metric.suffix)}</dd></div>
-                <div><dt>Máx</dt><dd>${formatStat(stats.max, metric.suffix)}</dd></div>
-                <div><dt>Delta</dt><dd>${Number.isFinite(stats.delta) ? formatDelta(stats.delta, metric.suffix) : "--"}</dd></div>
+                <div><dt>Mín</dt><dd>${formatarEstatistica(estatisticas.min, metrica.suffix)}</dd></div>
+                <div><dt>Máx</dt><dd>${formatarEstatistica(estatisticas.max, metrica.suffix)}</dd></div>
+                <div><dt>Delta</dt><dd>${Number.isFinite(estatisticas.delta) ? formatarDiferenca(estatisticas.delta, metrica.suffix) : "--"}</dd></div>
             </dl>
             ${resumoQualidade}
         `;
@@ -196,329 +196,329 @@
         return `${String(hora).padStart(2, "0")}:${String(minuto).padStart(2, "0")}`;
     }
 
-    const DEFAULT_ADVANCED_CONTAINERS = {
+    const RECIPIENTES_VISUALIZACOES_PADRAO = {
         monthlyCalendar: "monthlyClimateCalendar",
         hourlyHeatmap: "hourlyHeatmap",
         weeklyHeatmap: "weeklyHeatmap",
     };
 
-    function renderAdvancedClimateViews(data, selectedDate, options = {}) {
-        const dateParts = parseSelectedDate(selectedDate);
-        if (!dateParts) return;
+    function renderizarVisualizacoesClimaticasAvancadas(dados, dataSelecionada, opcoes = {}) {
+        const partesData = interpretarDataSelecionada(dataSelecionada);
+        if (!partesData) return;
 
-        const metricKey = options.metricKey || "Temperatura";
-        const containers = {
-            ...DEFAULT_ADVANCED_CONTAINERS,
-            ...(options.containers || {}),
+        const chaveMetrica = opcoes.metricKey || "Temperatura";
+        const recipientes = {
+            ...RECIPIENTES_VISUALIZACOES_PADRAO,
+            ...(opcoes.containers || {}),
         };
 
-        if (visualizacoesEstaoRecolhidas(containers)) return;
+        if (visualizacoesEstaoRecolhidas(recipientes)) return;
 
-        const normalizedDate = dateParts.firebaseDate;
-        const monthRecords = extractClimateRecordsForSelectedMonth(data, metricKey, normalizedDate);
-        const dayRecords = monthRecords.filter(record => record.firebaseDate === normalizedDate);
+        const dataNormalizada = partesData.firebaseDate;
+        const registrosMes = extrairRegistrosClimaticosMesSelecionado(dados, chaveMetrica, dataNormalizada);
+        const registrosDia = registrosMes.filter(registro => registro.firebaseDate === dataNormalizada);
 
         try {
-            renderMonthlyClimateCalendar(monthRecords, normalizedDate, containers.monthlyCalendar);
-            renderHourlyHeatmap(dayRecords, normalizedDate, containers.hourlyHeatmap);
-            renderWeeklyHeatmap(monthRecords, normalizedDate, containers.weeklyHeatmap);
-        } catch (error) {
-            window.ClimateDiagnostics?.depurar("Falha ao renderizar visualizações climáticas avançadas.", error);
+            renderizarCalendarioClimaticoMensal(registrosMes, dataNormalizada, recipientes.monthlyCalendar);
+            renderizarMapaCalorHorario(registrosDia, dataNormalizada, recipientes.hourlyHeatmap);
+            renderizarMapaCalorSemanal(registrosMes, dataNormalizada, recipientes.weeklyHeatmap);
+        } catch (erro) {
+            window.ClimateDiagnostics?.depurar("Falha ao renderizar visualizações climáticas avançadas.", erro);
         }
     }
 
-    function visualizacoesEstaoRecolhidas(containers) {
-        const ids = [containers.monthlyCalendar, containers.hourlyHeatmap, containers.weeklyHeatmap];
-        const container = ids
+    function visualizacoesEstaoRecolhidas(recipientes) {
+        const ids = [recipientes.monthlyCalendar, recipientes.hourlyHeatmap, recipientes.weeklyHeatmap];
+        const recipiente = ids
             .map(id => document.getElementById(id))
             .find(Boolean);
-        const section = container?.closest?.(".collapsible-section");
-        return !!section?.classList.contains("is-collapsed");
+        const secao = recipiente?.closest?.(".collapsible-section");
+        return !!secao?.classList.contains("is-collapsed");
     }
 
-    function extractClimateRecordsForSelectedMonth(data, metricKey, selectedDate) {
-        const dateParts = parseSelectedDate(selectedDate);
-        if (!dateParts) return [];
+    function extrairRegistrosClimaticosMesSelecionado(dados, chaveMetrica, dataSelecionada) {
+        const partesData = interpretarDataSelecionada(dataSelecionada);
+        if (!partesData) return [];
 
-        const selectedMonth = pad(dateParts.month);
-        const selectedYear = String(dateParts.year);
-        const records = [];
+        const mesSelecionado = preencherDigitos(partesData.month);
+        const anoSelecionado = String(partesData.year);
+        const registros = [];
 
-        for (const firebaseDate of Object.keys(data || {})) {
-            const [day, month, year] = firebaseDate.split("-");
-            if (month !== selectedMonth || year !== selectedYear) continue;
+        for (const dataFirebase of Object.keys(dados || {})) {
+            const [dia, mes, ano] = dataFirebase.split("-");
+            if (mes !== mesSelecionado || ano !== anoSelecionado) continue;
 
-            const dateData = data[firebaseDate];
-            if (!dateData || typeof dateData !== "object") continue;
+            const dadosData = dados[dataFirebase];
+            if (!dadosData || typeof dadosData !== "object") continue;
 
-            for (const time of Object.keys(dateData).sort()) {
-                const timeData = dateData[time];
-                if (!timeData || typeof timeData !== "object") continue;
+            for (const horario of Object.keys(dadosData).sort()) {
+                const dadosHorario = dadosData[horario];
+                if (!dadosHorario || typeof dadosHorario !== "object") continue;
 
-                const [hourPart, minutePart = "0"] = time.split("-");
-                const hour = Number(hourPart);
-                const minute = Number(minutePart);
-                if (!Number.isFinite(hour)) continue;
+                const [parteHora, parteMinuto = "0"] = horario.split("-");
+                const hora = Number(parteHora);
+                const minuto = Number(parteMinuto);
+                if (!Number.isFinite(hora)) continue;
 
-                for (const itemKey of Object.keys(timeData).sort()) {
-                    const item = timeData[itemKey];
+                for (const chaveItem of Object.keys(dadosHorario).sort()) {
+                    const item = dadosHorario[chaveItem];
                     if (!item || typeof item !== "object") continue;
 
-                    const value = ClimateData.normalizeMeasurementValue(metricKey, item[metricKey]);
-                    if (value === null) continue;
+                    const valor = ClimateData.normalizeMeasurementValue(chaveMetrica, item[chaveMetrica]);
+                    if (valor === null) continue;
 
-                    records.push({
-                        firebaseDate,
-                        day: Number(day),
-                        month: Number(month),
-                        year: Number(year),
-                        hour,
-                        minute: Number.isFinite(minute) ? minute : 0,
-                        value,
+                    registros.push({
+                        firebaseDate: dataFirebase,
+                        day: Number(dia),
+                        month: Number(mes),
+                        year: Number(ano),
+                        hour: hora,
+                        minute: Number.isFinite(minuto) ? minuto : 0,
+                        value: valor,
                     });
                 }
             }
         }
 
-        return records;
+        return registros;
     }
 
-    function renderMonthlyClimateCalendar(records, selectedDate, containerId) {
-        const el = document.getElementById(containerId);
-        if (!el) return;
+    function renderizarCalendarioClimaticoMensal(registros, dataSelecionada, idRecipiente) {
+        const elementoDom = document.getElementById(idRecipiente);
+        if (!elementoDom) return;
 
-        el.innerHTML = "";
+        elementoDom.innerHTML = "";
 
-        const dateParts = parseSelectedDate(selectedDate);
-        if (!dateParts) return;
+        const partesData = interpretarDataSelecionada(dataSelecionada);
+        if (!partesData) return;
 
-        const { day: selectedDay, month: selectedMonth, year: selectedYear } = dateParts;
-        const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
-        const firstWeekday = new Date(selectedYear, selectedMonth - 1, 1).getDay();
-        const valuesByDay = groupAverage(records, record => record.day);
-        const scale = getValueScale(Object.values(valuesByDay));
+        const { day: diaSelecionado, month: mesSelecionado, year: anoSelecionado } = partesData;
+        const diasNoMes = new Date(anoSelecionado, mesSelecionado, 0).getDate();
+        const primeiroDiaSemana = new Date(anoSelecionado, mesSelecionado - 1, 1).getDay();
+        const valoresPorDia = mediaGrupo(registros, registro => registro.day);
+        const escala = obterEscalaValores(Object.values(valoresPorDia));
 
-        addWeekdayHeaders(el);
+        adicionarCabecalhosDiasSemana(elementoDom);
 
-        for (let i = 0; i < firstWeekday; i++) {
-            const empty = document.createElement("span");
-            empty.className = "heatmap-cell heatmap-cell--empty";
-            el.appendChild(empty);
+        for (let i = 0; i < primeiroDiaSemana; i++) {
+            const vazio = document.createElement("span");
+            vazio.className = "heatmap-cell heatmap-cell--empty";
+            elementoDom.appendChild(vazio);
         }
 
-        for (let day = 1; day <= daysInMonth; day++) {
-            const value = valuesByDay[day];
-            const cell = document.createElement("span");
-            cell.className = "heatmap-cell calendar-heatmap__day";
-            if (day === selectedDay) cell.classList.add("is-selected");
-            cell.style.backgroundColor = getHeatColor(value, scale);
-            cell.innerHTML = `<span>${day}</span><strong>${formatHeatValue(value)}</strong>`;
-            cell.title = value == null ? `${pad(day)}/${pad(selectedMonth)} sem dados` : `${pad(day)}/${pad(selectedMonth)} média ${value.toFixed(1)}°C`;
-            el.appendChild(cell);
-        }
-    }
-
-    function renderHourlyHeatmap(records, selectedDate, containerId) {
-        const el = document.getElementById(containerId);
-        if (!el) return;
-
-        el.innerHTML = "";
-        const valuesByHour = groupAverage(records, record => record.hour);
-        const scale = getValueScale(Object.values(valuesByHour));
-        const today = new Date();
-        const shouldHighlightCurrentHour = parseSelectedDate(selectedDate)?.firebaseDate === ClimateData.dataAtual();
-        const currentHour = today.getHours();
-
-        for (let hour = 0; hour < 24; hour++) {
-            const value = valuesByHour[hour];
-            const cell = document.createElement("span");
-            cell.className = "heatmap-cell hourly-heatmap__cell";
-            if (shouldHighlightCurrentHour && hour === currentHour) cell.classList.add("is-selected");
-            cell.style.backgroundColor = getHeatColor(value, scale);
-            cell.innerHTML = `<span>${pad(hour)}h</span><strong>${formatHeatValue(value)}</strong>`;
-            cell.title = value == null ? `${pad(hour)}h sem dados` : `${pad(hour)}h média ${value.toFixed(1)}°C`;
-            el.appendChild(cell);
+        for (let dia = 1; dia <= diasNoMes; dia++) {
+            const valor = valoresPorDia[dia];
+            const celula = document.createElement("span");
+            celula.className = "heatmap-cell calendar-heatmap__day";
+            if (dia === diaSelecionado) celula.classList.add("is-selected");
+            celula.style.backgroundColor = obterCorMapaCalor(valor, escala);
+            celula.innerHTML = `<span>${dia}</span><strong>${formatarValorMapaCalor(valor)}</strong>`;
+            celula.title = valor == null ? `${preencherDigitos(dia)}/${preencherDigitos(mesSelecionado)} sem dados` : `${preencherDigitos(dia)}/${preencherDigitos(mesSelecionado)} média ${valor.toFixed(1)}°C`;
+            elementoDom.appendChild(celula);
         }
     }
 
-    function renderWeeklyHeatmap(records, selectedDate, containerId) {
-        const el = document.getElementById(containerId);
-        if (!el) return;
+    function renderizarMapaCalorHorario(registros, dataSelecionada, idRecipiente) {
+        const elementoDom = document.getElementById(idRecipiente);
+        if (!elementoDom) return;
 
-        el.innerHTML = "";
-        const dateParts = parseSelectedDate(selectedDate);
-        if (!dateParts) return;
+        elementoDom.innerHTML = "";
+        const valoresPorHora = mediaGrupo(registros, registro => registro.hour);
+        const escala = obterEscalaValores(Object.values(valoresPorHora));
+        const hoje = new Date();
+        const deveDestacarHoraAtual = interpretarDataSelecionada(dataSelecionada)?.firebaseDate === ClimateData.dataAtual();
+        const horaAtual = hoje.getHours();
 
-        const weekRecords = filterRecordsFromWeekStart(records, dateParts);
-        const values = {};
-        weekRecords.forEach(record => {
-            const weekday = new Date(record.year, record.month - 1, record.day).getDay();
-            const key = `${weekday}-${record.hour}`;
-            if (!values[key]) values[key] = [];
-            values[key].push(record.value);
+        for (let hora = 0; hora < 24; hora++) {
+            const valor = valoresPorHora[hora];
+            const celula = document.createElement("span");
+            celula.className = "heatmap-cell hourly-heatmap__cell";
+            if (deveDestacarHoraAtual && hora === horaAtual) celula.classList.add("is-selected");
+            celula.style.backgroundColor = obterCorMapaCalor(valor, escala);
+            celula.innerHTML = `<span>${preencherDigitos(hora)}h</span><strong>${formatarValorMapaCalor(valor)}</strong>`;
+            celula.title = valor == null ? `${preencherDigitos(hora)}h sem dados` : `${preencherDigitos(hora)}h média ${valor.toFixed(1)}°C`;
+            elementoDom.appendChild(celula);
+        }
+    }
+
+    function renderizarMapaCalorSemanal(registros, dataSelecionada, idRecipiente) {
+        const elementoDom = document.getElementById(idRecipiente);
+        if (!elementoDom) return;
+
+        elementoDom.innerHTML = "";
+        const partesData = interpretarDataSelecionada(dataSelecionada);
+        if (!partesData) return;
+
+        const registrosSemana = filtrarRegistrosDesdeInicioSemana(registros, partesData);
+        const valores = {};
+        registrosSemana.forEach(registro => {
+            const diaSemana = new Date(registro.year, registro.month - 1, registro.day).getDay();
+            const chave = `${diaSemana}-${registro.hour}`;
+            if (!valores[chave]) valores[chave] = [];
+            valores[chave].push(registro.value);
         });
 
-        const averaged = Object.fromEntries(
-            Object.entries(values).map(([key, valuesForKey]) => [key, average(valuesForKey)])
+        const mediasCalculadas = Object.fromEntries(
+            Object.entries(valores).map(([chave, valoresDaChave]) => [chave, media(valoresDaChave)])
         );
-        const scale = getValueScale(Object.values(averaged));
-        const weekLabels = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-        const today = new Date();
-        const shouldHighlightCurrentSlot = dateParts.firebaseDate === ClimateData.dataAtual();
-        const currentWeekday = today.getDay();
-        const currentHour = today.getHours();
+        const escala = obterEscalaValores(Object.values(mediasCalculadas));
+        const rotulosSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+        const hoje = new Date();
+        const deveDestacarFaixaAtual = partesData.firebaseDate === ClimateData.dataAtual();
+        const diaSemanaAtual = hoje.getDay();
+        const horaAtual = hoje.getHours();
 
-        const corner = document.createElement("span");
-        corner.className = "weekly-heatmap__axis weekly-heatmap__axis--corner";
-        el.appendChild(corner);
+        const canto = document.createElement("span");
+        canto.className = "weekly-heatmap__axis weekly-heatmap__axis--corner";
+        elementoDom.appendChild(canto);
 
-        for (let hour = 0; hour < 24; hour++) {
-            const label = document.createElement("span");
-            label.className = "weekly-heatmap__axis";
-            label.textContent = `${hour}h`;
-            el.appendChild(label);
+        for (let hora = 0; hora < 24; hora++) {
+            const rotulo = document.createElement("span");
+            rotulo.className = "weekly-heatmap__axis";
+            rotulo.textContent = `${hora}h`;
+            elementoDom.appendChild(rotulo);
         }
 
-        for (let weekday = 0; weekday < 7; weekday++) {
-            const rowLabel = document.createElement("span");
-            rowLabel.className = "weekly-heatmap__axis weekly-heatmap__day";
-            rowLabel.textContent = weekLabels[weekday];
-            el.appendChild(rowLabel);
+        for (let diaSemana = 0; diaSemana < 7; diaSemana++) {
+            const rotuloLinha = document.createElement("span");
+            rotuloLinha.className = "weekly-heatmap__axis weekly-heatmap__day";
+            rotuloLinha.textContent = rotulosSemana[diaSemana];
+            elementoDom.appendChild(rotuloLinha);
 
-            for (let hour = 0; hour < 24; hour++) {
-                const value = averaged[`${weekday}-${hour}`];
-                const cell = document.createElement("span");
-                cell.className = "heatmap-cell weekly-heatmap__cell";
-                if (shouldHighlightCurrentSlot && weekday === currentWeekday && hour === currentHour) {
-                    cell.classList.add("is-selected");
+            for (let hora = 0; hora < 24; hora++) {
+                const valor = mediasCalculadas[`${diaSemana}-${hora}`];
+                const celula = document.createElement("span");
+                celula.className = "heatmap-cell weekly-heatmap__cell";
+                if (deveDestacarFaixaAtual && diaSemana === diaSemanaAtual && hora === horaAtual) {
+                    celula.classList.add("is-selected");
                 }
-                cell.style.backgroundColor = getHeatColor(value, scale);
-                cell.title = value == null ? `${weekLabels[weekday]} ${hour}h sem dados` : `${weekLabels[weekday]} ${hour}h média ${value.toFixed(1)}°C`;
-                el.appendChild(cell);
+                celula.style.backgroundColor = obterCorMapaCalor(valor, escala);
+                celula.title = valor == null ? `${rotulosSemana[diaSemana]} ${hora}h sem dados` : `${rotulosSemana[diaSemana]} ${hora}h média ${valor.toFixed(1)}°C`;
+                elementoDom.appendChild(celula);
             }
         }
     }
 
-    function filterRecordsFromWeekStart(records, dateParts) {
-        const weekStart = new Date(dateParts.year, dateParts.month - 1, dateParts.day);
-        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-        weekStart.setHours(0, 0, 0, 0);
+    function filtrarRegistrosDesdeInicioSemana(registros, partesData) {
+        const inicioSemana = new Date(partesData.year, partesData.month - 1, partesData.day);
+        inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
+        inicioSemana.setHours(0, 0, 0, 0);
 
-        const selectedDateEnd = new Date(dateParts.year, dateParts.month - 1, dateParts.day);
-        selectedDateEnd.setHours(23, 59, 59, 999);
+        const fimDataSelecionada = new Date(partesData.year, partesData.month - 1, partesData.day);
+        fimDataSelecionada.setHours(23, 59, 59, 999);
 
-        return records.filter(record => {
-            const recordDate = new Date(record.year, record.month - 1, record.day);
-            recordDate.setHours(12, 0, 0, 0);
-            return recordDate >= weekStart && recordDate <= selectedDateEnd;
+        return registros.filter(registro => {
+            const dataRegistro = new Date(registro.year, registro.month - 1, registro.day);
+            dataRegistro.setHours(12, 0, 0, 0);
+            return dataRegistro >= inicioSemana && dataRegistro <= fimDataSelecionada;
         });
     }
 
-    function parseSelectedDate(value) {
-        const text = String(value || "").trim();
-        let match = text.match(/^(\d{2})-(\d{2})-(\d{4})$/);
-        if (match) return buildDateParts(match[1], match[2], match[3]);
+    function interpretarDataSelecionada(valor) {
+        const texto = String(valor || "").trim();
+        let correspondencia = texto.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+        if (correspondencia) return montarPartesData(correspondencia[1], correspondencia[2], correspondencia[3]);
 
-        match = text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-        if (match) return buildDateParts(match[1], match[2], match[3]);
+        correspondencia = texto.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (correspondencia) return montarPartesData(correspondencia[1], correspondencia[2], correspondencia[3]);
 
-        match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        if (match) return buildDateParts(match[3], match[2], match[1]);
+        correspondencia = texto.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (correspondencia) return montarPartesData(correspondencia[3], correspondencia[2], correspondencia[1]);
 
         return null;
     }
 
-    function buildDateParts(dayText, monthText, yearText) {
-        const day = Number(dayText);
-        const month = Number(monthText);
-        const year = Number(yearText);
-        if (!Number.isInteger(day) || !Number.isInteger(month) || !Number.isInteger(year)) return null;
-        if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    function montarPartesData(textoDia, textoMes, textoAno) {
+        const dia = Number(textoDia);
+        const mes = Number(textoMes);
+        const ano = Number(textoAno);
+        if (!Number.isInteger(dia) || !Number.isInteger(mes) || !Number.isInteger(ano)) return null;
+        if (mes < 1 || mes > 12 || dia < 1 || dia > 31) return null;
 
         return {
-            day,
-            month,
-            year,
-            firebaseDate: `${pad(day)}-${pad(month)}-${year}`,
+            day: dia,
+            month: mes,
+            year: ano,
+            firebaseDate: `${preencherDigitos(dia)}-${preencherDigitos(mes)}-${ano}`,
         };
     }
 
-    function addWeekdayHeaders(el) {
-        ["D", "S", "T", "Q", "Q", "S", "S"].forEach(label => {
-            const header = document.createElement("span");
-            header.className = "calendar-heatmap__weekday";
-            header.textContent = label;
-            el.appendChild(header);
+    function adicionarCabecalhosDiasSemana(elementoDom) {
+        ["D", "S", "T", "Q", "Q", "S", "S"].forEach(rotulo => {
+            const cabecalho = document.createElement("span");
+            cabecalho.className = "calendar-heatmap__weekday";
+            cabecalho.textContent = rotulo;
+            elementoDom.appendChild(cabecalho);
         });
     }
 
-    function groupAverage(records, keyFn) {
-        const grouped = {};
-        records.forEach(record => {
-            const key = keyFn(record);
-            if (!grouped[key]) grouped[key] = [];
-            grouped[key].push(record.value);
+    function mediaGrupo(registros, obterChave) {
+        const agrupado = {};
+        registros.forEach(registro => {
+            const chave = obterChave(registro);
+            if (!agrupado[chave]) agrupado[chave] = [];
+            agrupado[chave].push(registro.value);
         });
 
         return Object.fromEntries(
-            Object.entries(grouped).map(([key, values]) => [key, average(values)])
+            Object.entries(agrupado).map(([chave, valores]) => [chave, media(valores)])
         );
     }
 
-    function average(values) {
-        return values.reduce((sum, value) => sum + value, 0) / values.length;
+    function media(valores) {
+        return valores.reduce((soma, valor) => soma + valor, 0) / valores.length;
     }
 
-    function getValueScale(values) {
-        const validValues = values.filter(Number.isFinite);
-        if (!validValues.length) return { min: 20, max: 30 };
-        const min = Math.min(...validValues);
-        const max = Math.max(...validValues);
-        return min === max ? { min: min - 1, max: max + 1 } : { min, max };
+    function obterEscalaValores(valores) {
+        const valoresValidos = valores.filter(Number.isFinite);
+        if (!valoresValidos.length) return { min: 20, max: 30 };
+        const minimo = Math.min(...valoresValidos);
+        const maximo = Math.max(...valoresValidos);
+        return minimo === maximo ? { min: minimo - 1, max: maximo + 1 } : { min: minimo, max: maximo };
     }
 
-    function getHeatColor(value, scale) {
-        if (!Number.isFinite(value)) return "rgba(71, 85, 105, 0.18)";
+    function obterCorMapaCalor(valor, escala) {
+        if (!Number.isFinite(valor)) return "rgba(71, 85, 105, 0.18)";
 
-        const ratio = Math.min(1, Math.max(0, (value - scale.min) / (scale.max - scale.min)));
-        if (ratio < 0.5) {
-            const local = ratio / 0.5;
-            return interpolateColor([56, 189, 248], [52, 211, 153], local);
+        const proporcao = Math.min(1, Math.max(0, (valor - escala.min) / (escala.max - escala.min)));
+        if (proporcao < 0.5) {
+            const proporcaoInferior = proporcao / 0.5;
+            return interpolarCor([56, 189, 248], [52, 211, 153], proporcaoInferior);
         }
 
-        const local = (ratio - 0.5) / 0.5;
-        return interpolateColor([52, 211, 153], [251, 113, 133], local);
+        const localAtual = (proporcao - 0.5) / 0.5;
+        return interpolarCor([52, 211, 153], [251, 113, 133], localAtual);
     }
 
-    function interpolateColor(from, to, ratio) {
-        const color = from.map((start, index) => Math.round(start + (to[index] - start) * ratio));
-        return `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.72)`;
+    function interpolarCor(de, ate, proporcao) {
+        const cor = de.map((inicio, indice) => Math.round(inicio + (ate[indice] - inicio) * proporcao));
+        return `rgba(${cor[0]}, ${cor[1]}, ${cor[2]}, 0.72)`;
     }
 
-    function formatStat(value, suffix) {
-        return `${value.toFixed(2)}${suffix}`;
+    function formatarEstatistica(valor, sufixo) {
+        return `${valor.toFixed(2)}${sufixo}`;
     }
 
-    function formatDelta(value, suffix) {
-        const sign = value > 0 ? "+" : "";
-        return `${sign}${value.toFixed(2)}${suffix}`;
+    function formatarDiferenca(valor, sufixo) {
+        const sinal = valor > 0 ? "+" : "";
+        return `${sinal}${valor.toFixed(2)}${sufixo}`;
     }
 
-    function formatFirebaseDate(date) {
-        return date ? date.replace(/-/g, "/") : "--";
+    function formatarDataFirebaseRelatorio(dataReferencia) {
+        return dataReferencia ? dataReferencia.replace(/-/g, "/") : "--";
     }
 
-    function formatHeatValue(value) {
-        return Number.isFinite(value) ? `${value.toFixed(1)}°` : "--";
+    function formatarValorMapaCalor(valor) {
+        return Number.isFinite(valor) ? `${valor.toFixed(1)}°` : "--";
     }
 
-    function pad(value) {
-        return String(value).padStart(2, "0");
+    function preencherDigitos(valor) {
+        return String(valor).padStart(2, "0");
     }
 
     window.ClimateAnalytics = {
-        renderStats,
-        renderAdvancedClimateViews,
-        calculateStats,
+        renderStats: renderizarEstatisticas,
+        renderAdvancedClimateViews: renderizarVisualizacoesClimaticasAvancadas,
+        calculateStats: calcularEstatisticas,
     };
 })();

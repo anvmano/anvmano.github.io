@@ -1,9 +1,9 @@
 'use strict';
 
 (function () {
-    const modules = window.ClimatePdfReportModules = window.ClimatePdfReportModules || {};
+    const modulos = window.ClimatePdfReportModules = window.ClimatePdfReportModules || {};
 
-    const TAB_CONFIG = {
+    const CONFIGURACAO_ABAS = {
         Tab0: {
             label: "Estação",
             dataKey: "solar",
@@ -57,7 +57,7 @@
         },
     };
 
-    modules.config = {
-        TAB_CONFIG,
+    modulos.config = {
+        TAB_CONFIG: CONFIGURACAO_ABAS,
     };
 })();

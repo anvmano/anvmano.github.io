@@ -1,17 +1,17 @@
 'use strict';
 
 (function () {
-    let contextoGetter = null;
+    let obterContextoAtual = null;
     let formatoSelecionado = "pdf";
     let carregamentoRelatorio = null;
     let ultimaTentativa = null;
 
-    function setup({ buttonId, formatName = "exportFormat", getContext } = {}) {
-        contextoGetter = getContext;
-        const botao = document.getElementById(buttonId);
+    function configurarModulo({ buttonId: idBotao, formatName: nomeFormato = "exportFormat", getContext: obterContextoModulo } = {}) {
+        obterContextoAtual = obterContextoModulo;
+        const botao = document.getElementById(idBotao);
         if (!botao) return;
 
-        configurarControlesFormato(botao, formatName);
+        configurarControlesFormato(botao, nomeFormato);
         botao.addEventListener("click", () => exportarAbaAtiva(botao));
         document.getElementById("btnRetryExport")?.addEventListener("click", () => ultimaTentativa?.());
     }
@@ -31,7 +31,7 @@
                 };
                 const exportador = await carregarExportador(formato);
                 if (controle.cancelado) return;
-                const contexto = contextoGetter ? contextoGetter() : {};
+                const contexto = obterContextoAtual ? obterContextoAtual() : {};
                 if (!window.ClimateContracts?.validarContextoRelatorio?.(contexto)) {
                     throw new TypeError("Contexto de exportação inválido.");
                 }
@@ -63,9 +63,9 @@
                     raizRenderizacao.remove();
                 }
             });
-        } catch (error) {
-            window.ClimateDiagnostics?.depurar("Erro ao exportar dados.", error);
-            const mensagem = error?.name === "TimeoutError"
+        } catch (erro) {
+            window.ClimateDiagnostics?.depurar("Erro ao exportar dados.", erro);
+            const mensagem = erro?.name === "TimeoutError"
                 ? "A exportação demorou além do esperado. Verifique a conexão e tente novamente."
                 : "Falha ao exportar. Verifique a conexão e tente novamente.";
             atualizarProgresso(mensagem, "error", true);
@@ -81,47 +81,47 @@
         const controle = { cancelado: false };
         return Promise.race([
             Promise.resolve().then(() => acao(controle)),
-            new Promise((resolve, reject) => {
+            new Promise((resolver, rejeitar) => {
                 temporizador = setTimeout(() => {
                     controle.cancelado = true;
                     const erro = new Error("Tempo limite da exportação excedido.");
                     erro.name = "TimeoutError";
-                    reject(erro);
+                    rejeitar(erro);
                 }, limite);
             }),
         ]).finally(() => clearTimeout(temporizador));
     }
 
     function atualizarProgresso(mensagem, tipo, permitirNovaTentativa = false) {
-        const feedback = document.getElementById("exportFeedback");
-        const status = document.getElementById("exportStatus");
+        const retornoVisual = document.getElementById("exportFeedback");
+        const estado = document.getElementById("exportStatus");
         const repetir = document.getElementById("btnRetryExport");
-        if (!feedback || !status) return;
-        feedback.hidden = false;
-        feedback.classList.toggle("is-error", tipo === "error");
-        feedback.setAttribute("role", tipo === "error" ? "alert" : "status");
-        status.textContent = mensagem;
+        if (!retornoVisual || !estado) return;
+        retornoVisual.hidden = false;
+        retornoVisual.classList.toggle("is-error", tipo === "error");
+        retornoVisual.setAttribute("role", tipo === "error" ? "alert" : "status");
+        estado.textContent = mensagem;
         if (repetir) repetir.hidden = !permitirNovaTentativa;
     }
 
-    function configurarControlesFormato(botao, formatName) {
-        const inputs = Array.from(document.querySelectorAll(`input[name="${formatName}"]`));
-        if (!inputs.length) {
+    function configurarControlesFormato(botao, nomeFormato) {
+        const entradasDados = Array.from(document.querySelectorAll(`input[name="${nomeFormato}"]`));
+        if (!entradasDados.length) {
             botao.innerText = obterRotuloBotao(formatoSelecionado);
             return;
         }
 
         const sincronizar = () => {
-            formatoSelecionado = obterFormatoSelecionado(formatName);
+            formatoSelecionado = obterFormatoSelecionado(nomeFormato);
             botao.innerText = obterRotuloBotao(formatoSelecionado);
         };
 
-        inputs.forEach(input => input.addEventListener("change", sincronizar));
+        entradasDados.forEach(entrada => entrada.addEventListener("change", sincronizar));
         sincronizar();
     }
 
-    function obterFormatoSelecionado(formatName = "exportFormat") {
-        const marcado = document.querySelector(`input[name="${formatName}"]:checked`);
+    function obterFormatoSelecionado(nomeFormato = "exportFormat") {
+        const marcado = document.querySelector(`input[name="${nomeFormato}"]:checked`);
         return marcado?.value === "json" ? "json" : "pdf";
     }
 
@@ -148,6 +148,6 @@
     }
 
     window.ClimatePdfReport = {
-        setup,
+        setup: configurarModulo,
     };
 })();

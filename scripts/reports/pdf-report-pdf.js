@@ -1,13 +1,13 @@
 'use strict';
 
 (function () {
-    const modules = window.ClimatePdfReportModules = window.ClimatePdfReportModules || {};
+    const modulos = window.ClimatePdfReportModules = window.ClimatePdfReportModules || {};
 
-    const { format } = modules;
-    const { formatDateTime } = format;
+    const { format: formatacao } = modulos;
+    const { formatDateTime: formatarDataHoraRelatorio } = formatacao;
 
-    async function generatePdf(element, fileName, { deveCancelar = () => false } = {}) {
-        await waitForImages(element);
+    async function gerarPdf(elemento, nomeArquivo, { deveCancelar = () => false } = {}) {
+        await aguardarImagens(elemento);
         if (deveCancelar()) return;
 
         const { jsPDF } = window.jspdf;
@@ -18,41 +18,41 @@
             compress: true,
         });
 
-        await addReportBlocks(pdf, element);
+        await adicionarBlocosRelatorio(pdf, elemento);
         if (deveCancelar()) return;
-        addPdfFooters(pdf);
+        adicionarRodapesPdf(pdf);
         if (deveCancelar()) return;
-        pdf.save(fileName);
+        pdf.save(nomeArquivo);
     }
 
-    async function addReportBlocks(pdf, element) {
-        const layout = createPdfLayout();
-        const header = element.querySelector(".pdf-report__header");
-        const summarySection = element.querySelector(".pdf-report__summary-section");
-        const chartsSection = element.querySelector(".pdf-report__charts-section");
-        const tableSection = element.querySelector(".pdf-report__table-section");
-        let cursorY = layout.margin.top;
+    async function adicionarBlocosRelatorio(pdf, elemento) {
+        const leiaute = criarLeiautePdf();
+        const cabecalho = elemento.querySelector(".pdf-report__header");
+        const secaoResumo = elemento.querySelector(".pdf-report__summary-section");
+        const secaoGraficos = elemento.querySelector(".pdf-report__charts-section");
+        const secaoTabela = elemento.querySelector(".pdf-report__table-section");
+        let posicaoAtualY = leiaute.margin.top;
 
-        paintPdfPage(pdf, layout);
+        pintarPaginaPdf(pdf, leiaute);
 
-        cursorY = await addElementBlock(pdf, header, layout, cursorY, { gap: 6 });
-        await addElementBlock(pdf, summarySection, layout, cursorY, { gap: 0 });
+        posicaoAtualY = await adicionarBlocoElemento(pdf, cabecalho, leiaute, posicaoAtualY, { gap: 6 });
+        await adicionarBlocoElemento(pdf, secaoResumo, leiaute, posicaoAtualY, { gap: 0 });
 
-        cursorY = addPdfPage(pdf, layout);
-        cursorY = addSectionHeading(pdf, "Gráficos", layout, cursorY);
-        for (const chartCard of chartsSection.querySelectorAll(".pdf-chart-card")) {
-            cursorY = await addElementBlock(pdf, chartCard, layout, cursorY, { gap: 4 });
+        posicaoAtualY = adicionarPaginaPdf(pdf, leiaute);
+        posicaoAtualY = adicionarTituloSecao(pdf, "Gráficos", leiaute, posicaoAtualY);
+        for (const cardGrafico of secaoGraficos.querySelectorAll(".pdf-chart-card")) {
+            posicaoAtualY = await adicionarBlocoElemento(pdf, cardGrafico, leiaute, posicaoAtualY, { gap: 4 });
         }
 
-        if (tableSection) {
-            cursorY = addPdfPage(pdf, layout);
-            cursorY = addSectionHeading(pdf, "Tabela resumida", layout, cursorY);
-            const tableContent = tableSection.querySelector(".pdf-table, .pdf-empty");
-            await addElementBlock(pdf, tableContent, layout, cursorY, { allowSplit: true, gap: 0 });
+        if (secaoTabela) {
+            posicaoAtualY = adicionarPaginaPdf(pdf, leiaute);
+            posicaoAtualY = adicionarTituloSecao(pdf, "Tabela resumida", leiaute, posicaoAtualY);
+            const conteudoTabela = secaoTabela.querySelector(".pdf-table, .pdf-empty");
+            await adicionarBlocoElemento(pdf, conteudoTabela, leiaute, posicaoAtualY, { allowSplit: true, gap: 0 });
         }
     }
 
-    function createPdfLayout() {
+    function criarLeiautePdf() {
         return {
             pageWidth: 210,
             pageHeight: 297,
@@ -67,174 +67,174 @@
         };
     }
 
-    async function addElementBlock(pdf, element, layout, cursorY, options = {}) {
-        if (!element) return cursorY;
+    async function adicionarBlocoElemento(pdf, elemento, leiaute, posicaoAtualY, opcoes = {}) {
+        if (!elemento) return posicaoAtualY;
 
-        const gap = options.gap ?? 4;
-        const canvas = await captureElement(element);
-        const heightMm = getCanvasHeightMm(canvas, layout);
+        const intervaloVisual = opcoes.gap ?? 4;
+        const canvas = await capturarElemento(elemento);
+        const alturaMm = obterAlturaCanvasMm(canvas, leiaute);
 
-        if (options.allowSplit || heightMm > getContentHeight(layout)) {
-            return addCanvasSlices(pdf, canvas, layout, cursorY, gap);
+        if (opcoes.allowSplit || alturaMm > obterAlturaConteudo(leiaute)) {
+            return adicionarFatiasCanvas(pdf, canvas, leiaute, posicaoAtualY, intervaloVisual);
         }
 
-        if (cursorY + heightMm > layout.contentBottom) {
-            cursorY = addPdfPage(pdf, layout);
+        if (posicaoAtualY + alturaMm > leiaute.contentBottom) {
+            posicaoAtualY = adicionarPaginaPdf(pdf, leiaute);
         }
 
-        addCanvasImage(pdf, canvas, layout, cursorY, heightMm);
-        return cursorY + heightMm + gap;
+        adicionarImagemCanvas(pdf, canvas, leiaute, posicaoAtualY, alturaMm);
+        return posicaoAtualY + alturaMm + intervaloVisual;
     }
 
-    async function captureElement(element) {
-        return html2canvas(element, {
+    async function capturarElemento(elemento) {
+        return html2canvas(elemento, {
             scale: 2,
             backgroundColor: "#0b1120",
             useCORS: true,
             logging: false,
             scrollX: 0,
             scrollY: 0,
-            windowWidth: Math.max(element.scrollWidth, element.offsetWidth),
-            windowHeight: Math.max(element.scrollHeight, element.offsetHeight),
+            windowWidth: Math.max(elemento.scrollWidth, elemento.offsetWidth),
+            windowHeight: Math.max(elemento.scrollHeight, elemento.offsetHeight),
         });
     }
 
-    function addCanvasSlices(pdf, canvas, layout, cursorY, gap) {
-        const pixelsPerMm = canvas.width / layout.contentWidth;
-        let sourceY = 0;
+    function adicionarFatiasCanvas(pdf, canvas, leiaute, posicaoAtualY, intervaloVisual) {
+        const pixelsPorMm = canvas.width / leiaute.contentWidth;
+        let posicaoOrigemY = 0;
 
-        while (sourceY < canvas.height) {
-            const availableHeight = layout.contentBottom - cursorY;
-            if (availableHeight < 35) {
-                cursorY = addPdfPage(pdf, layout);
+        while (posicaoOrigemY < canvas.height) {
+            const alturaDisponivel = leiaute.contentBottom - posicaoAtualY;
+            if (alturaDisponivel < 35) {
+                posicaoAtualY = adicionarPaginaPdf(pdf, leiaute);
             }
 
-            const sliceHeight = Math.min(
-                Math.floor((layout.contentBottom - cursorY) * pixelsPerMm),
-                canvas.height - sourceY
+            const alturaFatia = Math.min(
+                Math.floor((leiaute.contentBottom - posicaoAtualY) * pixelsPorMm),
+                canvas.height - posicaoOrigemY
             );
-            const pageCanvas = createCanvasSlice(canvas, sourceY, sliceHeight);
-            const sliceHeightMm = sliceHeight / pixelsPerMm;
+            const canvasPagina = criarFatiaCanvas(canvas, posicaoOrigemY, alturaFatia);
+            const alturaFatiaMm = alturaFatia / pixelsPorMm;
 
-            addCanvasImage(pdf, pageCanvas, layout, cursorY, sliceHeightMm);
-            sourceY += sliceHeight;
-            cursorY += sliceHeightMm;
+            adicionarImagemCanvas(pdf, canvasPagina, leiaute, posicaoAtualY, alturaFatiaMm);
+            posicaoOrigemY += alturaFatia;
+            posicaoAtualY += alturaFatiaMm;
 
-            if (sourceY < canvas.height) {
-                cursorY = addPdfPage(pdf, layout);
+            if (posicaoOrigemY < canvas.height) {
+                posicaoAtualY = adicionarPaginaPdf(pdf, leiaute);
             }
         }
 
-        return cursorY + gap;
+        return posicaoAtualY + intervaloVisual;
     }
 
-    function createCanvasSlice(canvas, sourceY, sliceHeight) {
-        const pageCanvas = document.createElement("canvas");
-        pageCanvas.width = canvas.width;
-        pageCanvas.height = sliceHeight;
+    function criarFatiaCanvas(canvas, posicaoOrigemY, alturaFatia) {
+        const canvasPagina = document.createElement("canvas");
+        canvasPagina.width = canvas.width;
+        canvasPagina.height = alturaFatia;
 
-        const context = pageCanvas.getContext("2d");
-        context.fillStyle = "#0b1120";
-        context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-        context.drawImage(
+        const contexto = canvasPagina.getContext("2d");
+        contexto.fillStyle = "#0b1120";
+        contexto.fillRect(0, 0, canvasPagina.width, canvasPagina.height);
+        contexto.drawImage(
             canvas,
             0,
-            sourceY,
+            posicaoOrigemY,
             canvas.width,
-            sliceHeight,
+            alturaFatia,
             0,
             0,
-            pageCanvas.width,
-            pageCanvas.height
+            canvasPagina.width,
+            canvasPagina.height
         );
 
-        return pageCanvas;
+        return canvasPagina;
     }
 
-    function addCanvasImage(pdf, canvas, layout, y, heightMm) {
+    function adicionarImagemCanvas(pdf, canvas, leiaute, y, alturaMm) {
         pdf.addImage(
             canvas.toDataURL("image/jpeg", 0.96),
             "JPEG",
-            layout.margin.left,
+            leiaute.margin.left,
             y,
-            layout.contentWidth,
-            heightMm
+            leiaute.contentWidth,
+            alturaMm
         );
     }
 
-    function getCanvasHeightMm(canvas, layout) {
-        return canvas.height * layout.contentWidth / canvas.width;
+    function obterAlturaCanvasMm(canvas, leiaute) {
+        return canvas.height * leiaute.contentWidth / canvas.width;
     }
 
-    function getContentHeight(layout) {
-        return layout.contentBottom - layout.margin.top;
+    function obterAlturaConteudo(leiaute) {
+        return leiaute.contentBottom - leiaute.margin.top;
     }
 
-    function addSectionHeading(pdf, title, layout, cursorY) {
-        const height = 8;
-        if (cursorY + height > layout.contentBottom) {
-            cursorY = addPdfPage(pdf, layout);
+    function adicionarTituloSecao(pdf, titulo, leiaute, posicaoAtualY) {
+        const altura = 8;
+        if (posicaoAtualY + altura > leiaute.contentBottom) {
+            posicaoAtualY = adicionarPaginaPdf(pdf, leiaute);
         }
 
         pdf.setFont("helvetica", "bold");
         pdf.setFontSize(8);
         pdf.setTextColor(148, 163, 184);
-        pdf.text(title.toUpperCase(), layout.margin.left, cursorY + 4);
-        return cursorY + height;
+        pdf.text(titulo.toUpperCase(), leiaute.margin.left, posicaoAtualY + 4);
+        return posicaoAtualY + altura;
     }
 
-    function addPdfPage(pdf, layout) {
+    function adicionarPaginaPdf(pdf, leiaute) {
         pdf.addPage();
-        paintPdfPage(pdf, layout);
-        return layout.margin.top;
+        pintarPaginaPdf(pdf, leiaute);
+        return leiaute.margin.top;
     }
 
-    function paintPdfPage(pdf, layout) {
+    function pintarPaginaPdf(pdf, leiaute) {
         pdf.setFillColor(11, 17, 32);
-        pdf.rect(0, 0, layout.pageWidth, layout.pageHeight, "F");
+        pdf.rect(0, 0, leiaute.pageWidth, leiaute.pageHeight, "F");
     }
 
-    function waitForImages(element) {
-        const images = Array.from(element.querySelectorAll("img"));
-        const pending = images
-            .filter(img => !img.complete)
-            .map(img => new Promise(resolve => {
-                img.addEventListener("load", resolve, { once: true });
-                img.addEventListener("error", resolve, { once: true });
+    function aguardarImagens(elemento) {
+        const imagens = Array.from(elemento.querySelectorAll("img"));
+        const pendente = imagens
+            .filter(imagemElemento => !imagemElemento.complete)
+            .map(imagemElemento => new Promise(resolver => {
+                imagemElemento.addEventListener("load", resolver, { once: true });
+                imagemElemento.addEventListener("error", resolver, { once: true });
             }));
 
-        return Promise.all(pending);
+        return Promise.all(pendente);
     }
 
-    function addPdfFooters(pdf) {
-        const pageCount = pdf.internal.getNumberOfPages();
-        const generatedAt = formatDateTime(new Date());
+    function adicionarRodapesPdf(pdf) {
+        const quantidadePaginas = pdf.internal.getNumberOfPages();
+        const geradoEm = formatarDataHoraRelatorio(new Date());
 
-        for (let page = 1; page <= pageCount; page++) {
-            pdf.setPage(page);
+        for (let pagina = 1; pagina <= quantidadePaginas; pagina++) {
+            pdf.setPage(pagina);
             pdf.setFontSize(8);
             pdf.setTextColor(148, 163, 184);
             pdf.text("Estação Climática", 8, 290);
-            pdf.text(`Página ${page} / ${pageCount}`, 105, 290, { align: "center" });
-            pdf.text(generatedAt, 202, 290, { align: "right" });
+            pdf.text(`Página ${pagina} / ${quantidadePaginas}`, 105, 290, { align: "center" });
+            pdf.text(geradoEm, 202, 290, { align: "right" });
         }
     }
 
-    modules.pdf = {
-        generatePdf,
-        addReportBlocks,
-        createPdfLayout,
-        addElementBlock,
-        captureElement,
-        addCanvasSlices,
-        createCanvasSlice,
-        addCanvasImage,
-        getCanvasHeightMm,
-        getContentHeight,
-        addSectionHeading,
-        addPdfPage,
-        paintPdfPage,
-        waitForImages,
-        addPdfFooters,
+    modulos.pdf = {
+        generatePdf: gerarPdf,
+        addReportBlocks: adicionarBlocosRelatorio,
+        createPdfLayout: criarLeiautePdf,
+        addElementBlock: adicionarBlocoElemento,
+        captureElement: capturarElemento,
+        addCanvasSlices: adicionarFatiasCanvas,
+        createCanvasSlice: criarFatiaCanvas,
+        addCanvasImage: adicionarImagemCanvas,
+        getCanvasHeightMm: obterAlturaCanvasMm,
+        getContentHeight: obterAlturaConteudo,
+        addSectionHeading: adicionarTituloSecao,
+        addPdfPage: adicionarPaginaPdf,
+        paintPdfPage: pintarPaginaPdf,
+        waitForImages: aguardarImagens,
+        addPdfFooters: adicionarRodapesPdf,
     };
 })();

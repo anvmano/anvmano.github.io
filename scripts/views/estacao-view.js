@@ -1,80 +1,84 @@
 'use strict';
 
 (function () {
-    const { ids, fields, colors } = window.AppConfig;
+    const { ids, fields: campos, colors: cores } = window.AppConfig;
     const canvasTemperatura = document.getElementById(ids.charts.globalTemperature).getContext("2d");
     const canvasUmidade = document.getElementById(ids.charts.globalHumidity).getContext("2d");
+    const canvasChuva = document.getElementById(ids.charts.rain);
     let dadosExternosAtuais = null;
     let estadoConsultaExterna = "ocioso";
     let mensagemConsultaExterna = "";
     let ultimosDadosInternos = null;
+    let dependenciasGraficos = null;
 
-    function render({ latestData, selectedDate, chartInstances, defaults, colors: cores, ui, ensureChart }) {
-        ultimosDadosInternos = latestData;
-        renderizarResumoGlobal(latestData, selectedDate);
-        renderizarInsightsAmbientais(latestData);
+    function renderizar({ latestData: dadosMaisRecentes, selectedDate: dataSelecionada, chartInstances: instanciasGraficos, defaults: padroes, colors: cores, ui: interfaceUsuario, ensureChart: garantirGrafico }) {
+        dependenciasGraficos = { instanciasGraficos, padroes, cores, interfaceUsuario, garantirGrafico };
+        ultimosDadosInternos = dadosMaisRecentes;
+        renderizarResumoGlobal(dadosMaisRecentes, dataSelecionada);
+        renderizarInsightsAmbientais(dadosMaisRecentes);
+        renderizarGraficoChuvaExterna();
         renderizarLinhaEstacoes();
-        renderizarResumoLua(selectedDate);
+        renderizarResumoLua(dataSelecionada);
         renderizarGraficoComparativo({
             canvasCtx: canvasTemperatura,
             containerId: ids.chartContainers.globalTemperature,
-            chartInstances,
-            defaults,
-            ui,
-            ensureChart,
+            chartInstances: instanciasGraficos,
+            defaults: padroes,
+            ui: interfaceUsuario,
+            ensureChart: garantirGrafico,
             titulo: "Temperatura",
             unidade: "°",
             eixoY: "(°C)",
             series: [
-                criarSerie("Sala", latestData.livingRoom, fields.livingRoom.temperature, cores.blue),
-                criarSerie("Quarto", latestData.room, fields.room.temperature, cores.green),
-                criarSerie("Aquário", latestData.aquarium, fields.aquarium.temperature, cores.amber),
+                criarSerie("Sala", dadosMaisRecentes.livingRoom, campos.livingRoom.temperature, cores.blue),
+                criarSerie("Quarto", dadosMaisRecentes.room, campos.room.temperature, cores.green),
+                criarSerie("Aquário", dadosMaisRecentes.aquarium, campos.aquarium.temperature, cores.amber),
             ],
-            selectedDate,
-            mensagemVazia: `Sem dados comparativos de temperatura em ${selectedDate.replace(/-/g, "/")}.`,
+            selectedDate: dataSelecionada,
+            mensagemVazia: `Sem dados comparativos de temperatura em ${dataSelecionada.replace(/-/g, "/")}.`,
         });
         renderizarGraficoComparativo({
             canvasCtx: canvasUmidade,
             containerId: ids.chartContainers.globalHumidity,
-            chartInstances,
-            defaults,
-            ui,
-            ensureChart,
+            chartInstances: instanciasGraficos,
+            defaults: padroes,
+            ui: interfaceUsuario,
+            ensureChart: garantirGrafico,
             titulo: "Umidade",
             unidade: "%",
             eixoY: "%",
             series: [
-                criarSerie("Sala", latestData.livingRoom, fields.livingRoom.humidity, cores.purple),
-                criarSerie("Quarto", latestData.room, fields.room.humidity, cores.rose),
+                criarSerie("Sala", dadosMaisRecentes.livingRoom, campos.livingRoom.humidity, cores.purple),
+                criarSerie("Quarto", dadosMaisRecentes.room, campos.room.humidity, cores.rose),
             ],
-            selectedDate,
-            mensagemVazia: `Sem dados comparativos de umidade em ${selectedDate.replace(/-/g, "/")}.`,
+            selectedDate: dataSelecionada,
+            mensagemVazia: `Sem dados comparativos de umidade em ${dataSelecionada.replace(/-/g, "/")}.`,
         });
-        if (latestData.solar) {
+        if (dadosMaisRecentes.solar) {
             window.SolarView.render({
-                data: latestData.solar,
-                selectedDate,
-                chartInstances,
-                defaults,
+                data: dadosMaisRecentes.solar,
+                selectedDate: dataSelecionada,
+                chartInstances: instanciasGraficos,
+                defaults: padroes,
                 colors: cores,
-                ensureChart,
-                ui
+                ensureChart: garantirGrafico,
+                ui: interfaceUsuario
             });
         } else {
-            ui.renderChartMessage(ids.chartContainers.sunHistory, `Sem dados de nascer e pôr do sol em ${selectedDate.replace(/-/g, "/")}.`);
-            ui.renderChartMessage(ids.chartContainers.solarToday, `Sem dados de ciclo solar em ${selectedDate.replace(/-/g, "/")}.`);
+            interfaceUsuario.renderChartMessage(ids.chartContainers.sunHistory, `Sem dados de nascer e pôr do sol em ${dataSelecionada.replace(/-/g, "/")}.`);
+            interfaceUsuario.renderChartMessage(ids.chartContainers.solarToday, `Sem dados de ciclo solar em ${dataSelecionada.replace(/-/g, "/")}.`);
         }
     }
 
-    function renderizarInsightsAmbientais(latestData) {
-        const container = document.getElementById("environmentInsights");
-        if (!container) return;
+    function renderizarInsightsAmbientais(dadosMaisRecentes) {
+        const recipiente = document.getElementById("environmentInsights");
+        if (!recipiente) return;
 
-        const temperaturaSala = obterUltimoRegistro(latestData.livingRoom, fields.livingRoom.temperature)?.valor ?? null;
-        const umidadeSala = obterUltimoRegistro(latestData.livingRoom, fields.livingRoom.humidity)?.valor ?? null;
-        const temperaturaQuarto = obterUltimoRegistro(latestData.room, fields.room.temperature)?.valor ?? null;
-        const umidadeQuarto = obterUltimoRegistro(latestData.room, fields.room.humidity)?.valor ?? null;
-        const aqi = window.ClimateAqi.calculate(latestData.livingRoom)?.aqi ?? null;
+        const temperaturaSala = obterUltimoRegistro(dadosMaisRecentes.livingRoom, campos.livingRoom.temperature)?.valor ?? null;
+        const umidadeSala = obterUltimoRegistro(dadosMaisRecentes.livingRoom, campos.livingRoom.humidity)?.valor ?? null;
+        const temperaturaQuarto = obterUltimoRegistro(dadosMaisRecentes.room, campos.room.temperature)?.valor ?? null;
+        const umidadeQuarto = obterUltimoRegistro(dadosMaisRecentes.room, campos.room.humidity)?.valor ?? null;
+        const aqi = window.ClimateAqi.calculate(dadosMaisRecentes.livingRoom)?.aqi ?? null;
         const riscoSala = window.ClimateInsightsAmbientais.avaliarRiscoMofo({
             temperatura: temperaturaSala,
             umidade: umidadeSala,
@@ -114,7 +118,7 @@
             });
         }
 
-        container.innerHTML = `
+        recipiente.innerHTML = `
             <div class="environment-insights__grid">
                 ${montarCardInsight({
                     titulo: "Ventilação da Sala",
@@ -124,7 +128,7 @@
                     descricao: ventilacao.descricao,
                     detalhe: dadosExternosAtuais ? `Clima externo: ${dadosExternosAtuais.origem.rotulo}` : "Consulte a localização para combinar o clima externo",
                 })}
-                ${montarCardPrevisaoChuva(chuva)}
+                ${montarCardPrevisaoChuva(chuva, dadosExternosAtuais?.climaAtual)}
                 ${montarCardIndiceUv(indiceUv)}
                 ${montarCardOrvalho("Sala", riscoSala)}
                 ${montarCardOrvalho("Quarto", riscoQuarto)}
@@ -159,9 +163,10 @@
         }
 
         renderizarInsightsAmbientais(ultimosDadosInternos || {});
+        renderizarGraficoChuvaExterna();
     }
 
-    function montarCardPrevisaoChuva(chuva) {
+    function montarCardPrevisaoChuva(chuva, climaAtual) {
         if (!chuva) {
             return montarCardInsight({
                 titulo: "Chuva · próximas 6h",
@@ -174,15 +179,59 @@
             });
         }
 
+        const chuvaAtual = window.ClimateChuva.analisarAgora(climaAtual);
         return montarCardInsight({
             titulo: "Chuva · próximas 6h",
-            valor: chuva.classe === "indisponivel" ? "--" : `${Math.round(chuva.probabilidade)}%`,
+            valor: chuvaAtual.disponivel ? chuvaAtual.rotulo : "--",
             status: chuva.rotulo,
             classe: chuva.classe,
             descricao: chuva.descricao,
-            detalhe: chuva.classe === "indisponivel" ? "Sem previsão horária" : `${chuva.acumulado.toFixed(1)} mm acumulados · pico ${chuva.intensidadeMaxima.toFixed(1)} mm/h`,
+            detalhe: chuva.classe === "indisponivel" ? "Sem previsão horária" : `Maior chance ${Math.round(chuva.probabilidade)}% · ${chuva.acumulado.toFixed(1)} mm acumulados · pico ${chuva.intensidadeMaxima.toFixed(1)} mm/h`,
             acao: montarAcaoLocalizacao(),
         });
+    }
+
+    function renderizarGraficoChuvaExterna() {
+        const recipiente = document.getElementById(ids.chartContainers.rain);
+        const dependencias = dependenciasGraficos;
+        if (!recipiente || !canvasChuva || !dependencias) return;
+
+        const id = canvasChuva.id;
+        if (!dadosExternosAtuais) {
+            recipiente.hidden = true;
+            if (dependencias.instanciasGraficos[id]) {
+                window.ClimateChartSync?.desregistrar(dependencias.instanciasGraficos[id]);
+                dependencias.instanciasGraficos[id].destroy();
+                delete dependencias.instanciasGraficos[id];
+            }
+            return;
+        }
+
+        recipiente.hidden = false;
+        if (!window.Chart) {
+            dependencias.interfaceUsuario.renderChartMessage(ids.chartContainers.rain, "Carregando gráfico...", "loading");
+            dependencias.garantirGrafico?.();
+            return;
+        }
+
+        dependencias.interfaceUsuario.clearChartMessage(ids.chartContainers.rain);
+        const janela = window.ClimateChuva.montarJanela(
+            dadosExternosAtuais.previsaoCurtoPrazo,
+            dadosExternosAtuais.atualizadoEm
+        );
+        const grafico = window.ClimateChuva.criarGrafico({
+            canvas: canvasChuva,
+            janela,
+            graficoExistente: dependencias.instanciasGraficos[id],
+            cores: dependencias.cores,
+            grupoSincronizacao: "estacao",
+        });
+        if (grafico) {
+            dependencias.instanciasGraficos[id] = grafico;
+        } else {
+            delete dependencias.instanciasGraficos[id];
+            dependencias.interfaceUsuario.renderChartMessage(ids.chartContainers.rain, "Sem dados horários de chuva para a localização.");
+        }
     }
 
     function montarCardIndiceUv(indiceUv) {
@@ -219,12 +268,12 @@
         });
     }
 
-    function montarCardInsight({ titulo, valor, status, classe, descricao, detalhe, acao = "" }) {
+    function montarCardInsight({ titulo, valor, status: estado, classe, descricao, detalhe, acao = "" }) {
         return `
             <article class="environment-insight environment-insight--${classe}">
                 <div class="environment-insight__header">
                     <span>${titulo}</span>
-                    <small>${status}</small>
+                    <small>${estado}</small>
                 </div>
                 <strong>${valor}</strong>
                 <p>${descricao}</p>
@@ -254,37 +303,37 @@
         return dadosExternosAtuais ? "Atualizar clima externo" : "Usar localização para chuva e UV";
     }
 
-    function formatarHoraData(data) {
-        if (!(data instanceof Date) || Number.isNaN(data.getTime())) return "--:--";
-        return `${String(data.getHours()).padStart(2, "0")}:${String(data.getMinutes()).padStart(2, "0")}`;
+    function formatarHoraData(dados) {
+        if (!(dados instanceof Date) || Number.isNaN(dados.getTime())) return "--:--";
+        return `${String(dados.getHours()).padStart(2, "0")}:${String(dados.getMinutes()).padStart(2, "0")}`;
     }
 
-    function renderizarResumoGlobal(latestData, selectedDate) {
-        const container = document.getElementById("statsEstacao");
-        if (!container) return;
+    function renderizarResumoGlobal(dadosMaisRecentes, dataSelecionada) {
+        const recipiente = document.getElementById("statsEstacao");
+        if (!recipiente) return;
 
-        container.innerHTML = "";
+        recipiente.innerHTML = "";
         const cards = [
-            montarCardAqi(latestData.livingRoom),
-            montarCardUltimaMedicao("Temp. Sala", latestData.livingRoom, fields.livingRoom.temperature, "°C"),
-            montarCardUltimaMedicao("Temp. Quarto", latestData.room, fields.room.temperature, "°C"),
-            montarCardUltimaMedicao("Temp. Aquário", latestData.aquarium, fields.aquarium.temperature, "°C"),
-            montarCardUltimaMedicao("Umidade Sala", latestData.livingRoom, fields.livingRoom.humidity, "%"),
-            montarCardUltimaMedicao("Umidade Quarto", latestData.room, fields.room.humidity, "%"),
+            montarCardAqi(dadosMaisRecentes.livingRoom),
+            montarCardUltimaMedicao("Temp. Sala", dadosMaisRecentes.livingRoom, campos.livingRoom.temperature, "°C"),
+            montarCardUltimaMedicao("Temp. Quarto", dadosMaisRecentes.room, campos.room.temperature, "°C"),
+            montarCardUltimaMedicao("Temp. Aquário", dadosMaisRecentes.aquarium, campos.aquarium.temperature, "°C"),
+            montarCardUltimaMedicao("Umidade Sala", dadosMaisRecentes.livingRoom, campos.livingRoom.humidity, "%"),
+            montarCardUltimaMedicao("Umidade Quarto", dadosMaisRecentes.room, campos.room.humidity, "%"),
         ];
 
-        cards.forEach(card => container.appendChild(criarCardResumo(card)));
+        cards.forEach(card => recipiente.appendChild(criarCardResumo(card)));
 
         if (!cards.some(card => card.temValor)) {
             const mensagem = document.createElement("p");
             mensagem.className = "state-message";
-            mensagem.innerText = `Sem resumo global disponível para ${selectedDate.replace(/-/g, "/")}.`;
-            container.replaceChildren(mensagem);
+            mensagem.innerText = `Sem resumo global disponível para ${dataSelecionada.replace(/-/g, "/")}.`;
+            recipiente.replaceChildren(mensagem);
         }
     }
 
-    function montarCardAqi(data) {
-        const resultado = window.ClimateAqi.calculate(data);
+    function montarCardAqi(dados) {
+        const resultado = window.ClimateAqi.calculate(dados);
         if (!resultado) {
             return {
                 titulo: "AQI estimado",
@@ -308,9 +357,9 @@
         };
     }
 
-    function montarCardUltimaMedicao(titulo, data, campo, unidade) {
-        const registro = obterUltimoRegistro(data, campo);
-        const dadosHoje = ClimateData.filterDataByDays(data || {}, 1, ClimateData.dataAtual());
+    function montarCardUltimaMedicao(titulo, dados, campo, unidade) {
+        const registro = obterUltimoRegistro(dados, campo);
+        const dadosHoje = ClimateData.filterDataByDays(dados || {}, 1, ClimateData.dataAtual());
         const qualidade = window.ClimateDataQuality?.analisarSerie?.(dadosHoje, campo) || null;
         if (!registro) {
             return {
@@ -370,16 +419,16 @@
     }
 
     function renderizarLinhaEstacoes() {
-        const container = document.getElementById("seasonTimeline");
-        if (!container) return;
+        const recipiente = document.getElementById("seasonTimeline");
+        if (!recipiente) return;
 
         const estado = window.ClimateSeason?.getState?.();
         if (!estado) {
-            container.innerHTML = "";
+            recipiente.innerHTML = "";
             return;
         }
 
-        container.innerHTML = `
+        recipiente.innerHTML = `
             <div class="season-timeline__track" aria-label="Progresso anual das estações">
                 ${estado.estacoes.map(estacao => `
                     <span class="season-timeline__segment season-timeline__segment--${estacao.chave}">
@@ -391,18 +440,18 @@
         `;
     }
 
-    function renderizarResumoLua(selectedDate) {
-        const container = document.getElementById("moonSummary");
-        if (!container) return;
+    function renderizarResumoLua(dataSelecionada) {
+        const recipiente = document.getElementById("moonSummary");
+        if (!recipiente) return;
 
-        const estado = window.ClimateMoon?.getState?.(selectedDate);
+        const estado = window.ClimateMoon?.getState?.(dataSelecionada);
         if (!estado) {
-            container.innerHTML = "";
+            recipiente.innerHTML = "";
             return;
         }
 
-        container.innerHTML = `
-            <span class="station-context-badge" title="A fase lunar segue a data escolhida no calendário.">Data consultada: ${selectedDate.replace(/-/g, "/")}</span>
+        recipiente.innerHTML = `
+            <span class="station-context-badge" title="A fase lunar segue a data escolhida no calendário.">Data consultada: ${dataSelecionada.replace(/-/g, "/")}</span>
             <div class="moon-summary__scene moon-summary__scene--${estado.fase.chave}" style="--moon-shadow: ${estado.sombra}%">
                 <span class="moon-summary__orb" aria-hidden="true"></span>
             </div>
@@ -418,54 +467,57 @@
         `;
     }
 
-    function criarSerie(nome, data, campo, cor) {
-        return { nome, data, campo, cor };
+    function criarSerie(nome, dados, campo, cor) {
+        return { nome, data: dados, campo, cor };
     }
 
     function renderizarGraficoComparativo({
-        canvasCtx,
-        containerId,
-        chartInstances,
-        defaults,
-        ui,
-        ensureChart,
+        canvasCtx: contextoCanvas,
+        containerId: idRecipiente,
+        chartInstances: instanciasGraficos,
+        defaults: padroes,
+        ui: interfaceUsuario,
+        ensureChart: garantirGrafico,
         titulo,
         unidade,
         eixoY,
-        series,
-        selectedDate,
+        series: seriesDados,
+        selectedDate: dataSelecionada,
         mensagemVazia,
     }) {
-        const id = canvasCtx.canvas.id;
-        if (chartInstances[id]) chartInstances[id].destroy();
+        const id = contextoCanvas.canvas.id;
+        if (instanciasGraficos[id]) {
+            window.ClimateChartSync?.desregistrar(instanciasGraficos[id]);
+            instanciasGraficos[id].destroy();
+        }
 
-        const seriesNormalizadas = series.map(serie => ({
+        const seriesNormalizadas = seriesDados.map(serie => ({
             ...serie,
-            pontos: extrairPontosSerie(serie.data, selectedDate, serie.campo),
+            pontos: extrairPontosSerie(serie.data, dataSelecionada, serie.campo),
         }));
         const chaves = [...new Set(seriesNormalizadas.flatMap(serie => serie.pontos.map(ponto => ponto.chave)))].sort();
         const temDados = seriesNormalizadas.some(serie => serie.pontos.length);
 
         if (!temDados) {
-            delete chartInstances[id];
-            canvasCtx.clearRect(0, 0, canvasCtx.canvas.width, canvasCtx.canvas.height);
-            ui.renderChartMessage(containerId, mensagemVazia);
+            delete instanciasGraficos[id];
+            contextoCanvas.clearRect(0, 0, contextoCanvas.canvas.width, contextoCanvas.canvas.height);
+            interfaceUsuario.renderChartMessage(idRecipiente, mensagemVazia);
             return;
         }
 
         if (!window.Chart) {
-            ui.renderChartMessage(containerId, "Carregando gráfico...", "loading");
-            if (typeof ensureChart === "function") ensureChart();
+            interfaceUsuario.renderChartMessage(idRecipiente, "Carregando gráfico...", "loading");
+            if (typeof garantirGrafico === "function") garantirGrafico();
             return;
         }
 
-        ui.clearChartMessage(containerId);
-        const labels = chaves.map(chave => chave.slice(11));
-        const opcoes = ClimateCharts.mergeDeep(defaults, {
+        interfaceUsuario.clearChartMessage(idRecipiente);
+        const rotulos = chaves.map(chave => chave.slice(11));
+        const opcoes = ClimateCharts.mergeDeep(padroes, {
             plugins: {
                 legend: {
                     display: true,
-                    labels: { color: colors.text, boxWidth: 10, boxHeight: 10 },
+                    labels: { color: cores.text, boxWidth: 10, boxHeight: 10 },
                 },
                 tooltip: {
                     itemSort: (a, b) => {
@@ -476,10 +528,10 @@
                         return valorB - valorA;
                     },
                     callbacks: {
-                        label: context => {
-                            const valor = Number(context.parsed.y);
+                        label: contexto => {
+                            const valor = Number(contexto.parsed.y);
                             const formatado = Number.isFinite(valor) ? valor.toFixed(2) : "--";
-                            return `${context.dataset.label}: ${formatado}${unidade}`;
+                            return `${contexto.dataset.label}: ${formatado}${unidade}`;
                         }
                     }
                 }
@@ -489,7 +541,7 @@
                     title: {
                         display: true,
                         text: eixoY,
-                        color: colors.text,
+                        color: cores.text,
                         font: { size: 11 },
                     },
                     ticks: {
@@ -499,10 +551,10 @@
             },
         });
 
-        chartInstances[id] = new Chart(canvasCtx, {
+        instanciasGraficos[id] = new Chart(contextoCanvas, {
             type: "line",
             data: {
-                labels,
+                labels: rotulos,
                 datasets: seriesNormalizadas.map(serie => {
                     const mapa = new Map(serie.pontos.map(ponto => [ponto.chave, ponto.valor]));
                     return {
@@ -521,11 +573,13 @@
             },
             options: opcoes,
         });
-        chartInstances[id].$comparisonTitle = titulo;
+        instanciasGraficos[id].$comparisonTitle = titulo;
+        instanciasGraficos[id].$chavesSincronizacao = chaves.map(chave => chave.replace(" ", "T"));
+        window.ClimateChartSync?.registrar(instanciasGraficos[id], "estacao");
     }
 
-    function extrairPontosSerie(data, selectedDate, campo) {
-        const filtrado = ClimateData.filterDataByRollingHours(data || {}, selectedDate, 24);
+    function extrairPontosSerie(dados, dataSelecionada, campo) {
+        const filtrado = ClimateData.filterDataByRollingHours(dados || {}, dataSelecionada, 24);
         const pontosPorChave = new Map();
 
         for (const dataFirebase of Object.keys(filtrado).sort((a, b) => ClimateData.parseFirebaseDate(a) - ClimateData.parseFirebaseDate(b))) {
@@ -544,11 +598,11 @@
         return [...pontosPorChave.entries()].map(([chave, valor]) => ({ chave, valor }));
     }
 
-    function obterUltimoRegistro(data, campo) {
+    function obterUltimoRegistro(dados, campo) {
         let ultimo = null;
 
-        for (const dataFirebase of Object.keys(data || {})) {
-            const dadosData = data[dataFirebase];
+        for (const dataFirebase of Object.keys(dados || {})) {
+            const dadosData = dados[dataFirebase];
             if (!dadosData || typeof dadosData !== "object") continue;
 
             for (const horario of Object.keys(dadosData)) {
@@ -598,8 +652,8 @@
         return Number.isFinite(valor) ? `${valor.toFixed(2)}${unidade}` : "--";
     }
 
-    function formatarDataCompleta(data) {
-        return `${String(data.getDate()).padStart(2, "0")}/${String(data.getMonth() + 1).padStart(2, "0")}/${data.getFullYear()}`;
+    function formatarDataCompleta(dados) {
+        return `${String(dados.getDate()).padStart(2, "0")}/${String(dados.getMonth() + 1).padStart(2, "0")}/${dados.getFullYear()}`;
     }
 
     function media(valores) {
@@ -607,6 +661,7 @@
     }
 
     window.EstacaoView = {
-        render,
+        render: renderizar,
+        obterDadosExternosAtuais: () => dadosExternosAtuais,
     };
 })();

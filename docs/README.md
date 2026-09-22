@@ -60,6 +60,8 @@ Bibliotecas carregadas via CDN:
 │   │   └── environmental-insights.js Recomendações ambientais
 │   ├── charts/
 │   │   ├── chart-utils.js      Gráficos comuns e faixa de conforto
+│   │   ├── chart-sync.js       Sincronização temporal dos gráficos
+│   │   ├── rain.js             Chuva atual, precipitação e probabilidade
 │   │   ├── aqi.js              AQI estimado da Sala no header
 │   │   ├── season.js           Estação do ano no header e aba Estação
 │   │   ├── moon.js             Fase da lua no header e aba Estação
@@ -104,6 +106,7 @@ Bibliotecas carregadas via CDN:
 │   ├── validate-project.mjs    Validação estrutural local
 │   ├── testar-assistente.mjs   Regressões de intenção e respostas da assistente
 │   ├── testar-relatorio.mjs    Consistência de dados e ausências no PDF/JSON
+│   ├── testar-pdf-chuva.mjs    PDF real com card e gráfico de chuva
 │   ├── testar-acessibilidade.mjs Navegação das abas e contrato do zoom
 │   ├── testar-qualidade-dados.mjs Cobertura, anomalias e séries constantes
 │   └── testar-modo-publico.mjs Concorrência, estados e zoom público
@@ -229,6 +232,8 @@ A validação verifica:
 - Gráficos globais de temperatura/umidade por ambiente na aba Estação.
 - Aba Estação com ventilação e risco de mofo a partir dos sensores internos; chuva e UV entram por consulta opcional da localização, mantida somente em memória.
 - Gráficos de temperatura, sensação térmica, umidade, pressão, qualidade do ar e aquário.
+- Hover ou toque sincroniza o horário nos gráficos temporais compatíveis da mesma aba, inclusive chuva externa, sem transformar lacunas de dados em zero.
+- Chuva atual no card e gráfico de 24h anteriores + 12h previstas, com precipitação em milímetros e chance futura em porcentagem.
 - Cards com média, mínima, máxima, delta e tendência.
 - Indicadores de qualidade/cobertura aparecem somente quando houver anormalidade ou cobertura inferior a 100%; delta e tendência exigem pelo menos duas leituras válidas.
 - Estado operacional por metrica: `ok`, `parcial`, `desatualizado`, `suspeito` ou `offline`, compartilhado entre UI, exportacao e assistente sem poluir cards integrais.
@@ -257,6 +262,8 @@ A exportação usa os dados já carregados na tela. Ela não reconsulta o Fireba
 Os módulos internos de relatório são carregados apenas ao exportar. Exportar JSON não carrega Chart.js, CSS do PDF, `html2canvas` ou `jsPDF`. Exportar PDF carrega CSS do relatório, Chart.js, `html2canvas` e `jsPDF` sob demanda.
 
 O relatório cria uma fonte normalizada única filtrada pela data selecionada. Resumo, alertas, gráficos, tabelas e JSON usam esse mesmo recorte; os gráficos do PDF não reutilizam os gráficos visíveis da interface, que podem representar a janela móvel das últimas 24 horas. Valores ausentes permanecem `null`, formam lacunas e não entram nos cálculos de média, mínima ou máxima.
+
+Na aba Estação, depois de consultar a localização, o PDF também inclui o card `Chuva externa` e recria o gráfico de precipitação das últimas 24h + previsão de 12h. O JSON inclui o snapshot normalizado em `climaExterno`; nenhuma coordenada é persistida ou reconsultada durante a exportação.
 
 Essa fonte também inclui qualidade e cobertura por métrica. Uma única leitura válida mantém seu valor, mas não gera delta/tendência. pH fora da faixa, saltos/repetições e turbidez constante são sinalizados sem substituir ou apagar o valor original.
 

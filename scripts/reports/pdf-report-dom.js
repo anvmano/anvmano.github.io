@@ -1,15 +1,15 @@
 'use strict';
 
 (function () {
-    const modules = window.ClimatePdfReportModules = window.ClimatePdfReportModules || {};
+    const modulos = window.ClimatePdfReportModules = window.ClimatePdfReportModules || {};
 
-    const { format } = modules;
-    const { escapeHtml, formatFirebaseDate, formatDateTime, getStatusClass } = format;
+    const { format: formatacao } = modulos;
+    const { escapeHtml: escaparTextoHtml, formatFirebaseDate: formatarDataFirebaseRelatorio, formatDateTime: formatarDataHoraRelatorio, getStatusClass: obterClasseEstado } = formatacao;
 
-    function createHeader(tabLabel, selectedDate, generatedAt) {
-        const header = document.createElement("header");
-        header.className = "pdf-report__header";
-        header.innerHTML = `
+    function criarCabecalho(rotuloAba, dataSelecionada, geradoEm) {
+        const cabecalho = document.createElement("header");
+        cabecalho.className = "pdf-report__header";
+        cabecalho.innerHTML = `
             <div>
                 <span class="pdf-report__eyebrow">Resumo executivo</span>
                 <h2 class="pdf-report__title">Relatório da Estação Climática</h2>
@@ -18,79 +18,79 @@
             <div class="pdf-report__meta">
                 <div class="pdf-report__meta-item">
                     <span class="pdf-report__label">Aba selecionada</span>
-                    <span class="pdf-report__value">${escapeHtml(tabLabel)}</span>
+                    <span class="pdf-report__value">${escaparTextoHtml(rotuloAba)}</span>
                 </div>
                 <div class="pdf-report__meta-item">
                     <span class="pdf-report__label">Data consultada</span>
-                    <span class="pdf-report__value">${formatFirebaseDate(selectedDate)}</span>
+                    <span class="pdf-report__value">${formatarDataFirebaseRelatorio(dataSelecionada)}</span>
                 </div>
                 <div class="pdf-report__meta-item">
                     <span class="pdf-report__label">Gerado em</span>
-                    <span class="pdf-report__value">${formatDateTime(generatedAt)}</span>
+                    <span class="pdf-report__value">${formatarDataHoraRelatorio(geradoEm)}</span>
                 </div>
             </div>
         `;
-        return header;
+        return cabecalho;
     }
 
-    function createSummarySection(cards, alerts) {
-        const section = document.createElement("section");
-        section.className = "pdf-report__section pdf-report__summary-section";
-        section.innerHTML = `<span class="pdf-report__section-title">Indicadores principais</span>`;
+    function criarSecaoResumo(cards, alertas) {
+        const secao = document.createElement("section");
+        secao.className = "pdf-report__section pdf-report__summary-section";
+        secao.innerHTML = `<span class="pdf-report__section-title">Indicadores principais</span>`;
 
-        const grid = document.createElement("div");
-        grid.className = "pdf-summary-grid";
-        cards.forEach(card => grid.appendChild(createSummaryCard(card)));
-        section.appendChild(grid);
-        section.appendChild(createAlertsPanel(alerts));
-        return section;
+        const grade = document.createElement("div");
+        grade.className = "pdf-summary-grid";
+        cards.forEach(card => grade.appendChild(criarCardResumoRelatorio(card)));
+        secao.appendChild(grade);
+        secao.appendChild(criarPainelAlertas(alertas));
+        return secao;
     }
 
-    function createAlertsPanel(alerts) {
-        const panel = document.createElement("article");
-        panel.className = "pdf-alert-panel";
-        const items = alerts.length
-            ? alerts.map(alert => `<li>${escapeHtml(alert)}</li>`).join("")
+    function criarPainelAlertas(alertas) {
+        const painel = document.createElement("article");
+        painel.className = "pdf-alert-panel";
+        const itens = alertas.length
+            ? alertas.map(alerta => `<li>${escaparTextoHtml(alerta)}</li>`).join("")
             : "<li>Nenhum alerta relevante encontrado para o período.</li>";
 
-        panel.innerHTML = `
+        painel.innerHTML = `
             <div class="pdf-alert-panel__heading">
                 <span class="pdf-report__section-title">Alertas do dia</span>
-                <span class="pdf-status pdf-status--${alerts.length ? "alert" : "stable"}">${alerts.length ? "Atenção" : "Estável"}</span>
+                <span class="pdf-status pdf-status--${alertas.length ? "alert" : "stable"}">${alertas.length ? "Atenção" : "Estável"}</span>
             </div>
-            <ul class="pdf-alert-list">${items}</ul>
+            <ul class="pdf-alert-list">${itens}</ul>
         `;
-        return panel;
+        return painel;
     }
 
-    function createSummaryCard(card) {
-        const statusClass = getStatusClass(card.status);
-        const details = normalizarDetalhesResumo(card);
-        const el = document.createElement("article");
-        el.className = "pdf-summary-card";
-        el.innerHTML = `
+    function criarCardResumoRelatorio(card) {
+        const classeEstado = obterClasseEstado(card.status);
+        const detalhesSecao = normalizarDetalhesResumo(card);
+        const elementoDom = document.createElement("article");
+        elementoDom.className = "pdf-summary-card";
+        elementoDom.innerHTML = `
             <div class="pdf-summary-card__top">
-                <span class="pdf-summary-card__name">${escapeHtml(card.label)}</span>
-                <span class="pdf-status pdf-status--${statusClass}">${escapeHtml(card.status)}</span>
+                <span class="pdf-summary-card__name">${escaparTextoHtml(card.label)}</span>
+                <span class="pdf-status pdf-status--${classeEstado}">${escaparTextoHtml(card.status)}</span>
             </div>
-            <strong class="pdf-summary-card__current">${escapeHtml(card.current)}</strong>
+            <strong class="pdf-summary-card__current">${escaparTextoHtml(card.current)}</strong>
             <dl class="pdf-summary-card__details">
-                ${details.map(detail => `
+                ${detalhesSecao.map(detalhe => `
                     <div>
-                        <dt>${escapeHtml(detail.label)}</dt>
-                        <dd>${escapeHtml(detail.value)}</dd>
+                        <dt>${escaparTextoHtml(detalhe.label)}</dt>
+                        <dd>${escaparTextoHtml(detalhe.value)}</dd>
                     </div>
                 `).join("")}
             </dl>
         `;
-        return el;
+        return elementoDom;
     }
 
     function normalizarDetalhesResumo(card) {
         if (Array.isArray(card.details) && card.details.length) {
-            return card.details.slice(0, 4).map(detail => ({
-                label: detail.label || "",
-                value: detail.value ?? "--",
+            return card.details.slice(0, 4).map(detalhe => ({
+                label: detalhe.label || "",
+                value: detalhe.value ?? "--",
             }));
         }
 
@@ -101,101 +101,101 @@
         ];
     }
 
-    function createChartsSection(cards) {
-        const section = document.createElement("section");
-        section.className = "pdf-report__section pdf-report__charts-section";
-        section.innerHTML = `<span class="pdf-report__section-title">Gráficos</span>`;
+    function criarSecaoGraficos(cards) {
+        const secao = document.createElement("section");
+        secao.className = "pdf-report__section pdf-report__charts-section";
+        secao.innerHTML = `<span class="pdf-report__section-title">Gráficos</span>`;
 
-        const grid = document.createElement("div");
-        grid.className = "pdf-chart-grid";
-        cards.forEach(card => grid.appendChild(createChartCard(card)));
-        section.appendChild(grid);
-        return section;
+        const grade = document.createElement("div");
+        grade.className = "pdf-chart-grid";
+        cards.forEach(card => grade.appendChild(criarCardGrafico(card)));
+        secao.appendChild(grade);
+        return secao;
     }
 
-    function createChartCard(card) {
-        const el = document.createElement("article");
-        el.className = [
+    function criarCardGrafico(card) {
+        const elementoDom = document.createElement("article");
+        elementoDom.className = [
             "pdf-chart-card",
             card.wide ? "pdf-chart-card--wide" : "",
             card.compact ? "pdf-chart-card--compact" : "",
         ].filter(Boolean).join(" ");
-        el.innerHTML = `
+        elementoDom.innerHTML = `
             <div class="pdf-chart-card__title">
-                <span class="pdf-chart-card__name">${escapeHtml(card.label)}</span>
-                <span class="pdf-chart-card__unit">${escapeHtml(card.unit || "")}</span>
+                <span class="pdf-chart-card__name">${escaparTextoHtml(card.label)}</span>
+                <span class="pdf-chart-card__unit">${escaparTextoHtml(card.unit || "")}</span>
             </div>
         `;
 
         if (card.image) {
-            const img = document.createElement("img");
-            img.src = card.image;
-            img.alt = card.label;
-            el.appendChild(img);
+            const imagemElemento = document.createElement("img");
+            imagemElemento.src = card.image;
+            imagemElemento.alt = card.label;
+            elementoDom.appendChild(imagemElemento);
         } else {
-            const empty = document.createElement("div");
-            empty.className = "pdf-empty";
-            empty.innerText = card.emptyMessage || "Sem dados disponíveis";
-            el.appendChild(empty);
+            const vazio = document.createElement("div");
+            vazio.className = "pdf-empty";
+            vazio.innerText = card.emptyMessage || "Sem dados disponíveis";
+            elementoDom.appendChild(vazio);
         }
 
         if (card.stats?.length) {
-            const stats = document.createElement("div");
-            stats.className = "pdf-chart-stats";
-            stats.innerHTML = card.stats.map(item => `<span>${escapeHtml(item)}</span>`).join("");
-            el.appendChild(stats);
+            const estatisticas = document.createElement("div");
+            estatisticas.className = "pdf-chart-stats";
+            estatisticas.innerHTML = card.stats.map(item => `<span>${escaparTextoHtml(item)}</span>`).join("");
+            elementoDom.appendChild(estatisticas);
         }
 
-        return el;
+        return elementoDom;
     }
 
-    function createTableSection(rows, metrics) {
-        const section = document.createElement("section");
-        section.className = "pdf-report__section pdf-report__table-section";
-        section.innerHTML = `<span class="pdf-report__section-title">Tabela resumida</span>`;
+    function criarSecaoTabela(linhas, metricas) {
+        const secao = document.createElement("section");
+        secao.className = "pdf-report__section pdf-report__table-section";
+        secao.innerHTML = `<span class="pdf-report__section-title">Tabela resumida</span>`;
 
-        if (!rows.length) {
-            const empty = document.createElement("div");
-            empty.className = "pdf-empty";
-            empty.innerText = "Sem dados disponíveis";
-            section.appendChild(empty);
-            return section;
+        if (!linhas.length) {
+            const vazio = document.createElement("div");
+            vazio.className = "pdf-empty";
+            vazio.innerText = "Sem dados disponíveis";
+            secao.appendChild(vazio);
+            return secao;
         }
 
-        const table = document.createElement("table");
-        table.className = "pdf-table";
-        table.innerHTML = `
+        const tabela = document.createElement("table");
+        tabela.className = "pdf-table";
+        tabela.innerHTML = `
             <thead>
                 <tr>
                     <th>Horário</th>
-                    ${metrics.map(metric => `<th>${escapeHtml(metric.label)}</th>`).join("")}
+                    ${metricas.map(metrica => `<th>${escaparTextoHtml(metrica.label)}</th>`).join("")}
                     <th>Status geral</th>
                 </tr>
             </thead>
         `;
         const tbody = document.createElement("tbody");
-        rows.forEach(row => {
+        linhas.forEach(linha => {
             const tr = document.createElement("tr");
             tr.innerHTML = `
-                <td>${escapeHtml(row.time)}</td>
-                ${metrics.map(metric => `<td>${escapeHtml(row.values[metric.key] || "--")}</td>`).join("")}
-                <td><span class="pdf-status pdf-status--${getStatusClass(row.status)}">${escapeHtml(row.status)}</span></td>
+                <td>${escaparTextoHtml(linha.time)}</td>
+                ${metricas.map(metrica => `<td>${escaparTextoHtml(linha.values[metrica.key] || "--")}</td>`).join("")}
+                <td><span class="pdf-status pdf-status--${obterClasseEstado(linha.status)}">${escaparTextoHtml(linha.status)}</span></td>
             `;
             tbody.appendChild(tr);
         });
-        table.appendChild(tbody);
-        section.appendChild(table);
-        return section;
+        tabela.appendChild(tbody);
+        secao.appendChild(tabela);
+        return secao;
     }
 
-    modules.dom = {
-        createHeader,
-        createSummarySection,
-        createAlertsPanel,
-        createSummaryCard,
+    modulos.dom = {
+        createHeader: criarCabecalho,
+        createSummarySection: criarSecaoResumo,
+        createAlertsPanel: criarPainelAlertas,
+        createSummaryCard: criarCardResumoRelatorio,
         normalizarDetalhesResumo,
-        createChartsSection,
-        createChartCard,
-        createTableSection,
+        createChartsSection: criarSecaoGraficos,
+        createChartCard: criarCardGrafico,
+        createTableSection: criarSecaoTabela,
     };
 })();

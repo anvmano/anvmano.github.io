@@ -1,97 +1,97 @@
 'use strict';
 
 (function () {
-    const modules = window.ClimatePdfReportModules = window.ClimatePdfReportModules || {};
+    const modulos = window.ClimatePdfReportModules = window.ClimatePdfReportModules || {};
 
-    const { config, data, dom, charts, pdf, format } = modules;
-    const { TAB_CONFIG } = config;
-    const { construirFonteDadosRelatorio, getPdfTableMetrics, buildCompactTableRows, buildDailyAlerts, buildSummaryCards } = data;
-    const { createHeader, createSummarySection, createChartsSection, createTableSection } = dom;
-    const { collectChartCards } = charts;
-    const { generatePdf } = pdf;
-    const { formatFirebaseDate, slug } = format;
+    const { config: configuracaoRelatorio, data: dados, dom: elementosDom, charts: graficos, pdf, format: formatacao } = modulos;
+    const { TAB_CONFIG: CONFIGURACAO_ABAS } = configuracaoRelatorio;
+    const { construirFonteDadosRelatorio, getPdfTableMetrics: obterMetricasTabelaPdf, buildCompactTableRows: montarLinhasTabelaCompacta, buildDailyAlerts: montarAlertasDiarios, buildSummaryCards: montarCardsResumo } = dados;
+    const { createHeader: criarCabecalho, createSummarySection: criarSecaoResumo, createChartsSection: criarSecaoGraficos, createTableSection: criarSecaoTabela } = elementosDom;
+    const { collectChartCards: coletarCardsGraficos } = graficos;
+    const { generatePdf: gerarPdf } = pdf;
+    const { formatFirebaseDate: formatarDataFirebaseRelatorio, slug: gerarIdentificadorUrl } = formatacao;
 
-    let getContext = null;
-    let selectedFormat = "pdf";
+    let obterContextoModulo = null;
+    let formatoSelecionado = "pdf";
 
-    function setup({ buttonId, formatName = "exportFormat", getContext: contextGetter }) {
-        getContext = contextGetter;
-        const button = document.getElementById(buttonId);
-        if (!button) return;
+    function configurarModulo({ buttonId: idBotao, formatName: nomeFormato = "exportFormat", getContext: obterContextoFornecido }) {
+        obterContextoModulo = obterContextoFornecido;
+        const botao = document.getElementById(idBotao);
+        if (!botao) return;
 
-        setupFormatControls(button, formatName);
-        button.addEventListener("click", () => exportActiveTab(button));
+        configurarControlesFormatoRelatorio(botao, nomeFormato);
+        botao.addEventListener("click", () => exportarAbaAtual(botao));
     }
 
-    async function exportActiveTab(button) {
-        const format = getSelectedFormat();
-        const originalText = button.innerText;
-        button.disabled = true;
-        button.innerText = format === "json" ? "Gerando JSON..." : "Gerando PDF...";
+    async function exportarAbaAtual(botao) {
+        const formatoExportacao = obterFormatoSelecionadoRelatorio();
+        const textoOriginal = botao.innerText;
+        botao.disabled = true;
+        botao.innerText = formatoExportacao === "json" ? "Gerando JSON..." : "Gerando PDF...";
 
-        const renderRoot = document.createElement("div");
-        renderRoot.className = "pdf-render-root";
+        const raizRenderizacao = document.createElement("div");
+        raizRenderizacao.className = "pdf-render-root";
 
         try {
-            const context = getContext ? getContext() : {};
-            const report = await buildReport(context);
+            const contexto = obterContextoModulo ? obterContextoModulo() : {};
+            const relatorio = await montarRelatorio(contexto);
 
-            if (format === "json") {
-                exportJsonReport(report);
+            if (formatoExportacao === "json") {
+                exportarRelatorioJson(relatorio);
                 return;
             }
 
             await carregarBibliotecasPdf();
-            renderRoot.appendChild(report.element);
-            document.body.appendChild(renderRoot);
-            await generatePdf(report.element, report.fileNamePdf);
-        } catch (error) {
-            window.ClimateDiagnostics?.depurar("Erro ao exportar dados.", error);
+            raizRenderizacao.appendChild(relatorio.element);
+            document.body.appendChild(raizRenderizacao);
+            await gerarPdf(relatorio.element, relatorio.fileNamePdf);
+        } catch (erro) {
+            window.ClimateDiagnostics?.depurar("Erro ao exportar dados.", erro);
             alert("Não foi possível exportar os dados.");
         } finally {
-            renderRoot.remove();
-            button.disabled = false;
-            button.innerText = originalText || getButtonLabel(getSelectedFormat());
+            raizRenderizacao.remove();
+            botao.disabled = false;
+            botao.innerText = textoOriginal || obterRotuloBotaoRelatorio(obterFormatoSelecionadoRelatorio());
         }
     }
 
-    function setupFormatControls(button, formatName) {
-        const inputs = Array.from(document.querySelectorAll(`input[name="${formatName}"]`));
-        if (!inputs.length) {
-            button.innerText = getButtonLabel(selectedFormat);
+    function configurarControlesFormatoRelatorio(botao, nomeFormato) {
+        const entradasDados = Array.from(document.querySelectorAll(`input[name="${nomeFormato}"]`));
+        if (!entradasDados.length) {
+            botao.innerText = obterRotuloBotaoRelatorio(formatoSelecionado);
             return;
         }
 
-        const sync = () => {
-            selectedFormat = getSelectedFormat(formatName);
-            button.innerText = getButtonLabel(selectedFormat);
+        const sincronizarControles = () => {
+            formatoSelecionado = obterFormatoSelecionadoRelatorio(nomeFormato);
+            botao.innerText = obterRotuloBotaoRelatorio(formatoSelecionado);
         };
 
-        inputs.forEach(input => input.addEventListener("change", sync));
-        sync();
+        entradasDados.forEach(entrada => entrada.addEventListener("change", sincronizarControles));
+        sincronizarControles();
     }
 
-    function getSelectedFormat(formatName = "exportFormat") {
-        const checked = document.querySelector(`input[name="${formatName}"]:checked`);
-        return checked?.value === "json" ? "json" : "pdf";
+    function obterFormatoSelecionadoRelatorio(nomeFormato = "exportFormat") {
+        const verificado = document.querySelector(`input[name="${nomeFormato}"]:checked`);
+        return verificado?.value === "json" ? "json" : "pdf";
     }
 
-    function getButtonLabel(format) {
-        return format === "json" ? "Exportar JSON" : "Exportar PDF";
+    function obterRotuloBotaoRelatorio(formatoExportacao) {
+        return formatoExportacao === "json" ? "Exportar JSON" : "Exportar PDF";
     }
 
-    function canGeneratePdf() {
+    function podeGerarPdf() {
         return typeof html2canvas === "function" && typeof window.jspdf?.jsPDF === "function";
     }
 
     async function carregarBibliotecasPdf() {
-        if (canGeneratePdf()) return;
+        if (podeGerarPdf()) return;
 
         const configuracao = window.AppConfig?.firebase || {};
         await carregarScriptUnico(configuracao.html2canvasUrl, "html2canvas");
         await carregarScriptUnico(configuracao.jsPdfUrl, "jspdf");
 
-        if (!canGeneratePdf()) {
+        if (!podeGerarPdf()) {
             throw new Error("Bibliotecas de PDF indisponíveis.");
         }
     }
@@ -100,11 +100,11 @@
         if (!url) return Promise.reject(new Error(`URL ausente para ${nomeGlobal}.`));
         if (window[nomeGlobal]) return Promise.resolve();
 
-        return new Promise((resolve, reject) => {
+        return new Promise((resolver, rejeitar) => {
             const existente = document.querySelector(`script[data-lazy-lib="${nomeGlobal}"]`);
             if (existente) {
-                existente.addEventListener("load", resolve, { once: true });
-                existente.addEventListener("error", reject, { once: true });
+                existente.addEventListener("load", resolver, { once: true });
+                existente.addEventListener("error", rejeitar, { once: true });
                 return;
             }
 
@@ -112,37 +112,38 @@
             script.src = url;
             script.async = true;
             script.dataset.lazyLib = nomeGlobal;
-            script.onload = resolve;
-            script.onerror = () => reject(new Error(`Falha ao carregar ${nomeGlobal}.`));
+            script.onload = resolver;
+            script.onerror = () => rejeitar(new Error(`Falha ao carregar ${nomeGlobal}.`));
             document.head.appendChild(script);
         });
     }
 
-    function exportJsonReport(report) {
-        const payload = {
+    function exportarRelatorioJson(relatorio) {
+        const conteudoEnvio = {
             relatorio: "Estação Climática",
             versaoFormato: 2,
-            aba: report.tabLabel,
-            dataConsultada: formatFirebaseDate(report.selectedDate),
-            dataConsultadaFirebase: report.selectedDate,
-            geradoEm: report.generatedAt.toISOString(),
-            resumo: report.summaryCards.map(formatarCardResumoJson),
-            tabelaResumida: report.tableRows.map(formatarLinhaTabelaResumidaJson(report.tableMetrics)),
-            tabelaDetalhada: report.rows.map(formatarLinhaTabelaDetalhadaJson),
+            aba: relatorio.tabLabel,
+            dataConsultada: formatarDataFirebaseRelatorio(relatorio.selectedDate),
+            dataConsultadaFirebase: relatorio.selectedDate,
+            geradoEm: relatorio.generatedAt.toISOString(),
+            resumo: relatorio.summaryCards.map(formatarCardResumoJson),
+            tabelaResumida: relatorio.tableRows.map(formatarLinhaTabelaResumidaJson(relatorio.tableMetrics)),
+            tabelaDetalhada: relatorio.rows.map(formatarLinhaTabelaDetalhadaJson),
             // Compatibilidade com o JSON antigo: consumidores existentes ainda encontram `tabela`.
-            tabela: report.rows.map(formatarLinhaTabelaDetalhadaJson),
-            dadosBrutos: report.selectedData,
+            tabela: relatorio.rows.map(formatarLinhaTabelaDetalhadaJson),
+            dadosBrutos: relatorio.selectedData,
+            climaExterno: relatorio.dadosClimaExterno,
         };
-        const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        const blob = new Blob([JSON.stringify(conteudoEnvio, null, 2)], {
             type: "application/json;charset=utf-8",
         });
         const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = report.fileNameJson;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
+        const ligacao = document.createElement("a");
+        ligacao.href = url;
+        ligacao.download = relatorio.fileNameJson;
+        document.body.appendChild(ligacao);
+        ligacao.click();
+        ligacao.remove();
         URL.revokeObjectURL(url);
     }
 
@@ -168,9 +169,9 @@
 
     function normalizarDetalhesResumoJson(card) {
         if (Array.isArray(card.details) && card.details.length) {
-            return card.details.map(detail => ({
-                rotulo: detail.label || "",
-                valor: detail.value ?? "--",
+            return card.details.map(detalhe => ({
+                rotulo: detalhe.label || "",
+                valor: detalhe.value ?? "--",
             }));
         }
 
@@ -181,86 +182,95 @@
         ];
     }
 
-    function formatarLinhaTabelaResumidaJson(metrics) {
-        return row => ({
-            horario: row.time,
-            valores: metrics.reduce((acc, metric) => {
-                acc[metric.label] = row.values[metric.key] || "--";
-                return acc;
+    function formatarLinhaTabelaResumidaJson(metricas) {
+        return linha => ({
+            horario: linha.time,
+            valores: metricas.reduce((acumulador, metrica) => {
+                acumulador[metrica.label] = linha.values[metrica.key] || "--";
+                return acumulador;
             }, {}),
-            statusGeral: row.status,
+            statusGeral: linha.status,
         });
     }
 
-    function formatarLinhaTabelaDetalhadaJson(row) {
+    function formatarLinhaTabelaDetalhadaJson(linha) {
         const item = {
-            horario: row.time,
-            horarioCompleto: row.fullTime,
-            indicador: row.label,
-            valor: row.value,
-            status: row.status,
+            horario: linha.time,
+            horarioCompleto: linha.fullTime,
+            indicador: linha.label,
+            valor: linha.value,
+            status: linha.status,
         };
-        if (row.qualidade) item.qualidadeDados = row.qualidade;
+        if (linha.qualidade) item.qualidadeDados = linha.qualidade;
         return item;
     }
 
-    async function buildReport(context, { onProgress } = {}) {
-        const tabConfig = TAB_CONFIG[context.activeTab] || TAB_CONFIG.Tab0 || TAB_CONFIG.Tab1;
-        const selectedDate = context.selectedDate || ClimateData.dataAtual();
-        const generatedAt = new Date();
-        const fileNameBase = `relatorio-estacao-${slug(tabConfig.label)}-${selectedDate}`;
-        onProgress?.("Preparando dados.");
-        const fonte = construirFonteDadosRelatorio(tabConfig, context.latestData || {}, selectedDate);
-        const rows = fonte.linhasDetalhadas;
-        const tableMetrics = getPdfTableMetrics(tabConfig);
-        const tableRows = buildCompactTableRows(fonte.linhasNormalizadas, tableMetrics);
-        const summaryCards = buildSummaryCards(tabConfig, fonte.linhasNormalizadas, context.latestData || {}, selectedDate, fonte.qualidades);
-        const alerts = buildDailyAlerts(fonte.linhasNormalizadas, tabConfig.metrics, fonte.qualidades);
-        onProgress?.("Gerando gráficos.");
-        const chartCards = await collectChartCards(tabConfig, {
+    async function montarRelatorio(contexto, { onProgress: aoAvancar } = {}) {
+        const configuracaoAba = CONFIGURACAO_ABAS[contexto.activeTab] || CONFIGURACAO_ABAS.Tab0 || CONFIGURACAO_ABAS.Tab1;
+        const dataSelecionada = contexto.selectedDate || ClimateData.dataAtual();
+        const geradoEm = new Date();
+        const baseNomeArquivo = `relatorio-estacao-${gerarIdentificadorUrl(configuracaoAba.label)}-${dataSelecionada}`;
+        aoAvancar?.("Preparando dados.");
+        const fonte = construirFonteDadosRelatorio(configuracaoAba, contexto.latestData || {}, dataSelecionada);
+        const linhas = fonte.linhasDetalhadas;
+        const metricasTabela = obterMetricasTabelaPdf(configuracaoAba);
+        const linhasTabela = montarLinhasTabelaCompacta(fonte.linhasNormalizadas, metricasTabela);
+        const cardsResumo = montarCardsResumo(
+            configuracaoAba,
+            fonte.linhasNormalizadas,
+            contexto.latestData || {},
+            dataSelecionada,
+            fonte.qualidades,
+            contexto.dadosClimaExterno || null
+        );
+        const alertas = montarAlertasDiarios(fonte.linhasNormalizadas, configuracaoAba.metrics, fonte.qualidades);
+        aoAvancar?.("Gerando gráficos.");
+        const cardsGraficos = await coletarCardsGraficos(configuracaoAba, {
             normalizedRows: fonte.linhasNormalizadas,
-            latestData: context.latestData || {},
-            selectedDate,
+            latestData: contexto.latestData || {},
+            selectedDate: dataSelecionada,
             qualities: fonte.qualidades,
+            dadosClimaExterno: contexto.dadosClimaExterno || null,
         });
 
-        onProgress?.("Montando relatório.");
-        const report = document.createElement("article");
-        report.className = "pdf-report";
-        report.appendChild(createHeader(tabConfig.label, selectedDate, generatedAt));
-        report.appendChild(createSummarySection(summaryCards, alerts));
-        report.appendChild(createChartsSection(chartCards));
-        if (tabConfig.hasTable !== false) {
-            report.appendChild(createTableSection(tableRows, tableMetrics));
+        aoAvancar?.("Montando relatório.");
+        const relatorio = document.createElement("article");
+        relatorio.className = "pdf-report";
+        relatorio.appendChild(criarCabecalho(configuracaoAba.label, dataSelecionada, geradoEm));
+        relatorio.appendChild(criarSecaoResumo(cardsResumo, alertas));
+        relatorio.appendChild(criarSecaoGraficos(cardsGraficos));
+        if (configuracaoAba.hasTable !== false) {
+            relatorio.appendChild(criarSecaoTabela(linhasTabela, metricasTabela));
         }
 
         return {
-            element: report,
-            fileNamePdf: `${fileNameBase}.pdf`,
-            fileNameJson: `${fileNameBase}.json`,
-            tabLabel: tabConfig.label,
-            selectedDate,
-            generatedAt,
-            summaryCards,
-            rows,
-            tableRows,
-            tableMetrics,
+            element: relatorio,
+            fileNamePdf: `${baseNomeArquivo}.pdf`,
+            fileNameJson: `${baseNomeArquivo}.json`,
+            tabLabel: configuracaoAba.label,
+            selectedDate: dataSelecionada,
+            generatedAt: geradoEm,
+            summaryCards: cardsResumo,
+            rows: linhas,
+            tableRows: linhasTabela,
+            tableMetrics: metricasTabela,
             selectedData: fonte.dadosSelecionados,
             normalizedRows: fonte.linhasNormalizadas,
             qualities: fonte.qualidades,
-            chartCards,
+            chartCards: cardsGraficos,
+            dadosClimaExterno: contexto.dadosClimaExterno || null,
         };
     }
 
-    modules.exporter = {
-        setup,
-        exportActiveTab,
-        setupFormatControls,
-        getSelectedFormat,
-        getButtonLabel,
-        canGeneratePdf,
+    modulos.exporter = {
+        setup: configurarModulo,
+        exportActiveTab: exportarAbaAtual,
+        setupFormatControls: configurarControlesFormatoRelatorio,
+        getSelectedFormat: obterFormatoSelecionadoRelatorio,
+        getButtonLabel: obterRotuloBotaoRelatorio,
+        canGeneratePdf: podeGerarPdf,
         carregarBibliotecasPdf,
-        exportJsonReport,
-        buildReport,
+        exportJsonReport: exportarRelatorioJson,
+        buildReport: montarRelatorio,
     };
 })();

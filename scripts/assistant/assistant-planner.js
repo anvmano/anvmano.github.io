@@ -1,16 +1,16 @@
 'use strict';
 
 (function () {
-    const namespace = window.ClimateAssistant || {};
+    const espacoNomes = window.ClimateAssistant || {};
     const {
-        normalizeText,
-        hasWord,
-        formatFirebaseDate,
-    } = namespace.format;
-    const { ENVIRONMENTS } = namespace.config;
+        normalizeText: normalizarTextoConsulta,
+        hasWord: temPalavraConsulta,
+        formatFirebaseDate: formatarDataFirebaseRelatorio,
+    } = espacoNomes.format;
+    const { ENVIRONMENTS: AMBIENTES } = espacoNomes.config;
 
     function planejarIntencaoPergunta(intencao, pergunta, contexto = {}) {
-        const perguntaNormalizada = normalizeText(pergunta);
+        const perguntaNormalizada = normalizarTextoConsulta(pergunta);
         let plano = { ...intencao };
 
         plano = aplicarMemoriaCurta(plano, perguntaNormalizada, contexto?.chatMemory);
@@ -38,10 +38,10 @@
         const atalhoTemperatura = pedeMediaTemperatura || pedeMaximaTemperatura;
         const ambientes = abaEstacao
             ? (atalhoTemperatura || pedeAlertas
-                ? [ENVIRONMENTS.sala, ENVIRONMENTS.quarto, ENVIRONMENTS.aquario]
+                ? [AMBIENTES.sala, AMBIENTES.quarto, AMBIENTES.aquario]
                 : (pedeResumo
-                ? [ENVIRONMENTS.estacao, ENVIRONMENTS.sala, ENVIRONMENTS.quarto, ENVIRONMENTS.aquario]
-                : [ENVIRONMENTS.sala, ENVIRONMENTS.quarto, ENVIRONMENTS.aquario]))
+                ? [AMBIENTES.estacao, AMBIENTES.sala, AMBIENTES.quarto, AMBIENTES.aquario]
+                : [AMBIENTES.sala, AMBIENTES.quarto, AMBIENTES.aquario]))
             : plano.environments;
 
         return {
@@ -128,7 +128,7 @@
             "estação",
             "aquario",
             "aquário",
-        ].some(termo => hasWord(perguntaNormalizada, normalizeText(termo)));
+        ].some(termo => temPalavraConsulta(perguntaNormalizada, normalizarTextoConsulta(termo)));
     }
 
     function pareceContinuidade(perguntaNormalizada) {
@@ -141,7 +141,7 @@
             "também",
             "agora no",
             "agora na",
-        ].some(prefixo => perguntaNormalizada.startsWith(normalizeText(prefixo)))
+        ].some(prefixo => perguntaNormalizada.startsWith(normalizarTextoConsulta(prefixo)))
             || [
                 "no quarto",
                 "na sala",
@@ -152,7 +152,7 @@
                 "ontem",
                 "anteontem",
                 "antiontem",
-            ].some(termo => perguntaNormalizada === normalizeText(termo));
+            ].some(termo => perguntaNormalizada === normalizarTextoConsulta(termo));
     }
 
     function deveHerdarOperacao(plano, perguntaNormalizada) {
@@ -170,7 +170,7 @@
             "antiontem",
             "ultim",
             "urtim",
-        ].some(termo => perguntaNormalizada.includes(normalizeText(termo)))
+        ].some(termo => perguntaNormalizada.includes(normalizarTextoConsulta(termo)))
             || /\b\d{1,2}[/-]\d{1,2}[/-]\d{4}\b/.test(perguntaNormalizada);
 
         return !mencionaTempo && Boolean(plano.period);
@@ -186,7 +186,7 @@
 
         return {
             ...plano,
-            environments: [ENVIRONMENTS.estacao],
+            environments: [AMBIENTES.estacao],
             metrics: ["ciclo_solar"],
             operation: pedeDiaMaisCurto ? "solar_menor_duracao_luz" : "solar_maior_duracao_luz",
             period: montarPeriodoSolarExtremo(perguntaNormalizada, contexto?.selectedDate, plano.period),
@@ -228,11 +228,11 @@
             "ontem",
             "anteontem",
             "antiontem",
-        ].filter(termo => hasWord(perguntaNormalizada, normalizeText(termo)));
+        ].filter(termo => temPalavraConsulta(perguntaNormalizada, normalizarTextoConsulta(termo)));
         const datasExplicitas = [...perguntaNormalizada.matchAll(/\b\d{1,2}[/-]\d{1,2}[/-]\d{4}\b/g)];
         const quantidadeReferencias = new Set(diasRelativos).size + datasExplicitas.length;
         const pedeComparacaoExplicitamente = ["compar", "diferenca", "diferença"]
-            .some(termo => perguntaNormalizada.includes(normalizeText(termo)));
+            .some(termo => perguntaNormalizada.includes(normalizarTextoConsulta(termo)));
 
         return quantidadeReferencias >= 2 || pedeComparacaoExplicitamente;
     }
@@ -249,7 +249,7 @@
             "ultimo valor",
             "último valor",
             "valor atual",
-        ].some(termo => perguntaNormalizada.includes(normalizeText(termo)));
+        ].some(termo => perguntaNormalizada.includes(normalizarTextoConsulta(termo)));
         if (pedeValorAtual) return true;
 
         const pedeValorSimples = [
@@ -259,7 +259,7 @@
             "quanto está",
             "quanto ta",
             "quanto tá",
-        ].some(termo => perguntaNormalizada.includes(normalizeText(termo)));
+        ].some(termo => perguntaNormalizada.includes(normalizarTextoConsulta(termo)));
         if (!pedeValorSimples) return false;
 
         return ![
@@ -281,7 +281,7 @@
             "últimas",
             "ultimos",
             "últimos",
-        ].some(termo => perguntaNormalizada.includes(normalizeText(termo)));
+        ].some(termo => perguntaNormalizada.includes(normalizarTextoConsulta(termo)));
     }
 
     function montarPeriodoSolarExtremo(perguntaNormalizada, dataSelecionada, periodoAtual) {
@@ -302,7 +302,7 @@
     }
 
     function extrairIntervaloSolarExplicito(perguntaNormalizada) {
-        if (!hasWord(perguntaNormalizada, "entre") && !hasWord(perguntaNormalizada, "ate")) return null;
+        if (!temPalavraConsulta(perguntaNormalizada, "entre") && !temPalavraConsulta(perguntaNormalizada, "ate")) return null;
 
         const datas = [...perguntaNormalizada.matchAll(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b/g)]
             .map(resultado => `${resultado[1].padStart(2, "0")}-${resultado[2].padStart(2, "0")}-${resultado[3]}`);
@@ -321,13 +321,13 @@
 
         const selecionada = window.ClimateData.parseFirebaseDate(dataSelecionada || window.ClimateData.dataAtual());
         const ano = obterAnoMencionado(perguntaNormalizada) || selecionada.getFullYear();
-        return formatFirebaseDate(new Date(ano, indiceMes, 1));
+        return formatarDataFirebaseRelatorio(new Date(ano, indiceMes, 1));
     }
 
     function obterDataAnoMencionado(perguntaNormalizada, dataSelecionada) {
         const selecionada = window.ClimateData.parseFirebaseDate(dataSelecionada || window.ClimateData.dataAtual());
         const ano = obterAnoMencionado(perguntaNormalizada) || selecionada.getFullYear();
-        return formatFirebaseDate(new Date(ano, selecionada.getMonth(), selecionada.getDate()));
+        return formatarDataFirebaseRelatorio(new Date(ano, selecionada.getMonth(), selecionada.getDate()));
     }
 
     function obterAnoMencionado(perguntaNormalizada) {
@@ -351,12 +351,12 @@
             ["dezembro", "dez"],
         ];
 
-        const indice = meses.findIndex(aliases => aliases.some(alias => hasWord(perguntaNormalizada, normalizeText(alias))));
+        const indice = meses.findIndex(apelidos => apelidos.some(apelido => temPalavraConsulta(perguntaNormalizada, normalizarTextoConsulta(apelido))));
         return indice >= 0 ? indice : null;
     }
 
-    namespace.planner = {
+    espacoNomes.planner = {
         planQuestionIntent: planejarIntencaoPergunta,
     };
-    window.ClimateAssistant = namespace;
+    window.ClimateAssistant = espacoNomes;
 })();

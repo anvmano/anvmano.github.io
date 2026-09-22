@@ -6,10 +6,13 @@
     "test:assistant": "node tools/testar-assistente.mjs",
     "test:report": "node tools/testar-relatorio.mjs",
     "test:pdf-artifact": "node tools/testar-pdf-artifact.mjs",
+    "test:pdf-rain": "node tools/testar-pdf-chuva.mjs",
     "test:export": "node tools/testar-exportacao.mjs",
     "test:accessibility": "node tools/testar-acessibilidade.mjs",
     "test:data-quality": "node tools/testar-qualidade-dados.mjs",
     "test:public": "node tools/testar-modo-publico.mjs",
+    "test:chart-sync": "node tools/testar-sincronizacao-graficos.mjs",
+    "test:rain": "node tools/testar-chuva.mjs",
     "test:axe": "node tools/testar-axe.mjs",
     "test:tables": "node tools/testar-tabelas.mjs"
   },

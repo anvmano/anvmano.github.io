@@ -164,14 +164,14 @@
 
 @media (max-width: 640px) {
     .chart-card__meta-chip {
-        top: 46px;
-        right: 12px;
+        position: static;
+        align-self: flex-start;
         max-width: calc(100% - 24px);
         min-height: 24px;
         font-size: 0.68rem;
     }
 
     .plot--solar-day {
-        margin-top: 0.6rem;
+        margin-top: 0;
     }
 }

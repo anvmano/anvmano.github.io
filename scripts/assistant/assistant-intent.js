@@ -1,64 +1,64 @@
 'use strict';
 
 (function () {
-    const namespace = window.ClimateAssistant || {};
-    const { DEFAULT_RECENT_DAYS, MAX_PERIOD_DAYS, ENVIRONMENTS } = namespace.config;
+    const espacoNomes = window.ClimateAssistant || {};
+    const { DEFAULT_RECENT_DAYS: DIAS_RECENTES_PADRAO, MAX_PERIOD_DAYS: MAX_DIAS_PERIODO, ENVIRONMENTS: AMBIENTES } = espacoNomes.config;
     const MAX_DIAS_INTERVALO_SOLAR = 367;
     const {
-        normalizeText,
-        hasWord,
-        normalizeHourFilter,
-        formatDate,
-        formatFirebaseDate,
-        getTabLabel,
-        uniqueDates,
-    } = namespace.format;
+        normalizeText: normalizarTextoConsulta,
+        hasWord: temPalavraConsulta,
+        normalizeHourFilter: normalizarFiltroHoraConsulta,
+        formatDate: formatarDataConsulta,
+        formatFirebaseDate: formatarDataFirebaseRelatorio,
+        getTabLabel: obterRotuloAbaRelatorio,
+        uniqueDates: datasUnicas,
+    } = espacoNomes.format;
     const {
-        inferMetricsFromQuestion,
-        hasSolarIntent,
-        metricMatches,
-        toMetricObject,
-    } = namespace.metrics;
+        inferMetricsFromQuestion: inferirMetricasPergunta,
+        hasSolarIntent: temIntencaoSolar,
+        metricMatches: correspondenciasMetricas,
+        toMetricObject: converterParaObjetoMetrica,
+    } = espacoNomes.metrics;
 
-    async function resolveQuestionIntent(question, context) {
-        const normalizedQuestion = normalizeText(question);
-        const mentionedEnvironments = findMentionedEnvironments(normalizedQuestion);
-        const fallbackEnvironment = getEnvironmentByActiveTab(context.activeTab);
-        const classifiedIntent = await classifyQuestionIntent(question, context);
-        const classifiedEnvironments = getEnvironmentsFromIntent(classifiedIntent);
-        const operation = normalizeOperation(classifiedIntent?.operacao, normalizedQuestion);
-        const hourRange = normalizeHourRange(classifiedIntent?.periodo) || extractQuestionHourRange(normalizedQuestion);
-        const hour = hourRange
+    async function resolverIntencaoPergunta(pergunta, contexto) {
+        const perguntaNormalizada = normalizarTextoConsulta(pergunta);
+        const ambientesMencionados = encontrarAmbientesMencionados(perguntaNormalizada);
+        const ambientePadrao = obterAmbientePorAbaAtiva(contexto.activeTab);
+        const intencaoClassificada = await classificarIntencaoPergunta(pergunta, contexto);
+        const ambientesClassificados = obterAmbientesDaIntencao(intencaoClassificada);
+        const operacao = normalizarOperacao(intencaoClassificada?.operacao, perguntaNormalizada);
+        const faixaHoraria = normalizarFaixaHoraria(intencaoClassificada?.periodo) || extrairFaixaHorariaPergunta(perguntaNormalizada);
+        const hora = faixaHoraria
             ? null
-            : normalizeHourFilter(classifiedIntent?.periodo?.hora || classifiedIntent?.hora || extractQuestionHour(normalizedQuestion));
-        const period = normalizePeriod(classifiedIntent?.periodo, normalizedQuestion, context.selectedDate, operation);
-        const classifiedMetrics = normalizeMetrics(classifiedIntent?.metricas || classifiedIntent?.metrica);
-        const metrics = classifiedMetrics.length ? classifiedMetrics : inferMetricsFromQuestion(normalizedQuestion);
-        const solarIntent = hasSolarIntent(normalizedQuestion) || operation.startsWith("solar_") || Boolean(classifiedIntent?.solar);
-        const finalMetrics = solarIntent ? ["ciclo_solar"] : metrics;
-        const environments = resolveTargetEnvironments({
-            mentionedEnvironments,
-            classifiedEnvironments,
-            requestedMetrics: finalMetrics,
-            fallbackEnvironment,
+            : normalizarFiltroHoraConsulta(intencaoClassificada?.periodo?.hora || intencaoClassificada?.hora || extrairHoraPergunta(perguntaNormalizada));
+        const periodo = normalizarPeriodo(intencaoClassificada?.periodo, perguntaNormalizada, contexto.selectedDate, operacao);
+        const metricasClassificadas = normalizarMetricas(intencaoClassificada?.metricas || intencaoClassificada?.metrica);
+        const metricas = metricasClassificadas.length ? metricasClassificadas : inferirMetricasPergunta(perguntaNormalizada);
+        const intencaoSolar = temIntencaoSolar(perguntaNormalizada) || operacao.startsWith("solar_") || Boolean(intencaoClassificada?.solar);
+        const metricasFinais = intencaoSolar ? ["ciclo_solar"] : metricas;
+        const ambientes = resolverAmbientesAlvo({
+            mentionedEnvironments: ambientesMencionados,
+            classifiedEnvironments: ambientesClassificados,
+            requestedMetrics: metricasFinais,
+            fallbackEnvironment: ambientePadrao,
         });
 
         return {
-            environments,
-            metrics: finalMetrics,
-            operation,
-            period,
-            hour,
-            hourRange,
-            criterion: normalizeText(classifiedIntent?.criterio),
-            confidence: Number(classifiedIntent?.confianca) || null,
-            needsClarification: Boolean(classifiedIntent?.precisa_esclarecimento),
-            clarificationQuestion: classifiedIntent?.pergunta_esclarecimento || null,
+            environments: ambientes,
+            metrics: metricasFinais,
+            operation: operacao,
+            period: periodo,
+            hour: hora,
+            hourRange: faixaHoraria,
+            criterion: normalizarTextoConsulta(intencaoClassificada?.criterio),
+            confidence: Number(intencaoClassificada?.confianca) || null,
+            needsClarification: Boolean(intencaoClassificada?.precisa_esclarecimento),
+            clarificationQuestion: intencaoClassificada?.pergunta_esclarecimento || null,
         };
     }
 
-    async function classifyQuestionIntent(question, context) {
-        const prompt = `
+    async function classificarIntencaoPergunta(pergunta, contexto) {
+        const instrucaoModelo = `
             Interprete a pergunta abaixo para um dashboard de estação climática. Ela pode conter erros de digitação, gírias, fala informal e português não padrão.
             Responda somente JSON válido, sem markdown.
 
@@ -86,7 +86,7 @@
             }
 
             Regras:
-            - "últimos dias", "esses últimos dias" ou frase parecida significa últimos ${DEFAULT_RECENT_DAYS} dias.
+            - "últimos dias", "esses últimos dias" ou frase parecida significa últimos ${DIAS_RECENTES_PADRAO} dias.
             - "últimas 24 horas", "últimas 24h" ou frase parecida deve usar periodo.tipo "ultimas_24h".
             - "dia mais frio" usa menor média diária, exceto se pedir explicitamente menor registro.
             - "dia mais quente" usa maior média diária, exceto se pedir explicitamente maior registro.
@@ -111,128 +111,128 @@
             - Se a pergunta mencionar nascer do sol, pôr do sol, zênite, amanhecer, anoitecer, sol ou ciclo solar, use métrica "ciclo_solar" e solar true.
             - Não responda a pergunta do usuário, apenas classifique.
 
-            Data selecionada na página: ${formatDate(context.selectedDate)}
-            Aba ativa: ${getTabLabel(context.activeTab)}
-            Pergunta: ${question}
+            Data selecionada na página: ${formatarDataConsulta(contexto.selectedDate)}
+            Aba ativa: ${obterRotuloAbaRelatorio(contexto.activeTab)}
+            Pergunta: ${pergunta}
         `.trim();
 
         try {
-            const answer = await window.ClimateAIService.generateText(prompt);
-            return parseIntentJson(answer);
-        } catch (error) {
-            window.ClimateDiagnostics?.depurar("Falha ao classificar intenção do chat. Usando fallback local.", error);
+            const respostaFinal = await window.ClimateAIService.generateText(instrucaoModelo);
+            return interpretarJsonIntencao(respostaFinal);
+        } catch (erro) {
+            window.ClimateDiagnostics?.depurar("Falha ao classificar intenção do chat. Usando fallback local.", erro);
             return null;
         }
     }
 
-    function parseIntentJson(answer) {
-        const text = String(answer || "").trim();
-        const jsonText = text.match(/\{[\s\S]*\}/)?.[0] || text;
+    function interpretarJsonIntencao(respostaFinal) {
+        const texto = String(respostaFinal || "").trim();
+        const textoJson = texto.match(/\{[\s\S]*\}/)?.[0] || texto;
 
         try {
-            const parsed = JSON.parse(jsonText);
-            return parsed && typeof parsed === "object" ? parsed : null;
+            const interpretado = JSON.parse(textoJson);
+            return interpretado && typeof interpretado === "object" ? interpretado : null;
         } catch {
-            window.ClimateDiagnostics?.depurar("Intenção do chat não veio em JSON válido.", answer);
+            window.ClimateDiagnostics?.depurar("Intenção do chat não veio em JSON válido.", respostaFinal);
             return null;
         }
     }
 
-    function getEnvironmentsFromIntent(intent) {
-        const rawEnvironments = Array.isArray(intent?.ambientes)
-            ? intent.ambientes
-            : [intent?.ambiente].filter(Boolean);
+    function obterAmbientesDaIntencao(intencao) {
+        const ambientesBrutos = Array.isArray(intencao?.ambientes)
+            ? intencao.ambientes
+            : [intencao?.ambiente].filter(Boolean);
 
-        return rawEnvironments
-            .map(getEnvironmentByKey)
+        return ambientesBrutos
+            .map(obterAmbientePorChave)
             .filter(Boolean);
     }
 
-    function resolveTargetEnvironments({ mentionedEnvironments, classifiedEnvironments, requestedMetrics, fallbackEnvironment }) {
-        if (mentionedEnvironments.length) return resolveCompatibleEnvironments(mentionedEnvironments, requestedMetrics) || mentionedEnvironments;
-        if (classifiedEnvironments.length) return resolveCompatibleEnvironments(classifiedEnvironments, requestedMetrics) || classifiedEnvironments;
+    function resolverAmbientesAlvo({ mentionedEnvironments: ambientesMencionados, classifiedEnvironments: ambientesClassificados, requestedMetrics: metricasSolicitadas, fallbackEnvironment: ambientePadrao }) {
+        if (ambientesMencionados.length) return resolverAmbientesCompativeis(ambientesMencionados, metricasSolicitadas) || ambientesMencionados;
+        if (ambientesClassificados.length) return resolverAmbientesCompativeis(ambientesClassificados, metricasSolicitadas) || ambientesClassificados;
 
-        const metricEnvironment = findExclusiveMetricEnvironment(requestedMetrics);
-        if (metricEnvironment) return [metricEnvironment];
+        const ambienteMetrica = encontrarAmbienteExclusivoMetrica(metricasSolicitadas);
+        if (ambienteMetrica) return [ambienteMetrica];
 
-        const generalEnvironments = fallbackEnvironment?.dataKey === "solar"
-            ? findCompatibleMetricEnvironments(requestedMetrics)
+        const ambientesGerais = ambientePadrao?.dataKey === "solar"
+            ? encontrarAmbientesCompativeisMetrica(metricasSolicitadas)
             : [];
-        if (generalEnvironments.length) return generalEnvironments;
+        if (ambientesGerais.length) return ambientesGerais;
 
-        return [fallbackEnvironment];
+        return [ambientePadrao];
     }
 
-    function resolveCompatibleEnvironments(candidateEnvironments, requestedMetrics) {
-        if (!requestedMetrics?.length) return candidateEnvironments;
+    function resolverAmbientesCompativeis(ambientesCandidatos, metricasSolicitadas) {
+        if (!metricasSolicitadas?.length) return ambientesCandidatos;
 
-        const compatible = candidateEnvironments.filter(environment => (
-            requestedMetrics.some(requestedMetric => (
-                environment.metrics
-                    .map(toMetricObject)
-                    .some(metric => metricMatches(metric, requestedMetric))
+        const compativel = ambientesCandidatos.filter(ambiente => (
+            metricasSolicitadas.some(metricaSolicitada => (
+                ambiente.metrics
+                    .map(converterParaObjetoMetrica)
+                    .some(metrica => correspondenciasMetricas(metrica, metricaSolicitada))
             ))
         ));
-        if (compatible.length) return compatible;
+        if (compativel.length) return compativel;
 
-        const metricEnvironment = findExclusiveMetricEnvironment(requestedMetrics);
-        return metricEnvironment ? [metricEnvironment] : null;
+        const ambienteMetrica = encontrarAmbienteExclusivoMetrica(metricasSolicitadas);
+        return ambienteMetrica ? [ambienteMetrica] : null;
     }
 
-    function findExclusiveMetricEnvironment(requestedMetrics) {
-        const matches = findCompatibleMetricEnvironments(requestedMetrics);
-        return matches.length === 1 ? matches[0] : null;
+    function encontrarAmbienteExclusivoMetrica(metricasSolicitadas) {
+        const correspondencias = encontrarAmbientesCompativeisMetrica(metricasSolicitadas);
+        return correspondencias.length === 1 ? correspondencias[0] : null;
     }
 
-    function findCompatibleMetricEnvironments(requestedMetrics) {
+    function encontrarAmbientesCompativeisMetrica(metricasSolicitadas) {
         const ambientes = [];
-        for (const requestedMetric of requestedMetrics || []) {
-            const matches = Object.values(ENVIRONMENTS).filter(environment => (
-                environment.dataKey !== "solar" &&
-                environment.metrics
-                    .map(toMetricObject)
-                    .some(metric => metricMatches(metric, requestedMetric))
+        for (const metricaSolicitada of metricasSolicitadas || []) {
+            const correspondencias = Object.values(AMBIENTES).filter(ambiente => (
+                ambiente.dataKey !== "solar" &&
+                ambiente.metrics
+                    .map(converterParaObjetoMetrica)
+                    .some(metrica => correspondenciasMetricas(metrica, metricaSolicitada))
             ));
 
-            for (const environment of matches) {
-                if (!ambientes.includes(environment)) ambientes.push(environment);
+            for (const ambiente of correspondencias) {
+                if (!ambientes.includes(ambiente)) ambientes.push(ambiente);
             }
         }
 
         return ambientes;
     }
 
-    function normalizeMetrics(value) {
-        const values = Array.isArray(value) ? value : [value].filter(Boolean);
-        return values.map(normalizeText).filter(Boolean);
+    function normalizarMetricas(valor) {
+        const valores = Array.isArray(valor) ? valor : [valor].filter(Boolean);
+        return valores.map(normalizarTextoConsulta).filter(Boolean);
     }
 
-    function normalizeOperation(value, normalizedQuestion) {
-        const operation = normalizeText(value);
-        const solarOperation = inferSolarOperation(normalizedQuestion);
-        if (solarOperation) return solarOperation;
-        const heatmapOperation = inferHeatmapOperation(normalizedQuestion);
-        if (heatmapOperation) return heatmapOperation;
-        const hourlyOperation = inferHourlyOperation(normalizedQuestion);
-        if (hourlyOperation) return hourlyOperation;
-        if (hasComfortBandIntent(normalizedQuestion)) return "status_faixa";
-        if (normalizedQuestion.includes("dia mais fri")) return "dia_mais_frio";
-        if (normalizedQuestion.includes("dia mais quent")) return "dia_mais_quente";
-        if (normalizedQuestion.includes("tendencia") || normalizedQuestion.includes("subindo") || normalizedQuestion.includes("caindo")) return "tendencia";
-        if (normalizedQuestion.includes("variou") || normalizedQuestion.includes("variacao") || normalizedQuestion.includes("delta")) return "delta";
-        if (normalizedQuestion.includes("maxim") || normalizedQuestion.includes("mais alta") || normalizedQuestion.includes("maior valor")) return "maxima";
-        if (normalizedQuestion.includes("minim") || normalizedQuestion.includes("mais baixa") || normalizedQuestion.includes("menor valor")) return "minima";
-        if (normalizedQuestion.includes("media")) return "media";
-        if (normalizedQuestion.includes("diferenca") || normalizedQuestion.includes("diferença")) {
-            return hasExplicitDayComparison(normalizedQuestion) ? "comparar_dias" : "delta";
+    function normalizarOperacao(valor, perguntaNormalizada) {
+        const operacao = normalizarTextoConsulta(valor);
+        const operacaoSolar = inferirOperacaoSolar(perguntaNormalizada);
+        if (operacaoSolar) return operacaoSolar;
+        const operacaoMapaCalor = inferirOperacaoMapaCalor(perguntaNormalizada);
+        if (operacaoMapaCalor) return operacaoMapaCalor;
+        const operacaoHoraria = inferirOperacaoHoraria(perguntaNormalizada);
+        if (operacaoHoraria) return operacaoHoraria;
+        if (temIntencaoConforto(perguntaNormalizada)) return "status_faixa";
+        if (perguntaNormalizada.includes("dia mais fri")) return "dia_mais_frio";
+        if (perguntaNormalizada.includes("dia mais quent")) return "dia_mais_quente";
+        if (perguntaNormalizada.includes("tendencia") || perguntaNormalizada.includes("subindo") || perguntaNormalizada.includes("caindo")) return "tendencia";
+        if (perguntaNormalizada.includes("variou") || perguntaNormalizada.includes("variacao") || perguntaNormalizada.includes("delta")) return "delta";
+        if (perguntaNormalizada.includes("maxim") || perguntaNormalizada.includes("mais alta") || perguntaNormalizada.includes("maior valor")) return "maxima";
+        if (perguntaNormalizada.includes("minim") || perguntaNormalizada.includes("mais baixa") || perguntaNormalizada.includes("menor valor")) return "minima";
+        if (perguntaNormalizada.includes("media")) return "media";
+        if (perguntaNormalizada.includes("diferenca") || perguntaNormalizada.includes("diferença")) {
+            return temComparacaoDiasExplicita(perguntaNormalizada) ? "comparar_dias" : "delta";
         }
-        if (temIntencaoUltimaMedicao(normalizedQuestion) || operation === "valor") return "ultima_medicao";
-        if (operation && operation !== "resumo") return operation;
-        if (operation) return operation;
+        if (temIntencaoUltimaMedicao(perguntaNormalizada) || operacao === "valor") return "ultima_medicao";
+        if (operacao && operacao !== "resumo") return operacao;
+        if (operacao) return operacao;
         return "resumo";
     }
 
-    function temIntencaoUltimaMedicao(normalizedQuestion) {
+    function temIntencaoUltimaMedicao(perguntaNormalizada) {
         const pedeValorAtual = [
             "agora",
             "atual",
@@ -244,7 +244,7 @@
             "ultimo valor",
             "último valor",
             "valor atual",
-        ].some(term => normalizedQuestion.includes(normalizeText(term)));
+        ].some(termo => perguntaNormalizada.includes(normalizarTextoConsulta(termo)));
         if (pedeValorAtual) return true;
 
         const pedeValorSimples = [
@@ -254,7 +254,7 @@
             "quanto está",
             "quanto ta",
             "quanto tá",
-        ].some(term => normalizedQuestion.includes(normalizeText(term)));
+        ].some(termo => perguntaNormalizada.includes(normalizarTextoConsulta(termo)));
         if (!pedeValorSimples) return false;
 
         return ![
@@ -276,42 +276,42 @@
             "últimas",
             "ultimos",
             "últimos",
-        ].some(term => normalizedQuestion.includes(normalizeText(term)));
+        ].some(termo => perguntaNormalizada.includes(normalizarTextoConsulta(termo)));
     }
 
-    function inferSolarOperation(normalizedQuestion) {
-        if (!hasSolarQuestionIntent(normalizedQuestion)) return null;
+    function inferirOperacaoSolar(perguntaNormalizada) {
+        if (!temPerguntaSolar(perguntaNormalizada)) return null;
 
-        const isSunrise = normalizedQuestion.includes("nascer");
-        const isSunset = normalizedQuestion.includes("por do sol") || normalizedQuestion.includes("por-do-sol");
-        const asksTrend = normalizedQuestion.includes("ficando") || normalizedQuestion.includes("esta ficando") || normalizedQuestion.includes("tendencia");
-        const asksCompare = normalizedQuestion.includes("compar") || normalizedQuestion.includes("compare");
+        const ehNascerSol = perguntaNormalizada.includes("nascer");
+        const ehPorSol = perguntaNormalizada.includes("por do sol") || perguntaNormalizada.includes("por-do-sol");
+        const pedeTendencia = perguntaNormalizada.includes("ficando") || perguntaNormalizada.includes("esta ficando") || perguntaNormalizada.includes("tendencia");
+        const pedeComparacao = perguntaNormalizada.includes("compar") || perguntaNormalizada.includes("compare");
 
-        if (normalizedQuestion.includes("dia mais long") || normalizedQuestion.includes("dia com mais tempo de luz")) return "solar_maior_duracao_luz";
-        if (normalizedQuestion.includes("dia mais curt") || normalizedQuestion.includes("dia com menos tempo de luz")) return "solar_menor_duracao_luz";
+        if (perguntaNormalizada.includes("dia mais long") || perguntaNormalizada.includes("dia com mais tempo de luz")) return "solar_maior_duracao_luz";
+        if (perguntaNormalizada.includes("dia mais curt") || perguntaNormalizada.includes("dia com menos tempo de luz")) return "solar_menor_duracao_luz";
 
         if (
-            normalizedQuestion.includes("duracao")
-            || normalizedQuestion.includes("duração")
-            || normalizedQuestion.includes("tempo de luz")
-            || normalizedQuestion.includes("luz solar")
-            || normalizedQuestion.includes("periodo de luz")
-            || normalizedQuestion.includes("luz")
+            perguntaNormalizada.includes("duracao")
+            || perguntaNormalizada.includes("duração")
+            || perguntaNormalizada.includes("tempo de luz")
+            || perguntaNormalizada.includes("luz solar")
+            || perguntaNormalizada.includes("periodo de luz")
+            || perguntaNormalizada.includes("luz")
         ) {
-            if (normalizedQuestion.includes("maior") || normalizedQuestion.includes("mais long")) return "solar_maior_duracao_luz";
-            if (normalizedQuestion.includes("menor") || normalizedQuestion.includes("mais curt")) return "solar_menor_duracao_luz";
+            if (perguntaNormalizada.includes("maior") || perguntaNormalizada.includes("mais long")) return "solar_maior_duracao_luz";
+            if (perguntaNormalizada.includes("menor") || perguntaNormalizada.includes("mais curt")) return "solar_menor_duracao_luz";
             return "solar_duracao_dia";
         }
 
-        if (asksCompare && isSunrise) return "solar_comparar_nascer";
-        if (asksCompare && isSunset) return "solar_comparar_por";
-        if (asksTrend && isSunrise) return "solar_tendencia_nascer";
-        if (asksTrend && isSunset) return "solar_tendencia_por";
+        if (pedeComparacao && ehNascerSol) return "solar_comparar_nascer";
+        if (pedeComparacao && ehPorSol) return "solar_comparar_por";
+        if (pedeTendencia && ehNascerSol) return "solar_tendencia_nascer";
+        if (pedeTendencia && ehPorSol) return "solar_tendencia_por";
 
         return null;
     }
 
-    function hasSolarQuestionIntent(normalizedQuestion) {
+    function temPerguntaSolar(perguntaNormalizada) {
         return [
             "solar",
             "sol",
@@ -331,48 +331,48 @@
             "fotoperiodo",
             "dia mais longo",
             "dia mais curto",
-        ].some(term => normalizedQuestion.includes(normalizeText(term)));
+        ].some(termo => perguntaNormalizada.includes(normalizarTextoConsulta(termo)));
     }
 
-    function inferHeatmapOperation(normalizedQuestion) {
-        const mode = inferExtremeMode(normalizedQuestion);
-        if (!mode) return null;
+    function inferirOperacaoMapaCalor(perguntaNormalizada) {
+        const modo = inferirModoExtremo(perguntaNormalizada);
+        if (!modo) return null;
 
         if (
-            normalizedQuestion.includes("dia do mes")
-            || normalizedQuestion.includes("dia no mes")
-            || normalizedQuestion.includes("calendario")
-            || normalizedQuestion.includes("calendario climatico")
+            perguntaNormalizada.includes("dia do mes")
+            || perguntaNormalizada.includes("dia no mes")
+            || perguntaNormalizada.includes("calendario")
+            || perguntaNormalizada.includes("calendario climatico")
         ) {
-            return mode === "min" ? "calendario_dia_menor_valor" : "calendario_dia_maior_valor";
+            return modo === "min" ? "calendario_dia_menor_valor" : "calendario_dia_maior_valor";
         }
 
         if (
-            normalizedQuestion.includes("dia/hora")
-            || normalizedQuestion.includes("dia hora")
-            || normalizedQuestion.includes("dia e hora")
-            || normalizedQuestion.includes("mapa semanal")
-            || normalizedQuestion.includes("heatmap semanal")
-            || normalizedQuestion.includes("semana")
+            perguntaNormalizada.includes("dia/hora")
+            || perguntaNormalizada.includes("dia hora")
+            || perguntaNormalizada.includes("dia e hora")
+            || perguntaNormalizada.includes("mapa semanal")
+            || perguntaNormalizada.includes("heatmap semanal")
+            || perguntaNormalizada.includes("semana")
         ) {
-            return mode === "min" ? "heatmap_semana_menor_valor" : "heatmap_semana_maior_valor";
+            return modo === "min" ? "heatmap_semana_menor_valor" : "heatmap_semana_maior_valor";
         }
 
         if (
-            normalizedQuestion.includes("hora costuma")
-            || normalizedQuestion.includes("horario costuma")
-            || normalizedQuestion.includes("costuma ser")
-            || normalizedQuestion.includes("heatmap por hora")
-            || normalizedQuestion.includes("por hora do dia")
+            perguntaNormalizada.includes("hora costuma")
+            || perguntaNormalizada.includes("horario costuma")
+            || perguntaNormalizada.includes("costuma ser")
+            || perguntaNormalizada.includes("heatmap por hora")
+            || perguntaNormalizada.includes("por hora do dia")
         ) {
-            return mode === "min" ? "heatmap_hora_menor_valor" : "heatmap_hora_maior_valor";
+            return modo === "min" ? "heatmap_hora_menor_valor" : "heatmap_hora_maior_valor";
         }
 
         return null;
     }
 
-    function inferHourlyOperation(normalizedQuestion) {
-        const asksTime = [
+    function inferirOperacaoHoraria(perguntaNormalizada) {
+        const pedeHorario = [
             "qual horario",
             "qual foi o horario",
             "que horario",
@@ -382,52 +382,52 @@
             "que hora",
             "periodo do dia",
             "faixa do dia",
-        ].some(term => normalizedQuestion.includes(term));
-        if (!asksTime) return null;
+        ].some(termo => perguntaNormalizada.includes(termo));
+        if (!pedeHorario) return null;
 
-        const asksHigh = [
+        const pedeMaior = [
             "mais quent",
             "maior",
             "maxim",
             "mais alto",
             "pico",
-        ].some(term => normalizedQuestion.includes(term));
-        if (asksHigh) return "horario_maior_valor";
+        ].some(termo => perguntaNormalizada.includes(termo));
+        if (pedeMaior) return "horario_maior_valor";
 
-        const asksLow = [
+        const pedeMenor = [
             "mais fri",
             "menor",
             "minim",
             "mais baixo",
-        ].some(term => normalizedQuestion.includes(term));
-        if (asksLow) return "horario_menor_valor";
+        ].some(termo => perguntaNormalizada.includes(termo));
+        if (pedeMenor) return "horario_menor_valor";
 
         return null;
     }
 
-    function inferExtremeMode(normalizedQuestion) {
-        const asksHigh = [
+    function inferirModoExtremo(perguntaNormalizada) {
+        const pedeMaior = [
             "mais quent",
             "maior",
             "maxim",
             "mais alto",
             "pico",
-        ].some(term => normalizedQuestion.includes(term));
-        if (asksHigh) return "max";
+        ].some(termo => perguntaNormalizada.includes(termo));
+        if (pedeMaior) return "max";
 
-        const asksLow = [
+        const pedeMenor = [
             "mais fri",
             "menor",
             "minim",
             "mais baixo",
-        ].some(term => normalizedQuestion.includes(term));
-        if (asksLow) return "min";
+        ].some(termo => perguntaNormalizada.includes(termo));
+        if (pedeMenor) return "min";
 
         return null;
     }
 
 
-    function hasComfortBandIntent(normalizedQuestion) {
+    function temIntencaoConforto(perguntaNormalizada) {
         return [
             "faixa",
             "conforto",
@@ -440,31 +440,31 @@
             "pior horario",
             "pior horário",
             "quantas horas fora",
-        ].some(term => normalizedQuestion.includes(normalizeText(term)));
+        ].some(termo => perguntaNormalizada.includes(normalizarTextoConsulta(termo)));
     }
 
-    function normalizePeriod(period, normalizedQuestion, selectedDate, operation) {
-        const explicitDates = extractQuestionDates(normalizedQuestion);
-        const normalizedType = normalizeText(period?.tipo);
-        const monthPeriodDate = extractMonthPeriodDate(normalizedQuestion, selectedDate);
-        const yearPeriodDate = extractYearPeriodDate(normalizedQuestion, selectedDate);
-        const quantidadeHorasPergunta = extractRollingHours(normalizedQuestion);
-        if (normalizedType === "ultimas_24h" || quantidadeHorasPergunta !== null) {
-            const horasSolicitadas = quantidadeHorasPergunta || Number(period?.quantidade) || 24;
-            const horas = clampHours(horasSolicitadas);
+    function normalizarPeriodo(periodo, perguntaNormalizada, dataSelecionada, operacao) {
+        const datasExplicitas = extrairDatasPergunta(perguntaNormalizada);
+        const tipoNormalizado = normalizarTextoConsulta(periodo?.tipo);
+        const dataPeriodoMensal = extrairDataPeriodoMensal(perguntaNormalizada, dataSelecionada);
+        const dataPeriodoAnual = extrairDataPeriodoAnual(perguntaNormalizada, dataSelecionada);
+        const quantidadeHorasPergunta = extrairJanelaHoras(perguntaNormalizada);
+        if (tipoNormalizado === "ultimas_24h" || quantidadeHorasPergunta !== null) {
+            const horasSolicitadas = quantidadeHorasPergunta || Number(periodo?.quantidade) || 24;
+            const horas = limitarHoras(horasSolicitadas);
             return {
                 type: "rolling_hours",
                 hours: horas,
                 requestedHours: horasSolicitadas,
                 limited: horas !== horasSolicitadas,
-                selectedDate: explicitDates[0] || selectedDate || window.ClimateData.dataAtual(),
+                selectedDate: datasExplicitas[0] || dataSelecionada || window.ClimateData.dataAtual(),
             };
         }
 
-        const intervaloExplicito = extrairIntervaloExplicito(period, normalizedType, normalizedQuestion, explicitDates);
+        const intervaloExplicito = extrairIntervaloExplicito(periodo, tipoNormalizado, perguntaNormalizada, datasExplicitas);
         if (intervaloExplicito) {
-            const consultaSolarExtrema = operation === "solar_maior_duracao_luz"
-                || operation === "solar_menor_duracao_luz";
+            const consultaSolarExtrema = operacao === "solar_maior_duracao_luz"
+                || operacao === "solar_menor_duracao_luz";
             return {
                 type: consultaSolarExtrema ? "solar_range" : "range",
                 start: intervaloExplicito.inicio,
@@ -472,155 +472,155 @@
             };
         }
 
-        if (normalizedType === "mes_selecionado" || operation?.startsWith("calendario_dia_") || ((operation === "solar_maior_duracao_luz" || operation === "solar_menor_duracao_luz") && monthPeriodDate)) {
-            return { type: "selected_month", selectedDate: monthPeriodDate || explicitDates[0] || selectedDate || window.ClimateData.dataAtual() };
+        if (tipoNormalizado === "mes_selecionado" || operacao?.startsWith("calendario_dia_") || ((operacao === "solar_maior_duracao_luz" || operacao === "solar_menor_duracao_luz") && dataPeriodoMensal)) {
+            return { type: "selected_month", selectedDate: dataPeriodoMensal || datasExplicitas[0] || dataSelecionada || window.ClimateData.dataAtual() };
         }
 
-        if (normalizedType === "ano_selecionado" || operation === "solar_maior_duracao_luz" || operation === "solar_menor_duracao_luz") {
-            return { type: "selected_year", selectedDate: explicitDates[0] || yearPeriodDate || selectedDate || window.ClimateData.dataAtual() };
+        if (tipoNormalizado === "ano_selecionado" || operacao === "solar_maior_duracao_luz" || operacao === "solar_menor_duracao_luz") {
+            return { type: "selected_year", selectedDate: datasExplicitas[0] || dataPeriodoAnual || dataSelecionada || window.ClimateData.dataAtual() };
         }
 
-        if (normalizedType === "semana_selecionada" || operation?.startsWith("heatmap_semana_") || operation === "solar_tendencia_nascer" || operation === "solar_tendencia_por" || operation === "solar_comparar_nascer" || operation === "solar_comparar_por" || normalizedQuestion.includes("semana")) {
-            return { type: "selected_week", selectedDate: explicitDates[0] || selectedDate || window.ClimateData.dataAtual() };
+        if (tipoNormalizado === "semana_selecionada" || operacao?.startsWith("heatmap_semana_") || operacao === "solar_tendencia_nascer" || operacao === "solar_tendencia_por" || operacao === "solar_comparar_nascer" || operacao === "solar_comparar_por" || perguntaNormalizada.includes("semana")) {
+            return { type: "selected_week", selectedDate: datasExplicitas[0] || dataSelecionada || window.ClimateData.dataAtual() };
         }
 
-        if (operation?.startsWith("heatmap_hora_") && (normalizedQuestion.includes("costuma") || normalizedQuestion.includes("tipic"))) {
-            return { type: "selected_month", selectedDate: explicitDates[0] || selectedDate || window.ClimateData.dataAtual() };
+        if (operacao?.startsWith("heatmap_hora_") && (perguntaNormalizada.includes("costuma") || perguntaNormalizada.includes("tipic"))) {
+            return { type: "selected_month", selectedDate: datasExplicitas[0] || dataSelecionada || window.ClimateData.dataAtual() };
         }
 
-        if (normalizedType === "ultimos_dias" || normalizedQuestion.includes("ultim") || normalizedQuestion.includes("urtim")) {
-            const quantidadePergunta = extractLastDaysQuantity(normalizedQuestion);
-            const diasSolicitados = quantidadePergunta || Number(period?.quantidade) || DEFAULT_RECENT_DAYS;
-            const dias = clampDays(diasSolicitados);
+        if (tipoNormalizado === "ultimos_dias" || perguntaNormalizada.includes("ultim") || perguntaNormalizada.includes("urtim")) {
+            const quantidadePergunta = extrairQuantidadeUltimosDias(perguntaNormalizada);
+            const diasSolicitados = quantidadePergunta || Number(periodo?.quantidade) || DIAS_RECENTES_PADRAO;
+            const dias = limitarDias(diasSolicitados);
             return {
                 type: "last_days",
                 days: dias,
                 requestedDays: diasSolicitados,
                 limited: dias !== diasSolicitados,
-                selectedDate: explicitDates[0] || selectedDate || window.ClimateData.dataAtual(),
+                selectedDate: datasExplicitas[0] || dataSelecionada || window.ClimateData.dataAtual(),
             };
         }
 
-        if (explicitDates.length > 1) return { type: "datas", dates: explicitDates };
-        if (explicitDates.length === 1) return { type: "datas", dates: explicitDates };
+        if (datasExplicitas.length > 1) return { type: "datas", dates: datasExplicitas };
+        if (datasExplicitas.length === 1) return { type: "datas", dates: datasExplicitas };
 
-        const rawDates = Array.isArray(period?.datas) ? period.datas : [];
-        const classifiedDates = rawDates.map(normalizeRelativeOrExplicitDate).filter(Boolean);
-        if (classifiedDates.length) return { type: "datas", dates: classifiedDates };
+        const datasBrutas = Array.isArray(periodo?.datas) ? periodo.datas : [];
+        const datasClassificadas = datasBrutas.map(normalizarDataRelativaOuExplicita).filter(Boolean);
+        if (datasClassificadas.length) return { type: "datas", dates: datasClassificadas };
 
-        const singleDate = normalizeRelativeOrExplicitDate(period?.data);
-        if (singleDate) return { type: "datas", dates: [singleDate] };
+        const dataUnica = normalizarDataRelativaOuExplicita(periodo?.data);
+        if (dataUnica) return { type: "datas", dates: [dataUnica] };
 
-        if (normalizedType === "intervalo" && period?.inicio && period?.fim) {
+        if (tipoNormalizado === "intervalo" && periodo?.inicio && periodo?.fim) {
             return {
                 type: "range",
-                start: normalizeRelativeOrExplicitDate(period.inicio),
-                end: normalizeRelativeOrExplicitDate(period.fim),
+                start: normalizarDataRelativaOuExplicita(periodo.inicio),
+                end: normalizarDataRelativaOuExplicita(periodo.fim),
             };
         }
 
-        if (hasWord(normalizedQuestion, "hoje") || hasWord(normalizedQuestion, "hj")) return { type: "datas", dates: [window.ClimateData.dataAtual()] };
-        if (hasWord(normalizedQuestion, "ontem")) return { type: "datas", dates: [offsetFromToday(-1)] };
-        if (hasWord(normalizedQuestion, "anteontem") || hasWord(normalizedQuestion, "antiontem")) return { type: "datas", dates: [offsetFromToday(-2)] };
+        if (temPalavraConsulta(perguntaNormalizada, "hoje") || temPalavraConsulta(perguntaNormalizada, "hj")) return { type: "datas", dates: [window.ClimateData.dataAtual()] };
+        if (temPalavraConsulta(perguntaNormalizada, "ontem")) return { type: "datas", dates: [deslocamentoHoje(-1)] };
+        if (temPalavraConsulta(perguntaNormalizada, "anteontem") || temPalavraConsulta(perguntaNormalizada, "antiontem")) return { type: "datas", dates: [deslocamentoHoje(-2)] };
 
-        return { type: "datas", dates: [selectedDate || window.ClimateData.dataAtual()] };
+        return { type: "datas", dates: [dataSelecionada || window.ClimateData.dataAtual()] };
     }
 
-    function resolvePeriodDates(period) {
-        if (period.type === "rolling_hours") return resolveRollingHourDates(period);
-        if (period.type === "selected_month") return buildMonthDates(period.selectedDate);
-        if (period.type === "selected_year") return buildYearDates(period.selectedDate);
-        if (period.type === "selected_week") return buildWeekDates(period.selectedDate);
-        if (period.type === "datas") return uniqueDates(period.dates).slice(0, MAX_PERIOD_DAYS);
-        if (period.type === "last_days") return buildLastDays(period.days, period.selectedDate);
-        if (period.type === "solar_range" && period.start && period.end) {
-            return buildDateRange(period.start, period.end, MAX_DIAS_INTERVALO_SOLAR);
+    function resolverDatasPeriodo(periodo) {
+        if (periodo.type === "rolling_hours") return resolverDatasJanelaHoras(periodo);
+        if (periodo.type === "selected_month") return montarDatasMes(periodo.selectedDate);
+        if (periodo.type === "selected_year") return montarDatasAno(periodo.selectedDate);
+        if (periodo.type === "selected_week") return montarDatasSemana(periodo.selectedDate);
+        if (periodo.type === "datas") return datasUnicas(periodo.dates).slice(0, MAX_DIAS_PERIODO);
+        if (periodo.type === "last_days") return montarUltimosDias(periodo.days, periodo.selectedDate);
+        if (periodo.type === "solar_range" && periodo.start && periodo.end) {
+            return montarIntervaloDatas(periodo.start, periodo.end, MAX_DIAS_INTERVALO_SOLAR);
         }
-        if (period.type === "range" && period.start && period.end) return buildDateRange(period.start, period.end, MAX_PERIOD_DAYS);
+        if (periodo.type === "range" && periodo.start && periodo.end) return montarIntervaloDatas(periodo.start, periodo.end, MAX_DIAS_PERIODO);
         return [window.ClimateData.dataAtual()];
     }
 
-    function buildMonthDates(selectedDate) {
-        const date = window.ClimateData.parseFirebaseDate(selectedDate || window.ClimateData.dataAtual());
-        const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-        return Array.from({ length: daysInMonth }, (_, index) => (
-            formatFirebaseDate(new Date(date.getFullYear(), date.getMonth(), index + 1))
+    function montarDatasMes(dataSelecionada) {
+        const dataReferencia = window.ClimateData.parseFirebaseDate(dataSelecionada || window.ClimateData.dataAtual());
+        const diasNoMes = new Date(dataReferencia.getFullYear(), dataReferencia.getMonth() + 1, 0).getDate();
+        return Array.from({ length: diasNoMes }, (_, indice) => (
+            formatarDataFirebaseRelatorio(new Date(dataReferencia.getFullYear(), dataReferencia.getMonth(), indice + 1))
         ));
     }
 
-    function buildYearDates(selectedDate) {
-        const date = window.ClimateData.parseFirebaseDate(selectedDate || window.ClimateData.dataAtual());
-        const dates = [];
+    function montarDatasAno(dataSelecionada) {
+        const dataReferencia = window.ClimateData.parseFirebaseDate(dataSelecionada || window.ClimateData.dataAtual());
+        const datas = [];
 
         for (
-            const cursor = new Date(date.getFullYear(), 0, 1);
-            cursor.getFullYear() === date.getFullYear();
+            const cursor = new Date(dataReferencia.getFullYear(), 0, 1);
+            cursor.getFullYear() === dataReferencia.getFullYear();
             cursor.setDate(cursor.getDate() + 1)
         ) {
-            dates.push(formatFirebaseDate(cursor));
+            datas.push(formatarDataFirebaseRelatorio(cursor));
         }
 
-        return dates;
+        return datas;
     }
 
-    function buildWeekDates(selectedDate) {
-        const date = window.ClimateData.parseFirebaseDate(selectedDate || window.ClimateData.dataAtual());
-        const start = new Date(date);
-        start.setDate(start.getDate() - start.getDay());
-        const dates = [];
+    function montarDatasSemana(dataSelecionada) {
+        const dataReferencia = window.ClimateData.parseFirebaseDate(dataSelecionada || window.ClimateData.dataAtual());
+        const inicio = new Date(dataReferencia);
+        inicio.setDate(inicio.getDate() - inicio.getDay());
+        const datas = [];
 
-        for (const cursor = new Date(start); cursor <= date && dates.length < 7; cursor.setDate(cursor.getDate() + 1)) {
-            dates.push(formatFirebaseDate(cursor));
+        for (const cursor = new Date(inicio); cursor <= dataReferencia && datas.length < 7; cursor.setDate(cursor.getDate() + 1)) {
+            datas.push(formatarDataFirebaseRelatorio(cursor));
         }
 
-        return dates;
+        return datas;
     }
 
-    function resolveRollingHourDates(period) {
-        const selectedDate = period.selectedDate || window.ClimateData.dataAtual();
-        const end = getRollingWindowEnd(selectedDate);
-        const start = new Date(end);
-        start.setHours(start.getHours() - (period.hours || 24));
-        return uniqueDates([formatFirebaseDate(start), formatFirebaseDate(end)]);
+    function resolverDatasJanelaHoras(periodo) {
+        const dataSelecionada = periodo.selectedDate || window.ClimateData.dataAtual();
+        const fim = obterFimJanelaMovel(dataSelecionada);
+        const inicio = new Date(fim);
+        inicio.setHours(inicio.getHours() - (periodo.hours || 24));
+        return datasUnicas([formatarDataFirebaseRelatorio(inicio), formatarDataFirebaseRelatorio(fim)]);
     }
 
-    function buildLastDays(days, selectedDate) {
-        const quantidade = clampDays(days);
-        const dataFinal = window.ClimateData.parseFirebaseDate(selectedDate || window.ClimateData.dataAtual());
-        return Array.from({ length: quantidade }, (_, index) => {
-            const data = new Date(dataFinal);
-            data.setDate(data.getDate() - (quantidade - 1 - index));
-            return formatFirebaseDate(data);
+    function montarUltimosDias(dias, dataSelecionada) {
+        const quantidade = limitarDias(dias);
+        const dataFinal = window.ClimateData.parseFirebaseDate(dataSelecionada || window.ClimateData.dataAtual());
+        return Array.from({ length: quantidade }, (_, indice) => {
+            const dados = new Date(dataFinal);
+            dados.setDate(dados.getDate() - (quantidade - 1 - indice));
+            return formatarDataFirebaseRelatorio(dados);
         });
     }
 
-    function buildDateRange(start, end, limiteDias = MAX_PERIOD_DAYS) {
-        const startDate = window.ClimateData.parseFirebaseDate(start);
-        const endDate = window.ClimateData.parseFirebaseDate(end);
-        const dates = [];
-        const direction = startDate <= endDate ? 1 : -1;
-        const cursor = new Date(startDate);
+    function montarIntervaloDatas(inicio, fim, limiteDias = MAX_DIAS_PERIODO) {
+        const dataInicial = window.ClimateData.parseFirebaseDate(inicio);
+        const dataFinal = window.ClimateData.parseFirebaseDate(fim);
+        const datas = [];
+        const direcao = dataInicial <= dataFinal ? 1 : -1;
+        const cursor = new Date(dataInicial);
 
-        while (dates.length < limiteDias) {
-            dates.push(formatFirebaseDate(cursor));
-            if (formatFirebaseDate(cursor) === formatFirebaseDate(endDate)) break;
-            cursor.setDate(cursor.getDate() + direction);
+        while (datas.length < limiteDias) {
+            datas.push(formatarDataFirebaseRelatorio(cursor));
+            if (formatarDataFirebaseRelatorio(cursor) === formatarDataFirebaseRelatorio(dataFinal)) break;
+            cursor.setDate(cursor.getDate() + direcao);
         }
 
-        return dates;
+        return datas;
     }
 
     function extrairIntervaloExplicito(periodo, tipoNormalizado, perguntaNormalizada, datasExplicitas) {
-        const inicioClassificado = normalizeRelativeOrExplicitDate(periodo?.inicio);
-        const fimClassificado = normalizeRelativeOrExplicitDate(periodo?.fim);
+        const inicioClassificado = normalizarDataRelativaOuExplicita(periodo?.inicio);
+        const fimClassificado = normalizarDataRelativaOuExplicita(periodo?.fim);
         if (inicioClassificado && fimClassificado) {
             return { inicio: inicioClassificado, fim: fimClassificado };
         }
 
         const mencionaIntervalo = tipoNormalizado === "intervalo"
-            || hasWord(perguntaNormalizada, "entre")
-            || hasWord(perguntaNormalizada, "ate")
-            || hasWord(perguntaNormalizada, "intervalo");
+            || temPalavraConsulta(perguntaNormalizada, "entre")
+            || temPalavraConsulta(perguntaNormalizada, "ate")
+            || temPalavraConsulta(perguntaNormalizada, "intervalo");
         if (!mencionaIntervalo || datasExplicitas.length < 2) return null;
 
         return {
@@ -629,47 +629,47 @@
         };
     }
 
-    function extractQuestionDates(normalizedQuestion) {
-        const dates = [];
-        const matches = normalizedQuestion.matchAll(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b/g);
-        for (const match of matches) {
-            const [, day, month, year] = match;
-            dates.push(`${day.padStart(2, "0")}-${month.padStart(2, "0")}-${year}`);
+    function extrairDatasPergunta(perguntaNormalizada) {
+        const datas = [];
+        const correspondencias = perguntaNormalizada.matchAll(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b/g);
+        for (const correspondencia of correspondencias) {
+            const [, dia, mes, ano] = correspondencia;
+            datas.push(`${dia.padStart(2, "0")}-${mes.padStart(2, "0")}-${ano}`);
         }
 
-        if (hasWord(normalizedQuestion, "anteontem") || hasWord(normalizedQuestion, "antiontem")) dates.push(offsetFromToday(-2));
-        if (hasWord(normalizedQuestion, "ontem")) dates.push(offsetFromToday(-1));
-        if (hasWord(normalizedQuestion, "hoje") || hasWord(normalizedQuestion, "hj")) dates.push(window.ClimateData.dataAtual());
+        if (temPalavraConsulta(perguntaNormalizada, "anteontem") || temPalavraConsulta(perguntaNormalizada, "antiontem")) datas.push(deslocamentoHoje(-2));
+        if (temPalavraConsulta(perguntaNormalizada, "ontem")) datas.push(deslocamentoHoje(-1));
+        if (temPalavraConsulta(perguntaNormalizada, "hoje") || temPalavraConsulta(perguntaNormalizada, "hj")) datas.push(window.ClimateData.dataAtual());
 
-        return uniqueDates(dates);
+        return datasUnicas(datas);
     }
 
-    function extractMonthPeriodDate(normalizedQuestion, selectedDate) {
-        const monthIndex = getMentionedMonthIndex(normalizedQuestion);
-        if (monthIndex === null) {
-            return normalizedQuestion.includes("mes") || normalizedQuestion.includes("mês")
-                ? selectedDate || window.ClimateData.dataAtual()
+    function extrairDataPeriodoMensal(perguntaNormalizada, dataSelecionada) {
+        const indiceMes = obterIndiceMesMencionadoPergunta(perguntaNormalizada);
+        if (indiceMes === null) {
+            return perguntaNormalizada.includes("mes") || perguntaNormalizada.includes("mês")
+                ? dataSelecionada || window.ClimateData.dataAtual()
                 : null;
         }
 
-        const selected = window.ClimateData.parseFirebaseDate(selectedDate || window.ClimateData.dataAtual());
-        const year = extractQuestionYear(normalizedQuestion) || selected.getFullYear();
-        return formatFirebaseDate(new Date(year, monthIndex, 1));
+        const selecionado = window.ClimateData.parseFirebaseDate(dataSelecionada || window.ClimateData.dataAtual());
+        const ano = extrairAnoPergunta(perguntaNormalizada) || selecionado.getFullYear();
+        return formatarDataFirebaseRelatorio(new Date(ano, indiceMes, 1));
     }
 
-    function extractYearPeriodDate(normalizedQuestion, selectedDate) {
-        const selected = window.ClimateData.parseFirebaseDate(selectedDate || window.ClimateData.dataAtual());
-        const year = extractQuestionYear(normalizedQuestion) || selected.getFullYear();
-        return formatFirebaseDate(new Date(year, selected.getMonth(), selected.getDate()));
+    function extrairDataPeriodoAnual(perguntaNormalizada, dataSelecionada) {
+        const selecionado = window.ClimateData.parseFirebaseDate(dataSelecionada || window.ClimateData.dataAtual());
+        const ano = extrairAnoPergunta(perguntaNormalizada) || selecionado.getFullYear();
+        return formatarDataFirebaseRelatorio(new Date(ano, selecionado.getMonth(), selecionado.getDate()));
     }
 
-    function extractQuestionYear(normalizedQuestion) {
-        const match = normalizedQuestion.match(/\b(20\d{2})\b/);
-        return match ? Number(match[1]) : null;
+    function extrairAnoPergunta(perguntaNormalizada) {
+        const correspondencia = perguntaNormalizada.match(/\b(20\d{2})\b/);
+        return correspondencia ? Number(correspondencia[1]) : null;
     }
 
-    function getMentionedMonthIndex(normalizedQuestion) {
-        const months = [
+    function obterIndiceMesMencionadoPergunta(perguntaNormalizada) {
+        const meses = [
             ["janeiro", "jan"],
             ["fevereiro", "fev"],
             ["marco", "março", "mar"],
@@ -684,150 +684,150 @@
             ["dezembro", "dez"],
         ];
 
-        const index = months.findIndex(aliases => aliases.some(alias => hasWord(normalizedQuestion, normalizeText(alias))));
-        return index >= 0 ? index : null;
+        const indice = meses.findIndex(apelidos => apelidos.some(apelido => temPalavraConsulta(perguntaNormalizada, normalizarTextoConsulta(apelido))));
+        return indice >= 0 ? indice : null;
     }
 
-    function extractQuestionHour(normalizedQuestion) {
-        const match = normalizedQuestion.match(/\b(?:as|às)\s*(\d{1,2})(?:h|:00)?\b|\b(\d{1,2})(?:h|:00)\b/);
-        if (!match) return null;
-        const hour = Number(match[1] || match[2]);
-        if (!Number.isFinite(hour) || hour < 0 || hour > 23) return null;
-        return String(hour).padStart(2, "0");
+    function extrairHoraPergunta(perguntaNormalizada) {
+        const correspondencia = perguntaNormalizada.match(/\b(?:as|às)\s*(\d{1,2})(?:h|:00)?\b|\b(\d{1,2})(?:h|:00)\b/);
+        if (!correspondencia) return null;
+        const hora = Number(correspondencia[1] || correspondencia[2]);
+        if (!Number.isFinite(hora) || hora < 0 || hora > 23) return null;
+        return String(hora).padStart(2, "0");
     }
 
-    function normalizeHourRange(period) {
-        if (!period || typeof period !== "object") return null;
+    function normalizarFaixaHoraria(periodo) {
+        if (!periodo || typeof periodo !== "object") return null;
 
-        const start = normalizeHourFilter(
-            period.hora_inicio
-            || period.inicio_hora
-            || period.horaInicial
-            || period.inicioHorario
+        const inicio = normalizarFiltroHoraConsulta(
+            periodo.hora_inicio
+            || periodo.inicio_hora
+            || periodo.horaInicial
+            || periodo.inicioHorario
         );
-        const end = normalizeHourFilter(
-            period.hora_fim
-            || period.fim_hora
-            || period.horaFinal
-            || period.fimHorario
+        const fim = normalizarFiltroHoraConsulta(
+            periodo.hora_fim
+            || periodo.fim_hora
+            || periodo.horaFinal
+            || periodo.fimHorario
         );
 
-        return start && end ? { start, end } : null;
+        return inicio && fim ? { start: inicio, end: fim } : null;
     }
 
-    function extractQuestionHourRange(normalizedQuestion) {
-        const match = normalizedQuestion.match(/\b(?:entre|das|de)\s*(\d{1,2})(?:h|:00)?\s*(?:e|a|as|-)\s*(\d{1,2})(?:h|:00)?\b/);
-        if (!match) return null;
+    function extrairFaixaHorariaPergunta(perguntaNormalizada) {
+        const correspondencia = perguntaNormalizada.match(/\b(?:entre|das|de)\s*(\d{1,2})(?:h|:00)?\s*(?:e|a|as|-)\s*(\d{1,2})(?:h|:00)?\b/);
+        if (!correspondencia) return null;
 
-        const start = normalizeHourFilter(match[1]);
-        const end = normalizeHourFilter(match[2]);
-        return start && end ? { start, end } : null;
+        const inicio = normalizarFiltroHoraConsulta(correspondencia[1]);
+        const fim = normalizarFiltroHoraConsulta(correspondencia[2]);
+        return inicio && fim ? { start: inicio, end: fim } : null;
     }
 
-    function extractRollingHours(normalizedQuestion) {
-        const match = normalizedQuestion.match(/\b(?:ultim|urtim)[a-z]*\s+(.+?)\s*(?:h|hora|horas)\b/);
-        if (!match) return null;
-        return parseQuantity(match[1]);
+    function extrairJanelaHoras(perguntaNormalizada) {
+        const correspondencia = perguntaNormalizada.match(/\b(?:ultim|urtim)[a-z]*\s+(.+?)\s*(?:h|hora|horas)\b/);
+        if (!correspondencia) return null;
+        return interpretarQuantidade(correspondencia[1]);
     }
 
-    function extractLastDaysQuantity(normalizedQuestion) {
-        const match = normalizedQuestion.match(/\b(?:ultim|urtim)[a-z]*\s+(.+?)\s+dias?\b/);
-        if (!match) return null;
-        return parseQuantity(match[1]);
+    function extrairQuantidadeUltimosDias(perguntaNormalizada) {
+        const correspondencia = perguntaNormalizada.match(/\b(?:ultim|urtim)[a-z]*\s+(.+?)\s+dias?\b/);
+        if (!correspondencia) return null;
+        return interpretarQuantidade(correspondencia[1]);
     }
 
-    function parseQuantity(value) {
-        const text = normalizeText(value).trim();
-        if (/^\d+$/.test(text)) return Number(text);
+    function interpretarQuantidade(valor) {
+        const texto = normalizarTextoConsulta(valor).trim();
+        if (/^\d+$/.test(texto)) return Number(texto);
 
-        const units = {
+        const unidades = {
             um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5,
             seis: 6, sete: 7, oito: 8, nove: 9, dez: 10, onze: 11,
             doze: 12, treze: 13, quatorze: 14, catorze: 14, quinze: 15,
             dezesseis: 16, dezassete: 17, dezessete: 17, dezoito: 18, dezenove: 19,
         };
-        if (units[text]) return units[text];
+        if (unidades[texto]) return unidades[texto];
 
-        const tens = { vinte: 20, trinta: 30, quarenta: 40, cinquenta: 50, sessenta: 60 };
-        const compound = text.match(/^(vinte|trinta|quarenta|cinquenta|sessenta)(?:\s+e\s+(um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove))?$/);
-        if (!compound) return null;
-        return tens[compound[1]] + (compound[2] ? units[compound[2]] : 0);
+        const dezenas = { vinte: 20, trinta: 30, quarenta: 40, cinquenta: 50, sessenta: 60 };
+        const composto = texto.match(/^(vinte|trinta|quarenta|cinquenta|sessenta)(?:\s+e\s+(um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove))?$/);
+        if (!composto) return null;
+        return dezenas[composto[1]] + (composto[2] ? unidades[composto[2]] : 0);
     }
 
-    function hasExplicitDayComparison(normalizedQuestion) {
-        const mentions = ["hoje", "hj", "ontem", "anteontem", "antiontem"]
-            .filter(term => hasWord(normalizedQuestion, term));
-        const explicitDates = [...normalizedQuestion.matchAll(/\b\d{1,2}[/-]\d{1,2}[/-]\d{4}\b/g)];
-        return new Set(mentions).size + explicitDates.length >= 2 || normalizedQuestion.includes("compar");
+    function temComparacaoDiasExplicita(perguntaNormalizada) {
+        const mencoes = ["hoje", "hj", "ontem", "anteontem", "antiontem"]
+            .filter(termo => temPalavraConsulta(perguntaNormalizada, termo));
+        const datasExplicitas = [...perguntaNormalizada.matchAll(/\b\d{1,2}[/-]\d{1,2}[/-]\d{4}\b/g)];
+        return new Set(mencoes).size + datasExplicitas.length >= 2 || perguntaNormalizada.includes("compar");
     }
 
-    function getRollingWindowEnd(selectedDate) {
-        const parts = window.ClimateData.parseFirebaseDate(selectedDate);
-        const now = new Date();
+    function obterFimJanelaMovel(dataSelecionada) {
+        const partes = window.ClimateData.parseFirebaseDate(dataSelecionada);
+        const agora = new Date();
         return new Date(
-            parts.getFullYear(),
-            parts.getMonth(),
-            parts.getDate(),
-            now.getHours(),
-            now.getMinutes(),
-            now.getSeconds(),
-            now.getMilliseconds()
+            partes.getFullYear(),
+            partes.getMonth(),
+            partes.getDate(),
+            agora.getHours(),
+            agora.getMinutes(),
+            agora.getSeconds(),
+            agora.getMilliseconds()
         );
     }
 
-    function normalizeRelativeOrExplicitDate(value) {
-        const normalizedValue = normalizeText(value).trim();
-        if (!normalizedValue) return null;
+    function normalizarDataRelativaOuExplicita(valor) {
+        const valorNormalizado = normalizarTextoConsulta(valor).trim();
+        if (!valorNormalizado) return null;
 
-        const explicitDate = normalizedValue.match(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b/);
-        if (explicitDate) {
-            const [, day, month, year] = explicitDate;
-            return `${day.padStart(2, "0")}-${month.padStart(2, "0")}-${year}`;
+        const dataExplicita = valorNormalizado.match(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b/);
+        if (dataExplicita) {
+            const [, dia, mes, ano] = dataExplicita;
+            return `${dia.padStart(2, "0")}-${mes.padStart(2, "0")}-${ano}`;
         }
 
-        if (normalizedValue === "hoje") return window.ClimateData.dataAtual();
-        if (normalizedValue === "ontem") return offsetFromToday(-1);
-        if (normalizedValue === "anteontem" || normalizedValue === "antiontem") return offsetFromToday(-2);
+        if (valorNormalizado === "hoje") return window.ClimateData.dataAtual();
+        if (valorNormalizado === "ontem") return deslocamentoHoje(-1);
+        if (valorNormalizado === "anteontem" || valorNormalizado === "antiontem") return deslocamentoHoje(-2);
 
         return null;
     }
 
-    function findMentionedEnvironments(normalizedQuestion) {
-        return Object.values(ENVIRONMENTS).filter(environment => (
-            environment.aliases.some(alias => hasWord(normalizedQuestion, normalizeText(alias)))
+    function encontrarAmbientesMencionados(perguntaNormalizada) {
+        return Object.values(AMBIENTES).filter(ambiente => (
+            ambiente.aliases.some(apelido => temPalavraConsulta(perguntaNormalizada, normalizarTextoConsulta(apelido)))
         ));
     }
 
-    function getEnvironmentByKey(key) {
-        const normalizedKey = normalizeText(key);
-        if (!normalizedKey) return null;
-        return ENVIRONMENTS[normalizedKey] || null;
+    function obterAmbientePorChave(chave) {
+        const chaveNormalizada = normalizarTextoConsulta(chave);
+        if (!chaveNormalizada) return null;
+        return AMBIENTES[chaveNormalizada] || null;
     }
 
-    function getEnvironmentByActiveTab(activeTab) {
-        return Object.values(ENVIRONMENTS).find(environment => environment.activeTab === activeTab) || ENVIRONMENTS.sala;
+    function obterAmbientePorAbaAtiva(abaAtiva) {
+        return Object.values(AMBIENTES).find(ambiente => ambiente.activeTab === abaAtiva) || AMBIENTES.sala;
     }
 
-    function offsetFromToday(dayOffset) {
-        const date = window.ClimateData.parseFirebaseDate(window.ClimateData.dataAtual());
-        date.setDate(date.getDate() + dayOffset);
-        return formatFirebaseDate(date);
+    function deslocamentoHoje(deslocamentoDia) {
+        const dataReferencia = window.ClimateData.parseFirebaseDate(window.ClimateData.dataAtual());
+        dataReferencia.setDate(dataReferencia.getDate() + deslocamentoDia);
+        return formatarDataFirebaseRelatorio(dataReferencia);
     }
 
-    function clampDays(days) {
-        if (!Number.isFinite(days) || days <= 0) return DEFAULT_RECENT_DAYS;
-        return Math.min(Math.max(Math.round(days), 1), MAX_PERIOD_DAYS);
+    function limitarDias(dias) {
+        if (!Number.isFinite(dias) || dias <= 0) return DIAS_RECENTES_PADRAO;
+        return Math.min(Math.max(Math.round(dias), 1), MAX_DIAS_PERIODO);
     }
 
-    function clampHours(hours) {
-        if (!Number.isFinite(hours) || hours <= 0) return 24;
-        return Math.min(Math.max(Math.round(hours), 1), MAX_PERIOD_DAYS * 24);
+    function limitarHoras(horas) {
+        if (!Number.isFinite(horas) || horas <= 0) return 24;
+        return Math.min(Math.max(Math.round(horas), 1), MAX_DIAS_PERIODO * 24);
     }
 
-    namespace.intent = {
-        resolveQuestionIntent,
-        resolvePeriodDates,
+    espacoNomes.intent = {
+        resolveQuestionIntent: resolverIntencaoPergunta,
+        resolvePeriodDates: resolverDatasPeriodo,
     };
 
-    window.ClimateAssistant = namespace;
+    window.ClimateAssistant = espacoNomes;
 })();

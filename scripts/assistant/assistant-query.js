@@ -1,80 +1,80 @@
 'use strict';
 
 (function () {
-    const namespace = window.ClimateAssistant || {};
-    const { MAX_PROMPT_CHARS } = namespace.config;
+    const espacoNomes = window.ClimateAssistant || {};
+    const { MAX_PROMPT_CHARS: MAX_CARACTERES_INSTRUCAO } = espacoNomes.config;
     const {
-        formatNumber,
-        formatMetricValue,
-        formatPeriodLabel,
-    } = namespace.format;
+        formatNumber: formatarNumeroConsulta,
+        formatMetricValue: formatarValorMetricaConsulta,
+        formatPeriodLabel: formatarRotuloPeriodoConsulta,
+    } = espacoNomes.format;
 
-    async function answerQuestion(question, context) {
-        const answerResult = await answerQuestionDetailed(question, context);
-        return answerResult.answer;
+    async function responderPergunta(pergunta, contexto) {
+        const resultadoResposta = await responderPerguntaDetalhada(pergunta, contexto);
+        return resultadoResposta.answer;
     }
 
-    async function answerQuestionDetailed(question, context) {
-        const intent = await namespace.intent.resolveQuestionIntent(question, context);
-        const result = executeQuery(context, intent, question);
+    async function responderPerguntaDetalhada(pergunta, contexto) {
+        const intencao = await espacoNomes.intent.resolveQuestionIntent(pergunta, contexto);
+        const resultado = executarConsulta(contexto, intencao, pergunta);
 
-        if (result.needsClarification) {
+        if (resultado.needsClarification) {
             return {
-                answer: result.message,
-                result,
+                answer: resultado.message,
+                result: resultado,
             };
         }
 
-        const prompt = buildAnswerPrompt(question, result);
+        const instrucaoModelo = montarInstrucaoResposta(pergunta, resultado);
 
         try {
             return {
-                answer: await window.ClimateAIService.generateText(prompt),
-                result,
+                answer: await window.ClimateAIService.generateText(instrucaoModelo),
+                result: resultado,
             };
-        } catch (error) {
-            window.ClimateDiagnostics?.depurar("Falha ao redigir resposta com IA. Usando resposta local.", error);
+        } catch (erro) {
+            window.ClimateDiagnostics?.depurar("Falha ao redigir resposta com IA. Usando resposta local.", erro);
             return {
-                answer: formatResultFallback(result),
-                result,
+                answer: formatarResultadoAlternativo(resultado),
+                result: resultado,
             };
         }
     }
 
-    function executeQuery(context, intent, question) {
-        const effectiveIntent = namespace.planner.planQuestionIntent(intent, question, context);
+    function executarConsulta(contexto, intencao, pergunta) {
+        const intencaoEfetiva = espacoNomes.planner.planQuestionIntent(intencao, pergunta, contexto);
 
-        if (effectiveIntent.needsClarification) {
+        if (intencaoEfetiva.needsClarification) {
             return {
                 needsClarification: true,
-                message: effectiveIntent.clarificationQuestion || "Preciso de mais detalhes para responder com segurança.",
+                message: intencaoEfetiva.clarificationQuestion || "Preciso de mais detalhes para responder com segurança.",
             };
         }
 
-        const environments = effectiveIntent.environments;
-        const periodDates = namespace.intent.resolvePeriodDates(effectiveIntent.period);
-        const periodLabel = getPeriodLabel(effectiveIntent.period, periodDates);
+        const ambientes = intencaoEfetiva.environments;
+        const datasPeriodo = espacoNomes.intent.resolvePeriodDates(intencaoEfetiva.period);
+        const rotuloPeriodo = obterRotuloPeriodoConsulta(intencaoEfetiva.period, datasPeriodo);
 
-        if (!environments.length) {
+        if (!ambientes.length) {
             return {
                 needsClarification: true,
                 message: "Não consegui identificar o ambiente. Você quer consultar Sala, Quarto ou Aquário?",
             };
         }
 
-        if (!periodDates.length) {
+        if (!datasPeriodo.length) {
             return {
                 needsClarification: true,
                 message: "Não consegui identificar o período da consulta. Tente informar uma data ou período.",
             };
         }
 
-        const environmentResults = environments
-            .map(environment => executeEnvironmentQuery(context, environment, periodDates, effectiveIntent, periodLabel, question))
-            .filter(result => result.metricas.length);
-        const metricLabels = [...new Set(environmentResults.flatMap(result => result.metricas.map(metric => metric.metrica)))];
+        const resultadosAmbientes = ambientes
+            .map(ambiente => executarConsultaAmbiente(contexto, ambiente, datasPeriodo, intencaoEfetiva, rotuloPeriodo, pergunta))
+            .filter(resultado => resultado.metricas.length);
+        const rotulosMetricas = [...new Set(resultadosAmbientes.flatMap(resultado => resultado.metricas.map(metrica => metrica.metrica)))];
 
-        if (!environmentResults.length) {
+        if (!resultadosAmbientes.length) {
             return {
                 needsClarification: true,
                 message: "Não encontrei uma métrica compatível com o ambiente consultado.",
@@ -82,90 +82,90 @@
         }
 
         return {
-            question,
-            resolvedIntent: effectiveIntent,
+            question: pergunta,
+            resolvedIntent: intencaoEfetiva,
             intent: {
-                environments: environments.map(environment => environment.label),
-                metrics: metricLabels,
-                operation: effectiveIntent.operation,
-                criterion: effectiveIntent.criterion,
+                environments: ambientes.map(ambiente => ambiente.label),
+                metrics: rotulosMetricas,
+                operation: intencaoEfetiva.operation,
+                criterion: intencaoEfetiva.criterion,
                 period: {
-                    label: periodLabel,
-                    dates: periodDates,
+                    label: rotuloPeriodo,
+                    dates: datasPeriodo,
                 },
-                confidence: effectiveIntent.confidence,
+                confidence: intencaoEfetiva.confidence,
             },
-            results: environmentResults,
+            results: resultadosAmbientes,
             generatedAt: new Date().toLocaleString("pt-BR"),
         };
     }
 
-    function executeEnvironmentQuery(context, environment, periodDates, intent, periodLabel, question) {
-        const sourceData = context.latestData?.[environment.dataKey] || {};
-        const data = getScopedDataForPeriod(sourceData, intent.period);
-        const metrics = namespace.metrics.resolveMetricsForEnvironments([environment], intent.metrics, question);
-        const scopedDates = Object.keys(data || {}).sort((a, b) => window.ClimateData.parseFirebaseDate(a) - window.ClimateData.parseFirebaseDate(b));
-        const queryDates = intent.period?.type === "rolling_hours" ? scopedDates : periodDates;
-        const scopedIntent = { ...intent, periodLabel };
+    function executarConsultaAmbiente(contexto, ambiente, datasPeriodo, intencao, rotuloPeriodo, pergunta) {
+        const dadosOrigem = contexto.latestData?.[ambiente.dataKey] || {};
+        const dados = obterDadosRecortadosPeriodo(dadosOrigem, intencao.period);
+        const metricas = espacoNomes.metrics.resolveMetricsForEnvironments([ambiente], intencao.metrics, pergunta);
+        const datasDoRecorte = Object.keys(dados || {}).sort((a, b) => window.ClimateData.parseFirebaseDate(a) - window.ClimateData.parseFirebaseDate(b));
+        const datasConsulta = intencao.period?.type === "rolling_hours" ? datasDoRecorte : datasPeriodo;
+        const intencaoDoRecorte = { ...intencao, periodLabel: rotuloPeriodo };
 
-        const metricResults = metrics.map(metric => {
-                const dailyStats = metric.key === "cicloSolar" || metric.key === "qualidadeAr"
+        const resultadosMetricas = metricas.map(metrica => {
+                const estatisticasDiarias = metrica.key === "cicloSolar" || metrica.key === "qualidadeAr"
                     ? []
-                    : queryDates.map(date => namespace.metrics.buildDailyStats(data?.[date], metric, date, intent.hour, intent.hourRange)).filter(Boolean);
+                    : datasConsulta.map(dataReferencia => espacoNomes.metrics.buildDailyStats(dados?.[dataReferencia], metrica, dataReferencia, intencao.hour, intencao.hourRange)).filter(Boolean);
 
-            return namespace.metrics.buildMetricResult(environment, metric, dailyStats, queryDates.length ? queryDates : periodDates, scopedIntent, data, context);
+            return espacoNomes.metrics.buildMetricResult(ambiente, metrica, estatisticasDiarias, datasConsulta.length ? datasConsulta : datasPeriodo, intencaoDoRecorte, dados, contexto);
         });
 
         return {
-            ambiente: environment.label,
-            metricas: metricResults,
+            ambiente: ambiente.label,
+            metricas: resultadosMetricas,
         };
     }
 
-    function getScopedDataForPeriod(data, period) {
-        if (period?.type !== "rolling_hours") return data;
+    function obterDadosRecortadosPeriodo(dados, periodo) {
+        if (periodo?.type !== "rolling_hours") return dados;
         return window.ClimateData.filterDataByRollingHours(
-            data,
-            period.selectedDate || window.ClimateData.dataAtual(),
-            period.hours || 24
+            dados,
+            periodo.selectedDate || window.ClimateData.dataAtual(),
+            periodo.hours || 24
         );
     }
 
-    function getPeriodLabel(period, periodDates) {
-        if (period?.type === "selected_month") return formatMonthPeriodLabel(period.selectedDate || periodDates[0]);
-        if (period?.type === "selected_year") return formatYearPeriodLabel(period.selectedDate || periodDates[0]);
-        if (period?.type === "selected_week") return `semana de ${formatPeriodLabel(periodDates)}`;
-        if (period?.type === "last_days") {
-            const limite = period.limited
-                ? `; solicitados ${period.requestedDays} dias, limitado a ${period.days} dias`
+    function obterRotuloPeriodoConsulta(periodo, datasPeriodo) {
+        if (periodo?.type === "selected_month") return formatarRotuloPeriodoMensal(periodo.selectedDate || datasPeriodo[0]);
+        if (periodo?.type === "selected_year") return formatarRotuloPeriodoAnual(periodo.selectedDate || datasPeriodo[0]);
+        if (periodo?.type === "selected_week") return `semana de ${formatarRotuloPeriodoConsulta(datasPeriodo)}`;
+        if (periodo?.type === "last_days") {
+            const limite = periodo.limited
+                ? `; solicitados ${periodo.requestedDays} dias, limitado a ${periodo.days} dias`
                 : "";
-            return `últimos ${period.days} dias até ${formatDateLabel(period.selectedDate)} (${formatPeriodLabel(periodDates)}${limite})`;
+            return `últimos ${periodo.days} dias até ${formatarRotuloData(periodo.selectedDate)} (${formatarRotuloPeriodoConsulta(datasPeriodo)}${limite})`;
         }
-        if (period?.type !== "rolling_hours") return formatPeriodLabel(periodDates);
-        const limite = period.limited
-            ? `; solicitadas ${period.requestedHours} horas, limitado a ${period.hours} horas`
+        if (periodo?.type !== "rolling_hours") return formatarRotuloPeriodoConsulta(datasPeriodo);
+        const limite = periodo.limited
+            ? `; solicitadas ${periodo.requestedHours} horas, limitado a ${periodo.hours} horas`
             : "";
-        return `últimas ${period.hours || 24} horas até ${formatDateLabel(period.selectedDate)} (${formatPeriodLabel(periodDates)}${limite})`;
+        return `últimas ${periodo.hours || 24} horas até ${formatarRotuloData(periodo.selectedDate)} (${formatarRotuloPeriodoConsulta(datasPeriodo)}${limite})`;
     }
 
-    function formatDateLabel(firebaseDate) {
-        return window.ClimateData.formatarDataExibicao?.(firebaseDate)
-            || String(firebaseDate || "").replace(/-/g, "/");
+    function formatarRotuloData(dataFirebase) {
+        return window.ClimateData.formatarDataExibicao?.(dataFirebase)
+            || String(dataFirebase || "").replace(/-/g, "/");
     }
 
-    function formatMonthPeriodLabel(firebaseDate) {
-        const date = window.ClimateData.parseFirebaseDate(firebaseDate || window.ClimateData.dataAtual());
-        return `${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
+    function formatarRotuloPeriodoMensal(dataFirebase) {
+        const dataReferencia = window.ClimateData.parseFirebaseDate(dataFirebase || window.ClimateData.dataAtual());
+        return `${String(dataReferencia.getMonth() + 1).padStart(2, "0")}/${dataReferencia.getFullYear()}`;
     }
 
-    function formatYearPeriodLabel(firebaseDate) {
-        const date = window.ClimateData.parseFirebaseDate(firebaseDate || window.ClimateData.dataAtual());
-        return String(date.getFullYear());
+    function formatarRotuloPeriodoAnual(dataFirebase) {
+        const dataReferencia = window.ClimateData.parseFirebaseDate(dataFirebase || window.ClimateData.dataAtual());
+        return String(dataReferencia.getFullYear());
     }
 
-    function buildAnswerPrompt(question, result) {
-        const payload = JSON.stringify(result, null, 2);
-        const prompt = `
+    function montarInstrucaoResposta(pergunta, resultado) {
+        const conteudoEnvio = JSON.stringify(resultado, null, 2);
+        const instrucaoModelo = `
             Você é o assistente da página "Estação Climática".
 
             Responda em português do Brasil.
@@ -203,210 +203,210 @@
             - Se não houver dados, diga isso diretamente.
 
             Pergunta do usuário:
-            ${question}
+            ${pergunta}
 
             Resultado calculado:
-            ${payload}
+            ${conteudoEnvio}
         `.trim();
 
-        return prompt.length > MAX_PROMPT_CHARS ? prompt.slice(0, MAX_PROMPT_CHARS) : prompt;
+        return instrucaoModelo.length > MAX_CARACTERES_INSTRUCAO ? instrucaoModelo.slice(0, MAX_CARACTERES_INSTRUCAO) : instrucaoModelo;
     }
 
-    function formatResultFallback(result) {
-        const metricas = result.results?.flatMap(item => item.metricas || []) || [];
+    function formatarResultadoAlternativo(resultado) {
+        const metricas = resultado.results?.flatMap(item => item.metricas || []) || [];
         if (!metricas.length) return "Não encontrei dados suficientes para responder.";
-        return metricas.map(formatMetricFallback).filter(Boolean).join("\n\n");
+        return metricas.map(formatarMetricaAlternativa).filter(Boolean).join("\n\n");
     }
 
-    function formatMetricFallback(firstMetric) {
-        if (firstMetric.sem_dados) return firstMetric.mensagem;
+    function formatarMetricaAlternativa(primeiraMetrica) {
+        if (primeiraMetrica.sem_dados) return primeiraMetrica.mensagem;
 
-        if (firstMetric.tipo_resultado === "ciclo_solar") return formatSolarFallback(firstMetric);
-        if (firstMetric.tipo_resultado?.startsWith?.("solar_")) return formatSolarAnalyticFallback(firstMetric);
-        if (firstMetric.tipo_resultado === "faixa_conforto") return formatComfortBandFallback(firstMetric);
-        if (firstMetric.tipo_resultado === "dados_insuficientes_tendencia") return firstMetric.mensagem;
-        if (firstMetric.sem_faixa) return firstMetric.mensagem;
+        if (primeiraMetrica.tipo_resultado === "ciclo_solar") return formatarSolarAlternativo(primeiraMetrica);
+        if (primeiraMetrica.tipo_resultado?.startsWith?.("solar_")) return formatarAnaliseSolarAlternativa(primeiraMetrica);
+        if (primeiraMetrica.tipo_resultado === "faixa_conforto") return formatarConfortoAlternativo(primeiraMetrica);
+        if (primeiraMetrica.tipo_resultado === "dados_insuficientes_tendencia") return primeiraMetrica.mensagem;
+        if (primeiraMetrica.sem_faixa) return primeiraMetrica.mensagem;
 
-        if (firstMetric.tipo_resultado === "consulta_horaria") {
-            const dateLabel = firstMetric.datas_consultadas?.[0] || firstMetric.periodo;
-            const value = formatMetricValue(firstMetric.valor, firstMetric.unidade);
-            const classification = firstMetric.classificacao ? ` (${firstMetric.classificacao})` : "";
-            const dominant = firstMetric.dominante ? ` Dominante: ${firstMetric.dominante}.` : "";
-            return `${firstMetric.metrica} em ${firstMetric.ambiente} no dia ${dateLabel} às ${firstMetric.hora_consultada}: ${value}${classification}.${dominant}`;
+        if (primeiraMetrica.tipo_resultado === "consulta_horaria") {
+            const rotuloData = primeiraMetrica.datas_consultadas?.[0] || primeiraMetrica.periodo;
+            const valor = formatarValorMetricaConsulta(primeiraMetrica.valor, primeiraMetrica.unidade);
+            const classificacao = primeiraMetrica.classificacao ? ` (${primeiraMetrica.classificacao})` : "";
+            const dominante = primeiraMetrica.dominante ? ` Dominante: ${primeiraMetrica.dominante}.` : "";
+            return `${primeiraMetrica.metrica} em ${primeiraMetrica.ambiente} no dia ${rotuloData} às ${primeiraMetrica.hora_consultada}: ${valor}${classificacao}.${dominante}`;
         }
 
-        if (firstMetric.tipo_resultado === "estatistica_media") {
-            return `A média de ${firstMetric.metrica} em ${firstMetric.ambiente} foi ${formatMetricValue(firstMetric.valor, firstMetric.unidade)} no período ${firstMetric.periodo}.`;
+        if (primeiraMetrica.tipo_resultado === "estatistica_media") {
+            return `A média de ${primeiraMetrica.metrica} em ${primeiraMetrica.ambiente} foi ${formatarValorMetricaConsulta(primeiraMetrica.valor, primeiraMetrica.unidade)} no período ${primeiraMetrica.periodo}.`;
         }
 
-        if (firstMetric.tipo_resultado === "estatistica_extremo") {
-            const descricao = firstMetric.criterio === "menor_registro" ? "mínima" : "máxima";
-            return `A ${descricao} de ${firstMetric.metrica} em ${firstMetric.ambiente} foi ${formatMetricValue(firstMetric.valor, firstMetric.unidade)} em ${firstMetric.data} às ${firstMetric.horario}. Período: ${firstMetric.periodo}.`;
+        if (primeiraMetrica.tipo_resultado === "estatistica_extremo") {
+            const descricao = primeiraMetrica.criterio === "menor_registro" ? "mínima" : "máxima";
+            return `A ${descricao} de ${primeiraMetrica.metrica} em ${primeiraMetrica.ambiente} foi ${formatarValorMetricaConsulta(primeiraMetrica.valor, primeiraMetrica.unidade)} em ${primeiraMetrica.data} às ${primeiraMetrica.horario}. Período: ${primeiraMetrica.periodo}.`;
         }
 
-        if (firstMetric.tipo_resultado === "variacao_periodo" || firstMetric.tipo_resultado === "tendencia_periodo") {
-            const inicio = formatMetricValue(firstMetric.valor_inicial, firstMetric.unidade);
-            const fim = formatMetricValue(firstMetric.valor_final, firstMetric.unidade);
-            const diferenca = formatMetricValue(firstMetric.diferenca, firstMetric.unidade);
-            const tendencia = firstMetric.tipo_resultado === "tendencia_periodo"
-                ? ` A tendência foi ${firstMetric.tendencia}.`
+        if (primeiraMetrica.tipo_resultado === "variacao_periodo" || primeiraMetrica.tipo_resultado === "tendencia_periodo") {
+            const inicio = formatarValorMetricaConsulta(primeiraMetrica.valor_inicial, primeiraMetrica.unidade);
+            const fim = formatarValorMetricaConsulta(primeiraMetrica.valor_final, primeiraMetrica.unidade);
+            const diferenca = formatarValorMetricaConsulta(primeiraMetrica.diferenca, primeiraMetrica.unidade);
+            const tendencia = primeiraMetrica.tipo_resultado === "tendencia_periodo"
+                ? ` A tendência foi ${primeiraMetrica.tendencia}.`
                 : "";
-            return `${firstMetric.metrica} em ${firstMetric.ambiente} foi de ${inicio} em ${firstMetric.inicio.data} às ${firstMetric.inicio.horario} para ${fim} em ${firstMetric.fim.data} às ${firstMetric.fim.horario}, diferença de ${diferenca}.${tendencia}`;
+            return `${primeiraMetrica.metrica} em ${primeiraMetrica.ambiente} foi de ${inicio} em ${primeiraMetrica.inicio.data} às ${primeiraMetrica.inicio.horario} para ${fim} em ${primeiraMetrica.fim.data} às ${primeiraMetrica.fim.horario}, diferença de ${diferenca}.${tendencia}`;
         }
 
-        if (firstMetric.tipo_resultado === "extremo_diario") {
-            const descricao = firstMetric.criterio === "menor_media_diaria" ? "mais frio" : "mais quente";
-            return `No período ${firstMetric.periodo}, o dia ${descricao} em ${firstMetric.ambiente} foi ${firstMetric.data}, com média de ${formatMetricValue(firstMetric.valor, firstMetric.unidade)}.`;
+        if (primeiraMetrica.tipo_resultado === "extremo_diario") {
+            const descricao = primeiraMetrica.criterio === "menor_media_diaria" ? "mais frio" : "mais quente";
+            return `No período ${primeiraMetrica.periodo}, o dia ${descricao} em ${primeiraMetrica.ambiente} foi ${primeiraMetrica.data}, com média de ${formatarValorMetricaConsulta(primeiraMetrica.valor, primeiraMetrica.unidade)}.`;
         }
 
-        if (firstMetric.tipo_resultado === "analise_horaria") {
-            const value = formatMetricValue(firstMetric.valor, firstMetric.unidade);
-            const descriptor = firstMetric.criterio === "menor_media_horaria" ? "menor valor médio" : "maior valor médio";
-            const range = firstMetric.faixa_horaria_consultada
-                ? `, considerando apenas ${firstMetric.faixa_horaria_consultada}`
+        if (primeiraMetrica.tipo_resultado === "analise_horaria") {
+            const valor = formatarValorMetricaConsulta(primeiraMetrica.valor, primeiraMetrica.unidade);
+            const descritor = primeiraMetrica.criterio === "menor_media_horaria" ? "menor valor médio" : "maior valor médio";
+            const intervalo = primeiraMetrica.faixa_horaria_consultada
+                ? `, considerando apenas ${primeiraMetrica.faixa_horaria_consultada}`
                 : "";
-            return `O ${descriptor} de ${firstMetric.metrica} em ${firstMetric.ambiente}${range} foi em ${firstMetric.data} às ${firstMetric.horario}: ${value}.`;
+            return `O ${descritor} de ${primeiraMetrica.metrica} em ${primeiraMetrica.ambiente}${intervalo} foi em ${primeiraMetrica.data} às ${primeiraMetrica.horario}: ${valor}.`;
         }
 
-        if (firstMetric.tipo_resultado === "analise_calendario_mensal") {
-            const value = formatMetricValue(firstMetric.valor, firstMetric.unidade);
-            const descriptor = firstMetric.criterio === "menor_media_diaria" ? "menor média diária" : "maior média diária";
-            return `No calendário mensal de ${firstMetric.periodo}, o dia com ${descriptor} de ${firstMetric.metrica} em ${firstMetric.ambiente} foi ${firstMetric.data}: ${value}.`;
+        if (primeiraMetrica.tipo_resultado === "analise_calendario_mensal") {
+            const valor = formatarValorMetricaConsulta(primeiraMetrica.valor, primeiraMetrica.unidade);
+            const descritor = primeiraMetrica.criterio === "menor_media_diaria" ? "menor média diária" : "maior média diária";
+            return `No calendário mensal de ${primeiraMetrica.periodo}, o dia com ${descritor} de ${primeiraMetrica.metrica} em ${primeiraMetrica.ambiente} foi ${primeiraMetrica.data}: ${valor}.`;
         }
 
-        if (firstMetric.tipo_resultado === "analise_heatmap_horario") {
-            const value = formatMetricValue(firstMetric.valor, firstMetric.unidade);
-            const descriptor = firstMetric.criterio === "menor_media_por_hora" ? "menor média por hora" : "maior média por hora";
-            return `No período ${firstMetric.periodo}, a hora com ${descriptor} de ${firstMetric.metrica} em ${firstMetric.ambiente} foi ${firstMetric.horario}: ${value}.`;
+        if (primeiraMetrica.tipo_resultado === "analise_heatmap_horario") {
+            const valor = formatarValorMetricaConsulta(primeiraMetrica.valor, primeiraMetrica.unidade);
+            const descritor = primeiraMetrica.criterio === "menor_media_por_hora" ? "menor média por hora" : "maior média por hora";
+            return `No período ${primeiraMetrica.periodo}, a hora com ${descritor} de ${primeiraMetrica.metrica} em ${primeiraMetrica.ambiente} foi ${primeiraMetrica.horario}: ${valor}.`;
         }
 
-        if (firstMetric.tipo_resultado === "analise_heatmap_semanal") {
-            const value = formatMetricValue(firstMetric.valor, firstMetric.unidade);
-            const descriptor = firstMetric.criterio === "menor_media_dia_hora" ? "menor média por dia/hora" : "maior média por dia/hora";
-            return `No mapa semanal (${firstMetric.periodo}), o ponto com ${descriptor} de ${firstMetric.metrica} em ${firstMetric.ambiente} foi ${firstMetric.dia_semana} às ${firstMetric.horario}: ${value}.`;
+        if (primeiraMetrica.tipo_resultado === "analise_heatmap_semanal") {
+            const valor = formatarValorMetricaConsulta(primeiraMetrica.valor, primeiraMetrica.unidade);
+            const descritor = primeiraMetrica.criterio === "menor_media_dia_hora" ? "menor média por dia/hora" : "maior média por dia/hora";
+            return `No mapa semanal (${primeiraMetrica.periodo}), o ponto com ${descritor} de ${primeiraMetrica.metrica} em ${primeiraMetrica.ambiente} foi ${primeiraMetrica.dia_semana} às ${primeiraMetrica.horario}: ${valor}.`;
         }
 
-        if (firstMetric.tipo_resultado === "comparacao_dias") {
-            const winnerValue = formatMetricValue(firstMetric.vencedor.media, firstMetric.unidade);
-            const referenceValue = formatMetricValue(firstMetric.comparado_com.media, firstMetric.unidade);
-            const difference = formatMetricValue(firstMetric.diferenca, firstMetric.unidade);
-            return `${firstMetric.vencedor.data} teve maior média de ${firstMetric.metrica} em ${firstMetric.ambiente}: ${winnerValue}. ${firstMetric.comparado_com.data} ficou com ${referenceValue}, diferença de ${difference}.`;
+        if (primeiraMetrica.tipo_resultado === "comparacao_dias") {
+            const valorVencedor = formatarValorMetricaConsulta(primeiraMetrica.vencedor.media, primeiraMetrica.unidade);
+            const valorReferencia = formatarValorMetricaConsulta(primeiraMetrica.comparado_com.media, primeiraMetrica.unidade);
+            const diferenca = formatarValorMetricaConsulta(primeiraMetrica.diferenca, primeiraMetrica.unidade);
+            return `${primeiraMetrica.vencedor.data} teve maior média de ${primeiraMetrica.metrica} em ${primeiraMetrica.ambiente}: ${valorVencedor}. ${primeiraMetrica.comparado_com.data} ficou com ${valorReferencia}, diferença de ${diferenca}.`;
         }
 
-        if (firstMetric.tipo_resultado === "qualidade_ar") {
+        if (primeiraMetrica.tipo_resultado === "qualidade_ar") {
             return [
-                `AQI estimado em ${firstMetric.ambiente}: ${firstMetric.media} (${firstMetric.classificacao_atual || "sem classificação"}).`,
-                firstMetric.dominante_atual ? `Dominante: ${firstMetric.dominante_atual}.` : null,
+                `AQI estimado em ${primeiraMetrica.ambiente}: ${primeiraMetrica.media} (${primeiraMetrica.classificacao_atual || "sem classificação"}).`,
+                primeiraMetrica.dominante_atual ? `Dominante: ${primeiraMetrica.dominante_atual}.` : null,
                 "",
-                `Mínimo: ${firstMetric.minima}`,
-                `Máximo: ${firstMetric.maxima}`,
-                `Período: ${firstMetric.periodo}`
+                `Mínimo: ${primeiraMetrica.minima}`,
+                `Máximo: ${primeiraMetrica.maxima}`,
+                `Período: ${primeiraMetrica.periodo}`
             ].filter(Boolean).join("\n");
         }
 
-        if (firstMetric.operacao === "dia_mais_frio") {
-            return `No período ${firstMetric.periodo}, o dia mais frio em ${firstMetric.ambiente} foi ${firstMetric.dia_mais_frio.data}, com média de ${formatNumber(firstMetric.dia_mais_frio.valor)}${firstMetric.unidade}.`;
+        if (primeiraMetrica.operacao === "dia_mais_frio") {
+            return `No período ${primeiraMetrica.periodo}, o dia mais frio em ${primeiraMetrica.ambiente} foi ${primeiraMetrica.dia_mais_frio.data}, com média de ${formatarNumeroConsulta(primeiraMetrica.dia_mais_frio.valor)}${primeiraMetrica.unidade}.`;
         }
 
-        if (firstMetric.operacao === "dia_mais_quente") {
-            return `No período ${firstMetric.periodo}, o dia mais quente em ${firstMetric.ambiente} foi ${firstMetric.dia_mais_quente.data}, com média de ${formatNumber(firstMetric.dia_mais_quente.valor)}${firstMetric.unidade}.`;
+        if (primeiraMetrica.operacao === "dia_mais_quente") {
+            return `No período ${primeiraMetrica.periodo}, o dia mais quente em ${primeiraMetrica.ambiente} foi ${primeiraMetrica.dia_mais_quente.data}, com média de ${formatarNumeroConsulta(primeiraMetrica.dia_mais_quente.valor)}${primeiraMetrica.unidade}.`;
         }
 
         return [
-            `${firstMetric.metrica} em ${firstMetric.ambiente}:`,
+            `${primeiraMetrica.metrica} em ${primeiraMetrica.ambiente}:`,
             "",
-            `Média: ${formatNumber(firstMetric.media)}${firstMetric.unidade}`,
-            `Mínima: ${formatNumber(firstMetric.minima)}${firstMetric.unidade}`,
-            `Máxima: ${formatNumber(firstMetric.maxima)}${firstMetric.unidade}`,
-            firstMetric.faixa_horaria_consultada ? `Faixa horária: ${firstMetric.faixa_horaria_consultada}` : null,
+            `Média: ${formatarNumeroConsulta(primeiraMetrica.media)}${primeiraMetrica.unidade}`,
+            `Mínima: ${formatarNumeroConsulta(primeiraMetrica.minima)}${primeiraMetrica.unidade}`,
+            `Máxima: ${formatarNumeroConsulta(primeiraMetrica.maxima)}${primeiraMetrica.unidade}`,
+            primeiraMetrica.faixa_horaria_consultada ? `Faixa horária: ${primeiraMetrica.faixa_horaria_consultada}` : null,
             "",
-            `Período: ${firstMetric.periodo}`
-        ].filter(line => line !== null).join("\n");
+            `Período: ${primeiraMetrica.periodo}`
+        ].filter(linhaTexto => linhaTexto !== null).join("\n");
     }
 
-    function formatSolarFallback(firstMetric) {
-        const firstDay = firstMetric.por_dia?.[0];
-        if (!firstDay) return firstMetric.mensagem || "Não encontrei dados de ciclo solar para o período consultado.";
+    function formatarSolarAlternativo(primeiraMetrica) {
+        const primeiroDia = primeiraMetrica.por_dia?.[0];
+        if (!primeiroDia) return primeiraMetrica.mensagem || "Não encontrei dados de ciclo solar para o período consultado.";
 
-        const lines = [
-            `Ciclo solar em ${firstMetric.ambiente} no dia ${firstDay.data}:`,
+        const linhasTexto = [
+            `Ciclo solar em ${primeiraMetrica.ambiente} no dia ${primeiroDia.data}:`,
             "",
         ];
 
-        if (firstDay.amanhecer) lines.push(`Amanhecer: ${firstDay.amanhecer}`);
-        if (firstDay.nascer_do_sol) lines.push(`Nascer do sol: ${firstDay.nascer_do_sol}`);
-        if (firstDay.zenite) lines.push(`Zênite: ${firstDay.zenite}`);
-        if (firstDay.por_do_sol) lines.push(`Pôr do sol: ${firstDay.por_do_sol}`);
-        if (firstDay.anoitecer) lines.push(`Anoitecer: ${firstDay.anoitecer}`);
-        if (firstDay.duracao_dia) lines.push(`Duração do dia: ${firstDay.duracao_dia}`);
-        if (firstDay.periodo_luz_total) lines.push(`Período total de luz: ${firstDay.periodo_luz_total}`);
+        if (primeiroDia.amanhecer) linhasTexto.push(`Amanhecer: ${primeiroDia.amanhecer}`);
+        if (primeiroDia.nascer_do_sol) linhasTexto.push(`Nascer do sol: ${primeiroDia.nascer_do_sol}`);
+        if (primeiroDia.zenite) linhasTexto.push(`Zênite: ${primeiroDia.zenite}`);
+        if (primeiroDia.por_do_sol) linhasTexto.push(`Pôr do sol: ${primeiroDia.por_do_sol}`);
+        if (primeiroDia.anoitecer) linhasTexto.push(`Anoitecer: ${primeiroDia.anoitecer}`);
+        if (primeiroDia.duracao_dia) linhasTexto.push(`Duração do dia: ${primeiroDia.duracao_dia}`);
+        if (primeiroDia.periodo_luz_total) linhasTexto.push(`Período total de luz: ${primeiroDia.periodo_luz_total}`);
 
-        lines.push("");
-        lines.push(`Período consultado: ${firstMetric.periodo}`);
+        linhasTexto.push("");
+        linhasTexto.push(`Período consultado: ${primeiraMetrica.periodo}`);
 
-        return lines.join("\n");
+        return linhasTexto.join("\n");
     }
 
-    function formatSolarAnalyticFallback(firstMetric) {
-        if (firstMetric.tipo_resultado === "solar_duracao_dia") {
-            return `A duração do dia em ${firstMetric.data} foi ${firstMetric.duracao_dia}, de ${firstMetric.nascer_do_sol} até ${firstMetric.por_do_sol}.`;
+    function formatarAnaliseSolarAlternativa(primeiraMetrica) {
+        if (primeiraMetrica.tipo_resultado === "solar_duracao_dia") {
+            return `A duração do dia em ${primeiraMetrica.data} foi ${primeiraMetrica.duracao_dia}, de ${primeiraMetrica.nascer_do_sol} até ${primeiraMetrica.por_do_sol}.`;
         }
 
-        if (firstMetric.tipo_resultado === "solar_extremo_duracao_luz") {
-            const descriptor = firstMetric.criterio === "menor_duracao_luz" ? "menor duração de luz" : "maior duração de luz";
-            return `No período ${firstMetric.periodo}, o dia com ${descriptor} foi ${firstMetric.data}: ${firstMetric.duracao_dia} de luz (${firstMetric.nascer_do_sol} às ${firstMetric.por_do_sol}).`;
+        if (primeiraMetrica.tipo_resultado === "solar_extremo_duracao_luz") {
+            const descritor = primeiraMetrica.criterio === "menor_duracao_luz" ? "menor duração de luz" : "maior duração de luz";
+            return `No período ${primeiraMetrica.periodo}, o dia com ${descritor} foi ${primeiraMetrica.data}: ${primeiraMetrica.duracao_dia} de luz (${primeiraMetrica.nascer_do_sol} às ${primeiraMetrica.por_do_sol}).`;
         }
 
-        if (firstMetric.tipo_resultado === "solar_tendencia_evento") {
-            const trendLabel = {
+        if (primeiraMetrica.tipo_resultado === "solar_tendencia_evento") {
+            const rotuloTendencia = {
                 mais_cedo: "ficando mais cedo",
                 mais_tarde: "ficando mais tarde",
                 estavel: "praticamente estável",
-            }[firstMetric.tendencia] || firstMetric.tendencia;
-            const delta = formatMinuteDelta(firstMetric.delta_minutos);
-            return `No período (${firstMetric.periodo}), o ${firstMetric.evento} está ${trendLabel}: foi de ${firstMetric.primeiro.horario} em ${firstMetric.primeiro.data} para ${firstMetric.ultimo.horario} em ${firstMetric.ultimo.data} (${delta}).`;
+            }[primeiraMetrica.tendencia] || primeiraMetrica.tendencia;
+            const delta = formatarDiferencaMinutos(primeiraMetrica.delta_minutos);
+            return `No período (${primeiraMetrica.periodo}), o ${primeiraMetrica.evento} está ${rotuloTendencia}: foi de ${primeiraMetrica.primeiro.horario} em ${primeiraMetrica.primeiro.data} para ${primeiraMetrica.ultimo.horario} em ${primeiraMetrica.ultimo.data} (${delta}).`;
         }
 
-        if (firstMetric.tipo_resultado === "solar_comparacao_evento") {
-            const rows = firstMetric.por_dia
-                .map(day => `${day.data}: ${day.horario}${day.diferenca_minutos ? ` (${formatMinuteDelta(day.diferenca_minutos)})` : ""}`)
+        if (primeiraMetrica.tipo_resultado === "solar_comparacao_evento") {
+            const linhas = primeiraMetrica.por_dia
+                .map(dia => `${dia.data}: ${dia.horario}${dia.diferenca_minutos ? ` (${formatarDiferencaMinutos(dia.diferenca_minutos)})` : ""}`)
                 .join("\n");
-            return `Comparação de ${firstMetric.evento} no período (${firstMetric.periodo}):\n\n${rows}`;
+            return `Comparação de ${primeiraMetrica.evento} no período (${primeiraMetrica.periodo}):\n\n${linhas}`;
         }
 
-        return firstMetric.mensagem || "Não encontrei dados solares suficientes para responder.";
+        return primeiraMetrica.mensagem || "Não encontrei dados solares suficientes para responder.";
     }
 
-    function formatMinuteDelta(minutes) {
-        if (!Number.isFinite(minutes) || minutes === 0) return "sem variação";
-        const sign = minutes > 0 ? "+" : "-";
-        const abs = Math.abs(minutes);
-        return `${sign}${abs} min`;
+    function formatarDiferencaMinutos(minutos) {
+        if (!Number.isFinite(minutos) || minutos === 0) return "sem variação";
+        const sinal = minutos > 0 ? "+" : "-";
+        const absoluto = Math.abs(minutos);
+        return `${sinal}${absoluto} min`;
     }
 
-    function formatComfortBandFallback(firstMetric) {
-        const status = firstMetric.status === "dentro_da_faixa"
+    function formatarConfortoAlternativo(primeiraMetrica) {
+        const estado = primeiraMetrica.status === "dentro_da_faixa"
             ? "ficou dentro da faixa"
             : "ficou fora da faixa";
-        const lines = [
-            `${firstMetric.metrica} em ${firstMetric.ambiente} ${status} no período ${firstMetric.periodo}.`,
+        const linhasTexto = [
+            `${primeiraMetrica.metrica} em ${primeiraMetrica.ambiente} ${estado} no período ${primeiraMetrica.periodo}.`,
             "",
-            `Faixa usada: ${firstMetric.faixa}`,
-            `Horas fora da faixa: ${firstMetric.horas_fora}`,
-            `Dentro da faixa: ${formatNumber(firstMetric.percentual_dentro)}%`,
+            `Faixa usada: ${primeiraMetrica.faixa}`,
+            `Horas fora da faixa: ${primeiraMetrica.horas_fora}`,
+            `Dentro da faixa: ${formatarNumeroConsulta(primeiraMetrica.percentual_dentro)}%`,
         ];
 
-        if (firstMetric.pior_horario_fora) {
-            const value = formatMetricValue(firstMetric.pior_horario_fora.valor, firstMetric.unidade);
-            lines.push(`Pior horário fora da faixa: ${firstMetric.pior_horario_fora.data} às ${firstMetric.pior_horario_fora.horario}, com ${value} (${firstMetric.pior_horario_fora.direcao} da faixa).`);
+        if (primeiraMetrica.pior_horario_fora) {
+            const valor = formatarValorMetricaConsulta(primeiraMetrica.pior_horario_fora.valor, primeiraMetrica.unidade);
+            linhasTexto.push(`Pior horário fora da faixa: ${primeiraMetrica.pior_horario_fora.data} às ${primeiraMetrica.pior_horario_fora.horario}, com ${valor} (${primeiraMetrica.pior_horario_fora.direcao} da faixa).`);
         }
 
-        return lines.join("\n");
+        return linhasTexto.join("\n");
     }
 
-    namespace.query = {
-        answerQuestion,
-        answerQuestionDetailed,
+    espacoNomes.query = {
+        answerQuestion: responderPergunta,
+        answerQuestionDetailed: responderPerguntaDetalhada,
     };
-    window.ClimateAssistant = namespace;
+    window.ClimateAssistant = espacoNomes;
 })();

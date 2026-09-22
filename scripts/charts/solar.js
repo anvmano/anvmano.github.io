@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-    const SOLAR_FIELD_ALIASES = {
+    const ALIASES_CAMPOS_SOLARES = {
         dawn: {
             hours: ["HoraAmanhecer", "HourAmanhecer"],
             minutes: ["MinuteAmanhecer", "MinutoAmanhecer"],
@@ -24,109 +24,109 @@
         },
     };
 
-    function getNumberValue(item, names) {
-        for (const name of names) {
-            const value = Number(item[name]);
-            if (Number.isFinite(value)) return value;
+    function obterValorNumero(item, nomes) {
+        for (const nome of nomes) {
+            const valor = Number(item[nome]);
+            if (Number.isFinite(valor)) return valor;
         }
         return null;
     }
 
-    function readTimeSeconds(item, hourNames, minuteNames) {
-        const hour = getNumberValue(item, hourNames);
-        const minute = getNumberValue(item, minuteNames) || 0;
-        if (hour == null) return null;
-        return hour * 3600 + minute * 60;
+    function lerHorarioSegundos(item, nomesHora, nomesMinuto) {
+        const hora = obterValorNumero(item, nomesHora);
+        const minuto = obterValorNumero(item, nomesMinuto) || 0;
+        if (hora == null) return null;
+        return hora * 3600 + minuto * 60;
     }
 
-    function hasSolarFields(item) {
+    function temCamposSolares(item) {
         return item &&
             typeof item === "object" &&
             (
-                hasAnyAlias(item, SOLAR_FIELD_ALIASES.sunrise.hours) ||
-                hasAnyAlias(item, SOLAR_FIELD_ALIASES.dawn.hours)
+                temAlgumAlias(item, ALIASES_CAMPOS_SOLARES.sunrise.hours) ||
+                temAlgumAlias(item, ALIASES_CAMPOS_SOLARES.dawn.hours)
             );
     }
 
-    function readSolarEventSeconds(item) {
+    function lerSegundosEventosSolares(item) {
         if (!item) return null;
 
-        const dawn = readAliasedTimeSeconds(item, SOLAR_FIELD_ALIASES.dawn);
-        const sunrise = readAliasedTimeSeconds(item, SOLAR_FIELD_ALIASES.sunrise);
-        const sunset = readAliasedTimeSeconds(item, SOLAR_FIELD_ALIASES.sunset);
-        const dusk = readAliasedTimeSeconds(item, SOLAR_FIELD_ALIASES.dusk);
-        const zenithFromData = readAliasedTimeSeconds(item, SOLAR_FIELD_ALIASES.zenith);
+        const amanhecerSolar = lerHorarioSegundosPorAlias(item, ALIASES_CAMPOS_SOLARES.dawn);
+        const nascerSolar = lerHorarioSegundosPorAlias(item, ALIASES_CAMPOS_SOLARES.sunrise);
+        const porSolar = lerHorarioSegundosPorAlias(item, ALIASES_CAMPOS_SOLARES.sunset);
+        const anoitecerSolar = lerHorarioSegundosPorAlias(item, ALIASES_CAMPOS_SOLARES.dusk);
+        const zeniteDosDados = lerHorarioSegundosPorAlias(item, ALIASES_CAMPOS_SOLARES.zenith);
 
-        if ([dawn, sunrise, sunset, dusk].some(value => value == null)) return null;
+        if ([amanhecerSolar, nascerSolar, porSolar, anoitecerSolar].some(valor => valor == null)) return null;
 
         return {
-            dawn,
-            sunrise,
-            zenith: zenithFromData != null ? zenithFromData : sunrise + ((sunset - sunrise) / 2),
-            sunset,
-            dusk,
+            dawn: amanhecerSolar,
+            sunrise: nascerSolar,
+            zenith: zeniteDosDados != null ? zeniteDosDados : nascerSolar + ((porSolar - nascerSolar) / 2),
+            sunset: porSolar,
+            dusk: anoitecerSolar,
         };
     }
 
-    function readAliasedTimeSeconds(item, aliases) {
-        return readTimeSeconds(item, aliases.hours, aliases.minutes);
+    function lerHorarioSegundosPorAlias(item, apelidos) {
+        return lerHorarioSegundos(item, apelidos.hours, apelidos.minutes);
     }
 
-    function hasAnyAlias(item, names) {
-        return names.some(name => item[name] != null);
+    function temAlgumAlias(item, nomes) {
+        return nomes.some(nome => item[nome] != null);
     }
 
-    function getFirstItemForDate(data, date) {
-        const dateData = data[date];
-        if (!dateData || typeof dateData !== "object") return null;
-        for (const key of Object.keys(dateData).sort().reverse()) {
-            const item = dateData[key];
+    function obterPrimeiroItemData(dados, dataReferencia) {
+        const dadosData = dados[dataReferencia];
+        if (!dadosData || typeof dadosData !== "object") return null;
+        for (const chave of Object.keys(dadosData).sort().reverse()) {
+            const item = dadosData[chave];
             if (!item || typeof item !== "object") continue;
-            if (hasSolarFields(item)) {
+            if (temCamposSolares(item)) {
                 return item;
             }
-            for (const nestedKey of Object.keys(item).sort().reverse()) {
-                const nestedItem = item[nestedKey];
-                if (hasSolarFields(nestedItem)) return nestedItem;
+            for (const chaveAninhada of Object.keys(item).sort().reverse()) {
+                const itemAninhado = item[chaveAninhada];
+                if (temCamposSolares(itemAninhado)) return itemAninhado;
             }
         }
         return null;
     }
 
-    function getSolarEventsForSelectedDate(data, selectedDate) {
-        const item = selectedDate ? getFirstItemForDate(data, selectedDate) : null;
-        const eventSeconds = readSolarEventSeconds(item);
-        if (!eventSeconds) return null;
+    function obterEventosSolaresDataSelecionada(dados, dataSelecionada) {
+        const item = dataSelecionada ? obterPrimeiroItemData(dados, dataSelecionada) : null;
+        const segundosEventos = lerSegundosEventosSolares(item);
+        if (!segundosEventos) return null;
 
         return {
-            date: selectedDate,
-            dawn: ClimateData.secondsToHours(eventSeconds.dawn),
-            sunrise: ClimateData.secondsToHours(eventSeconds.sunrise),
-            zenith: ClimateData.secondsToHours(eventSeconds.zenith),
-            sunset: ClimateData.secondsToHours(eventSeconds.sunset),
-            dusk: ClimateData.secondsToHours(eventSeconds.dusk)
+            date: dataSelecionada,
+            dawn: ClimateData.secondsToHours(segundosEventos.dawn),
+            sunrise: ClimateData.secondsToHours(segundosEventos.sunrise),
+            zenith: ClimateData.secondsToHours(segundosEventos.zenith),
+            sunset: ClimateData.secondsToHours(segundosEventos.sunset),
+            dusk: ClimateData.secondsToHours(segundosEventos.dusk)
         };
     }
 
-    function getSunriseSunsetData(data) {
-        const dates = [], sunriseTimes = [], sunsetTimes = [], amanhecerTimes = [], anoitecerTimes = [];
+    function obterDadosNascerPorSol(dados) {
+        const datas = [], horariosNascer = [], horariosPor = [], horariosAmanhecer = [], horariosAnoitecer = [];
 
-        for (const date of Object.keys(data).sort((a,b) => ClimateData.parseFirebaseDate(a)-ClimateData.parseFirebaseDate(b))) {
-            const item = getFirstItemForDate(data, date);
-            const eventSeconds = readSolarEventSeconds(item);
-            if (!eventSeconds) continue;
+        for (const dataReferencia of Object.keys(dados).sort((a,b) => ClimateData.parseFirebaseDate(a)-ClimateData.parseFirebaseDate(b))) {
+            const item = obterPrimeiroItemData(dados, dataReferencia);
+            const segundosEventos = lerSegundosEventosSolares(item);
+            if (!segundosEventos) continue;
 
-            dates.push(date);
-            sunriseTimes.push(eventSeconds.sunrise);
-            sunsetTimes.push(eventSeconds.sunset);
-            amanhecerTimes.push(eventSeconds.dawn);
-            anoitecerTimes.push(eventSeconds.dusk);
+            datas.push(dataReferencia);
+            horariosNascer.push(segundosEventos.sunrise);
+            horariosPor.push(segundosEventos.sunset);
+            horariosAmanhecer.push(segundosEventos.dawn);
+            horariosAnoitecer.push(segundosEventos.dusk);
         }
-        return { dates, sunriseTimes, sunsetTimes, amanhecerTimes, anoitecerTimes };
+        return { dates: datas, sunriseTimes: horariosNascer, sunsetTimes: horariosPor, amanhecerTimes: horariosAmanhecer, anoitecerTimes: horariosAnoitecer };
     }
 
-    function tooltipLabel(context) {
-        return `${context.dataset.label || ""}: ${ClimateData.formatTime(context.raw)}`;
+    function rotuloDica(contexto) {
+        return `${contexto.dataset.label || ""}: ${ClimateData.formatTime(contexto.raw)}`;
     }
 
     function ordenarTooltipPorPosicaoVisual(a, b) {
@@ -144,138 +144,140 @@
         return valorB - valorA;
     }
 
-    function obterPixelTooltip(context) {
-        const dataset = context.chart?.data?.datasets?.[context.datasetIndex];
-        const escala = context.chart?.scales?.[dataset?.yAxisID || "y"];
-        const valor = Number(context.parsed?.y);
+    function obterPixelTooltip(contexto) {
+        const serieGrafico = contexto.chart?.data?.datasets?.[contexto.datasetIndex];
+        const escala = contexto.chart?.scales?.[serieGrafico?.yAxisID || "y"];
+        const valor = Number(contexto.parsed?.y);
         if (!escala || !Number.isFinite(valor)) return null;
         return escala.getPixelForValue(valor);
     }
 
-    function getSunHistoryOptions({ legend = true, tickSize = 11, labelSize = 11, defaults, colors } = {}) {
+    function obterOpcoesHistoricoSolar({ legend: legenda = true, tickSize: tamanhoMarcador = 11, labelSize: tamanhoRotulo = 11, defaults: padroes, colors: cores } = {}) {
         return {
             responsive: true,
             maintainAspectRatio: false,
             animation: { duration: 600 },
             interaction: {
-                mode: 'nearest',
+                mode: 'index',
                 intersect: false,
                 axis: 'x'
             },
             hover: {
-                mode: 'nearest',
+                mode: 'index',
                 intersect: false
             },
             plugins: {
                 legend: {
-                    display: legend,
+                    display: legenda,
                     position: 'top',
-                    labels: { color: colors.text, font: { size: labelSize }, boxWidth: 12, padding: 16 }
+                    labels: { color: cores.text, font: { size: tamanhoRotulo }, boxWidth: 12, padding: 16 }
                 },
                 tooltip: {
-                    ...defaults.plugins.tooltip,
+                    ...padroes.plugins.tooltip,
+                    mode: "index",
+                    intersect: false,
                     itemSort: ordenarTooltipPorPosicaoVisual,
-                    callbacks: { label: tooltipLabel }
+                    callbacks: { label: rotuloDica }
                 }
             },
             scales: {
                 x: {
-                    grid:  { color: colors.grid, drawBorder: false },
-                    ticks: { color: colors.text, font: { size: tickSize }, maxRotation: 45 }
+                    grid:  { color: cores.grid, drawBorder: false },
+                    ticks: { color: cores.text, font: { size: tamanhoMarcador }, maxRotation: 45 }
                 },
                 yLeft: {
                     type: "linear", position: "right",
                     min: 4, max: 7,
-                    grid: { color: colors.grid, drawBorder: false },
-                    ticks: { callback: ClimateData.formatTime, color: colors.text, font: { size: tickSize } }
+                    grid: { color: cores.grid, drawBorder: false },
+                    ticks: { callback: ClimateData.formatTime, color: cores.text, font: { size: tamanhoMarcador } }
                 },
                 yRight: {
                     type: "linear", position: "left",
                     min: 17, max: 21,
                     grid: { drawOnChartArea: false },
-                    ticks: { callback: ClimateData.formatTime, color: colors.text, font: { size: tickSize } }
+                    ticks: { callback: ClimateData.formatTime, color: cores.text, font: { size: tamanhoMarcador } }
                 }
             }
         };
     }
 
-    function createSunriseSunsetChart({ data, ctx, existingChart, defaults, colors, onEmpty }) {
-        const { dates, sunriseTimes, sunsetTimes, amanhecerTimes, anoitecerTimes } = getSunriseSunsetData(data);
-        const formattedDates = dates.map(d => d.replace(/-/g, "/"));
-        const remap = (arr, i1, i2, o1, o2) => arr.map(t => ClimateData.mapRange(t, i1, i2, o1, o2));
+    function criarGraficoNascerPorSol({ data: dados, ctx: contextoDesenho, existingChart: graficoExistente, defaults: padroes, colors: cores, onEmpty: aoEstarVazio }) {
+        const { dates: datas, sunriseTimes: horariosNascer, sunsetTimes: horariosPor, amanhecerTimes: horariosAmanhecer, anoitecerTimes: horariosAnoitecer } = obterDadosNascerPorSol(dados);
+        const datasFormatadas = datas.map(d => d.replace(/-/g, "/"));
+        const remapear = (listaValores, i1, i2, o1, o2) => listaValores.map(t => ClimateData.mapRange(t, i1, i2, o1, o2));
 
-        if (existingChart) existingChart.destroy();
+        if (graficoExistente) graficoExistente.destroy();
 
-        if (!dates.length) {
-            if (onEmpty) onEmpty();
+        if (!datas.length) {
+            if (aoEstarVazio) aoEstarVazio();
             return null;
         }
 
-        return new Chart(ctx, {
+        return new Chart(contextoDesenho, {
             type: "line",
             data: {
-                labels: formattedDates,
+                labels: datasFormatadas,
                 datasets: [
-                    { label: "Amanhecer",     yAxisID: "yLeft",  data: remap(amanhecerTimes,14400,25200,4,7),  borderColor: "#fde68a", backgroundColor: "transparent", tension: 0.4, borderWidth: 2, pointRadius: 0, pointHitRadius: 18, pointHoverRadius: 6, order: 1 },
-                    { label: "Nascer do sol", yAxisID: "yLeft",  data: remap(sunriseTimes,  14400,25200,4,7),  borderColor: "#fb923c", backgroundColor: "transparent", tension: 0.4, borderWidth: 2, pointRadius: 0, pointHitRadius: 18, pointHoverRadius: 6, order: 2 },
-                    { label: "Pôr do sol",    yAxisID: "yRight", data: remap(sunsetTimes,   61200,75600,17,21), borderColor: "#f87171", backgroundColor: "transparent", tension: 0.4, borderWidth: 2, pointRadius: 0, pointHitRadius: 18, pointHoverRadius: 6, order: 3 },
-                    { label: "Anoitecer",     yAxisID: "yRight", data: remap(anoitecerTimes,61200,75600,17,21), borderColor: "#818cf8", backgroundColor: "transparent", tension: 0.4, borderWidth: 2, pointRadius: 0, pointHitRadius: 18, pointHoverRadius: 6, order: 4 }
+                    { label: "Amanhecer",     yAxisID: "yLeft",  data: remapear(horariosAmanhecer,14400,25200,4,7),  borderColor: "#fde68a", backgroundColor: "transparent", tension: 0.4, borderWidth: 2, pointRadius: 0, pointHitRadius: 18, pointHoverRadius: 6, order: 1 },
+                    { label: "Nascer do sol", yAxisID: "yLeft",  data: remapear(horariosNascer,  14400,25200,4,7),  borderColor: "#fb923c", backgroundColor: "transparent", tension: 0.4, borderWidth: 2, pointRadius: 0, pointHitRadius: 18, pointHoverRadius: 6, order: 2 },
+                    { label: "Pôr do sol",    yAxisID: "yRight", data: remapear(horariosPor,   61200,75600,17,21), borderColor: "#f87171", backgroundColor: "transparent", tension: 0.4, borderWidth: 2, pointRadius: 0, pointHitRadius: 18, pointHoverRadius: 6, order: 3 },
+                    { label: "Anoitecer",     yAxisID: "yRight", data: remapear(horariosAnoitecer,61200,75600,17,21), borderColor: "#818cf8", backgroundColor: "transparent", tension: 0.4, borderWidth: 2, pointRadius: 0, pointHitRadius: 18, pointHoverRadius: 6, order: 4 }
                 ]
             },
-            options: getSunHistoryOptions({ defaults, colors })
+            options: obterOpcoesHistoricoSolar({ defaults: padroes, colors: cores })
         });
     }
 
-    const solarDayBackgroundPlugin = {
+    const pluginFundoDiaSolar = {
         id: "solarDayBackground",
-        beforeDatasetsDraw(chart) {
-            const times = chart.$solarDayTimes;
-            const xScale = chart.scales.x;
-            const area = chart.chartArea;
-            if (!times || !xScale || !area) return;
+        beforeDatasetsDraw(grafico) {
+            const horarios = grafico.$solarDayTimes;
+            const escalaX = grafico.scales.x;
+            const areaDesenho = grafico.chartArea;
+            if (!horarios || !escalaX || !areaDesenho) return;
 
-            const ctx = chart.ctx;
-            const dawnX = xScale.getPixelForValue(times.dawn);
-            const sunriseX = xScale.getPixelForValue(times.sunrise);
-            const zenithX = xScale.getPixelForValue(times.zenith);
-            const sunsetX = xScale.getPixelForValue(times.sunset);
-            const duskX = xScale.getPixelForValue(times.dusk);
+            const contextoDesenho = grafico.ctx;
+            const amanhecerX = escalaX.getPixelForValue(horarios.dawn);
+            const nascerX = escalaX.getPixelForValue(horarios.sunrise);
+            const zeniteX = escalaX.getPixelForValue(horarios.zenith);
+            const porX = escalaX.getPixelForValue(horarios.sunset);
+            const anoitecerX = escalaX.getPixelForValue(horarios.dusk);
 
-            ctx.save();
-            ctx.fillStyle = "rgba(15, 23, 42, 0.72)";
-            ctx.fillRect(area.left, area.top, Math.max(0, dawnX - area.left), area.bottom - area.top);
-            ctx.fillRect(duskX, area.top, Math.max(0, area.right - duskX), area.bottom - area.top);
+            contextoDesenho.save();
+            contextoDesenho.fillStyle = "rgba(15, 23, 42, 0.72)";
+            contextoDesenho.fillRect(areaDesenho.left, areaDesenho.top, Math.max(0, amanhecerX - areaDesenho.left), areaDesenho.bottom - areaDesenho.top);
+            contextoDesenho.fillRect(anoitecerX, areaDesenho.top, Math.max(0, areaDesenho.right - anoitecerX), areaDesenho.bottom - areaDesenho.top);
 
-            const twilight = ctx.createLinearGradient(dawnX, 0, sunriseX, 0);
-            twilight.addColorStop(0, "rgba(148, 163, 184, 0.24)");
-            twilight.addColorStop(1, "rgba(251, 191, 36, 0.22)");
-            ctx.fillStyle = twilight;
-            ctx.fillRect(dawnX, area.top, Math.max(0, sunriseX - dawnX), area.bottom - area.top);
+            const crepusculo = contextoDesenho.createLinearGradient(amanhecerX, 0, nascerX, 0);
+            crepusculo.addColorStop(0, "rgba(148, 163, 184, 0.24)");
+            crepusculo.addColorStop(1, "rgba(251, 191, 36, 0.22)");
+            contextoDesenho.fillStyle = crepusculo;
+            contextoDesenho.fillRect(amanhecerX, areaDesenho.top, Math.max(0, nascerX - amanhecerX), areaDesenho.bottom - areaDesenho.top);
 
-            const daylight = ctx.createLinearGradient(sunriseX, 0, sunsetX, 0);
-            daylight.addColorStop(0, "rgba(251, 191, 36, 0.20)");
-            daylight.addColorStop(0.5, "rgba(254, 240, 138, 0.38)");
-            daylight.addColorStop(1, "rgba(251, 191, 36, 0.20)");
-            ctx.fillStyle = daylight;
-            ctx.fillRect(sunriseX, area.top, Math.max(0, sunsetX - sunriseX), area.bottom - area.top);
+            const luzDiurna = contextoDesenho.createLinearGradient(nascerX, 0, porX, 0);
+            luzDiurna.addColorStop(0, "rgba(251, 191, 36, 0.20)");
+            luzDiurna.addColorStop(0.5, "rgba(254, 240, 138, 0.38)");
+            luzDiurna.addColorStop(1, "rgba(251, 191, 36, 0.20)");
+            contextoDesenho.fillStyle = luzDiurna;
+            contextoDesenho.fillRect(nascerX, areaDesenho.top, Math.max(0, porX - nascerX), areaDesenho.bottom - areaDesenho.top);
 
-            const evening = ctx.createLinearGradient(sunsetX, 0, duskX, 0);
-            evening.addColorStop(0, "rgba(251, 146, 60, 0.24)");
-            evening.addColorStop(1, "rgba(129, 140, 248, 0.18)");
-            ctx.fillStyle = evening;
-            ctx.fillRect(sunsetX, area.top, Math.max(0, duskX - sunsetX), area.bottom - area.top);
+            const periodoNoturno = contextoDesenho.createLinearGradient(porX, 0, anoitecerX, 0);
+            periodoNoturno.addColorStop(0, "rgba(251, 146, 60, 0.24)");
+            periodoNoturno.addColorStop(1, "rgba(129, 140, 248, 0.18)");
+            contextoDesenho.fillStyle = periodoNoturno;
+            contextoDesenho.fillRect(porX, areaDesenho.top, Math.max(0, anoitecerX - porX), areaDesenho.bottom - areaDesenho.top);
 
-            ctx.strokeStyle = "rgba(251, 191, 36, 0.35)";
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(zenithX, area.top);
-            ctx.lineTo(zenithX, area.bottom);
-            ctx.stroke();
-            ctx.restore();
+            contextoDesenho.strokeStyle = "rgba(251, 191, 36, 0.35)";
+            contextoDesenho.lineWidth = 1;
+            contextoDesenho.beginPath();
+            contextoDesenho.moveTo(zeniteX, areaDesenho.top);
+            contextoDesenho.lineTo(zeniteX, areaDesenho.bottom);
+            contextoDesenho.stroke();
+            contextoDesenho.restore();
         }
     };
 
-    function getSolarTodayOptions({ tickSize = 11, labelSize = 11, defaults, colors } = {}) {
+    function obterOpcoesSolarDia({ tickSize: tamanhoMarcador = 11, labelSize: tamanhoRotulo = 11, defaults: padroes, colors: cores } = {}) {
         registrarPosicionadorTooltipSolar();
 
         return {
@@ -294,19 +296,19 @@
                 legend: {
                     display: true,
                     position: "top",
-                    labels: { color: colors.text, font: { size: labelSize }, boxWidth: 12, padding: 16 }
+                    labels: { color: cores.text, font: { size: tamanhoRotulo }, boxWidth: 12, padding: 16 }
                 },
                 tooltip: {
-                    ...defaults.plugins.tooltip,
+                    ...padroes.plugins.tooltip,
                     mode: "nearest",
                     intersect: true,
                     position: "solarEvent",
-                    filter: context => context.dataset.label === "Eventos solares",
+                    filter: contexto => contexto.dataset.label === "Eventos solares",
                     callbacks: {
-                        title: items => items[0]?.raw?.label || "",
-                        label: context => {
-                            const raw = context.raw;
-                            return raw && raw.timeLabel ? raw.timeLabel : ClimateData.formatTime(context.parsed.x);
+                        title: itens => itens[0]?.raw?.label || "",
+                        label: contexto => {
+                            const bruto = contexto.raw;
+                            return bruto && bruto.timeLabel ? bruto.timeLabel : ClimateData.formatTime(contexto.parsed.x);
                         }
                     }
                 }
@@ -319,9 +321,9 @@
                     grid: { color: "rgba(99,132,200,0.13)", drawBorder: false },
                     ticks: {
                         stepSize: 2,
-                        color: colors.text,
-                        font: { size: tickSize },
-                        callback: value => `${value}h`
+                        color: cores.text,
+                        font: { size: tamanhoMarcador },
+                        callback: valor => `${valor}h`
                     }
                 },
                 y: {
@@ -335,13 +337,13 @@
     }
 
     function registrarPosicionadorTooltipSolar() {
-        const positioners = window.Chart?.Tooltip?.positioners;
-        if (!positioners || positioners.solarEvent) return;
+        const posicionadores = window.Chart?.Tooltip?.positioners;
+        if (!posicionadores || posicionadores.solarEvent) return;
 
-        positioners.solarEvent = function (elementos, posicaoEvento) {
+        posicionadores.solarEvent = function (elementos, posicaoEvento) {
             const elementoEvento = elementos.find(item => {
-                const dataset = this.chart?.data?.datasets?.[item.datasetIndex];
-                return dataset?.label === "Eventos solares";
+                const serieGrafico = this.chart?.data?.datasets?.[item.datasetIndex];
+                return serieGrafico?.label === "Eventos solares";
             }) || elementos[0];
 
             return elementoEvento?.element?.tooltipPosition?.() || posicaoEvento;
@@ -367,39 +369,39 @@
         return `${horas}h${String(minutos).padStart(2, "0")}`;
     }
 
-    function createSolarTodayChart({ data, selectedDate, ctx, existingChart, defaults, colors, onEmpty }) {
-        const events = getSolarEventsForSelectedDate(data, selectedDate);
-        if (existingChart) existingChart.destroy();
+    function criarGraficoSolarDia({ data: dados, selectedDate: dataSelecionada, ctx: contextoDesenho, existingChart: graficoExistente, defaults: padroes, colors: cores, onEmpty: aoEstarVazio }) {
+        const eventos = obterEventosSolaresDataSelecionada(dados, dataSelecionada);
+        if (graficoExistente) graficoExistente.destroy();
 
-        if (!events) {
-            if (onEmpty) onEmpty();
+        if (!eventos) {
+            if (aoEstarVazio) aoEstarVazio();
             return null;
         }
 
-        const daylightPoints = [
+        const pontosLuzDiurna = [
             { x: 0, y: 0 },
-            { x: events.dawn, y: 0.08, label: "Amanhecer", timeLabel: ClimateData.formatTime(events.dawn) },
-            { x: events.sunrise, y: 0.52, label: "Nascer do sol", timeLabel: ClimateData.formatTime(events.sunrise) },
-            { x: events.zenith, y: 1, label: "Zenite", timeLabel: ClimateData.formatTime(events.zenith) },
-            { x: events.sunset, y: 0.52, label: "Pôr do sol", timeLabel: ClimateData.formatTime(events.sunset) },
-            { x: events.dusk, y: 0.08, label: "Anoitecer", timeLabel: ClimateData.formatTime(events.dusk) },
+            { x: eventos.dawn, y: 0.08, label: "Amanhecer", timeLabel: ClimateData.formatTime(eventos.dawn) },
+            { x: eventos.sunrise, y: 0.52, label: "Nascer do sol", timeLabel: ClimateData.formatTime(eventos.sunrise) },
+            { x: eventos.zenith, y: 1, label: "Zenite", timeLabel: ClimateData.formatTime(eventos.zenith) },
+            { x: eventos.sunset, y: 0.52, label: "Pôr do sol", timeLabel: ClimateData.formatTime(eventos.sunset) },
+            { x: eventos.dusk, y: 0.08, label: "Anoitecer", timeLabel: ClimateData.formatTime(eventos.dusk) },
             { x: 24, y: 0 }
         ];
-        const eventPoints = [
-            daylightPoints[1],
-            daylightPoints[2],
-            daylightPoints[3],
-            daylightPoints[4],
-            daylightPoints[5]
+        const pontosEventos = [
+            pontosLuzDiurna[1],
+            pontosLuzDiurna[2],
+            pontosLuzDiurna[3],
+            pontosLuzDiurna[4],
+            pontosLuzDiurna[5]
         ];
 
-        const chart = new Chart(ctx, {
+        const grafico = new Chart(contextoDesenho, {
             type: "line",
             data: {
                 datasets: [
                     {
                         label: "Luz do dia",
-                        data: daylightPoints,
+                        data: pontosLuzDiurna,
                         borderColor: "#facc15",
                         backgroundColor: "rgba(250, 204, 21, 0.22)",
                         fill: true,
@@ -412,7 +414,7 @@
                     {
                         type: "scatter",
                         label: "Eventos solares",
-                        data: eventPoints,
+                        data: pontosEventos,
                         borderColor: "#f8fafc",
                         backgroundColor: ["#fde68a", "#fb923c", "#facc15", "#f87171", "#818cf8"],
                         pointBorderColor: "#0b1120",
@@ -424,21 +426,21 @@
                     }
                 ]
             },
-            options: getSolarTodayOptions({ defaults, colors }),
-            plugins: [solarDayBackgroundPlugin]
+            options: obterOpcoesSolarDia({ defaults: padroes, colors: cores }),
+            plugins: [pluginFundoDiaSolar]
         });
 
-        chart.$solarDayTimes = events;
-        return chart;
+        grafico.$solarDayTimes = eventos;
+        return grafico;
     }
 
     window.ClimateSolar = {
-        createSunriseSunsetChart,
-        createSolarTodayChart,
-        getSolarEventsForSelectedDate,
+        createSunriseSunsetChart: criarGraficoNascerPorSol,
+        createSolarTodayChart: criarGraficoSolarDia,
+        getSolarEventsForSelectedDate: obterEventosSolaresDataSelecionada,
         formatarDuracaoDia,
-        getSunHistoryOptions,
-        getSolarTodayOptions,
-        solarDayBackgroundPlugin,
+        getSunHistoryOptions: obterOpcoesHistoricoSolar,
+        getSolarTodayOptions: obterOpcoesSolarDia,
+        solarDayBackgroundPlugin: pluginFundoDiaSolar,
     };
 })();

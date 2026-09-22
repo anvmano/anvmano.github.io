@@ -1,15 +1,15 @@
 'use strict';
 
 (function () {
-    const modules = window.ClimatePdfReportModules = window.ClimatePdfReportModules || {};
+    const modulos = window.ClimatePdfReportModules = window.ClimatePdfReportModules || {};
 
-    const { format } = modules;
-    const { buildNoDataMessage, clamp, formatValue } = format;
+    const { format: formatacao } = modulos;
+    const { buildNoDataMessage: montarMensagemSemDados, clamp: limitar, formatValue: formatarValorRelatorio } = formatacao;
 
-    async function collectChartCards(tabConfig, { normalizedRows = [], latestData = {}, selectedDate, qualities = {} } = {}) {
+    async function coletarCardsGraficos(configuracaoAba, { normalizedRows: linhasNormalizadas = [], latestData: dadosMaisRecentes = {}, selectedDate: dataSelecionada, qualities: qualidades = {}, dadosClimaExterno = null } = {}) {
         const cards = [];
-        if (tabConfig.tableType === "station") {
-            cards.push(createStationChartCard(
+        if (configuracaoAba.tableType === "station") {
+            cards.push(criarCardGraficoEstacao(
                 "Temperatura por Ambiente",
                 "°C",
                 [
@@ -17,96 +17,97 @@
                     { label: "Quarto", dataKey: "room", field: AppConfig.fields.room.temperature },
                     { label: "Aquário", dataKey: "aquarium", field: AppConfig.fields.aquarium.temperature },
                 ],
-                latestData,
-                selectedDate
+                dadosMaisRecentes,
+                dataSelecionada
             ));
-            cards.push(createStationChartCard(
+            cards.push(criarCardGraficoEstacao(
                 "Umidade por Ambiente",
                 "%",
                 [
                     { label: "Sala", dataKey: "livingRoom", field: AppConfig.fields.livingRoom.humidity },
                     { label: "Quarto", dataKey: "room", field: AppConfig.fields.room.humidity },
                 ],
-                latestData,
-                selectedDate
+                dadosMaisRecentes,
+                dataSelecionada
             ));
+            if (dadosClimaExterno) cards.push(criarCardGraficoChuva(dadosClimaExterno));
         }
 
-        const temperatureMetric = tabConfig.metrics.find(metric => metric.key === "temperature");
-        const feelsLikeMetric = tabConfig.metrics.find(metric => metric.key === "feelsLike");
-        const humidityMetric = tabConfig.metrics.find(metric => metric.key === "humidity");
+        const metricaTemperatura = configuracaoAba.metrics.find(metrica => metrica.key === "temperature");
+        const metricaSensacaoTermica = configuracaoAba.metrics.find(metrica => metrica.key === "feelsLike");
+        const metricaUmidade = configuracaoAba.metrics.find(metrica => metrica.key === "humidity");
 
-        if (temperatureMetric && feelsLikeMetric) {
-            cards.push(await createMetricChartCard(
+        if (metricaTemperatura && metricaSensacaoTermica) {
+            cards.push(await criarCardGraficoMetrica(
                 "Temperatura x Sensação Térmica",
                 "°C",
-                [temperatureMetric, feelsLikeMetric],
-                normalizedRows,
-                selectedDate,
-                qualities
+                [metricaTemperatura, metricaSensacaoTermica],
+                linhasNormalizadas,
+                dataSelecionada,
+                qualidades
             ));
-        } else if (temperatureMetric) {
-            cards.push(await createMetricChartCard(temperatureMetric.label, temperatureMetric.unit, [temperatureMetric], normalizedRows, selectedDate, qualities));
+        } else if (metricaTemperatura) {
+            cards.push(await criarCardGraficoMetrica(metricaTemperatura.label, metricaTemperatura.unit, [metricaTemperatura], linhasNormalizadas, dataSelecionada, qualidades));
         }
 
-        if (humidityMetric) {
-            cards.push(await createMetricChartCard(humidityMetric.label, humidityMetric.unit, [humidityMetric], normalizedRows, selectedDate, qualities));
+        if (metricaUmidade) {
+            cards.push(await criarCardGraficoMetrica(metricaUmidade.label, metricaUmidade.unit, [metricaUmidade], linhasNormalizadas, dataSelecionada, qualidades));
         }
 
-        const individualMetrics = tabConfig.metrics.filter(metric => (
-            metric.key !== "temperature" &&
-            metric.key !== "feelsLike" &&
-            metric.key !== "humidity"
+        const metricasIndividuais = configuracaoAba.metrics.filter(metrica => (
+            metrica.key !== "temperature" &&
+            metrica.key !== "feelsLike" &&
+            metrica.key !== "humidity"
         ));
 
-        for (const metric of individualMetrics) {
-            cards.push(await createMetricChartCard(metric.label, metric.unit, [metric], normalizedRows, selectedDate, qualities));
+        for (const metrica of metricasIndividuais) {
+            cards.push(await criarCardGraficoMetrica(metrica.label, metrica.unit, [metrica], linhasNormalizadas, dataSelecionada, qualidades));
         }
 
-        if (tabConfig.includeSolar) {
-            const temposSolares = window.ClimateSolar?.getSolarEventsForSelectedDate?.(latestData.solar || {}, selectedDate);
+        if (configuracaoAba.includeSolar) {
+            const temposSolares = window.ClimateSolar?.getSolarEventsForSelectedDate?.(dadosMaisRecentes.solar || {}, dataSelecionada);
             cards.push({
                 label: "Ciclo solar compacto",
                 unit: "h",
-                image: createSolarCompactImage(temposSolares),
+                image: criarImagemSolarCompacta(temposSolares),
                 compact: true,
-                emptyMessage: selectedDate === ClimateData.dataAtual()
+                emptyMessage: dataSelecionada === ClimateData.dataAtual()
                     ? "Ciclo solar ainda não processado para hoje."
-                    : buildNoDataMessage("ciclo solar", selectedDate),
-                stats: buildSolarChartStats(temposSolares),
+                    : montarMensagemSemDados("ciclo solar", dataSelecionada),
+                stats: montarEstatisticasGraficoSolar(temposSolares),
             });
         }
 
         return cards;
     }
 
-    function createExistingChartCard(label, unit, chartId, chartInstances, selectedDate) {
-        const chart = chartInstances[chartId];
+    function criarCardGraficoExistente(rotulo, unidade, idGrafico, instanciasGraficos, dataSelecionada) {
+        const grafico = instanciasGraficos[idGrafico];
         return {
-            label,
-            unit,
-            image: captureChartImage(chartId, chartInstances),
-            emptyMessage: buildNoDataMessage(label, selectedDate),
-            stats: buildExistingChartStats(chart, unit),
+            label: rotulo,
+            unit: unidade,
+            image: capturarImagemGrafico(idGrafico, instanciasGraficos),
+            emptyMessage: montarMensagemSemDados(rotulo, dataSelecionada),
+            stats: montarEstatisticasGraficoExistente(grafico, unidade),
         };
     }
 
-    async function createMetricChartCard(label, unit, metrics, normalizedRows, selectedDate, qualities = {}) {
-        const series = metrics.map((metric, index) => ({
-            metric,
-            labels: normalizedRows.map(row => row.time),
-            values: normalizedRows.map(row => Number.isFinite(row.numericValues?.[metric.key]) ? row.numericValues[metric.key] : null),
-            color: getPdfChartColor(index),
+    async function criarCardGraficoMetrica(rotulo, unidade, metricas, linhasNormalizadas, dataSelecionada, qualidades = {}) {
+        const seriesDados = metricas.map((metrica, indice) => ({
+            metric: metrica,
+            labels: linhasNormalizadas.map(linha => linha.time),
+            values: linhasNormalizadas.map(linha => Number.isFinite(linha.numericValues?.[metrica.key]) ? linha.numericValues[metrica.key] : null),
+            color: obterCorGraficoPdf(indice),
         }));
-        const image = createMetricChartImage(label, unit, series);
+        const imagem = criarImagemGraficoMetrica(rotulo, unidade, seriesDados);
         return {
-            label,
-            unit,
-            image,
-            emptyMessage: buildNoDataMessage(label, selectedDate),
-            stats: series.flatMap(item => {
-                const estatisticas = buildChartStats(item.metric.label, item.values, item.metric.unit);
-                const qualidade = qualities[item.metric.key];
+            label: rotulo,
+            unit: unidade,
+            image: imagem,
+            emptyMessage: montarMensagemSemDados(rotulo, dataSelecionada),
+            stats: seriesDados.flatMap(item => {
+                const estatisticas = montarEstatisticasGrafico(item.metric.label, item.values, item.metric.unit);
+                const qualidade = qualidades[item.metric.key];
                 if (qualidade && qualidade.nivel !== "adequada") {
                     estatisticas.push(`${item.metric.label}: ${qualidade.rotulo} (${qualidade.leiturasValidas}/${qualidade.leiturasEsperadas})`);
                 }
@@ -115,36 +116,36 @@
         };
     }
 
-    function createMetricChartImage(title, unit, series) {
+    function criarImagemGraficoMetrica(titulo, unidade, seriesDados) {
         if (typeof Chart !== "function") return null;
 
-        const seriesNormalizadas = normalizarSeries(series);
+        const seriesNormalizadas = normalizarSeries(seriesDados);
         if (!seriesNormalizadas.length) return null;
 
-        const labels = seriesNormalizadas[0].labels;
+        const rotulos = seriesNormalizadas[0].labels;
         const canvas = document.createElement("canvas");
         canvas.width = 1200;
         canvas.height = 520;
 
-        const datasets = seriesNormalizadas.flatMap(item => {
-            const stats = calculateSeriesStats(item.values);
-            const normalizedValues = labels.map((_, index) => item.values[index] ?? null);
+        const seriesGraficos = seriesNormalizadas.flatMap(item => {
+            const estatisticas = calcularEstatisticasSerie(item.values);
+            const valoresNormalizados = rotulos.map((_, indice) => item.values[indice] ?? null);
             return [
                 {
                     label: item.metric.label,
-                    data: normalizedValues,
+                    data: valoresNormalizados,
                     borderColor: item.color,
                     backgroundColor: item.color,
                     borderWidth: 4,
                     tension: 0.32,
-                    pointRadius: normalizedValues.map((_, index) => index === stats.minIndex || index === stats.maxIndex ? 6 : 0),
+                    pointRadius: valoresNormalizados.map((_, indice) => indice === estatisticas.minIndex || indice === estatisticas.maxIndex ? 6 : 0),
                     pointHoverRadius: 0,
                     fill: false,
                 },
                 {
                     label: `${item.metric.label} média`,
-                    data: labels.map(() => stats.avg),
-                    borderColor: withAlpha(item.color, 0.45),
+                    data: rotulos.map(() => estatisticas.avg),
+                    borderColor: aplicarOpacidade(item.color, 0.45),
                     borderDash: [10, 8],
                     borderWidth: 2,
                     pointRadius: 0,
@@ -153,29 +154,29 @@
             ];
         });
 
-        const comfortBand = getPdfComfortBand(seriesNormalizadas.map(item => item.metric));
-        const yBounds = calculatePdfYBounds(seriesNormalizadas);
-        const chart = new Chart(canvas.getContext("2d"), {
+        const faixaConforto = obterFaixaConfortoPdf(seriesNormalizadas.map(item => item.metric));
+        const limitesY = calcularLimitesYPdf(seriesNormalizadas);
+        const grafico = new Chart(canvas.getContext("2d"), {
             type: "line",
-            data: { labels, datasets },
-            options: createPdfChartOptions(title, unit, datasets.length > 2, yBounds),
-            plugins: [pdfChartBackgroundPlugin(), pdfComfortBandPlugin()],
+            data: { labels: rotulos, datasets: seriesGraficos },
+            options: criarOpcoesGraficoPdf(titulo, unidade, seriesGraficos.length > 2, limitesY),
+            plugins: [pluginFundoGraficoPdf(), pluginFaixaConfortoPdf()],
         });
 
-        chart.$pdfComfortBand = comfortBand;
-        chart.update("none");
-        const image = canvas.toDataURL("image/png", 1);
-        chart.destroy();
-        return image;
+        grafico.$pdfComfortBand = faixaConforto;
+        grafico.update("none");
+        const imagem = canvas.toDataURL("image/png", 1);
+        grafico.destroy();
+        return imagem;
     }
 
-    function normalizarSeries(series) {
-        const rotulos = [...new Set(series.flatMap(item => item.labels || []))].sort();
+    function normalizarSeries(seriesDados) {
+        const rotulos = [...new Set(seriesDados.flatMap(item => item.labels || []))].sort();
         if (!rotulos.length) return [];
 
-        return series
+        return seriesDados
             .map(item => {
-                const valoresPorRotulo = new Map((item.labels || []).map((rotulo, index) => [rotulo, item.values?.[index] ?? null]));
+                const valoresPorRotulo = new Map((item.labels || []).map((rotulo, indice) => [rotulo, item.values?.[indice] ?? null]));
                 return {
                     ...item,
                     labels: rotulos,
@@ -188,30 +189,173 @@
             .filter(item => item.values.some(Number.isFinite));
     }
 
-    function createStationChartCard(label, unit, definitions, latestData, selectedDate) {
-        const series = definitions.map((definition, index) => ({
-            metric: { label: definition.label, unit },
-            ...extrairSeriePorHorario(latestData?.[definition.dataKey] || {}, selectedDate, definition.field),
-            color: getPdfChartColor(index),
+    function criarCardGraficoEstacao(rotulo, unidade, definicoes, dadosMaisRecentes, dataSelecionada) {
+        const seriesDados = definicoes.map((definicao, indice) => ({
+            metric: { label: definicao.label, unit: unidade },
+            ...extrairSeriePorHorario(dadosMaisRecentes?.[definicao.dataKey] || {}, dataSelecionada, definicao.field),
+            color: obterCorGraficoPdf(indice),
         }));
 
         return {
-            label,
-            unit,
-            image: createMetricChartImage(label, unit, series),
-            emptyMessage: buildNoDataMessage(label, selectedDate),
-            stats: series.flatMap(item => buildChartStats(item.metric.label, item.values, unit)),
+            label: rotulo,
+            unit: unidade,
+            image: criarImagemGraficoMetrica(rotulo, unidade, seriesDados),
+            emptyMessage: montarMensagemSemDados(rotulo, dataSelecionada),
+            stats: seriesDados.flatMap(item => montarEstatisticasGrafico(item.metric.label, item.values, unidade)),
         };
     }
 
-    function extrairSeriePorHorario(data, selectedDate, field) {
-        const dadosSelecionados = ClimateData.filterDataByDays(data, 2, selectedDate);
+    function criarCardGraficoChuva(dadosClimaExterno) {
+        const janela = window.ClimateChuva?.montarJanela?.(
+            dadosClimaExterno?.previsaoCurtoPrazo || [],
+            dadosClimaExterno?.atualizadoEm
+        );
+        const precipitacaoObservada = somarPorTipo(janela, "observado");
+        const precipitacaoPrevista = somarPorTipo(janela, "previsao");
+        const probabilidadesPrevistas = (janela?.probabilidade || []).filter((valor, indice) => (
+            janela.tipos[indice] === "previsao" && Number.isFinite(valor)
+        ));
+        const maiorProbabilidade = probabilidadesPrevistas.length ? Math.max(...probabilidadesPrevistas) : null;
+
+        return {
+            label: "Chuva · 24h + previsão 12h",
+            unit: "mm / %",
+            image: criarImagemGraficoChuva(janela),
+            wide: true,
+            emptyMessage: "Sem dados horários de chuva para a localização consultada.",
+            stats: [
+                `Registrado 24h: ${precipitacaoObservada.toFixed(1)} mm`,
+                `Previsto 12h: ${precipitacaoPrevista.toFixed(1)} mm`,
+                `Maior chance futura: ${Number.isFinite(maiorProbabilidade) ? `${Math.round(maiorProbabilidade)}%` : "--"}`,
+            ],
+        };
+    }
+
+    function criarImagemGraficoChuva(janela) {
+        if (!janela?.horarios?.length || typeof Chart !== "function" || !window.ClimateChuva) return null;
+
+        const observada = janela.precipitacao.map((valor, indice) => janela.tipos[indice] === "observado" ? valor : null);
+        const prevista = janela.precipitacao.map((valor, indice) => janela.tipos[indice] === "previsao" ? valor : null);
+        const probabilidade = janela.probabilidade.map((valor, indice) => janela.tipos[indice] === "previsao" ? valor : null);
+        const temDados = [...observada, ...prevista, ...probabilidade].some(Number.isFinite);
+        if (!temDados) return null;
+
+        const canvas = document.createElement("canvas");
+        canvas.width = 1200;
+        canvas.height = 520;
+        const opcoes = window.ClimateChuva.obterOpcoes({ janela, cores: AppConfig.colors });
+        opcoes.responsive = false;
+        opcoes.animation = false;
+        opcoes.maintainAspectRatio = false;
+        opcoes.layout = { padding: { top: 24, right: 28, bottom: 12, left: 16 } };
+        opcoes.plugins.title = {
+            display: true,
+            text: "Chuva · 24h + previsão 12h",
+            color: "#f8fafc",
+            font: { size: 26, weight: "700" },
+            padding: { bottom: 18 },
+        };
+        opcoes.plugins.legend.labels.font = { size: 17, weight: "600" };
+        opcoes.plugins.tooltip.enabled = false;
+        opcoes.scales.x.ticks.font = { size: 17 };
+        opcoes.scales.yMilimetros.ticks.font = { size: 17 };
+        opcoes.scales.yProbabilidade.ticks.font = { size: 17 };
+
+        const grafico = new Chart(canvas.getContext("2d"), {
+            type: "bar",
+            data: {
+                labels: janela.horarios.map(formatarHoraChuvaPdf),
+                datasets: [
+                    {
+                        label: "Precipitação registrada",
+                        data: observada,
+                        yAxisID: "yMilimetros",
+                        backgroundColor: "rgba(56, 189, 248, 0.72)",
+                        borderColor: "#38bdf8",
+                        borderWidth: 1,
+                        borderRadius: 3,
+                        order: 2,
+                    },
+                    {
+                        label: "Precipitação prevista",
+                        data: prevista,
+                        yAxisID: "yMilimetros",
+                        backgroundColor: "rgba(125, 211, 252, 0.42)",
+                        borderColor: "rgba(125, 211, 252, 0.68)",
+                        borderWidth: 1,
+                        borderRadius: 3,
+                        order: 2,
+                    },
+                    {
+                        type: "line",
+                        label: "Chance de chuva",
+                        data: probabilidade,
+                        yAxisID: "yProbabilidade",
+                        borderColor: "#a78bfa",
+                        borderDash: [10, 7],
+                        borderWidth: 3,
+                        tension: 0.3,
+                        pointRadius: 0,
+                        spanGaps: false,
+                        order: 1,
+                    },
+                ],
+            },
+            options: opcoes,
+            plugins: [pluginFundoGraficoPdf(), pluginMarcadorAgoraChuvaPdf()],
+        });
+        grafico.$marcadorAgora = { indice: janela.indiceAgora };
+        grafico.update("none");
+        const imagem = canvas.toDataURL("image/png", 1);
+        grafico.destroy();
+        return imagem;
+    }
+
+    function pluginMarcadorAgoraChuvaPdf() {
+        return {
+            id: "pdfRainNowMarker",
+            afterDraw(grafico) {
+                const indice = grafico.$marcadorAgora?.indice;
+                const escalaX = grafico.scales?.x;
+                const area = grafico.chartArea;
+                if (!Number.isInteger(indice) || indice < 0 || !escalaX || !area) return;
+                const x = escalaX.getPixelForValue(indice);
+                if (!Number.isFinite(x)) return;
+
+                const contextoDesenho = grafico.ctx;
+                contextoDesenho.save();
+                contextoDesenho.strokeStyle = "rgba(226, 232, 240, 0.72)";
+                contextoDesenho.lineWidth = 2;
+                contextoDesenho.setLineDash([7, 6]);
+                contextoDesenho.beginPath();
+                contextoDesenho.moveTo(x, area.top);
+                contextoDesenho.lineTo(x, area.bottom);
+                contextoDesenho.stroke();
+                contextoDesenho.restore();
+            },
+        };
+    }
+
+    function somarPorTipo(janela, tipo) {
+        return (janela?.precipitacao || []).reduce((total, valor, indice) => (
+            janela.tipos[indice] === tipo && Number.isFinite(valor) ? total + valor : total
+        ), 0);
+    }
+
+    function formatarHoraChuvaPdf(valor) {
+        const dados = new Date(valor);
+        if (Number.isNaN(dados.getTime())) return "--";
+        return `${String(dados.getHours()).padStart(2, "0")}:${String(dados.getMinutes()).padStart(2, "0")}`;
+    }
+
+    function extrairSeriePorHorario(dados, dataSelecionada, campo) {
+        const dadosSelecionados = ClimateData.filterDataByDays(dados, 2, dataSelecionada);
         const valoresPorHorario = new Map();
 
         for (const dadosData of Object.values(dadosSelecionados)) {
             for (const [horarioFirebase, dadosHorario] of Object.entries(dadosData || {})) {
                 const valores = Object.values(dadosHorario || {})
-                    .map(item => ClimateData.normalizeMeasurementValue(field, item?.[field]))
+                    .map(item => ClimateData.normalizeMeasurementValue(campo, item?.[campo]))
                     .filter(Number.isFinite);
                 if (!valores.length) continue;
 
@@ -221,19 +365,19 @@
             }
         }
 
-        const labels = [...valoresPorHorario.keys()].sort();
+        const rotulos = [...valoresPorHorario.keys()].sort();
         return {
-            labels,
-            values: labels.map(horario => valoresPorHorario.get(horario)),
+            labels: rotulos,
+            values: rotulos.map(horario => valoresPorHorario.get(horario)),
         };
     }
 
-    function captureFirstMetricImage(metrics, chartInstances) {
-        const metric = metrics.find(item => item?.chart);
-        return metric ? captureChartImage(AppConfig.ids.charts[metric.chart], chartInstances) : null;
+    function capturarImagemPrimeiraMetrica(metricas, instanciasGraficos) {
+        const metrica = metricas.find(item => item?.chart);
+        return metrica ? capturarImagemGrafico(AppConfig.ids.charts[metrica.chart], instanciasGraficos) : null;
     }
 
-    function createPdfChartOptions(title, unit, showLegend, yBounds = {}) {
+    function criarOpcoesGraficoPdf(titulo, unidade, mostrarLegenda, limitesY = {}) {
         return {
             responsive: false,
             animation: false,
@@ -244,13 +388,13 @@
             plugins: {
                 title: {
                     display: true,
-                    text: title,
+                    text: titulo,
                     color: "#f8fafc",
                     font: { size: 26, weight: "700" },
                     padding: { bottom: 18 },
                 },
                 legend: {
-                    display: showLegend,
+                    display: mostrarLegenda,
                     labels: {
                         color: "#cbd5e1",
                         boxWidth: 22,
@@ -274,11 +418,11 @@
                     grid: { color: "rgba(99, 132, 200, 0.16)" },
                 },
                 y: {
-                    suggestedMin: yBounds.suggestedMin,
-                    suggestedMax: yBounds.suggestedMax,
+                    suggestedMin: limitesY.suggestedMin,
+                    suggestedMax: limitesY.suggestedMax,
                     title: {
-                        display: Boolean(unit),
-                        text: unit,
+                        display: Boolean(unidade),
+                        text: unidade,
                         color: "#94a3b8",
                         font: { size: 17, weight: "700" },
                     },
@@ -292,111 +436,111 @@
         };
     }
 
-    function pdfChartBackgroundPlugin() {
+    function pluginFundoGraficoPdf() {
         return {
             id: "pdfChartBackground",
-            beforeDraw(chart) {
-                const { ctx, width, height } = chart;
-                ctx.save();
-                ctx.fillStyle = "#111827";
-                ctx.fillRect(0, 0, width, height);
-                ctx.restore();
+            beforeDraw(grafico) {
+                const { ctx: contextoDesenho, width: largura, height: altura } = grafico;
+                contextoDesenho.save();
+                contextoDesenho.fillStyle = "#111827";
+                contextoDesenho.fillRect(0, 0, largura, altura);
+                contextoDesenho.restore();
             },
         };
     }
 
-    function pdfComfortBandPlugin() {
+    function pluginFaixaConfortoPdf() {
         return {
             id: "pdfComfortBand",
-            beforeDatasetsDraw(chart) {
-                const band = chart.$pdfComfortBand;
-                const yScale = chart.scales.y;
-                const area = chart.chartArea;
-                if (!band || !yScale || !area) return;
+            beforeDatasetsDraw(grafico) {
+                const faixa = grafico.$pdfComfortBand;
+                const escalaY = grafico.scales.y;
+                const areaDesenho = grafico.chartArea;
+                if (!faixa || !escalaY || !areaDesenho) return;
 
-                const yMin = clamp(yScale.getPixelForValue(band.min), area.top, area.bottom);
-                const yMax = clamp(yScale.getPixelForValue(band.max), area.top, area.bottom);
-                const top = Math.min(yMin, yMax);
-                const height = Math.abs(yMax - yMin);
-                const ctx = chart.ctx;
+                const minimoY = limitar(escalaY.getPixelForValue(faixa.min), areaDesenho.top, areaDesenho.bottom);
+                const maximoY = limitar(escalaY.getPixelForValue(faixa.max), areaDesenho.top, areaDesenho.bottom);
+                const topo = Math.min(minimoY, maximoY);
+                const altura = Math.abs(maximoY - minimoY);
+                const contextoDesenho = grafico.ctx;
 
-                ctx.save();
-                ctx.fillStyle = "rgba(52, 211, 153, 0.10)";
-                ctx.fillRect(area.left, top, area.right - area.left, height);
-                ctx.strokeStyle = "rgba(52, 211, 153, 0.35)";
-                ctx.setLineDash([8, 6]);
-                ctx.beginPath();
-                ctx.moveTo(area.left, yMin);
-                ctx.lineTo(area.right, yMin);
-                ctx.moveTo(area.left, yMax);
-                ctx.lineTo(area.right, yMax);
-                ctx.stroke();
-                ctx.restore();
+                contextoDesenho.save();
+                contextoDesenho.fillStyle = "rgba(52, 211, 153, 0.10)";
+                contextoDesenho.fillRect(areaDesenho.left, topo, areaDesenho.right - areaDesenho.left, altura);
+                contextoDesenho.strokeStyle = "rgba(52, 211, 153, 0.35)";
+                contextoDesenho.setLineDash([8, 6]);
+                contextoDesenho.beginPath();
+                contextoDesenho.moveTo(areaDesenho.left, minimoY);
+                contextoDesenho.lineTo(areaDesenho.right, minimoY);
+                contextoDesenho.moveTo(areaDesenho.left, maximoY);
+                contextoDesenho.lineTo(areaDesenho.right, maximoY);
+                contextoDesenho.stroke();
+                contextoDesenho.restore();
             },
         };
     }
 
-    function getPdfComfortBand(metrics) {
-        const metricWithBand = metrics.find(metric => metric.comfortBand);
-        return metricWithBand?.comfortBand || null;
+    function obterFaixaConfortoPdf(metricas) {
+        const metricaComFaixa = metricas.find(metrica => metrica.comfortBand);
+        return metricaComFaixa?.comfortBand || null;
     }
 
-    function calculatePdfYBounds(series) {
-        const values = series
+    function calcularLimitesYPdf(seriesDados) {
+        const valores = seriesDados
             .flatMap(item => item.values)
             .filter(Number.isFinite);
 
-        if (!values.length) return {};
+        if (!valores.length) return {};
 
-        const min = Math.min(...values);
-        const max = Math.max(...values);
-        const range = max - min;
-        const padding = range > 0 ? Math.max(range * 0.12, 0.1) : 1;
+        const minimo = Math.min(...valores);
+        const maximo = Math.max(...valores);
+        const intervalo = maximo - minimo;
+        const espacamento = intervalo > 0 ? Math.max(intervalo * 0.12, 0.1) : 1;
 
         return {
-            suggestedMin: min - padding,
-            suggestedMax: max + padding,
+            suggestedMin: minimo - espacamento,
+            suggestedMax: maximo + espacamento,
         };
     }
 
-    function createSolarCompactImage(source) {
-        const times = source?.$solarDayTimes || source;
-        if (!times || typeof Chart !== "function" || !window.ClimateSolar || !window.ClimateCharts) return null;
+    function criarImagemSolarCompacta(origem) {
+        const horarios = origem?.$solarDayTimes || origem;
+        if (!horarios || typeof Chart !== "function" || !window.ClimateSolar || !window.ClimateCharts) return null;
 
         const canvas = document.createElement("canvas");
         canvas.width = 1200;
         canvas.height = 520;
 
-        const daylightPoints = [
+        const pontosLuzDiurna = [
             { x: 0, y: 0 },
-            { x: times.dawn, y: 0.08, label: "Amanhecer", timeLabel: ClimateData.formatTime(times.dawn) },
-            { x: times.sunrise, y: 0.52, label: "Nascer do sol", timeLabel: ClimateData.formatTime(times.sunrise) },
-            { x: times.zenith, y: 1, label: "Zenite", timeLabel: ClimateData.formatTime(times.zenith) },
-            { x: times.sunset, y: 0.52, label: "Pôr do sol", timeLabel: ClimateData.formatTime(times.sunset) },
-            { x: times.dusk, y: 0.08, label: "Anoitecer", timeLabel: ClimateData.formatTime(times.dusk) },
+            { x: horarios.dawn, y: 0.08, label: "Amanhecer", timeLabel: ClimateData.formatTime(horarios.dawn) },
+            { x: horarios.sunrise, y: 0.52, label: "Nascer do sol", timeLabel: ClimateData.formatTime(horarios.sunrise) },
+            { x: horarios.zenith, y: 1, label: "Zenite", timeLabel: ClimateData.formatTime(horarios.zenith) },
+            { x: horarios.sunset, y: 0.52, label: "Pôr do sol", timeLabel: ClimateData.formatTime(horarios.sunset) },
+            { x: horarios.dusk, y: 0.08, label: "Anoitecer", timeLabel: ClimateData.formatTime(horarios.dusk) },
             { x: 24, y: 0 },
         ];
 
-        const eventPoints = daylightPoints.slice(1, 6);
-        const defaults = window.ClimateCharts.createDefaults(AppConfig.colors);
-        const options = window.ClimateSolar.getSolarTodayOptions({
-            defaults,
+        const pontosEventos = pontosLuzDiurna.slice(1, 6);
+        const padroes = window.ClimateCharts.createDefaults(AppConfig.colors);
+        const opcoes = window.ClimateSolar.getSolarTodayOptions({
+            defaults: padroes,
             colors: AppConfig.colors,
             tickSize: 17,
             labelSize: 17,
         });
-        options.responsive = false;
-        options.animation = false;
-        options.layout = { padding: { top: 20, right: 24, bottom: 8, left: 10 } };
-        options.plugins.tooltip.enabled = false;
+        opcoes.responsive = false;
+        opcoes.animation = false;
+        opcoes.layout = { padding: { top: 20, right: 24, bottom: 8, left: 10 } };
+        opcoes.plugins.tooltip.enabled = false;
 
-        const pdfSolarChart = new Chart(canvas.getContext("2d"), {
+        const graficoSolarPdf = new Chart(canvas.getContext("2d"), {
             type: "line",
             data: {
                 datasets: [
                     {
                         label: "Luz do dia",
-                        data: daylightPoints,
+                        data: pontosLuzDiurna,
                         borderColor: "#facc15",
                         backgroundColor: "rgba(250, 204, 21, 0.22)",
                         fill: true,
@@ -409,7 +553,7 @@
                     {
                         type: "scatter",
                         label: "Eventos solares",
-                        data: eventPoints,
+                        data: pontosEventos,
                         borderColor: "#f8fafc",
                         backgroundColor: ["#fde68a", "#fb923c", "#facc15", "#f87171", "#818cf8"],
                         pointBorderColor: "#0b1120",
@@ -421,105 +565,105 @@
                     },
                 ],
             },
-            options,
-            plugins: [pdfChartBackgroundPlugin(), window.ClimateSolar.solarDayBackgroundPlugin],
+            options: opcoes,
+            plugins: [pluginFundoGraficoPdf(), window.ClimateSolar.solarDayBackgroundPlugin],
         });
 
-        pdfSolarChart.$solarDayTimes = times;
-        pdfSolarChart.update("none");
-        const image = canvas.toDataURL("image/png", 1);
-        pdfSolarChart.destroy();
-        return image;
+        graficoSolarPdf.$solarDayTimes = horarios;
+        graficoSolarPdf.update("none");
+        const imagem = canvas.toDataURL("image/png", 1);
+        graficoSolarPdf.destroy();
+        return imagem;
     }
 
-    function getPdfChartColor(index) {
-        return ["#38bdf8", "#34d399", "#a78bfa", "#fb7185"][index] || "#facc15";
+    function obterCorGraficoPdf(indice) {
+        return ["#38bdf8", "#34d399", "#a78bfa", "#fb7185"][indice] || "#facc15";
     }
 
-    function withAlpha(hex, alpha) {
-        const value = hex.replace("#", "");
-        const r = parseInt(value.slice(0, 2), 16);
-        const g = parseInt(value.slice(2, 4), 16);
-        const b = parseInt(value.slice(4, 6), 16);
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    function aplicarOpacidade(corHexadecimal, opacidade) {
+        const valor = corHexadecimal.replace("#", "");
+        const r = parseInt(valor.slice(0, 2), 16);
+        const g = parseInt(valor.slice(2, 4), 16);
+        const b = parseInt(valor.slice(4, 6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${opacidade})`;
     }
 
-    function getChartLabels(chart) {
-        return (chart?.data?.labels || []).map(label => String(label));
+    function obterRotulosGrafico(grafico) {
+        return (grafico?.data?.labels || []).map(rotulo => String(rotulo));
     }
 
-    function getChartValues(chart) {
-        const data = chart?.data?.datasets?.[0]?.data || [];
-        return data.map(point => {
-            const value = typeof point === "object" && point !== null ? point.y : point;
-            if (value === null || value === undefined || (typeof value === "string" && value.trim() === "")) return null;
-            const number = Number(value);
-            return Number.isFinite(number) ? number : null;
+    function obterValoresGrafico(grafico) {
+        const dados = grafico?.data?.datasets?.[0]?.data || [];
+        return dados.map(pontoGrafico => {
+            const valor = typeof pontoGrafico === "object" && pontoGrafico !== null ? pontoGrafico.y : pontoGrafico;
+            if (valor === null || valor === undefined || (typeof valor === "string" && valor.trim() === "")) return null;
+            const numero = Number(valor);
+            return Number.isFinite(numero) ? numero : null;
         });
     }
 
-    function calculateSeriesStats(values) {
-        const numeric = values
-            .map((value, index) => ({ value, index }))
+    function calcularEstatisticasSerie(valores) {
+        const numerico = valores
+            .map((valor, indice) => ({ value: valor, index: indice }))
             .filter(item => Number.isFinite(item.value));
 
-        if (!numeric.length) {
+        if (!numerico.length) {
             return { min: null, max: null, avg: null, minIndex: -1, maxIndex: -1 };
         }
 
-        const minItem = numeric.reduce((lowest, item) => item.value < lowest.value ? item : lowest, numeric[0]);
-        const maxItem = numeric.reduce((highest, item) => item.value > highest.value ? item : highest, numeric[0]);
-        const avg = numeric.reduce((sum, item) => sum + item.value, 0) / numeric.length;
+        const itemMinimo = numerico.reduce((menor, item) => item.value < menor.value ? item : menor, numerico[0]);
+        const itemMaximo = numerico.reduce((maior, item) => item.value > maior.value ? item : maior, numerico[0]);
+        const mediaCalculada = numerico.reduce((soma, item) => soma + item.value, 0) / numerico.length;
         return {
-            min: minItem.value,
-            max: maxItem.value,
-            avg,
-            minIndex: minItem.index,
-            maxIndex: maxItem.index,
+            min: itemMinimo.value,
+            max: itemMaximo.value,
+            avg: mediaCalculada,
+            minIndex: itemMinimo.index,
+            maxIndex: itemMaximo.index,
         };
     }
 
-    function buildChartStats(label, values, unit) {
-        const stats = calculateSeriesStats(values);
-        if (!Number.isFinite(stats.avg)) return [];
+    function montarEstatisticasGrafico(rotulo, valores, unidade) {
+        const estatisticas = calcularEstatisticasSerie(valores);
+        if (!Number.isFinite(estatisticas.avg)) return [];
 
         return [
-            `${label}: mín ${formatValue(stats.min, unit)} · máx ${formatValue(stats.max, unit)} · média ${formatValue(stats.avg, unit)}`,
+            `${rotulo}: mín ${formatarValorRelatorio(estatisticas.min, unidade)} · máx ${formatarValorRelatorio(estatisticas.max, unidade)} · média ${formatarValorRelatorio(estatisticas.avg, unidade)}`,
         ];
     }
 
-    function buildSolarChartStats(source) {
-        const times = source?.$solarDayTimes || source;
-        if (!times) return [];
+    function montarEstatisticasGraficoSolar(origem) {
+        const horarios = origem?.$solarDayTimes || origem;
+        if (!horarios) return [];
 
         return [
-            `Amanhecer ${ClimateData.formatTime(times.dawn)}`,
-            `Nascer ${ClimateData.formatTime(times.sunrise)}`,
-            `Zênite ${ClimateData.formatTime(times.zenith)}`,
-            `Pôr ${ClimateData.formatTime(times.sunset)}`,
-            `Anoitecer ${ClimateData.formatTime(times.dusk)}`,
+            `Amanhecer ${ClimateData.formatTime(horarios.dawn)}`,
+            `Nascer ${ClimateData.formatTime(horarios.sunrise)}`,
+            `Zênite ${ClimateData.formatTime(horarios.zenith)}`,
+            `Pôr ${ClimateData.formatTime(horarios.sunset)}`,
+            `Anoitecer ${ClimateData.formatTime(horarios.dusk)}`,
         ];
     }
 
-    function buildExistingChartStats(chart, unit) {
-        const datasets = chart?.data?.datasets || [];
-        return datasets
-            .filter(dataset => dataset?.label)
-            .flatMap(dataset => buildChartStats(dataset.label, extractDatasetValues(dataset), unit));
+    function montarEstatisticasGraficoExistente(grafico, unidade) {
+        const seriesGraficos = grafico?.data?.datasets || [];
+        return seriesGraficos
+            .filter(serieGrafico => serieGrafico?.label)
+            .flatMap(serieGrafico => montarEstatisticasGrafico(serieGrafico.label, extrairValoresSerie(serieGrafico), unidade));
     }
 
-    function extractDatasetValues(dataset) {
-        return (dataset?.data || []).map(point => {
-            const value = typeof point === "object" && point !== null ? point.y : point;
-            if (value === null || value === undefined || (typeof value === "string" && value.trim() === "")) return null;
-            const number = Number(value);
-            return Number.isFinite(number) ? number : null;
+    function extrairValoresSerie(serieGrafico) {
+        return (serieGrafico?.data || []).map(pontoGrafico => {
+            const valor = typeof pontoGrafico === "object" && pontoGrafico !== null ? pontoGrafico.y : pontoGrafico;
+            if (valor === null || valor === undefined || (typeof valor === "string" && valor.trim() === "")) return null;
+            const numero = Number(valor);
+            return Number.isFinite(numero) ? numero : null;
         });
     }
 
-    function captureChartImage(chartId, chartInstances) {
-        const chart = chartInstances[chartId];
-        const canvas = chart?.canvas;
+    function capturarImagemGrafico(idGrafico, instanciasGraficos) {
+        const grafico = instanciasGraficos[idGrafico];
+        const canvas = grafico?.canvas;
         if (!canvas || typeof canvas.toDataURL !== "function") return null;
 
         try {
@@ -529,30 +673,32 @@
         }
     }
 
-    modules.charts = {
-        collectChartCards,
-        createMetricChartCard,
-        createMetricChartImage,
+    modulos.charts = {
+        collectChartCards: coletarCardsGraficos,
+        createMetricChartCard: criarCardGraficoMetrica,
+        createMetricChartImage: criarImagemGraficoMetrica,
         normalizarSeries,
-        createStationChartCard,
+        createStationChartCard: criarCardGraficoEstacao,
+        createRainChartCard: criarCardGraficoChuva,
+        createRainChartImage: criarImagemGraficoChuva,
         extrairSeriePorHorario,
-        captureFirstMetricImage,
-        createPdfChartOptions,
-        pdfChartBackgroundPlugin,
-        pdfComfortBandPlugin,
-        getPdfComfortBand,
-        calculatePdfYBounds,
-        createSolarCompactImage,
-        getPdfChartColor,
-        withAlpha,
-        getChartLabels,
-        getChartValues,
-        calculateSeriesStats,
-        buildChartStats,
-        buildSolarChartStats,
-        createExistingChartCard,
-        buildExistingChartStats,
-        extractDatasetValues,
-        captureChartImage,
+        captureFirstMetricImage: capturarImagemPrimeiraMetrica,
+        createPdfChartOptions: criarOpcoesGraficoPdf,
+        pdfChartBackgroundPlugin: pluginFundoGraficoPdf,
+        pdfComfortBandPlugin: pluginFaixaConfortoPdf,
+        getPdfComfortBand: obterFaixaConfortoPdf,
+        calculatePdfYBounds: calcularLimitesYPdf,
+        createSolarCompactImage: criarImagemSolarCompacta,
+        getPdfChartColor: obterCorGraficoPdf,
+        withAlpha: aplicarOpacidade,
+        getChartLabels: obterRotulosGrafico,
+        getChartValues: obterValoresGrafico,
+        calculateSeriesStats: calcularEstatisticasSerie,
+        buildChartStats: montarEstatisticasGrafico,
+        buildSolarChartStats: montarEstatisticasGraficoSolar,
+        createExistingChartCard: criarCardGraficoExistente,
+        buildExistingChartStats: montarEstatisticasGraficoExistente,
+        extractDatasetValues: extrairValoresSerie,
+        captureChartImage: capturarImagemGrafico,
     };
 })();

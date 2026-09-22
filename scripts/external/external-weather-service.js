@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-    const config = () => window.AppConfig.externalApis;
+    const configuracao = () => window.AppConfig.externalApis;
 
     function limparCep(cep) {
         return String(cep || "").replace(/\D/g, "");
@@ -94,13 +94,13 @@
 
     async function buscarEnderecoPorCep(cep) {
         try {
-            const resposta = await fetch(`${config().brasilApiCepUrl}/${cep}`);
+            const resposta = await fetch(`${configuracao().brasilApiCepUrl}/${cep}`);
             if (resposta.ok) return normalizarEnderecoBrasilApi(await resposta.json());
         } catch (erro) {
             window.ClimateDiagnostics?.depurar("BrasilAPI indisponível, tentando ViaCEP.", erro);
         }
 
-        const resposta = await fetch(`${config().viaCepUrl}/${cep}/json/`);
+        const resposta = await fetch(`${configuracao().viaCepUrl}/${cep}/json/`);
         if (!resposta.ok) throw new Error("Não foi possível consultar o CEP.");
         const dados = await resposta.json();
         if (dados.erro) throw criarErroEsperado("CEP não encontrado.", "cep_nao_encontrado");
@@ -141,7 +141,7 @@
     }
 
     async function consultarGeocodificacao(termo, quantidade) {
-        const url = new URL(config().openMeteoGeocodingUrl);
+        const url = new URL(configuracao().openMeteoGeocodingUrl);
         url.searchParams.set("name", termo);
         url.searchParams.set("count", String(quantidade));
         url.searchParams.set("language", "pt");
@@ -155,7 +155,7 @@
     }
 
     async function buscarClima(latitude, longitude) {
-        const url = new URL(config().openMeteoForecastUrl);
+        const url = new URL(configuracao().openMeteoForecastUrl);
         url.searchParams.set("latitude", latitude);
         url.searchParams.set("longitude", longitude);
         url.searchParams.set("timezone", "auto");
@@ -171,7 +171,7 @@
     }
 
     async function buscarQualidadeAr(latitude, longitude) {
-        const url = new URL(config().openMeteoAirQualityUrl);
+        const url = new URL(configuracao().openMeteoAirQualityUrl);
         url.searchParams.set("latitude", latitude);
         url.searchParams.set("longitude", longitude);
         url.searchParams.set("timezone", "auto");
@@ -288,6 +288,8 @@
                 umidade: normalizarSerie(clima.hourly?.relative_humidity_2m),
                 pressao: normalizarSerie(clima.hourly?.pressure_msl),
                 pontoOrvalho: normalizarSerie(clima.hourly?.dew_point_2m),
+                probabilidadeChuva: normalizarSerie(clima.hourly?.precipitation_probability),
+                precipitacao: normalizarSerie(clima.hourly?.precipitation),
             },
             previsaoCurtoPrazo: montarPrevisaoCurtoPrazo(clima.hourly),
             previsaoDiaria: {
@@ -305,52 +307,52 @@
         };
     }
 
-    function obterEventosSolares(daily, horarioAtual) {
-        const indice = obterIndiceDiario(daily, horarioAtual);
-        const nascer = daily?.sunrise?.[indice] ? new Date(daily.sunrise[indice]) : null;
-        const por = daily?.sunset?.[indice] ? new Date(daily.sunset[indice]) : null;
+    function obterEventosSolares(diario, horarioAtual) {
+        const indice = obterIndiceDiario(diario, horarioAtual);
+        const nascer = diario?.sunrise?.[indice] ? new Date(diario.sunrise[indice]) : null;
+        const por = diario?.sunset?.[indice] ? new Date(diario.sunset[indice]) : null;
         if (!nascer || !por || Number.isNaN(nascer.getTime()) || Number.isNaN(por.getTime())) return null;
 
-        const sunrise = horaDecimal(nascer);
-        const sunset = horaDecimal(por);
-        const dawn = Math.max(0, sunrise - 1);
-        const dusk = Math.min(24, sunset + 1);
-        const zenith = sunrise + ((sunset - sunrise) / 2);
-        const daylightDuration = Number(daily?.daylight_duration?.[indice]);
+        const nascerSolar = horaDecimal(nascer);
+        const porSolar = horaDecimal(por);
+        const amanhecerSolar = Math.max(0, nascerSolar - 1);
+        const anoitecerSolar = Math.min(24, porSolar + 1);
+        const zeniteSolar = nascerSolar + ((porSolar - nascerSolar) / 2);
+        const duracaoLuzDiurna = Number(diario?.daylight_duration?.[indice]);
 
         return {
-            dawn,
-            sunrise,
-            zenith,
-            sunset,
-            dusk,
-            daylightDuration: Number.isFinite(daylightDuration) ? daylightDuration : (sunset - sunrise) * 3600,
+            dawn: amanhecerSolar,
+            sunrise: nascerSolar,
+            zenith: zeniteSolar,
+            sunset: porSolar,
+            dusk: anoitecerSolar,
+            daylightDuration: Number.isFinite(duracaoLuzDiurna) ? duracaoLuzDiurna : (porSolar - nascerSolar) * 3600,
         };
     }
 
-    function obterIndiceDiario(daily, horarioAtual) {
+    function obterIndiceDiario(diario, horarioAtual) {
         const dataAlvo = String(horarioAtual || "").slice(0, 10);
-        const indice = (daily?.time || []).findIndex(data => String(data).slice(0, 10) === dataAlvo);
+        const indice = (diario?.time || []).findIndex(dados => String(dados).slice(0, 10) === dataAlvo);
         return indice >= 0 ? indice : 0;
     }
 
-    function montarPrevisaoCurtoPrazo(hourly) {
-        return (hourly?.time || []).map((horario, indice) => ({
+    function montarPrevisaoCurtoPrazo(porHora) {
+        return (porHora?.time || []).map((horario, indice) => ({
             horario,
-            probabilidadeChuva: numeroOuNulo(hourly?.precipitation_probability?.[indice]),
-            precipitacao: numeroOuNulo(hourly?.precipitation?.[indice]),
-            chuva: numeroOuNulo(hourly?.rain?.[indice]),
-            pancadas: numeroOuNulo(hourly?.showers?.[indice]),
-            codigoTempo: numeroOuNulo(hourly?.weather_code?.[indice]),
-            nebulosidade: numeroOuNulo(hourly?.cloud_cover?.[indice]),
-            velocidadeVento: numeroOuNulo(hourly?.wind_speed_10m?.[indice]),
-            rajadaVento: numeroOuNulo(hourly?.wind_gusts_10m?.[indice]),
-            indiceUv: numeroOuNulo(hourly?.uv_index?.[indice]),
+            probabilidadeChuva: numeroOuNulo(porHora?.precipitation_probability?.[indice]),
+            precipitacao: numeroOuNulo(porHora?.precipitation?.[indice]),
+            chuva: numeroOuNulo(porHora?.rain?.[indice]),
+            pancadas: numeroOuNulo(porHora?.showers?.[indice]),
+            codigoTempo: numeroOuNulo(porHora?.weather_code?.[indice]),
+            nebulosidade: numeroOuNulo(porHora?.cloud_cover?.[indice]),
+            velocidadeVento: numeroOuNulo(porHora?.wind_speed_10m?.[indice]),
+            rajadaVento: numeroOuNulo(porHora?.wind_gusts_10m?.[indice]),
+            indiceUv: numeroOuNulo(porHora?.uv_index?.[indice]),
         }));
     }
 
-    function horaDecimal(data) {
-        return data.getHours() + data.getMinutes() / 60 + data.getSeconds() / 3600;
+    function horaDecimal(dados) {
+        return dados.getHours() + dados.getMinutes() / 60 + dados.getSeconds() / 3600;
     }
 
     function normalizarSerie(valores) {

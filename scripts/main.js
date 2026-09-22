@@ -56,23 +56,23 @@ if (
     throw new Error("Módulos auxiliares não foram carregados na ordem correta.");
 }
 
-const chartInstances = {};
-const latestData = {
+const instanciasGraficos = {};
+const dadosMaisRecentes = {
     room: null,
     solar: null,
     aquarium: null,
     livingRoom: null,
 };
 
-const COLORS = AppConfig.colors;
-const COMFORT_BAND = AppConfig.comfortBand;
-const CHART_DEFAULTS = ClimateCharts.createDefaults(COLORS);
-const FIREBASE_PATHS = AppConfig.firebasePaths;
+const CORES = AppConfig.colors;
+const FAIXA_CONFORTO = AppConfig.comfortBand;
+const PADROES_GRAFICOS = ClimateCharts.createDefaults(CORES);
+const CAMINHOS_FIREBASE = AppConfig.firebasePaths;
 const IDS = AppConfig.ids;
 
-let selectedDate = ClimateData.dataAtual();
-let astroIndicatorTimer = null;
-let lastAstroState = null;
+let dataSelecionada = ClimateData.dataAtual();
+let temporizadorIndicadorAstronomico = null;
+let ultimoEstadoAstronomico = null;
 let carregamentoChart = null;
 let dashboardInternoInicializado = false;
 let modoPublicoAtivo = false;
@@ -82,112 +82,118 @@ let canceladoresFirebase = [];
 
 if (window.Chart) ClimateCharts.registerComfortBand();
 
-function getSelectedDate() {
-    return selectedDate;
+function obterDataSelecionada() {
+    return dataSelecionada;
 }
 
-function setSelectedDate(date) {
-    selectedDate = date;
+function definirDataSelecionada(dataReferencia) {
+    dataSelecionada = dataReferencia;
     ClimateSeason.update();
     ClimateMoon.update();
 }
 
-function createChart({
-    canvasCtx,
-    containerId,
-    data,
-    key,
-    label,
-    color,
-    yAxisTitle,
-    yAxisSuffix = "",
-    comfortBand = COMFORT_BAND,
-    emptyMessage = "Sem dados para esta data."
+function criarGrafico({
+    canvasCtx: contextoCanvas,
+    containerId: idRecipiente,
+    data: dados,
+    key: chave,
+    label: rotulo,
+    color: cor,
+    yAxisTitle: tituloEixoY,
+    yAxisSuffix: sufixoEixoY = "",
+    comfortBand: faixaConforto = FAIXA_CONFORTO,
+    grupoSincronizacao,
+    emptyMessage: mensagemVazia = "Sem dados para esta data."
 }) {
-    const id = canvasCtx.canvas.id;
+    const id = contextoCanvas.canvas.id;
     if (!window.Chart) {
-        if (containerId) ClimateUI.renderChartMessage(containerId, "Carregando gráfico...", "loading");
+        if (idRecipiente) ClimateUI.renderChartMessage(idRecipiente, "Carregando gráfico...", "loading");
         carregarChartParaGraficos();
-        return chartInstances[id] || null;
+        return instanciasGraficos[id] || null;
     }
 
-    const chart = ClimateCharts.createLineChart({
-        canvasCtx,
-        data,
-        key,
-        label,
-        color,
-        yAxisTitle,
-        yAxisSuffix,
-        existingChart: chartInstances[id],
-        defaults: CHART_DEFAULTS,
-        colors: COLORS,
-        comfortBand,
+    const grafico = ClimateCharts.createLineChart({
+        canvasCtx: contextoCanvas,
+        data: dados,
+        key: chave,
+        label: rotulo,
+        color: cor,
+        yAxisTitle: tituloEixoY,
+        yAxisSuffix: sufixoEixoY,
+        existingChart: instanciasGraficos[id],
+        defaults: PADROES_GRAFICOS,
+        colors: CORES,
+        comfortBand: faixaConforto,
+        grupoSincronizacao,
         onEmpty: () => {
-            delete chartInstances[id];
-            if (containerId) ClimateUI.renderChartMessage(containerId, emptyMessage);
+            delete instanciasGraficos[id];
+            if (idRecipiente) ClimateUI.renderChartMessage(idRecipiente, mensagemVazia);
         },
         onReady: () => {
-            if (containerId) ClimateUI.clearChartMessage(containerId);
+            if (idRecipiente) ClimateUI.clearChartMessage(idRecipiente);
         }
     });
-    if (chart) chartInstances[id] = chart;
-    return chartInstances[id];
+    if (grafico) instanciasGraficos[id] = grafico;
+    return instanciasGraficos[id];
 }
 
 function carregarChartParaGraficos() {
     if (window.Chart) return Promise.resolve(window.Chart);
     if (!carregamentoChart) {
         carregamentoChart = ClimateAssets.carregarChart()
-            .then(chart => {
+            .then(grafico => {
                 ClimateCharts.registerComfortBand();
-                rerenderDashboardFromSelectedDate();
-                return chart;
+                renderizarPainelDaDataSelecionada();
+                return grafico;
             })
-            .catch(error => {
-                window.ClimateDiagnostics?.erro("Falha ao carregar Chart.js.", error);
+            .catch(erro => {
+                window.ClimateDiagnostics?.erro("Falha ao carregar Chart.js.", erro);
                 mostrarFalhaGraficos();
-                throw error;
+                throw erro;
             });
     }
     return carregamentoChart;
 }
 
 function mostrarFalhaGraficos() {
-    Object.values(IDS.chartContainers).forEach(containerId => {
-        ClimateUI.renderChartMessage(containerId, "Não foi possível carregar os gráficos.", "error");
+    Object.values(IDS.chartContainers).forEach(idRecipiente => {
+        ClimateUI.renderChartMessage(idRecipiente, "Não foi possível carregar os gráficos.", "error");
     });
 }
 
-function getZoomOptions(sourceId) {
-    if (sourceId === IDS.charts.sunHistory) {
+function obterOpcoesAmpliacao(idOrigem) {
+    if (idOrigem === IDS.charts.sunHistory) {
         return ClimateSolar.getSunHistoryOptions({
             legend: true,
             tickSize: 12,
             labelSize: 12,
-            defaults: CHART_DEFAULTS,
-            colors: COLORS
+            defaults: PADROES_GRAFICOS,
+            colors: CORES
         });
     }
 
-    if (sourceId === IDS.charts.solarToday) {
+    if (idOrigem === IDS.charts.solarToday) {
         return ClimateSolar.getSolarTodayOptions({
             tickSize: 12,
             labelSize: 12,
-            defaults: CHART_DEFAULTS,
-            colors: COLORS
+            defaults: PADROES_GRAFICOS,
+            colors: CORES
         });
     }
 
-    return ClimateCharts.mergeDeep(CHART_DEFAULTS, {
+    if (idOrigem === IDS.charts.rain) {
+        return window.ClimateChuva.obterOpcoes({ cores: CORES });
+    }
+
+    return ClimateCharts.mergeDeep(PADROES_GRAFICOS, {
         animation: false,
         plugins: {
             tooltip: {
                 callbacks: {
-                    label: context => {
-                        const value = context.parsed.y;
-                        const formatted = Number.isFinite(value) ? value.toFixed(2) : "--";
-                        return `${context.dataset.label || ""}: ${formatted}`;
+                    label: contexto => {
+                        const valor = contexto.parsed.y;
+                        const formatado = Number.isFinite(valor) ? valor.toFixed(2) : "--";
+                        return `${contexto.dataset.label || ""}: ${formatado}`;
                     }
                 }
             }
@@ -203,67 +209,67 @@ function getZoomOptions(sourceId) {
     });
 }
 
-function renderRoomData(data) {
+function renderizarDadosQuarto(dados) {
     QuartoView.render({
-        data,
-        selectedDate,
-        createChart,
-        colors: COLORS,
+        data: dados,
+        selectedDate: dataSelecionada,
+        createChart: criarGrafico,
+        colors: CORES,
         ui: ClimateUI
     });
 }
 
-function renderStationData() {
+function renderizarDadosEstacao() {
     EstacaoView.render({
-        latestData,
-        selectedDate,
-        chartInstances,
-        defaults: CHART_DEFAULTS,
-        colors: COLORS,
+        latestData: dadosMaisRecentes,
+        selectedDate: dataSelecionada,
+        chartInstances: instanciasGraficos,
+        defaults: PADROES_GRAFICOS,
+        colors: CORES,
         ensureChart: carregarChartParaGraficos,
         ui: ClimateUI
     });
 }
 
-function renderAquariumData(data) {
+function renderizarDadosAquario(dados) {
     AquarioView.render({
-        data,
-        selectedDate,
-        createChart,
-        colors: COLORS,
+        data: dados,
+        selectedDate: dataSelecionada,
+        createChart: criarGrafico,
+        colors: CORES,
         ui: ClimateUI
     });
 }
 
-function renderLivingRoomData(data) {
-    ClimateAqi.update(data);
+function renderizarDadosSala(dados) {
+    ClimateAqi.update(dados);
     SalaView.render({
-        data,
-        selectedDate,
-        createChart,
-        colors: COLORS,
+        data: dados,
+        selectedDate: dataSelecionada,
+        createChart: criarGrafico,
+        colors: CORES,
         ui: ClimateUI
     });
 }
 
-function rerenderDashboardFromSelectedDate() {
-    renderStationData();
-    if (latestData.room) renderRoomData(latestData.room);
-    if (latestData.aquarium) renderAquariumData(latestData.aquarium);
-    if (latestData.livingRoom) renderLivingRoomData(latestData.livingRoom);
+function renderizarPainelDaDataSelecionada() {
+    renderizarDadosEstacao();
+    if (dadosMaisRecentes.room) renderizarDadosQuarto(dadosMaisRecentes.room);
+    if (dadosMaisRecentes.aquarium) renderizarDadosAquario(dadosMaisRecentes.aquarium);
+    if (dadosMaisRecentes.livingRoom) renderizarDadosSala(dadosMaisRecentes.livingRoom);
 }
 
-function getCurrentHourValue(now = new Date()) {
-    return now.getHours() + (now.getMinutes() / 60) + (now.getSeconds() / 3600);
+function obterValorHoraAtual(agora = new Date()) {
+    return agora.getHours() + (agora.getMinutes() / 60) + (agora.getSeconds() / 3600);
 }
 
-function getTodaySolarEvents() {
+function obterEventosSolaresHoje() {
     if (modoPublicoAtivo) return eventosSolaresPublicos?.events || null;
-    if (!latestData.solar) return null;
-    return ClimateSolar.getSolarEventsForSelectedDate(latestData.solar, ClimateData.dataAtual());
+    if (!dadosMaisRecentes.solar) return null;
+    return ClimateSolar.getSolarEventsForSelectedDate(dadosMaisRecentes.solar, ClimateData.dataAtual());
 }
 
-function getFallbackSolarEvents() {
+function obterEventosSolaresPadrao() {
     return {
         dawn: 5.5,
         sunrise: 6,
@@ -273,37 +279,37 @@ function getFallbackSolarEvents() {
     };
 }
 
-function formatAstroHour(value) {
-    if (!Number.isFinite(value)) return "--";
-    const totalMinutes = Math.round(value * 60);
-    const hour = Math.floor(totalMinutes / 60) % 24;
-    const minute = totalMinutes % 60;
-    return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+function formatarHoraAstronomica(valor) {
+    if (!Number.isFinite(valor)) return "--";
+    const totalMinutosSolar = Math.round(valor * 60);
+    const hora = Math.floor(totalMinutosSolar / 60) % 24;
+    const minuto = totalMinutosSolar % 60;
+    return `${String(hora).padStart(2, "0")}:${String(minuto).padStart(2, "0")}`;
 }
 
-function getAstroDescription(state) {
-    if (!state?.events) return "Informe CEP ou permita a localização para consultar o ciclo solar.";
-    return `Nascer do sol: ${formatAstroHour(state.events.sunrise)} · Pôr do sol: ${formatAstroHour(state.events.sunset)}`;
+function obterDescricaoAstronomica(estado) {
+    if (!estado?.events) return "Informe CEP ou permita a localização para consultar o ciclo solar.";
+    return `Nascer do sol: ${formatarHoraAstronomica(estado.events.sunrise)} · Pôr do sol: ${formatarHoraAstronomica(estado.events.sunset)}`;
 }
 
-function getAstroModeLabel(mode) {
-    if (mode === "day") return "Dia";
-    if (mode === "twilight") return "Transição";
-    if (mode === "unknown") return "Aguardando";
+function obterRotuloModoAstronomico(modo) {
+    if (modo === "day") return "Dia";
+    if (modo === "twilight") return "Transição";
+    if (modo === "unknown") return "Aguardando";
     return "Noite";
 }
 
-function formatAstroDuration(start, end) {
-    if (!Number.isFinite(start) || !Number.isFinite(end)) return "--";
-    const totalMinutes = Math.max(0, Math.round((end - start) * 60));
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    return `${hours}h${String(minutes).padStart(2, "0")}`;
+function formatarDuracaoAstronomica(inicio, fim) {
+    if (!Number.isFinite(inicio) || !Number.isFinite(fim)) return "--";
+    const totalMinutosSolar = Math.max(0, Math.round((fim - inicio) * 60));
+    const horas = Math.floor(totalMinutosSolar / 60);
+    const minutos = totalMinutosSolar % 60;
+    return `${horas}h${String(minutos).padStart(2, "0")}`;
 }
 
-function getAstroState(now = new Date()) {
-    const solarEvents = getTodaySolarEvents();
-    if (modoPublicoAtivo && !solarEvents) {
+function obterEstadoAstronomico(agora = new Date()) {
+    const eventosSolares = obterEventosSolaresHoje();
+    if (modoPublicoAtivo && !eventosSolares) {
         return {
             mode: "unknown",
             progress: 0.5,
@@ -315,150 +321,150 @@ function getAstroState(now = new Date()) {
         };
     }
 
-    const events = solarEvents || getFallbackSolarEvents();
-    const hour = getCurrentHourValue(now);
-    const isTwilight = (hour >= events.dawn && hour < events.sunrise) || (hour > events.sunset && hour <= events.dusk);
-    const isDay = hour >= events.sunrise && hour <= events.sunset;
-    const isSolarPath = hour >= events.dawn && hour <= events.dusk;
-    const mode = isTwilight ? "twilight" : isDay ? "day" : "night";
-    const rangeStart = isSolarPath ? events.dawn : events.dusk;
-    const rangeEnd = isSolarPath ? events.dusk : events.sunrise + 24;
-    const adjustedHour = !isSolarPath && hour < events.sunrise ? hour + 24 : hour;
-    const progress = Math.min(1, Math.max(0, (adjustedHour - rangeStart) / (rangeEnd - rangeStart || 1)));
-    const y = 3 + Math.sin(progress * Math.PI) * 12;
+    const eventos = eventosSolares || obterEventosSolaresPadrao();
+    const hora = obterValorHoraAtual(agora);
+    const ehCrepusculo = (hora >= eventos.dawn && hora < eventos.sunrise) || (hora > eventos.sunset && hora <= eventos.dusk);
+    const ehDia = hora >= eventos.sunrise && hora <= eventos.sunset;
+    const ehCaminhoSolar = hora >= eventos.dawn && hora <= eventos.dusk;
+    const modo = ehCrepusculo ? "twilight" : ehDia ? "day" : "night";
+    const inicioIntervalo = ehCaminhoSolar ? eventos.dawn : eventos.dusk;
+    const fimIntervalo = ehCaminhoSolar ? eventos.dusk : eventos.sunrise + 24;
+    const horaAjustada = !ehCaminhoSolar && hora < eventos.sunrise ? hora + 24 : hora;
+    const progresso = Math.min(1, Math.max(0, (horaAjustada - inicioIntervalo) / (fimIntervalo - inicioIntervalo || 1)));
+    const y = 3 + Math.sin(progresso * Math.PI) * 12;
 
     return {
-        mode,
-        progress,
-        x: `${(progress * 100).toFixed(1)}%`,
+        mode: modo,
+        progress: progresso,
+        x: `${(progresso * 100).toFixed(1)}%`,
         y: `${y.toFixed(1)}px`,
-        events,
-        source: solarEvents ? (modoPublicoAtivo ? "dados solares públicos" : "dados solares") : "fallback 06:00-18:00",
+        events: eventos,
+        source: eventosSolares ? (modoPublicoAtivo ? "dados solares públicos" : "dados solares") : "fallback 06:00-18:00",
         origem: modoPublicoAtivo ? eventosSolaresPublicos?.origem : null,
     };
 }
 
-function updateAstroIndicator() {
-    const indicator = document.getElementById("astroIndicator");
-    if (!indicator) return;
+function atualizarIndicadorAstronomico() {
+    const indicador = document.getElementById("astroIndicator");
+    if (!indicador) return;
 
-    const state = getAstroState();
-    lastAstroState = state;
-    const labelElement = indicator.querySelector(".astro-indicator__label");
+    const estado = obterEstadoAstronomico();
+    ultimoEstadoAstronomico = estado;
+    const elementoRotulo = indicador.querySelector(".astro-indicator__label");
 
-    indicator.classList.remove("astro-indicator--day", "astro-indicator--twilight", "astro-indicator--night", "astro-indicator--unknown");
-    indicator.classList.add(`astro-indicator--${state.mode}`);
-    indicator.style.setProperty("--astro-progress", state.progress.toFixed(3));
-    const track = indicator.querySelector(".astro-indicator__track");
-    if (track) track.style.setProperty("--astro-x", state.x);
-    indicator.style.setProperty("--astro-y", state.y);
-    if (labelElement) labelElement.textContent = "";
-    indicator.title = getAstroDescription(state);
-    indicator.setAttribute("aria-label", indicator.title);
-    updateAstroPopover(state);
+    indicador.classList.remove("astro-indicator--day", "astro-indicator--twilight", "astro-indicator--night", "astro-indicator--unknown");
+    indicador.classList.add(`astro-indicator--${estado.mode}`);
+    indicador.style.setProperty("--astro-progress", estado.progress.toFixed(3));
+    const trilha = indicador.querySelector(".astro-indicator__track");
+    if (trilha) trilha.style.setProperty("--astro-x", estado.x);
+    indicador.style.setProperty("--astro-y", estado.y);
+    if (elementoRotulo) elementoRotulo.textContent = "";
+    indicador.title = obterDescricaoAstronomica(estado);
+    indicador.setAttribute("aria-label", indicador.title);
+    atualizarDetalhesAstronomicos(estado);
 }
 
-function setupAstroIndicator() {
-    const indicator = document.getElementById("astroIndicator");
-    const popover = document.getElementById("astroPopover");
+function configurarIndicadorAstronomico() {
+    const indicador = document.getElementById("astroIndicator");
+    const janelaDetalhes = document.getElementById("astroPopover");
 
-    if (indicator && popover) {
-        indicator.setAttribute("role", "button");
-        indicator.setAttribute("tabindex", "0");
-        indicator.setAttribute("aria-controls", "astroPopover");
-        indicator.setAttribute("aria-expanded", "false");
-        indicator.addEventListener("click", event => {
-            event.stopPropagation();
-            toggleAstroPopover();
+    if (indicador && janelaDetalhes) {
+        indicador.setAttribute("role", "button");
+        indicador.setAttribute("tabindex", "0");
+        indicador.setAttribute("aria-controls", "astroPopover");
+        indicador.setAttribute("aria-expanded", "false");
+        indicador.addEventListener("click", evento => {
+            evento.stopPropagation();
+            alternarDetalhesAstronomicos();
         });
-        indicator.addEventListener("keydown", event => {
-            if (event.key !== "Enter" && event.key !== " ") return;
-            event.preventDefault();
-            toggleAstroPopover();
+        indicador.addEventListener("keydown", evento => {
+            if (evento.key !== "Enter" && evento.key !== " ") return;
+            evento.preventDefault();
+            alternarDetalhesAstronomicos();
         });
-        document.addEventListener("click", event => {
-            if (popover.hidden) return;
-            if (popover.contains(event.target) || indicator.contains(event.target)) return;
-            closeAstroPopover();
+        document.addEventListener("click", evento => {
+            if (janelaDetalhes.hidden) return;
+            if (janelaDetalhes.contains(evento.target) || indicador.contains(evento.target)) return;
+            fecharDetalhesAstronomicos();
         });
-        document.addEventListener("keydown", event => {
-            if (event.key === "Escape") closeAstroPopover();
+        document.addEventListener("keydown", evento => {
+            if (evento.key === "Escape") fecharDetalhesAstronomicos();
         });
-        window.addEventListener("header-popover-open", event => {
-            if (event.detail?.source !== "astro") closeAstroPopover();
+        window.addEventListener("header-popover-open", evento => {
+            if (evento.detail?.source !== "astro") fecharDetalhesAstronomicos();
         });
     }
 
-    updateAstroIndicator();
-    if (astroIndicatorTimer) clearInterval(astroIndicatorTimer);
-    astroIndicatorTimer = setInterval(updateAstroIndicator, 60000);
+    atualizarIndicadorAstronomico();
+    if (temporizadorIndicadorAstronomico) clearInterval(temporizadorIndicadorAstronomico);
+    temporizadorIndicadorAstronomico = setInterval(atualizarIndicadorAstronomico, 60000);
 }
 
-function toggleAstroPopover() {
-    const indicator = document.getElementById("astroIndicator");
-    const popover = document.getElementById("astroPopover");
-    if (!indicator || !popover) return;
+function alternarDetalhesAstronomicos() {
+    const indicador = document.getElementById("astroIndicator");
+    const janelaDetalhes = document.getElementById("astroPopover");
+    if (!indicador || !janelaDetalhes) return;
 
-    if (popover.hidden) {
+    if (janelaDetalhes.hidden) {
         window.dispatchEvent(new CustomEvent("header-popover-open", { detail: { source: "astro" } }));
-        updateAstroPopover(lastAstroState || getAstroState());
-        popover.hidden = false;
-        indicator.setAttribute("aria-expanded", "true");
+        atualizarDetalhesAstronomicos(ultimoEstadoAstronomico || obterEstadoAstronomico());
+        janelaDetalhes.hidden = false;
+        indicador.setAttribute("aria-expanded", "true");
     } else {
-        closeAstroPopover();
+        fecharDetalhesAstronomicos();
     }
 }
 
-function closeAstroPopover() {
-    const indicator = document.getElementById("astroIndicator");
-    const popover = document.getElementById("astroPopover");
-    if (!indicator || !popover) return;
+function fecharDetalhesAstronomicos() {
+    const indicador = document.getElementById("astroIndicator");
+    const janelaDetalhes = document.getElementById("astroPopover");
+    if (!indicador || !janelaDetalhes) return;
 
-    popover.hidden = true;
-    indicator.setAttribute("aria-expanded", "false");
+    janelaDetalhes.hidden = true;
+    indicador.setAttribute("aria-expanded", "false");
 }
 
-function updateAstroPopover(state) {
-    const popover = document.getElementById("astroPopover");
-    if (!popover || !state) return;
+function atualizarDetalhesAstronomicos(estado) {
+    const janelaDetalhes = document.getElementById("astroPopover");
+    if (!janelaDetalhes || !estado) return;
 
-    const headerValue = popover.querySelector(".astro-popover__header strong");
-    const list = popover.querySelector(".astro-popover__list");
-    if (!headerValue || !list) return;
+    const valorCabecalho = janelaDetalhes.querySelector(".astro-popover__header strong");
+    const lista = janelaDetalhes.querySelector(".astro-popover__list");
+    if (!valorCabecalho || !lista) return;
 
-    headerValue.textContent = getAstroModeLabel(state.mode);
-    if (!state.events) {
-        list.innerHTML = `
+    valorCabecalho.textContent = obterRotuloModoAstronomico(estado.mode);
+    if (!estado.events) {
+        lista.innerHTML = `
             <div><dt>Status</dt><dd>Informe CEP ou localização</dd></div>
             <div><dt>Origem</dt><dd>Modo público</dd></div>
         `;
         return;
     }
 
-    const origem = state.origem ? [["Origem", state.origem]] : [];
-    list.innerHTML = [
+    const origem = estado.origem ? [["Origem", estado.origem]] : [];
+    lista.innerHTML = [
         ...origem,
-        ["Amanhecer", formatAstroHour(state.events.dawn)],
-        ["Nascer do sol", formatAstroHour(state.events.sunrise)],
-        ["Zênite", formatAstroHour(state.events.zenith)],
-        ["Pôr do sol", formatAstroHour(state.events.sunset)],
-        ["Anoitecer", formatAstroHour(state.events.dusk)],
-        ["Duração do dia", formatAstroDuration(state.events.sunrise, state.events.sunset)],
-    ].map(([label, value]) => `<div><dt>${label}</dt><dd>${value}</dd></div>`).join("");
+        ["Amanhecer", formatarHoraAstronomica(estado.events.dawn)],
+        ["Nascer do sol", formatarHoraAstronomica(estado.events.sunrise)],
+        ["Zênite", formatarHoraAstronomica(estado.events.zenith)],
+        ["Pôr do sol", formatarHoraAstronomica(estado.events.sunset)],
+        ["Anoitecer", formatarHoraAstronomica(estado.events.dusk)],
+        ["Duração do dia", formatarDuracaoAstronomica(estado.events.sunrise, estado.events.sunset)],
+    ].map(([rotulo, valor]) => `<div><dt>${rotulo}</dt><dd>${valor}</dd></div>`).join("");
 }
 
 function configurarCicloSolarPublico() {
-    window.addEventListener("public-solar-events-updated", event => {
-        const detail = event.detail || {};
-        eventosSolaresPublicos = detail.events ? {
-            events: detail.events,
-            origem: detail.origem || null,
+    window.addEventListener("public-solar-events-updated", evento => {
+        const detalhe = evento.detail || {};
+        eventosSolaresPublicos = detalhe.events ? {
+            events: detalhe.events,
+            origem: detalhe.origem || null,
         } : null;
-        updateAstroIndicator();
+        atualizarIndicadorAstronomico();
     });
 }
 
-async function setupFirebaseListeners() {
+async function configurarEscutasFirebase() {
     if (canceladoresFirebase.length) return;
 
     FirebaseService.trackLoadStart();
@@ -468,57 +474,57 @@ async function setupFirebaseListeners() {
         FirebaseService.trackLoadEnd();
     }
 
-    registrarListenerFirebase(FirebaseService.listenToPath(FIREBASE_PATHS.room, data => {
-        latestData.room = data;
-        if (!data) {
+    registrarListenerFirebase(FirebaseService.listenToPath(CAMINHOS_FIREBASE.room, dados => {
+        dadosMaisRecentes.room = dados;
+        if (!dados) {
             ClimateUI.renderEmptyState(IDS.tables.room, "Sem dados de temperatura.");
-            renderStationData();
+            renderizarDadosEstacao();
             return;
         }
-        renderRoomData(data);
-        renderStationData();
+        renderizarDadosQuarto(dados);
+        renderizarDadosEstacao();
     }, () => ClimateUI.renderEmptyState(IDS.tables.room, "Falha ao carregar dados de temperatura.", "error")));
 
-    registrarListenerFirebase(FirebaseService.listenToPath(FIREBASE_PATHS.solar, data => {
-        latestData.solar = data;
-        if (!data) {
-            const formattedDate = selectedDate.replace(/-/g, "/");
-            ClimateUI.renderChartMessage(IDS.chartContainers.sunHistory, `Sem dados de nascer e pôr do sol em ${formattedDate}.`);
-            ClimateUI.renderChartMessage(IDS.chartContainers.solarToday, `Sem dados de ciclo solar em ${formattedDate}.`);
-            renderStationData();
-            updateAstroIndicator();
+    registrarListenerFirebase(FirebaseService.listenToPath(CAMINHOS_FIREBASE.solar, dados => {
+        dadosMaisRecentes.solar = dados;
+        if (!dados) {
+            const dataFormatada = dataSelecionada.replace(/-/g, "/");
+            ClimateUI.renderChartMessage(IDS.chartContainers.sunHistory, `Sem dados de nascer e pôr do sol em ${dataFormatada}.`);
+            ClimateUI.renderChartMessage(IDS.chartContainers.solarToday, `Sem dados de ciclo solar em ${dataFormatada}.`);
+            renderizarDadosEstacao();
+            atualizarIndicadorAstronomico();
             return;
         }
-        renderStationData();
-        updateAstroIndicator();
+        renderizarDadosEstacao();
+        atualizarIndicadorAstronomico();
     }, () => {
         ClimateUI.renderChartMessage(IDS.chartContainers.sunHistory, "Falha ao carregar dados solares.", "error");
         ClimateUI.renderChartMessage(IDS.chartContainers.solarToday, "Falha ao carregar ciclo solar.", "error");
-        renderStationData();
-        updateAstroIndicator();
+        renderizarDadosEstacao();
+        atualizarIndicadorAstronomico();
     }));
 
-    registrarListenerFirebase(FirebaseService.listenToPath(FIREBASE_PATHS.aquarium, data => {
-        latestData.aquarium = data;
-        if (!data) {
+    registrarListenerFirebase(FirebaseService.listenToPath(CAMINHOS_FIREBASE.aquarium, dados => {
+        dadosMaisRecentes.aquarium = dados;
+        if (!dados) {
             ClimateUI.renderEmptyState(IDS.tables.aquarium, "Sem dados do aquário.");
-            renderStationData();
+            renderizarDadosEstacao();
             return;
         }
-        renderAquariumData(data);
-        renderStationData();
+        renderizarDadosAquario(dados);
+        renderizarDadosEstacao();
     }, () => ClimateUI.renderEmptyState(IDS.tables.aquarium, "Falha ao carregar dados do aquário.", "error")));
 
-    registrarListenerFirebase(FirebaseService.listenToPath(FIREBASE_PATHS.livingRoom, data => {
-        latestData.livingRoom = data;
-        if (!data) {
+    registrarListenerFirebase(FirebaseService.listenToPath(CAMINHOS_FIREBASE.livingRoom, dados => {
+        dadosMaisRecentes.livingRoom = dados;
+        if (!dados) {
             ClimateAqi.update(null);
             ClimateUI.renderEmptyState(IDS.tables.livingRoom, "Sem dados da sala.");
-            renderStationData();
+            renderizarDadosEstacao();
             return;
         }
-        renderLivingRoomData(data);
-        renderStationData();
+        renderizarDadosSala(dados);
+        renderizarDadosEstacao();
     }, () => ClimateUI.renderEmptyState(IDS.tables.livingRoom, "Falha ao carregar dados da sala.", "error")));
 }
 
@@ -528,8 +534,8 @@ function iniciarFirebaseProgressivo() {
     ClimateAssets.executarQuandoOcioso(() => {
         firebaseProgressivoAgendado = false;
         if (modoPublicoAtivo) return;
-        setupFirebaseListeners().catch(error => {
-            FirebaseService.handleError("Firebase", error);
+        configurarEscutasFirebase().catch(erro => {
+            FirebaseService.handleError("Firebase", erro);
             FirebaseService.setLoading(false);
             ClimateUI.renderStartupError();
         });
@@ -549,24 +555,24 @@ function pararFirebaseInterno() {
         }
     });
     canceladoresFirebase = [];
-    Object.keys(latestData).forEach(chave => {
-        latestData[chave] = null;
+    Object.keys(dadosMaisRecentes).forEach(chave => {
+        dadosMaisRecentes[chave] = null;
     });
     ClimateAqi.update(null);
 }
 
 function reagirAberturaColapsavel() {
-    document.addEventListener("climate-collapsible-expanded", event => {
-        const secao = event.detail?.section;
+    document.addEventListener("climate-collapsible-expanded", evento => {
+        const secao = evento.detail?.section;
         if (!secao?.querySelector?.(".calendar-heatmap, .hourly-heatmap, .weekly-heatmap")) return;
-        rerenderDashboardFromSelectedDate();
+        renderizarPainelDaDataSelecionada();
     });
 }
 
 function inicializarDashboardInterno() {
     modoPublicoAtivo = false;
     eventosSolaresPublicos = null;
-    updateAstroIndicator();
+    atualizarIndicadorAstronomico();
     if (dashboardInternoInicializado) {
         PublicWeatherView.ocultar();
         iniciarFirebaseProgressivo();
@@ -580,37 +586,38 @@ function inicializarDashboardInterno() {
         tabOrder: ["Tab0", "Tab1", "Tab2", "Tab3"]
     });
     ClimateUI.setupDateControls({
-        getSelectedDate,
-        setSelectedDate,
+        getSelectedDate: obterDataSelecionada,
+        setSelectedDate: definirDataSelecionada,
         getTodayDate: ClimateData.dataAtual,
-        onDateChange: rerenderDashboardFromSelectedDate
+        onDateChange: renderizarPainelDaDataSelecionada
     });
     ClimateUI.setupCollapsibleSections();
     reagirAberturaColapsavel();
-    ClimateZoom.setup({ chartInstances, getZoomOptions });
+    ClimateZoom.setup({ chartInstances: instanciasGraficos, getZoomOptions: obterOpcoesAmpliacao });
     ClimatePdfReport.setup({
         buttonId: "btnExportData",
         formatName: "exportFormat",
         getContext: () => ({
             activeTab: ClimateUI.getActiveTabName(),
-            selectedDate,
-            latestData,
-            chartInstances,
+            selectedDate: dataSelecionada,
+            latestData: dadosMaisRecentes,
+            chartInstances: instanciasGraficos,
+            dadosClimaExterno: EstacaoView.obterDadosExternosAtuais?.() || null,
         })
     });
     ClimateChat.setup({
         getContext: () => ({
             activeTab: ClimateUI.getActiveTabName(),
-            selectedDate,
-            latestData,
+            selectedDate: dataSelecionada,
+            latestData: dadosMaisRecentes,
         })
     });
-    renderStationData();
+    renderizarDadosEstacao();
 
     ClimateAssets.executarQuandoOcioso(() => {
         if (modoPublicoAtivo) return;
         ClimateAssets.carregarCssZoom()
-            .catch(error => window.ClimateDiagnostics?.depurar("Falha ao carregar CSS de zoom.", error));
+            .catch(erro => window.ClimateDiagnostics?.depurar("Falha ao carregar CSS de zoom.", erro));
     }, 1200);
 
     iniciarFirebaseProgressivo();
@@ -622,7 +629,7 @@ function inicializarModoPublico(usuario, usuarioInterno) {
     pararFirebaseInterno();
     PublicWeatherView.atualizarUsuario(usuario, usuarioInterno);
     PublicWeatherView.mostrar();
-    updateAstroIndicator();
+    atualizarIndicadorAstronomico();
 }
 
 function configurarAutenticacaoPublica() {
@@ -710,7 +717,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ClimateAqi.setup();
     ClimateSeason.setup();
     ClimateMoon.setup();
-    setupAstroIndicator();
+    configurarIndicadorAstronomico();
     configurarCicloSolarPublico();
     configurarAutenticacaoPublica();
 });

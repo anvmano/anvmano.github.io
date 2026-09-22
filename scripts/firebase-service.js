@@ -1,131 +1,131 @@
 'use strict';
 
 (function () {
-    let app = null;
-    let database = null;
-    let refFn = null;
-    let onValueFn = null;
+    let aplicacao = null;
+    let bancoDados = null;
+    let criarReferencia = null;
+    let observarValor = null;
     let carregamentoApp = null;
     let carregamentoDatabase = null;
-    let pendingLoads = 0;
-    let appCheckInitialized = false;
+    let carregamentosPendentes = 0;
+    let appCheckInicializado = false;
 
-    function setLoading(isLoading) {
-        const el = document.getElementById("loadingBar");
-        if (!el) return;
-        el.classList.toggle("is-active", isLoading);
+    function definirCarregamento(estaCarregando) {
+        const elementoDom = document.getElementById("loadingBar");
+        if (!elementoDom) return;
+        elementoDom.classList.toggle("is-active", estaCarregando);
     }
 
-    function trackLoadStart() {
-        pendingLoads++;
-        setLoading(true);
+    function registrarInicioCarregamento() {
+        carregamentosPendentes++;
+        definirCarregamento(true);
     }
 
-    function trackLoadEnd() {
-        pendingLoads = Math.max(0, pendingLoads - 1);
-        setLoading(pendingLoads > 0);
+    function registrarFimCarregamento() {
+        carregamentosPendentes = Math.max(0, carregamentosPendentes - 1);
+        definirCarregamento(carregamentosPendentes > 0);
     }
 
-    function handleError(path, error) {
-        window.ClimateDiagnostics?.erro(`Erro ao carregar ${path}.`, error);
+    function tratarErro(caminho, erro) {
+        window.ClimateDiagnostics?.erro(`Erro ao carregar ${caminho}.`, erro);
     }
 
-    async function initialize() {
-        if (app) return app;
+    async function inicializarServico() {
+        if (aplicacao) return aplicacao;
         if (carregamentoApp) return carregamentoApp;
 
         carregamentoApp = (async () => {
-            const config = window.AppConfig.firebase;
-            const { initializeApp } = await import(config.appUrl);
-            app = initializeApp(config.options);
-            return app;
+            const configuracao = window.AppConfig.firebase;
+            const { initializeApp } = await import(configuracao.appUrl);
+            aplicacao = initializeApp(configuracao.options);
+            return aplicacao;
         })();
 
         return carregamentoApp;
     }
 
-    async function initializeDatabase() {
-        if (database) return database;
+    async function inicializarBancoDados() {
+        if (bancoDados) return bancoDados;
         if (carregamentoDatabase) return carregamentoDatabase;
 
         carregamentoDatabase = (async () => {
-            await initialize();
+            await inicializarServico();
             const { getDatabase, onValue, ref } = await import(window.AppConfig.firebase.databaseUrl);
-            database = getDatabase(app);
-            refFn = ref;
-            onValueFn = onValue;
-            return database;
+            bancoDados = getDatabase(aplicacao);
+            criarReferencia = ref;
+            observarValor = onValue;
+            return bancoDados;
         })();
 
         return carregamentoDatabase;
     }
 
-    async function ensureAppCheckInitialized() {
-        await initialize();
-        return initializeAppCheckIfConfigured();
+    async function garantirAppCheckInicializado() {
+        await inicializarServico();
+        return inicializarAppCheckSeConfigurado();
     }
 
-    async function initializeAppCheckIfConfigured() {
-        const config = window.AppConfig.firebase;
+    async function inicializarAppCheckSeConfigurado() {
+        const configuracao = window.AppConfig.firebase;
         // App Check fica sob demanda para evitar carregar reCAPTCHA antes de recursos protegidos, como a IA.
-        if (appCheckInitialized || !config.recaptchaEnterpriseSiteKey || !config.appCheckUrl || ehHostLocal()) return;
+        if (appCheckInicializado || !configuracao.recaptchaEnterpriseSiteKey || !configuracao.appCheckUrl || ehHostLocal()) return;
 
         try {
-            const { initializeAppCheck, ReCaptchaEnterpriseProvider } = await import(config.appCheckUrl);
-            initializeAppCheck(app, {
-                provider: new ReCaptchaEnterpriseProvider(config.recaptchaEnterpriseSiteKey),
+            const { initializeAppCheck, ReCaptchaEnterpriseProvider } = await import(configuracao.appCheckUrl);
+            initializeAppCheck(aplicacao, {
+                provider: new ReCaptchaEnterpriseProvider(configuracao.recaptchaEnterpriseSiteKey),
                 isTokenAutoRefreshEnabled: true,
             });
-            appCheckInitialized = true;
-        } catch (error) {
-            window.ClimateDiagnostics?.depurar("App Check não foi inicializado.", error);
+            appCheckInicializado = true;
+        } catch (erro) {
+            window.ClimateDiagnostics?.depurar("App Check não foi inicializado.", erro);
         }
     }
 
     function ehHostLocal() {
-        const hostname = window.location.hostname;
-        return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+        const nomeHost = window.location.hostname;
+        return nomeHost === "localhost" || nomeHost === "127.0.0.1" || nomeHost === "::1";
     }
 
-    function listenToPath(path, onData, onError) {
-        if (!database || !refFn || !onValueFn) {
+    function escutarCaminho(caminho, aoReceberDados, aoOcorrerErro) {
+        if (!bancoDados || !criarReferencia || !observarValor) {
             throw new Error("Firebase Database ainda não foi inicializado.");
         }
-        let firstLoad = true;
-        trackLoadStart();
+        let primeiroCarregamento = true;
+        registrarInicioCarregamento();
 
-        return onValueFn(refFn(database, path), snapshot => {
-            if (firstLoad) {
-                trackLoadEnd();
-                firstLoad = false;
+        return observarValor(criarReferencia(bancoDados, caminho), retratoDados => {
+            if (primeiroCarregamento) {
+                registrarFimCarregamento();
+                primeiroCarregamento = false;
             }
-            const dados = snapshot.val();
+            const dados = retratoDados.val();
             if (!window.ClimateContracts?.validarColecaoFirebase?.(dados)) {
-                const erro = new TypeError(`Estrutura Firebase inválida em ${path}.`);
-                handleError(path, erro);
-                if (onError) onError(erro);
+                const erro = new TypeError(`Estrutura Firebase inválida em ${caminho}.`);
+                tratarErro(caminho, erro);
+                if (aoOcorrerErro) aoOcorrerErro(erro);
                 return;
             }
-            onData(dados);
-        }, error => {
-            if (firstLoad) {
-                trackLoadEnd();
-                firstLoad = false;
+            aoReceberDados(dados);
+        }, erro => {
+            if (primeiroCarregamento) {
+                registrarFimCarregamento();
+                primeiroCarregamento = false;
             }
-            handleError(path, error);
-            if (onError) onError(error);
+            tratarErro(caminho, erro);
+            if (aoOcorrerErro) aoOcorrerErro(erro);
         });
     }
 
     window.FirebaseService = {
-        initialize,
-        initializeDatabase,
-        ensureAppCheckInitialized,
-        listenToPath,
-        getApp: () => app,
-        setLoading,
-        trackLoadStart,
-        trackLoadEnd,
-        handleError,
+        initialize: inicializarServico,
+        initializeDatabase: inicializarBancoDados,
+        ensureAppCheckInitialized: garantirAppCheckInicializado,
+        listenToPath: escutarCaminho,
+        getApp: () => aplicacao,
+        setLoading: definirCarregamento,
+        trackLoadStart: registrarInicioCarregamento,
+        trackLoadEnd: registrarFimCarregamento,
+        handleError: tratarErro,
     };
 })();

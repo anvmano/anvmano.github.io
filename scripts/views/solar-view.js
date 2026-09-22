@@ -2,53 +2,53 @@
 
 (function () {
     const { ids } = window.AppConfig;
-    const sunHistoryChart = document.getElementById(ids.charts.sunHistory).getContext("2d");
-    const solarTodayChart = document.getElementById(ids.charts.solarToday).getContext("2d");
+    const graficoHistoricoSolar = document.getElementById(ids.charts.sunHistory).getContext("2d");
+    const graficoSolarDia = document.getElementById(ids.charts.solarToday).getContext("2d");
 
-    function render({ data, selectedDate, chartInstances, defaults, colors, ui, ensureChart }) {
-        ui.clearChartMessage(ids.chartContainers.sunHistory);
-        ui.clearChartMessage(ids.chartContainers.solarToday);
+    function renderizar({ data: dados, selectedDate: dataSelecionada, chartInstances: instanciasGraficos, defaults: padroes, colors: cores, ui: interfaceUsuario, ensureChart: garantirGrafico }) {
+        interfaceUsuario.clearChartMessage(ids.chartContainers.sunHistory);
+        interfaceUsuario.clearChartMessage(ids.chartContainers.solarToday);
         atualizarChipDuracaoDia(null);
 
         if (!window.Chart) {
-            ui.renderChartMessage(ids.chartContainers.sunHistory, "Carregando gráfico...", "loading");
-            ui.renderChartMessage(ids.chartContainers.solarToday, "Carregando gráfico...", "loading");
-            if (typeof ensureChart === "function") ensureChart();
+            interfaceUsuario.renderChartMessage(ids.chartContainers.sunHistory, "Carregando gráfico...", "loading");
+            interfaceUsuario.renderChartMessage(ids.chartContainers.solarToday, "Carregando gráfico...", "loading");
+            if (typeof garantirGrafico === "function") garantirGrafico();
             return;
         }
 
-        const historyData = ClimateData.filterDataByDays(data, 365, selectedDate, false);
-        createSunriseSunsetChart({ data: historyData, selectedDate, chartInstances, defaults, colors, ui });
-        createSolarTodayChart({ data, selectedDate, chartInstances, defaults, colors, ui });
+        const dadosHistoricos = ClimateData.filterDataByDays(dados, 365, dataSelecionada, false);
+        criarGraficoNascerPorSol({ data: dadosHistoricos, selectedDate: dataSelecionada, chartInstances: instanciasGraficos, defaults: padroes, colors: cores, ui: interfaceUsuario });
+        criarGraficoSolarDia({ data: dados, selectedDate: dataSelecionada, chartInstances: instanciasGraficos, defaults: padroes, colors: cores, ui: interfaceUsuario });
     }
 
-    function createSunriseSunsetChart({ data, selectedDate, chartInstances, defaults, colors, ui }) {
-        const id = sunHistoryChart.canvas.id;
-        const chart = ClimateSolar.createSunriseSunsetChart({
-            data,
-            ctx: sunHistoryChart,
-            existingChart: chartInstances[id],
-            defaults,
-            colors,
-            onEmpty: () => ui.renderChartMessage(ids.chartContainers.sunHistory, `Sem dados de nascer e pôr do sol em ${selectedDate.replace(/-/g, "/")}.`)
+    function criarGraficoNascerPorSol({ data: dados, selectedDate: dataSelecionada, chartInstances: instanciasGraficos, defaults: padroes, colors: cores, ui: interfaceUsuario }) {
+        const id = graficoHistoricoSolar.canvas.id;
+        const grafico = ClimateSolar.createSunriseSunsetChart({
+            data: dados,
+            ctx: graficoHistoricoSolar,
+            existingChart: instanciasGraficos[id],
+            defaults: padroes,
+            colors: cores,
+            onEmpty: () => interfaceUsuario.renderChartMessage(ids.chartContainers.sunHistory, `Sem dados de nascer e pôr do sol em ${dataSelecionada.replace(/-/g, "/")}.`)
         });
-        if (chart) chartInstances[id] = chart;
+        if (grafico) instanciasGraficos[id] = grafico;
     }
 
-    function createSolarTodayChart({ data, selectedDate, chartInstances, defaults, colors, ui }) {
-        const id = solarTodayChart.canvas.id;
-        const chart = ClimateSolar.createSolarTodayChart({
-            data,
-            selectedDate,
-            ctx: solarTodayChart,
-            existingChart: chartInstances[id],
-            defaults,
-            colors,
-            onEmpty: () => ui.renderChartMessage(ids.chartContainers.solarToday, `Sem dados de ciclo solar em ${selectedDate.replace(/-/g, "/")}.`)
+    function criarGraficoSolarDia({ data: dados, selectedDate: dataSelecionada, chartInstances: instanciasGraficos, defaults: padroes, colors: cores, ui: interfaceUsuario }) {
+        const id = graficoSolarDia.canvas.id;
+        const grafico = ClimateSolar.createSolarTodayChart({
+            data: dados,
+            selectedDate: dataSelecionada,
+            ctx: graficoSolarDia,
+            existingChart: instanciasGraficos[id],
+            defaults: padroes,
+            colors: cores,
+            onEmpty: () => interfaceUsuario.renderChartMessage(ids.chartContainers.solarToday, `Sem dados de ciclo solar em ${dataSelecionada.replace(/-/g, "/")}.`)
         });
-        if (chart) {
-            chartInstances[id] = chart;
-            atualizarChipDuracaoDia(chart.$solarDayTimes);
+        if (grafico) {
+            instanciasGraficos[id] = grafico;
+            atualizarChipDuracaoDia(grafico.$solarDayTimes);
         }
     }
 
@@ -61,5 +61,5 @@
         chip.textContent = duracao ? `Duração do dia: ${duracao}` : "";
     }
 
-    window.SolarView = { render };
+    window.SolarView = { render: renderizar };
 })();

@@ -23,8 +23,8 @@
         // Equacao de Magnus: aproximacao adequada para ambientes residenciais.
         const constanteA = 17.62;
         const constanteB = 243.12;
-        const gamma = Math.log(umidadeNumero / 100) + ((constanteA * temperaturaNumero) / (constanteB + temperaturaNumero));
-        const pontoOrvalho = (constanteB * gamma) / (constanteA - gamma);
+        const fatorMagnus = Math.log(umidadeNumero / 100) + ((constanteA * temperaturaNumero) / (constanteB + temperaturaNumero));
+        const pontoOrvalho = (constanteB * fatorMagnus) / (constanteA - fatorMagnus);
         return Number.isFinite(pontoOrvalho) ? pontoOrvalho : null;
     }
 
@@ -260,8 +260,8 @@
     }
 
     function dataValida(valor) {
-        const data = valor instanceof Date ? valor : new Date(valor);
-        return Number.isNaN(data.getTime()) ? null : data;
+        const dados = valor instanceof Date ? valor : new Date(valor);
+        return Number.isNaN(dados.getTime()) ? null : dados;
     }
 
     function maximoNumerico(valores) {
@@ -270,9 +270,9 @@
     }
 
     function formatarHora(valor) {
-        const data = dataValida(valor);
-        if (!data) return "--:--";
-        return `${String(data.getHours()).padStart(2, "0")}:${String(data.getMinutes()).padStart(2, "0")}`;
+        const dados = dataValida(valor);
+        if (!dados) return "--:--";
+        return `${String(dados.getHours()).padStart(2, "0")}:${String(dados.getMinutes()).padStart(2, "0")}`;
     }
 
     window.ClimateInsightsAmbientais = {

@@ -1,8 +1,8 @@
 'use strict';
 
 (function () {
-    const namespace = window.ClimateAssistant || {};
-    const { CHAT_EXAMPLES } = namespace.config;
+    const espacoNomes = window.ClimateAssistant || {};
+    const { CHAT_EXAMPLES: EXEMPLOS_CONVERSA } = espacoNomes.config;
 
     let obterContexto = null;
     let elementos = {};
@@ -89,7 +89,7 @@
     }
 
     function renderizarMensagemInicial() {
-        adicionarMensagem("assistant", `Tenho acesso aos dados carregados da estação climática. Escolha um atalho acima ou pergunte algo como:\n${CHAT_EXAMPLES.map(item => `• ${item}`).join("\n")}`);
+        adicionarMensagem("assistant", `Tenho acesso aos dados carregados da estação climática. Escolha um atalho acima ou pergunte algo como:\n${EXEMPLOS_CONVERSA.map(item => `• ${item}`).join("\n")}`);
     }
 
     async function aoEnviarFormulario(evento) {
@@ -114,7 +114,7 @@
 
         try {
             const contexto = obterContexto ? obterContexto() : {};
-            const resultado = await namespace.query.answerQuestionDetailed(pergunta, {
+            const resultado = await espacoNomes.query.answerQuestionDetailed(pergunta, {
                 ...contexto,
                 chatMemory: memoriaConversa,
             });
@@ -161,10 +161,10 @@
         return mensagem;
     }
 
-    namespace.ui = {
+    espacoNomes.ui = {
         setup: configurar,
         open: abrirChat,
         close: fecharChat,
     };
-    window.ClimateAssistant = namespace;
+    window.ClimateAssistant = espacoNomes;
 })();

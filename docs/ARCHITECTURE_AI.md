@@ -30,6 +30,8 @@ Usuarios internos autorizados sao definidos em `AppConfig.auth.usuariosInternosA
 
 Codigo interno novo ou refatorado deve usar nomes em PT-BR para metodos, funcoes e variaveis, acompanhando o dominio da aplicacao. Devem permanecer com o nome original apenas os campos Firebase, ids/classes DOM, contratos publicos em `window.*`, propriedades exigidas por APIs externas/bibliotecas e chaves estruturais ja consumidas por outros modulos.
 
+Situação em 08/09/2026: as implementações internas foram adequadas em todos os scripts ativos e ferramentas. Os nomes públicos anteriores continuam como aliases nas exportações globais e módulos carregados sob demanda, evitando mudança na topologia ou na ordem de carregamento. Consulte `docs/nomenclatura-pt-br/RELATORIO.md`.
+
 ```text
 .
 ├── index.html
@@ -80,6 +82,8 @@ Codigo interno novo ou refatorado deve usar nomes em PT-BR para metodos, funcoes
 │   │   └── environmental-insights.js
 │   ├── charts/
 │   │   ├── chart-utils.js
+│   │   ├── chart-sync.js
+│   │   ├── rain.js
 │   │   ├── aqi.js
 │   │   ├── season.js
 │   │   ├── moon.js
@@ -141,7 +145,9 @@ Responsabilidades:
 - `scripts/assistant/assistant-format.js`: normalizacao e formatacao compartilhadas.
 - `scripts/data/data-utils.js`: datas, filtros, tabelas, extracao de series, conversoes e formatacao.
 - `scripts/data/data-quality.js`: analise compartilhada de cobertura, atualidade, plausibilidade, saltos, repeticao e zero constante, sem modificar o valor medido.
-- `scripts/charts/chart-utils.js`: defaults Chart.js, criacao de graficos de linha, fallback de grafico vazio, faixa de conforto.
+- `scripts/charts/chart-utils.js`: defaults Chart.js, criacao de graficos de linha, fallback de grafico vazio, faixa de conforto e callbacks de hover/toque.
+- `scripts/charts/chart-sync.js`: grupos de graficos temporais, propagacao do indice selecionado, limpeza de tooltip e preservacao de lacunas.
+- `scripts/charts/rain.js`: janela externa de 24h observadas + 12h previstas, estado atual e grafico de precipitacao/probabilidade.
 - `scripts/data/analytics.js`: estatisticas, cards de resumo, calendario climatico, heatmap horario e heatmap semanal.
 - `scripts/data/environmental-insights.js`: ponto de orvalho, risco estimado de mofo, chuva, indice UV e recomendacao de ventilacao compartilhados entre modos interno e publico.
 - `scripts/charts/aqi.js`: AQI estimado da Sala/MQ135, chip no header e popover.
@@ -153,9 +159,9 @@ Responsabilidades:
 - `scripts/reports/pdf-report.js`: fachada publica leve da exportacao PDF/JSON, mantendo `window.ClimatePdfReport.setup` e carregando `scripts/reports/pdf-report-*` somente ao exportar.
 - `scripts/reports/pdf-report-config.js`: configuracao das abas, metricas, tabela e inclusao de ciclo solar.
 - `scripts/reports/pdf-report-format.js`: formatacao de datas, valores, status, mensagens e HTML seguro.
-- `scripts/reports/pdf-report-data.js`: selecao de dados, linhas, resumos, cards contextuais da Estacao, alertas e contrato por aba.
+- `scripts/reports/pdf-report-data.js`: selecao de dados, linhas, resumos, cards contextuais da Estacao, card opcional de chuva externa, alertas e contrato por aba.
 - `scripts/reports/pdf-report-dom.js`: criacao do HTML temporario do relatorio.
-- `scripts/reports/pdf-report-charts.js`: captura/renderizacao das imagens de graficos e ciclo solar compacto.
+- `scripts/reports/pdf-report-charts.js`: renderizacao independente das imagens de graficos, ciclo solar compacto e chuva externa de 24h + 12h.
 - `scripts/reports/pdf-report-pdf.js`: montagem A4 com html2canvas/jsPDF, paginacao e rodapes.
 - `scripts/reports/pdf-report-export.js`: setup do botao, seletor PDF/JSON, build do relatorio e download.
 - `styles/reports/pdf-report.css`: layout visual do relatorio PDF em tema escuro.
@@ -167,7 +173,7 @@ Responsabilidades:
 - `scripts/views/public-weather-view.js`: renderizacao do modo publico por CEP/cidade/localizacao, controle segmentado do modo de busca, escolha acessivel de cidades homonimas, cards, contexto sazonal/lunar, insights ambientais e graficos externos; as series meteorologicas separam 24h observadas e 12h previstas, com marcador temporal e datasets distintos preservados no zoom.
 - `tools/validate-project.mjs`: validacao estrutural local de sintaxe, referencias, imports CSS e ids.
 - `tools/testar-assistente.mjs`: regressao local de interpretacao de periodos, operacoes e contratos de resposta da assistente.
-- `tools/testar-relatorio.mjs`, `tools/testar-pdf-artifact.mjs`, `tools/testar-acessibilidade.mjs`, `tools/testar-axe.mjs`, `tools/testar-qualidade-dados.mjs`, `tools/testar-modo-publico.mjs` e `tools/testar-tabelas.mjs`: regressao de relatorio/artefato, ARIA/contraste, qualidade, fluxo publico e tabelas.
+- `tools/testar-relatorio.mjs`, `tools/testar-pdf-artifact.mjs`, `tools/testar-pdf-chuva.mjs`, `tools/testar-acessibilidade.mjs`, `tools/testar-axe.mjs`, `tools/testar-qualidade-dados.mjs`, `tools/testar-modo-publico.mjs`, `tools/testar-sincronizacao-graficos.mjs`, `tools/testar-chuva.mjs` e `tools/testar-tabelas.mjs`: regressao de relatorio/artefato, PDF real com chuva, ARIA/contraste, qualidade, fluxo publico, sincronizacao temporal, chuva e tabelas.
 - `package.json`: comandos `npm run validate` e `npm run test:*`.
 
 ## Fluxo de Execucao
@@ -608,6 +614,8 @@ Graficos comuns:
 - tooltip do Ciclo Solar do Dia ativa apenas proximo dos pontos solares
 - tooltip do Nascer & Por do Sol ordena as series pela posicao visual real no canvas, considerando dois eixos Y
 - tooltips dos comparativos da Estacao ordenam as series de cima para baixo no ponto consultado
+- graficos temporais compativeis sincronizam o horario selecionado por hover/toque dentro do grupo da visao; fontes com minutos distintos usam aproximacao maxima de 45 minutos; solares mantem interacao propria
+- o historico Nascer & Por do Sol usa interacao por indice e ordena a tooltip pela posicao vertical real das quatro linhas, mesmo com dois eixos Y
 
 ## Eventos
 

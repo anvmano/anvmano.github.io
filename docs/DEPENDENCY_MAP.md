@@ -471,18 +471,29 @@ Impacto da alteracao: Alto. Uma mudanca afeta simultaneamente cards, tabelas, gr
 
 ## scripts/charts/chart-utils.js
 
-Responsabilidade: defaults Chart.js, grafico de linha, faixa de conforto, merge de opcoes.
+Responsabilidade: defaults Chart.js, grafico de linha, faixa de conforto, merge de opcoes e encaminhamento de hover/toque para sincronizacao temporal.
 
 Dependencias diretas:
 
 - `Chart`
 - `ClimateData`
+- `ClimateChartSync`
 
 Quem chama: `scripts/main.js` e `scripts/views/public-weather-view.js`.
 
 Quem e chamado: Chart.js.
 
 Impacto da alteracao: Alto.
+
+## scripts/charts/chart-sync.js
+
+Responsabilidade: manter grupos isolados de graficos temporais e sincronizar o indice horario ativo entre seus membros.
+
+Dependencias diretas: instancias Chart.js registradas pelas views.
+
+Quem chama: callbacks criados por `scripts/charts/chart-utils.js`; views de Sala, Quarto, Aquario, Estacao e modo publico registram seus graficos.
+
+Impacto da alteracao: Medio. Pode afetar tooltips comparativos, mas nao deve incluir graficos solares, zoom ou PDF.
 
 ## scripts/charts/aqi.js
 
@@ -558,6 +569,16 @@ Quem e chamado: Chart.js.
 
 Impacto da alteracao: Alto.
 
+## scripts/charts/rain.js
+
+Responsabilidade: classificar chuva atual, montar a janela externa de 24h + 12h e criar o grafico combinado de precipitacao em milimetros com probabilidade futura.
+
+Dependencias diretas: `ClimateCharts`, `ClimateChartSync`, Chart.js e dados normalizados por `ExternalWeatherService`.
+
+Quem chama: `scripts/views/public-weather-view.js`, `scripts/views/estacao-view.js` e opcoes de zoom em `scripts/main.js`.
+
+Impacto da alteracao: Medio.
+
 ## scripts/ui/ui.js
 
 Responsabilidade: estados vazios, mensagens, tabelas com ordenacao/contador/CSV, tabs com foco movel e navegacao ARIA por teclado, swipe touch, colapsaveis, date picker e contexto `Agora/Data consultada`.
@@ -611,9 +632,9 @@ Organizacao:
 - `pdf-report.js`: fachada publica `window.ClimatePdfReport.setup`.
 - `pdf-report-config.js`: contrato das abas e metricas do relatorio.
 - `pdf-report-format.js`: valores, datas, status, slug e HTML seguro.
-- `pdf-report-data.js`: fonte normalizada unica, linhas, cards, alertas e tabela compacta.
+- `pdf-report-data.js`: fonte normalizada unica, linhas, cards, chuva externa opcional, alertas e tabela compacta.
 - `pdf-report-dom.js`: HTML temporario do relatorio.
-- `pdf-report-charts.js`: imagens dos graficos e ciclo solar compacto.
+- `pdf-report-charts.js`: imagens dos graficos, ciclo solar compacto e grafico temporario de chuva.
 - `pdf-report-pdf.js`: captura, paginacao A4, rodapes e jsPDF.
 - `pdf-report-export.js`: setup do botao, seletor PDF/JSON, build e download.
 
@@ -621,8 +642,8 @@ Observacoes:
 
 - PDF usa resumo executivo, alertas, graficos otimizados e tabela resumida por horario
 - PDF junta Temperatura e Sensacao termica no mesmo grafico quando possivel
-- PDF tem contrato por aba: Estacao inclui cards contextuais de Estacao do ano e Fase da lua com rotulos proprios de detalhe, 6 cards globais, graficos comparativos e ciclo solar, sem tabela; Sala usa tabela MQ135 e nao inclui solar; Quarto nao inclui solar; Aquario nao inclui solar.
-- JSON inclui `resumo` com detalhes, `tabelaResumida`, `tabelaDetalhada`, `dadosBrutos` e mantem `tabela` como alias de compatibilidade da tabela detalhada antiga.
+- PDF tem contrato por aba: Estacao inclui cards contextuais, 6 cards globais, graficos comparativos e ciclo solar; se houver clima externo em memoria, inclui tambem card e grafico de chuva, sem tabela. Sala usa tabela MQ135 e nao inclui solar; Quarto nao inclui solar; Aquario nao inclui solar.
+- JSON inclui `resumo` com detalhes, `tabelaResumida`, `tabelaDetalhada`, `dadosBrutos`, `climaExterno` e mantem `tabela` como alias de compatibilidade da tabela detalhada antiga.
 - resumo, alertas, graficos, tabelas e JSON derivam do mesmo recorte normalizado de `selectedDate`
 - graficos do PDF sao temporarios e nao reutilizam `chartInstances`, pois os graficos visiveis podem estar na janela movel das ultimas 24h
 - valores ausentes permanecem `null`, formam lacunas e sao excluidos das estatisticas
@@ -850,6 +871,8 @@ graph TD
 ## Regra de Nomenclatura
 
 Novos metodos, funcoes e variaveis internas devem seguir PT-BR. Nao traduzir campos Firebase reais, ids/classes DOM, contratos publicos em `window.*`, propriedades de APIs externas, opcoes de bibliotecas ou chaves estruturais ja consumidas entre modulos.
+
+Estado em 08/09/2026: vínculos locais foram traduzidos em todos os componentes ativos. As arestas entre módulos continuam usando os contratos públicos anteriores (`window.*`, membros exportados e chaves de contexto), agora ligados a implementações internas em PT-BR. Essa camada de compatibilidade preserva o grafo de dependências documentado acima. Detalhes e exceções: `docs/nomenclatura-pt-br/RELATORIO.md`.
 
 ### `scripts/config.js`
 

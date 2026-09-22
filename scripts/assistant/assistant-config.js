@@ -1,18 +1,18 @@
 'use strict';
 
 (function () {
-    const namespace = window.ClimateAssistant || {};
+    const espacoNomes = window.ClimateAssistant || {};
 
-    const MAX_PROMPT_CHARS = 9000;
-    const DEFAULT_RECENT_DAYS = 7;
-    const MAX_PERIOD_DAYS = 30;
-    const CHAT_EXAMPLES = [
+    const MAX_CARACTERES_INSTRUCAO = 9000;
+    const DIAS_RECENTES_PADRAO = 7;
+    const MAX_DIAS_PERIODO = 30;
+    const EXEMPLOS_CONVERSA = [
         "Qual foi a temperatura média hoje?",
         "Qual a máxima do aquário na data selecionada?",
         "A umidade ficou dentro da faixa?",
     ];
 
-    const METRIC_ALIASES = {
+    const ALIASES_METRICAS = {
         temperatura: ["temperatura", "temp", "frio", "quente", "calor"],
         temperaturaDS18B20: ["temperatura", "temp", "frio", "quente", "calor"],
         "Sensacao termica": ["sensacao", "sensacao termica", "sensação térmica"],
@@ -33,7 +33,7 @@
         Turbidez: ["turbidez", "ntu"],
     };
 
-    const ENVIRONMENTS = {
+    const AMBIENTES = {
         estacao: {
             label: "Estação",
             dataKey: "solar",
@@ -87,14 +87,14 @@
         },
     };
 
-    namespace.config = {
-        MAX_PROMPT_CHARS,
-        DEFAULT_RECENT_DAYS,
-        MAX_PERIOD_DAYS,
-        CHAT_EXAMPLES,
-        METRIC_ALIASES,
-        ENVIRONMENTS,
+    espacoNomes.config = {
+        MAX_PROMPT_CHARS: MAX_CARACTERES_INSTRUCAO,
+        DEFAULT_RECENT_DAYS: DIAS_RECENTES_PADRAO,
+        MAX_PERIOD_DAYS: MAX_DIAS_PERIODO,
+        CHAT_EXAMPLES: EXEMPLOS_CONVERSA,
+        METRIC_ALIASES: ALIASES_METRICAS,
+        ENVIRONMENTS: AMBIENTES,
     };
 
-    window.ClimateAssistant = namespace;
+    window.ClimateAssistant = espacoNomes;
 })();

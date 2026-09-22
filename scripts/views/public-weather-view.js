@@ -17,11 +17,11 @@
         afterDraw(grafico) {
             const marcador = grafico.$marcadorAgora;
             const escalaX = grafico.scales?.x;
-            const area = grafico.chartArea;
-            if (!marcador || !escalaX || !area || marcador.indice < 0) return;
+            const areaDesenho = grafico.chartArea;
+            if (!marcador || !escalaX || !areaDesenho || marcador.indice < 0) return;
 
             const x = escalaX.getPixelForValue(marcador.indice);
-            if (!Number.isFinite(x) || x < area.left || x > area.right) return;
+            if (!Number.isFinite(x) || x < areaDesenho.left || x > areaDesenho.right) return;
 
             const contexto = grafico.ctx;
             contexto.save();
@@ -29,8 +29,8 @@
             contexto.lineWidth = 1;
             contexto.setLineDash([4, 4]);
             contexto.beginPath();
-            contexto.moveTo(x, area.top);
-            contexto.lineTo(x, area.bottom);
+            contexto.moveTo(x, areaDesenho.top);
+            contexto.lineTo(x, areaDesenho.bottom);
             contexto.stroke();
 
             contexto.setLineDash([]);
@@ -38,28 +38,28 @@
             contexto.textAlign = "center";
             contexto.textBaseline = "top";
             const larguraTexto = contexto.measureText("Agora").width;
-            const centroSeguro = Math.min(Math.max(x, area.left + larguraTexto / 2 + 7), area.right - larguraTexto / 2 - 7);
+            const centroSeguro = Math.min(Math.max(x, areaDesenho.left + larguraTexto / 2 + 7), areaDesenho.right - larguraTexto / 2 - 7);
             contexto.fillStyle = "rgba(15, 23, 42, 0.88)";
-            contexto.fillRect(centroSeguro - larguraTexto / 2 - 5, area.top + 4, larguraTexto + 10, 17);
+            contexto.fillRect(centroSeguro - larguraTexto / 2 - 5, areaDesenho.top + 4, larguraTexto + 10, 17);
             contexto.fillStyle = "#cbd5e1";
-            contexto.fillText("Agora", centroSeguro, area.top + 7);
+            contexto.fillText("Agora", centroSeguro, areaDesenho.top + 7);
             contexto.restore();
         },
     };
     let elementos = {};
-    let callbacks = {};
+    let retornos = {};
     let sequenciaBusca = 0;
     let consultaRestaurada = false;
     let modoBusca = "cep";
     const valoresBusca = { cep: "", cidade: "" };
 
-    function setup({ onLogin, onLogout, getUsuario, isOwner } = {}) {
+    function configurarModulo({ onLogin: aoEntrar, onLogout: aoSair, getUsuario: obterUsuario, isOwner: ehProprietario } = {}) {
         elementos = obterElementos();
-        callbacks = { onLogin, onLogout };
+        retornos = { onLogin: aoEntrar, onLogout: aoSair };
         if (!elementos.publicApp) return;
 
-        elementos.btnEntrar?.addEventListener("click", () => onLogin?.());
-        elementos.btnSair?.addEventListener("click", () => onLogout?.());
+        elementos.btnEntrar?.addEventListener("click", () => aoEntrar?.());
+        elementos.btnSair?.addEventListener("click", () => aoSair?.());
         elementos.formBusca?.addEventListener("submit", async evento => {
             evento.preventDefault();
             await buscarPorEntrada();
@@ -74,7 +74,7 @@
         });
         alterarModoBusca("cep", { focar: false });
 
-        atualizarUsuario(getUsuario?.(), isOwner?.());
+        atualizarUsuario(obterUsuario?.(), ehProprietario?.());
         renderizarEstadoInicial();
     }
 
@@ -87,7 +87,7 @@
                 <button type="button" id="publicLoginButton">Entrar com Google</button>
             `;
             elementos.btnEntrar = document.getElementById("publicLoginButton");
-            elementos.btnEntrar?.addEventListener("click", () => callbacks.onLogin?.());
+            elementos.btnEntrar?.addEventListener("click", () => retornos.onLogin?.());
             return;
         }
 
@@ -96,7 +96,7 @@
             <button type="button" id="publicLogoutButton">Sair</button>
         `;
         elementos.btnSair = document.getElementById("publicLogoutButton");
-        elementos.btnSair?.addEventListener("click", () => callbacks.onLogout?.());
+        elementos.btnSair?.addEventListener("click", () => retornos.onLogout?.());
     }
 
     function mostrar() {
@@ -253,13 +253,14 @@
                 <section class="season-timeline public-season" id="publicSeasonTimeline"></section>
                 <section class="moon-summary public-moon" id="publicMoonSummary"></section>
             </div>
-            ${montarSecaoInsightsPublicos(insights)}
+            ${montarSecaoInsightsPublicos(insights, dados.climaAtual)}
             <div class="charts-grid">
-                ${canvasCard("publicChartTemperature", "Temperatura", "Temperatura externa")}
-                ${canvasCard("publicChartFeelsLike", "Sensação Térmica", "Sensação térmica externa")}
-                ${canvasCard("publicChartHumidity", "Umidade", "Umidade externa")}
-                ${canvasCard("publicChartPressure", "Pressão", "Pressão externa")}
+                ${cardCanvas("publicChartTemperature", "Temperatura", "Temperatura externa")}
+                ${cardCanvas("publicChartFeelsLike", "Sensação Térmica", "Sensação térmica externa")}
+                ${cardCanvas("publicChartHumidity", "Umidade", "Umidade externa")}
+                ${cardCanvas("publicChartPressure", "Pressão", "Pressão externa")}
             </div>
+            ${cardCanvas("publicChartRain", "Chuva · 24h + previsão 12h", "Precipitação e chance de chuva", true)}
             <div class="chart-card chart-card--wide" id="public-solar-container">
                 <span class="chart-label">Ciclo Solar do Dia</span>
                 <span class="chart-card__meta-chip" id="publicSolarDuration" hidden></span>
@@ -279,6 +280,7 @@
         renderizarGraficoLinha("publicChartFeelsLike", janelaGraficos, "sensacaoTermica", "Sensação térmica", "°C", window.AppConfig.colors.green);
         renderizarGraficoLinha("publicChartHumidity", janelaGraficos, "umidade", "Umidade", "%", window.AppConfig.colors.purple);
         renderizarGraficoLinha("publicChartPressure", janelaGraficos, "pressao", "Pressão", "hPa", window.AppConfig.colors.amber);
+        renderizarGraficoChuva(dados);
         renderizarGraficoSolar(dados.cicloSolar);
         window.ClimateZoom?.registrarCards?.(elementos.publicResults, {
             chartInstances: graficos,
@@ -311,10 +313,11 @@
         return { chuva, indiceUv, riscoMofo, ventilacao };
     }
 
-    function montarSecaoInsightsPublicos({ chuva, indiceUv, riscoMofo, ventilacao }) {
+    function montarSecaoInsightsPublicos({ chuva, indiceUv, riscoMofo, ventilacao }, climaAtual) {
         const pontoOrvalho = riscoMofo.pontoOrvalho;
         const valorOrvalho = Number.isFinite(pontoOrvalho) ? `${pontoOrvalho.toFixed(1)}°C` : "--";
-        const valorChuva = chuva.classe === "indisponivel" ? "--" : `${Math.round(chuva.probabilidade)}%`;
+        const chuvaAtual = window.ClimateChuva.analisarAgora(climaAtual);
+        const valorChuva = chuvaAtual.disponivel ? chuvaAtual.rotulo : "--";
         const valorUv = Number.isFinite(indiceUv.valor) ? indiceUv.valor.toFixed(1) : "--";
 
         return `
@@ -334,7 +337,7 @@
                         status: chuva.rotulo,
                         classe: chuva.classe,
                         descricao: chuva.descricao,
-                        detalhe: chuva.classe === "indisponivel" ? "Sem previsão horária" : `${chuva.acumulado.toFixed(1)} mm acumulados · pico ${chuva.intensidadeMaxima.toFixed(1)} mm/h`,
+                        detalhe: chuva.classe === "indisponivel" ? "Sem previsão horária" : `Maior chance ${Math.round(chuva.probabilidade)}% · ${chuva.acumulado.toFixed(1)} mm acumulados · pico ${chuva.intensidadeMaxima.toFixed(1)} mm/h`,
                     })}
                     ${montarCardInsight({
                         titulo: "Índice UV",
@@ -357,12 +360,12 @@
         `;
     }
 
-    function montarCardInsight({ titulo, valor, status, classe, descricao, detalhe }) {
+    function montarCardInsight({ titulo, valor, status: estado, classe, descricao, detalhe }) {
         return `
             <article class="environment-insight environment-insight--${classe}">
                 <div class="environment-insight__header">
                     <span>${titulo}</span>
-                    <small>${status}</small>
+                    <small>${estado}</small>
                 </div>
                 <strong>${valor}</strong>
                 <p>${descricao}</p>
@@ -409,7 +412,7 @@
         }
     }
 
-    function renderizarGraficoLinha(id, janela, chaveMetrica, label, unidade, cor) {
+    function renderizarGraficoLinha(id, janela, chaveMetrica, rotulo, unidade, cor) {
         const canvas = document.getElementById(id);
         if (!canvas) return;
         if (graficos[id]) graficos[id].destroy();
@@ -426,11 +429,11 @@
         const temPrevisao = valoresPrevistos.some((valor, indice) => indice > janela.indiceAgora && numeroValido(valor) !== null);
         if (!temMedicao && !temPrevisao) return;
 
-        const ctx = canvas.getContext("2d");
+        const contextoDesenho = canvas.getContext("2d");
         const corPrevisao = corComTransparencia(cor, 0.58);
-        const datasets = [];
+        const seriesGraficos = [];
         if (temMedicao) {
-            datasets.push({
+            seriesGraficos.push({
                 label: "Medido",
                 tipoDado: "medido",
                 data: valoresMedidos,
@@ -444,7 +447,7 @@
             });
         }
         if (temPrevisao) {
-            datasets.push({
+            seriesGraficos.push({
                 label: "Previsão",
                 tipoDado: "previsao",
                 data: valoresPrevistos,
@@ -460,19 +463,38 @@
         }
 
         const opcoes = criarOpcoesGraficoPublico({ janela, unidade });
-        const grafico = new Chart(ctx, {
+        const grafico = new Chart(contextoDesenho, {
             type: "line",
             data: {
                 labels: janela.horarios.map(formatarHoraIso),
-                datasets,
+                datasets: seriesGraficos,
             },
             options: opcoes,
             plugins: [marcadorAgoraPlugin],
         });
         grafico.$marcadorAgora = { indice: janela.indiceAgora };
+        grafico.$chavesSincronizacao = [...janela.horarios];
         grafico.$zoomPlugins = [marcadorAgoraPlugin];
         grafico.update("none");
         graficos[id] = grafico;
+        window.ClimateChartSync?.registrar(grafico, "publico");
+    }
+
+    function renderizarGraficoChuva(dados) {
+        const canvas = document.getElementById("publicChartRain");
+        const janela = window.ClimateChuva.montarJanela(dados.previsaoCurtoPrazo, dados.atualizadoEm);
+        const grafico = window.ClimateChuva.criarGrafico({
+            canvas,
+            janela,
+            graficoExistente: graficos.publicChartRain,
+            cores: window.AppConfig.colors,
+            grupoSincronizacao: "publico",
+        });
+        if (grafico) {
+            graficos.publicChartRain = grafico;
+        } else {
+            delete graficos.publicChartRain;
+        }
     }
 
     function criarOpcoesGraficoPublico({ janela, unidade }) {
@@ -507,7 +529,7 @@
         });
     }
 
-    function montarJanelaObservadaEPrevista(series, atualizadoEm, horasPrevisao = HORAS_PREVISAO_GRAFICOS) {
+    function montarJanelaObservadaEPrevista(seriesDados, atualizadoEm, horasPrevisao = HORAS_PREVISAO_GRAFICOS) {
         const fim = atualizadoEm instanceof Date && !Number.isNaN(atualizadoEm.getTime()) ? atualizadoEm : new Date();
         const inicio = new Date(fim.getTime() - 24 * 60 * 60 * 1000);
         const inicioPrevisao = new Date(fim);
@@ -524,7 +546,7 @@
             indiceAgora: -1,
         };
 
-        (series?.horarios || []).forEach((horario, indice) => {
+        (seriesDados?.horarios || []).forEach((horario, indice) => {
             const dataHora = new Date(horario);
             if (Number.isNaN(dataHora.getTime())) return;
             const eMedido = dataHora >= inicio && dataHora <= fim;
@@ -533,10 +555,10 @@
 
             resultado.horarios.push(horario);
             resultado.tipos.push(eMedido ? "medido" : "previsao");
-            resultado.temperatura.push(series.temperatura?.[indice] ?? null);
-            resultado.sensacaoTermica.push(series.sensacaoTermica?.[indice] ?? null);
-            resultado.umidade.push(series.umidade?.[indice] ?? null);
-            resultado.pressao.push(series.pressao?.[indice] ?? null);
+            resultado.temperatura.push(seriesDados.temperatura?.[indice] ?? null);
+            resultado.sensacaoTermica.push(seriesDados.sensacaoTermica?.[indice] ?? null);
+            resultado.umidade.push(seriesDados.umidade?.[indice] ?? null);
+            resultado.pressao.push(seriesDados.pressao?.[indice] ?? null);
             if (eMedido) resultado.indiceAgora = resultado.horarios.length - 1;
         });
 
@@ -549,22 +571,22 @@
         return Number.isFinite(numero) ? numero : null;
     }
 
-    function corComTransparencia(cor, alpha) {
+    function corComTransparencia(cor, opacidade) {
         const hexadecimal = String(cor || "").replace("#", "");
         if (!/^[0-9a-f]{6}$/i.test(hexadecimal)) return cor;
         const vermelho = Number.parseInt(hexadecimal.slice(0, 2), 16);
         const verde = Number.parseInt(hexadecimal.slice(2, 4), 16);
         const azul = Number.parseInt(hexadecimal.slice(4, 6), 16);
-        return `rgba(${vermelho}, ${verde}, ${azul}, ${alpha})`;
+        return `rgba(${vermelho}, ${verde}, ${azul}, ${opacidade})`;
     }
 
     function formatarDataHoraTooltip(valor) {
-        const data = new Date(valor);
-        if (Number.isNaN(data.getTime())) return "--";
-        const dia = String(data.getDate()).padStart(2, "0");
-        const mes = String(data.getMonth() + 1).padStart(2, "0");
-        const hora = String(data.getHours()).padStart(2, "0");
-        const minuto = String(data.getMinutes()).padStart(2, "0");
+        const dados = new Date(valor);
+        if (Number.isNaN(dados.getTime())) return "--";
+        const dia = String(dados.getDate()).padStart(2, "0");
+        const mes = String(dados.getMonth() + 1).padStart(2, "0");
+        const hora = String(dados.getHours()).padStart(2, "0");
+        const minuto = String(dados.getMinutes()).padStart(2, "0");
         return `${dia}/${mes} ${hora}:${minuto}`;
     }
 
@@ -584,8 +606,8 @@
             { x: 24, y: 0 },
         ];
 
-        const ctx = canvas.getContext("2d");
-        graficos.publicChartSolar = new Chart(ctx, {
+        const contextoDesenho = canvas.getContext("2d");
+        graficos.publicChartSolar = new Chart(contextoDesenho, {
             type: "line",
             data: {
                 datasets: [
@@ -627,6 +649,10 @@
                 defaults: padroes,
                 colors: window.AppConfig.colors,
             });
+        }
+
+        if (idGrafico === "publicChartRain") {
+            return window.ClimateChuva.obterOpcoes({ cores: window.AppConfig.colors });
         }
 
         const unidades = {
@@ -698,9 +724,9 @@
         `;
     }
 
-    function canvasCard(id, titulo, ariaLabel) {
+    function cardCanvas(id, titulo, ariaLabel, largo = false) {
         return `
-            <div class="chart-card" id="${id}-container">
+            <div class="chart-card${largo ? " chart-card--wide" : ""}" id="${id}-container">
                 <span class="chart-label">${titulo}</span>
                 <canvas aria-label="${ariaLabel}" class="plot" id="${id}" role="img"></canvas>
             </div>
@@ -722,7 +748,10 @@
     }
 
     function limparGraficos() {
-        Object.values(graficos).forEach(grafico => grafico?.destroy?.());
+        Object.values(graficos).forEach(grafico => {
+            window.ClimateChartSync?.desregistrar(grafico);
+            grafico?.destroy?.();
+        });
         Object.keys(graficos).forEach(chave => delete graficos[chave]);
     }
 
@@ -768,14 +797,14 @@
     }
 
     function renderizarOpcoesCidades(cidades) {
-        const container = elementos.opcoesCidades;
-        if (!container) return;
-        container.replaceChildren();
+        const recipiente = elementos.opcoesCidades;
+        if (!recipiente) return;
+        recipiente.replaceChildren();
 
         const titulo = document.createElement("span");
         titulo.className = "public-city-results__title";
         titulo.textContent = "Escolha a localização";
-        container.appendChild(titulo);
+        recipiente.appendChild(titulo);
 
         const lista = document.createElement("div");
         lista.className = "public-city-results__list";
@@ -792,8 +821,8 @@
             item.appendChild(botao);
             lista.appendChild(item);
         });
-        container.appendChild(lista);
-        container.hidden = false;
+        recipiente.appendChild(lista);
+        recipiente.hidden = false;
 
         requestAnimationFrame(() => lista.querySelector("button")?.focus());
     }
@@ -835,10 +864,10 @@
         elementos.entradaBusca?.removeAttribute("aria-describedby");
     }
 
-    function aplicarMascaraCep(input) {
-        if (!input) return;
-        const digitos = String(input.value || "").replace(/\D/g, "").slice(0, 8);
-        input.value = digitos.length > 5 ? `${digitos.slice(0, 5)}-${digitos.slice(5)}` : digitos;
+    function aplicarMascaraCep(entrada) {
+        if (!entrada) return;
+        const digitos = String(entrada.value || "").replace(/\D/g, "").slice(0, 8);
+        entrada.value = digitos.length > 5 ? `${digitos.slice(0, 5)}-${digitos.slice(5)}` : digitos;
     }
 
     function preservarUltimaConsulta(dados) {
@@ -883,8 +912,8 @@
     }
 
     function calcularAtualidade(atualizadoEm) {
-        const data = atualizadoEm instanceof Date ? atualizadoEm : new Date(atualizadoEm);
-        const minutos = Number.isNaN(data.getTime()) ? Infinity : Math.max(0, Math.floor((Date.now() - data.getTime()) / 60000));
+        const dados = atualizadoEm instanceof Date ? atualizadoEm : new Date(atualizadoEm);
+        const minutos = Number.isNaN(dados.getTime()) ? Infinity : Math.max(0, Math.floor((Date.now() - dados.getTime()) / 60000));
         const limite = Number(window.AppConfig?.publicData?.staleAfterMinutes) || 20;
         if (!Number.isFinite(minutos)) return { desatualizado: true, rotulo: "horário indisponível" };
         if (minutos < 1) return { desatualizado: false, rotulo: "agora" };
@@ -917,31 +946,31 @@
 
     function formatarHoraIso(valor) {
         if (!valor) return "--";
-        const data = new Date(valor);
-        if (Number.isNaN(data.getTime())) return "--";
-        return `${String(data.getHours()).padStart(2, "0")}:${String(data.getMinutes()).padStart(2, "0")}`;
+        const dados = new Date(valor);
+        if (Number.isNaN(dados.getTime())) return "--";
+        return `${String(dados.getHours()).padStart(2, "0")}:${String(dados.getMinutes()).padStart(2, "0")}`;
     }
 
-    function formatarDataHora(data) {
-        if (!(data instanceof Date) || Number.isNaN(data.getTime())) return "--";
-        return `${String(data.getDate()).padStart(2, "0")}/${String(data.getMonth() + 1).padStart(2, "0")} ${String(data.getHours()).padStart(2, "0")}:${String(data.getMinutes()).padStart(2, "0")}`;
+    function formatarDataHora(dados) {
+        if (!(dados instanceof Date) || Number.isNaN(dados.getTime())) return "--";
+        return `${String(dados.getDate()).padStart(2, "0")}/${String(dados.getMonth() + 1).padStart(2, "0")} ${String(dados.getHours()).padStart(2, "0")}:${String(dados.getMinutes()).padStart(2, "0")}`;
     }
 
-    function formatarDataCompleta(data) {
-        if (!(data instanceof Date) || Number.isNaN(data.getTime())) return "--";
-        return `${String(data.getDate()).padStart(2, "0")}/${String(data.getMonth() + 1).padStart(2, "0")}/${data.getFullYear()}`;
+    function formatarDataCompleta(dados) {
+        if (!(dados instanceof Date) || Number.isNaN(dados.getTime())) return "--";
+        return `${String(dados.getDate()).padStart(2, "0")}/${String(dados.getMonth() + 1).padStart(2, "0")}/${dados.getFullYear()}`;
     }
 
     function dataFirebasePublica(dados) {
-        const data = dados?.atualizadoEm instanceof Date ? dados.atualizadoEm : null;
-        if (!data || Number.isNaN(data.getTime())) {
+        const dataAtualizacao = dados?.atualizadoEm instanceof Date ? dados.atualizadoEm : null;
+        if (!dataAtualizacao || Number.isNaN(dataAtualizacao.getTime())) {
             return window.ClimateData?.dataAtual?.();
         }
-        return `${String(data.getDate()).padStart(2, "0")}-${String(data.getMonth() + 1).padStart(2, "0")}-${data.getFullYear()}`;
+        return `${String(dataAtualizacao.getDate()).padStart(2, "0")}-${String(dataAtualizacao.getMonth() + 1).padStart(2, "0")}-${dataAtualizacao.getFullYear()}`;
     }
 
     window.PublicWeatherView = {
-        setup,
+        setup: configurarModulo,
         mostrar,
         ocultar,
         atualizarUsuario,

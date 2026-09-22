@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-    const namespace = window.ClimateAssistant || {};
+    const espacoNomes = window.ClimateAssistant || {};
 
     function normalizarTexto(texto) {
         return String(texto || "")
@@ -61,15 +61,15 @@
         return `${formatarData(datas[0])} a ${formatarData(datas[datas.length - 1])}`;
     }
 
-    function formatarDataFirebase(data) {
-        return `${String(data.getDate()).padStart(2, "0")}-${String(data.getMonth() + 1).padStart(2, "0")}-${data.getFullYear()}`;
+    function formatarDataFirebase(dados) {
+        return `${String(dados.getDate()).padStart(2, "0")}-${String(dados.getMonth() + 1).padStart(2, "0")}-${dados.getFullYear()}`;
     }
 
-    function formatarRotuloTimestamp(timestamp) {
-        if (!(timestamp instanceof Date) || Number.isNaN(timestamp.getTime())) return null;
-        const data = `${String(timestamp.getDate()).padStart(2, "0")}/${String(timestamp.getMonth() + 1).padStart(2, "0")}/${timestamp.getFullYear()}`;
-        const hora = `${String(timestamp.getHours()).padStart(2, "0")}:${String(timestamp.getMinutes()).padStart(2, "0")}`;
-        return `${data} ${hora}`;
+    function formatarRotuloTimestamp(instanteRegistro) {
+        if (!(instanteRegistro instanceof Date) || Number.isNaN(instanteRegistro.getTime())) return null;
+        const dados = `${String(instanteRegistro.getDate()).padStart(2, "0")}/${String(instanteRegistro.getMonth() + 1).padStart(2, "0")}/${instanteRegistro.getFullYear()}`;
+        const hora = `${String(instanteRegistro.getHours()).padStart(2, "0")}:${String(instanteRegistro.getMinutes()).padStart(2, "0")}`;
+        return `${dados} ${hora}`;
     }
 
     function obterRotuloAba(idAba) {
@@ -80,7 +80,7 @@
         return [...new Set(datas.filter(Boolean))];
     }
 
-    namespace.format = {
+    espacoNomes.format = {
         normalizeText: normalizarTexto,
         hasWord: temPalavra,
         normalizeHourFilter: normalizarFiltroHora,
@@ -96,5 +96,5 @@
         uniqueDates: obterDatasUnicas,
     };
 
-    window.ClimateAssistant = namespace;
+    window.ClimateAssistant = espacoNomes;
 })();

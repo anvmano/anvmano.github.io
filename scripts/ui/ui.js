@@ -1,26 +1,26 @@
 'use strict';
 
 (function () {
-    function renderEmptyState(id, message, type = "empty") {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.innerHTML = "";
-        const empty = document.createElement("p");
-        empty.className = `state-message state-message--${type}`;
-        empty.innerText = message;
-        el.appendChild(empty);
+    function renderizarEstadoVazio(id, mensagem, tipo = "empty") {
+        const elementoDom = document.getElementById(id);
+        if (!elementoDom) return;
+        elementoDom.innerHTML = "";
+        const vazio = document.createElement("p");
+        vazio.className = `state-message state-message--${tipo}`;
+        vazio.innerText = mensagem;
+        elementoDom.appendChild(vazio);
     }
 
-    function renderTable(id, table, emptyMessage = "Sem registros recentes.") {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.innerHTML = "";
-        if (table.rows && table.rows.length <= 1) {
-            renderEmptyState(id, emptyMessage);
+    function renderizarTabela(id, tabela, mensagemVazia = "Sem registros recentes.") {
+        const elementoDom = document.getElementById(id);
+        if (!elementoDom) return;
+        elementoDom.innerHTML = "";
+        if (tabela.rows && tabela.rows.length <= 1) {
+            renderizarEstadoVazio(id, mensagemVazia);
             return;
         }
-        el.appendChild(criarFerramentasTabela(table));
-        el.appendChild(table);
+        elementoDom.appendChild(criarFerramentasTabela(tabela));
+        elementoDom.appendChild(tabela);
     }
 
     function criarFerramentasTabela(tabela) {
@@ -61,9 +61,9 @@
         Array.from(linhas).forEach(linha => {
             const dataIso = String(linha.dataset.timestamp || "").slice(0, 10);
             const [ano, mes, dia] = dataIso.split("-");
-            const data = ano && mes && dia ? `${dia}/${mes}/${ano}` : "";
-            linha.cells[0].textContent = data !== dataAtual ? data : "";
-            dataAtual = data;
+            const dados = ano && mes && dia ? `${dia}/${mes}/${ano}` : "";
+            linha.cells[0].textContent = dados !== dataAtual ? dados : "";
+            dataAtual = dados;
         });
     }
 
@@ -74,41 +74,41 @@
         }).join(";"));
         const blob = new Blob(["\uFEFF", linhas.join("\r\n")], { type: "text/csv;charset=utf-8" });
         const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `${tabela.dataset.exportName || "tabela"}-${ClimateData.dataAtual()}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
+        const ligacao = document.createElement("a");
+        ligacao.href = url;
+        ligacao.download = `${tabela.dataset.exportName || "tabela"}-${ClimateData.dataAtual()}.csv`;
+        document.body.appendChild(ligacao);
+        ligacao.click();
+        ligacao.remove();
         URL.revokeObjectURL(url);
     }
 
-    function clearChartMessage(id) {
-        const el = document.getElementById(id);
-        const status = el ? el.querySelector(".chart-message") : null;
-        if (status) status.remove();
+    function limparMensagemGrafico(id) {
+        const elementoDom = document.getElementById(id);
+        const estado = elementoDom ? elementoDom.querySelector(".chart-message") : null;
+        if (estado) estado.remove();
     }
 
-    function renderChartMessage(id, message, type = "empty") {
-        const el = document.getElementById(id);
-        if (!el) return;
-        clearChartMessage(id);
-        const status = document.createElement("p");
-        status.className = `chart-message state-message state-message--${type}`;
-        status.innerText = message;
-        el.appendChild(status);
+    function renderizarMensagemGrafico(id, mensagem, tipo = "empty") {
+        const elementoDom = document.getElementById(id);
+        if (!elementoDom) return;
+        limparMensagemGrafico(id);
+        const estado = document.createElement("p");
+        estado.className = `chart-message state-message state-message--${tipo}`;
+        estado.innerText = mensagem;
+        elementoDom.appendChild(estado);
     }
 
-    function renderStartupError() {
+    function renderizarErroInicializacao() {
         const { ids } = window.AppConfig;
-        renderEmptyState(ids.tables.room, "Falha ao carregar o Firebase. Verifique a conexão com a internet.");
-        renderEmptyState(ids.tables.livingRoom, "Falha ao carregar o Firebase. Verifique a conexão com a internet.");
-        renderEmptyState(ids.tables.aquarium, "Falha ao carregar o Firebase. Verifique a conexão com a internet.");
-        renderChartMessage(ids.chartContainers.sunHistory, "Falha ao carregar o Firebase.", "error");
-        renderChartMessage(ids.chartContainers.solarToday, "Falha ao carregar o Firebase.", "error");
+        renderizarEstadoVazio(ids.tables.room, "Falha ao carregar o Firebase. Verifique a conexão com a internet.");
+        renderizarEstadoVazio(ids.tables.livingRoom, "Falha ao carregar o Firebase. Verifique a conexão com a internet.");
+        renderizarEstadoVazio(ids.tables.aquarium, "Falha ao carregar o Firebase. Verifique a conexão com a internet.");
+        renderizarMensagemGrafico(ids.chartContainers.sunHistory, "Falha ao carregar o Firebase.", "error");
+        renderizarMensagemGrafico(ids.chartContainers.solarToday, "Falha ao carregar o Firebase.", "error");
     }
 
-    function getStoredTab() {
+    function obterAbaArmazenada() {
         try {
             return localStorage.getItem("activeTab");
         } catch {
@@ -116,59 +116,59 @@
         }
     }
 
-    function storeActiveTab(tabName) {
+    function armazenarAbaAtiva(nomeAba) {
         try {
-            localStorage.setItem("activeTab", tabName);
+            localStorage.setItem("activeTab", nomeAba);
         } catch {
             // localStorage can be blocked in private or embedded contexts.
         }
     }
 
-    function openTab(tabName, trigger) {
-        document.querySelectorAll(".tabcontent").forEach(el => {
-            el.style.display = "none";
-            el.setAttribute("hidden", "");
+    function abrirAba(nomeAba, acionador) {
+        document.querySelectorAll(".tabcontent").forEach(elementoDom => {
+            elementoDom.style.display = "none";
+            elementoDom.setAttribute("hidden", "");
         });
-        document.querySelectorAll(".tablink").forEach(el => {
-            el.classList.remove("active");
-            el.setAttribute("aria-selected", "false");
-            el.setAttribute("tabindex", "-1");
+        document.querySelectorAll(".tablink").forEach(elementoDom => {
+            elementoDom.classList.remove("active");
+            elementoDom.setAttribute("aria-selected", "false");
+            elementoDom.setAttribute("tabindex", "-1");
         });
 
-        const tab = document.getElementById(tabName);
-        if (tab) {
-            tab.style.display = "block";
-            tab.removeAttribute("hidden");
+        const aba = document.getElementById(nomeAba);
+        if (aba) {
+            aba.style.display = "block";
+            aba.removeAttribute("hidden");
         }
 
-        const selectedButton = trigger || document.querySelector(`.tablink[data-tab-target="${tabName}"]`);
-        if (selectedButton) {
-            selectedButton.classList.add("active");
-            selectedButton.setAttribute("aria-selected", "true");
-            selectedButton.setAttribute("tabindex", "0");
+        const botaoSelecionado = acionador || document.querySelector(`.tablink[data-tab-target="${nomeAba}"]`);
+        if (botaoSelecionado) {
+            botaoSelecionado.classList.add("active");
+            botaoSelecionado.setAttribute("aria-selected", "true");
+            botaoSelecionado.setAttribute("tabindex", "0");
         }
 
-        storeActiveTab(tabName);
+        armazenarAbaAtiva(nomeAba);
     }
 
-    function setupTabs(defaultTab = "Tab1") {
-        const tabButtons = document.querySelectorAll(".tablink[data-tab-target]");
-        tabButtons.forEach(button => {
-            button.addEventListener("click", () => openTab(button.dataset.tabTarget, button));
-            button.addEventListener("keydown", evento => navegarAbasPorTeclado(evento, tabButtons));
+    function configurarAbas(abaPadrao = "Tab1") {
+        const botoesAbas = document.querySelectorAll(".tablink[data-tab-target]");
+        botoesAbas.forEach(botao => {
+            botao.addEventListener("click", () => abrirAba(botao.dataset.tabTarget, botao));
+            botao.addEventListener("keydown", evento => navegarAbasPorTeclado(evento, botoesAbas));
         });
 
-        const storedTab = getStoredTab();
-        const initialTab = storedTab && document.getElementById(storedTab) ? storedTab : defaultTab;
-        openTab(initialTab);
+        const abaArmazenada = obterAbaArmazenada();
+        const abaInicial = abaArmazenada && document.getElementById(abaArmazenada) ? abaArmazenada : abaPadrao;
+        abrirAba(abaInicial);
     }
 
-    function navegarAbasPorTeclado(evento, tabButtons) {
+    function navegarAbasPorTeclado(evento, botoesAbas) {
         const teclasSuportadas = ["ArrowLeft", "ArrowRight", "Home", "End"];
         if (!teclasSuportadas.includes(evento.key)) return;
 
         evento.preventDefault();
-        const botoes = Array.from(tabButtons);
+        const botoes = Array.from(botoesAbas);
         const indiceAtual = botoes.indexOf(evento.currentTarget);
         if (indiceAtual < 0) return;
 
@@ -179,129 +179,129 @@
         if (evento.key === "ArrowRight") proximoIndice = (indiceAtual + 1) % botoes.length;
 
         const proximoBotao = botoes[proximoIndice];
-        openTab(proximoBotao.dataset.tabTarget, proximoBotao);
+        abrirAba(proximoBotao.dataset.tabTarget, proximoBotao);
         proximoBotao.focus();
     }
 
-    function getActiveTabName() {
-        const activeButton = document.querySelector(".tablink.active[data-tab-target]");
-        if (activeButton) return activeButton.dataset.tabTarget;
+    function obterNomeAbaAtiva() {
+        const botaoAtivo = document.querySelector(".tablink.active[data-tab-target]");
+        if (botaoAtivo) return botaoAtivo.dataset.tabTarget;
 
-        const visibleTab = Array.from(document.querySelectorAll(".tabcontent")).find(tab => !tab.hasAttribute("hidden"));
-        return visibleTab ? visibleTab.id : null;
+        const abaVisivel = Array.from(document.querySelectorAll(".tabcontent")).find(aba => !aba.hasAttribute("hidden"));
+        return abaVisivel ? abaVisivel.id : null;
     }
 
-    function setupTabSwipe({ tabOrder, minDistance = 60, maxVerticalDrift = 80 } = {}) {
-        if (!Array.isArray(tabOrder) || tabOrder.length < 2) return;
+    function configurarDeslizeAbas({ tabOrder: ordemAbas, minDistance: distanciaMinima = 60, maxVerticalDrift: desvioVerticalMaximo = 80 } = {}) {
+        if (!Array.isArray(ordemAbas) || ordemAbas.length < 2) return;
 
-        const container = document.querySelector(".container");
-        if (!container) return;
+        const recipiente = document.querySelector(".container");
+        if (!recipiente) return;
 
-        let touchStartX = 0;
-        let touchStartY = 0;
-        let ignoreSwipe = false;
+        let inicioToqueX = 0;
+        let inicioToqueY = 0;
+        let ignorarDeslize = false;
 
-        container.addEventListener("touchstart", event => {
-            const touch = event.touches[0];
-            if (!touch) return;
-            ignoreSwipe = shouldIgnoreTabSwipe(event.target);
-            touchStartX = touch.clientX;
-            touchStartY = touch.clientY;
+        recipiente.addEventListener("touchstart", evento => {
+            const toque = evento.touches[0];
+            if (!toque) return;
+            ignorarDeslize = deveIgnorarDeslizeAbas(evento.target);
+            inicioToqueX = toque.clientX;
+            inicioToqueY = toque.clientY;
         }, { passive: true });
 
-        container.addEventListener("touchend", event => {
-            if (ignoreSwipe) {
-                ignoreSwipe = false;
+        recipiente.addEventListener("touchend", evento => {
+            if (ignorarDeslize) {
+                ignorarDeslize = false;
                 return;
             }
 
-            const touch = event.changedTouches[0];
-            if (!touch) return;
+            const toque = evento.changedTouches[0];
+            if (!toque) return;
 
-            const deltaX = touch.clientX - touchStartX;
-            const deltaY = touch.clientY - touchStartY;
+            const deltaX = toque.clientX - inicioToqueX;
+            const deltaY = toque.clientY - inicioToqueY;
 
-            if (Math.abs(deltaX) < minDistance) return;
-            if (Math.abs(deltaY) > maxVerticalDrift) return;
+            if (Math.abs(deltaX) < distanciaMinima) return;
+            if (Math.abs(deltaY) > desvioVerticalMaximo) return;
 
-            const currentTab = getActiveTabName();
-            const currentIndex = tabOrder.indexOf(currentTab);
-            if (currentIndex === -1) return;
+            const abaAtual = obterNomeAbaAtiva();
+            const indiceAtual = ordemAbas.indexOf(abaAtual);
+            if (indiceAtual === -1) return;
 
-            const nextIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1;
-            const nextTab = tabOrder[nextIndex];
-            if (!nextTab) return;
+            const proximoIndice = deltaX < 0 ? indiceAtual + 1 : indiceAtual - 1;
+            const proximaAba = ordemAbas[proximoIndice];
+            if (!proximaAba) return;
 
-            openTab(nextTab);
+            abrirAba(proximaAba);
         }, { passive: true });
     }
 
-    function shouldIgnoreTabSwipe(target) {
-        const explicitInteractiveArea = target?.closest?.(".table-wrapper, .weekly-heatmap, .hourly-heatmap, .calendar-heatmap");
-        if (explicitInteractiveArea) return true;
+    function deveIgnorarDeslizeAbas(destino) {
+        const areaInterativaExplicita = destino?.closest?.(".table-wrapper, .weekly-heatmap, .hourly-heatmap, .calendar-heatmap");
+        if (areaInterativaExplicita) return true;
 
-        let element = target instanceof Element ? target : null;
-        while (element && !element.classList.contains("container")) {
-            const style = window.getComputedStyle(element);
-            const canScrollHorizontally = /(auto|scroll)/.test(style.overflowX) && element.scrollWidth > element.clientWidth;
-            if (canScrollHorizontally) return true;
-            element = element.parentElement;
+        let elemento = destino instanceof Element ? destino : null;
+        while (elemento && !elemento.classList.contains("container")) {
+            const estilo = window.getComputedStyle(elemento);
+            const podeRolarHorizontalmente = /(auto|scroll)/.test(estilo.overflowX) && elemento.scrollWidth > elemento.clientWidth;
+            if (podeRolarHorizontalmente) return true;
+            elemento = elemento.parentElement;
         }
 
         return false;
     }
 
-    function setupCollapsibleSections() {
-        document.querySelectorAll(".collapsible-section").forEach(section => {
-            const trigger = section.querySelector(".collapsible-trigger");
-            if (!trigger) return;
+    function configurarSecoesRecolhiveis() {
+        document.querySelectorAll(".collapsible-section").forEach(secao => {
+            const acionador = secao.querySelector(".collapsible-trigger");
+            if (!acionador) return;
 
-            trigger.addEventListener("click", () => {
-                const isCollapsed = section.classList.toggle("is-collapsed");
-                trigger.setAttribute("aria-expanded", String(!isCollapsed));
-                if (!isCollapsed) {
+            acionador.addEventListener("click", () => {
+                const estaRecolhido = secao.classList.toggle("is-collapsed");
+                acionador.setAttribute("aria-expanded", String(!estaRecolhido));
+                if (!estaRecolhido) {
                     document.dispatchEvent(new CustomEvent("climate-collapsible-expanded", {
-                        detail: { section }
+                        detail: { section: secao }
                     }));
                 }
             });
         });
     }
 
-    function setupDateControls({ getSelectedDate, setSelectedDate, getTodayDate, onDateChange }) {
-        const dateInput = document.getElementById("selectedDate");
-        const todayButton = document.getElementById("btnToday");
+    function configurarControlesData({ getSelectedDate: obterDataSelecionada, setSelectedDate: definirDataSelecionada, getTodayDate: obterDataHoje, onDateChange: aoAlterarData }) {
+        const entradaData = document.getElementById("selectedDate");
+        const botaoHoje = document.getElementById("btnToday");
 
-        if (dateInput) {
-            dateInput.value = ClimateData.convertFirebaseDateToInput(getSelectedDate());
-            dateInput.addEventListener("change", () => {
-                setSelectedDate(ClimateData.convertInputDateToFirebase(dateInput.value));
-                onDateChange();
+        if (entradaData) {
+            entradaData.value = ClimateData.convertFirebaseDateToInput(obterDataSelecionada());
+            entradaData.addEventListener("change", () => {
+                definirDataSelecionada(ClimateData.convertInputDateToFirebase(entradaData.value));
+                aoAlterarData();
             });
         }
 
-        if (todayButton) {
-            todayButton.addEventListener("click", () => {
-                setSelectedDate(getTodayDate());
-                if (dateInput) dateInput.value = ClimateData.convertFirebaseDateToInput(getSelectedDate());
-                onDateChange();
+        if (botaoHoje) {
+            botaoHoje.addEventListener("click", () => {
+                definirDataSelecionada(obterDataHoje());
+                if (entradaData) entradaData.value = ClimateData.convertFirebaseDateToInput(obterDataSelecionada());
+                aoAlterarData();
             });
         }
     }
 
     window.ClimateUI = {
-        clearChartMessage,
-        renderChartMessage,
-        renderEmptyState,
-        renderStartupError,
-        renderTable,
+        clearChartMessage: limparMensagemGrafico,
+        renderChartMessage: renderizarMensagemGrafico,
+        renderEmptyState: renderizarEstadoVazio,
+        renderStartupError: renderizarErroInicializacao,
+        renderTable: renderizarTabela,
         ordenarTabelaPorHorario,
         baixarTabelaCsv,
-        getActiveTabName,
-        setupCollapsibleSections,
-        setupDateControls,
-        setupTabSwipe,
-        setupTabs,
+        getActiveTabName: obterNomeAbaAtiva,
+        setupCollapsibleSections: configurarSecoesRecolhiveis,
+        setupDateControls: configurarControlesData,
+        setupTabSwipe: configurarDeslizeAbas,
+        setupTabs: configurarAbas,
         navegarAbasPorTeclado,
     };
 })();

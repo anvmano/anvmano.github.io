@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-    const namespace = window.ClimateAssistant || {};
+    const espacoNomes = window.ClimateAssistant || {};
     const {
         normalizeHourFilter: normalizarFiltroHora,
         formatDate: formatarData,
@@ -9,11 +9,11 @@
         formatHourLabel: formatarRotuloHora,
         formatNumber: formatarNumero,
         formatTimestampLabel: formatarRotuloTimestamp,
-    } = namespace.format;
+    } = espacoNomes.format;
 
     function montarResultadoQualidadeAr(ambiente, metrica, datasPeriodo, intencao, dados) {
         const aqiDiario = datasPeriodo
-            .map(data => montarQualidadeArDiaria(dados?.[data], data, intencao.hour))
+            .map(dataConsulta => montarQualidadeArDiaria(dados?.[dataConsulta], dataConsulta, intencao.hour))
             .filter(Boolean);
         const base = {
             ambiente: ambiente.label,
@@ -51,7 +51,7 @@
         }
 
         const valores = aqiDiario.map(dia => dia.aqi);
-        const estatisticas = namespace.metrics.calculateStats(valores);
+        const estatisticas = espacoNomes.metrics.calculateStats(valores);
         const maisRecente = aqiDiario[aqiDiario.length - 1];
 
         return {
@@ -61,7 +61,7 @@
             minima: Math.round(estatisticas.min),
             maxima: Math.round(estatisticas.max),
             delta: Math.round(estatisticas.delta),
-            tendencia: namespace.metrics.trendFromDelta(estatisticas.delta),
+            tendencia: espacoNomes.metrics.trendFromDelta(estatisticas.delta),
             classificacao_atual: maisRecente.classificacao,
             impacto_atual: maisRecente.impacto,
             dominante_atual: maisRecente.dominante,
@@ -70,17 +70,17 @@
         };
     }
 
-    function montarQualidadeArDiaria(dadosDia, data, hora) {
+    function montarQualidadeArDiaria(dadosDia, dados, hora) {
         if (!window.ClimateAqi?.calculate) return null;
 
         const dadosFiltrados = filtrarDadosDiaPorHora(dadosDia, hora);
         if (!Object.keys(dadosFiltrados).length) return null;
 
-        const resultado = window.ClimateAqi.calculate({ [data]: dadosFiltrados });
+        const resultado = window.ClimateAqi.calculate({ [dados]: dadosFiltrados });
         if (!resultado) return null;
 
         return {
-            data: formatarData(data),
+            data: formatarData(dados),
             aqi: resultado.aqi,
             classificacao: resultado.category.label,
             impacto: resultado.category.impact,
@@ -108,6 +108,6 @@
         return `${formatarNumero(Number(item.value))}${item.unit}`;
     }
 
-    namespace.aqi = { buildAirQualityResult: montarResultadoQualidadeAr };
-    window.ClimateAssistant = namespace;
+    espacoNomes.aqi = { buildAirQualityResult: montarResultadoQualidadeAr };
+    window.ClimateAssistant = espacoNomes;
 })();

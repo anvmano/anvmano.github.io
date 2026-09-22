@@ -33,9 +33,9 @@
         botao.addEventListener("click", abrirAssistenteSobDemanda, { once: true });
     }
 
-    async function abrirAssistenteSobDemanda(event) {
-        event.preventDefault();
-        event.stopPropagation();
+    async function abrirAssistenteSobDemanda(evento) {
+        evento.preventDefault();
+        evento.stopPropagation();
 
         const botao = document.getElementById("aiChatToggle");
         if (botao) {
@@ -47,8 +47,8 @@
             await carregarAssistente();
             inicializarAssistente();
             window.ClimateAssistant?.ui?.open();
-        } catch (error) {
-            window.ClimateDiagnostics?.erro("Falha ao carregar assistente.", error);
+        } catch (erro) {
+            window.ClimateDiagnostics?.erro("Falha ao carregar assistente.", erro);
             alert("Não foi possível carregar a assistente agora.");
         } finally {
             if (botao) {

@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-    let zoomOverlay = null;
+    let sobreposicaoAmpliacao = null;
     let disparadorZoom = null;
     let eventoEscapeRegistrado = false;
     let carregamentoEstilosZoom = null;
@@ -18,10 +18,10 @@
         return carregamentoEstilosZoom;
     }
 
-    async function abrirZoom(card, zoomOptions, disparador) {
+    async function abrirZoom(card, opcoesAmpliacao, disparador) {
         try {
             await garantirEstilosZoom();
-            handleZoom(card, zoomOptions, disparador);
+            tratarAmpliacao(card, opcoesAmpliacao, disparador);
         } catch (erro) {
             window.ClimateDiagnostics?.erro("Falha ao preparar o zoom do gráfico.", erro);
         }
@@ -30,23 +30,23 @@
     function registrarFechamentoPorEscape() {
         if (eventoEscapeRegistrado) return;
 
-        document.addEventListener("keydown", event => {
-            if (event.key === "Escape") closeZoom();
+        document.addEventListener("keydown", evento => {
+            if (evento.key === "Escape") fecharAmpliacao();
         });
         eventoEscapeRegistrado = true;
     }
 
-    function isTouchDevice() {
+    function ehDispositivoToque() {
         return window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
     }
 
-    function closeZoom({ restaurarFoco = true } = {}) {
-        if (!zoomOverlay) return;
+    function fecharAmpliacao({ restaurarFoco = true } = {}) {
+        if (!sobreposicaoAmpliacao) return;
         const disparadorAnterior = disparadorZoom;
-        const zoomChart = zoomOverlay._chart;
-        if (zoomChart) zoomChart.destroy();
-        zoomOverlay.remove();
-        zoomOverlay = null;
+        const graficoAmpliado = sobreposicaoAmpliacao._chart;
+        if (graficoAmpliado) graficoAmpliado.destroy();
+        sobreposicaoAmpliacao.remove();
+        sobreposicaoAmpliacao = null;
         disparadorZoom = null;
 
         if (restaurarFoco && disparadorAnterior?.isConnected) {
@@ -54,68 +54,68 @@
         }
     }
 
-    function cloneChartData(sourceChart) {
+    function copiarDadosGrafico(graficoOrigem) {
         return {
-            labels: sourceChart.data.labels ? [...sourceChart.data.labels] : undefined,
-            datasets: sourceChart.data.datasets.map(dataset => ({
-                type: dataset.type,
-                label: dataset.label,
-                data: Array.isArray(dataset.data)
-                    ? dataset.data.map(item => item && typeof item === "object" ? { ...item } : item)
-                    : dataset.data,
-                yAxisID: dataset.yAxisID,
-                borderColor: dataset.borderColor,
-                borderDash: dataset.borderDash,
-                backgroundColor: Array.isArray(dataset.backgroundColor) || typeof dataset.backgroundColor === "string"
-                    ? dataset.backgroundColor
+            labels: graficoOrigem.data.labels ? [...graficoOrigem.data.labels] : undefined,
+            datasets: graficoOrigem.data.datasets.map(serieGrafico => ({
+                type: serieGrafico.type,
+                label: serieGrafico.label,
+                data: Array.isArray(serieGrafico.data)
+                    ? serieGrafico.data.map(item => item && typeof item === "object" ? { ...item } : item)
+                    : serieGrafico.data,
+                yAxisID: serieGrafico.yAxisID,
+                borderColor: serieGrafico.borderColor,
+                borderDash: serieGrafico.borderDash,
+                backgroundColor: Array.isArray(serieGrafico.backgroundColor) || typeof serieGrafico.backgroundColor === "string"
+                    ? serieGrafico.backgroundColor
                     : "transparent",
-                fill: dataset.fill,
-                tension: dataset.tension,
-                borderWidth: dataset.borderWidth,
-                pointRadius: dataset.pointRadius,
-                pointHitRadius: dataset.pointHitRadius || 18,
-                pointHoverRadius: dataset.pointHoverRadius || 6,
-                pointBackgroundColor: dataset.pointBackgroundColor,
-                pointBorderColor: dataset.pointBorderColor,
-                pointHoverBackgroundColor: dataset.pointHoverBackgroundColor,
-                pointHoverBorderColor: dataset.pointHoverBorderColor,
-                pointHoverBorderWidth: dataset.pointHoverBorderWidth,
-                showLine: dataset.showLine,
-                spanGaps: dataset.spanGaps,
-                order: dataset.order,
-                parsing: dataset.parsing,
-                tipoDado: dataset.tipoDado,
+                fill: serieGrafico.fill,
+                tension: serieGrafico.tension,
+                borderWidth: serieGrafico.borderWidth,
+                pointRadius: serieGrafico.pointRadius,
+                pointHitRadius: serieGrafico.pointHitRadius || 18,
+                pointHoverRadius: serieGrafico.pointHoverRadius || 6,
+                pointBackgroundColor: serieGrafico.pointBackgroundColor,
+                pointBorderColor: serieGrafico.pointBorderColor,
+                pointHoverBackgroundColor: serieGrafico.pointHoverBackgroundColor,
+                pointHoverBorderColor: serieGrafico.pointHoverBorderColor,
+                pointHoverBorderWidth: serieGrafico.pointHoverBorderWidth,
+                showLine: serieGrafico.showLine,
+                spanGaps: serieGrafico.spanGaps,
+                order: serieGrafico.order,
+                parsing: serieGrafico.parsing,
+                tipoDado: serieGrafico.tipoDado,
             }))
         };
     }
 
-    function createZoomChart({ sourceChart, targetCtx, getZoomOptions }) {
-        const sourceId = sourceChart.canvas.id;
-        const eGraficoSolar = Boolean(sourceChart.$solarDayTimes);
+    function criarGraficoAmpliado({ sourceChart: graficoOrigem, targetCtx: contextoDestino, getZoomOptions: obterOpcoesAmpliacao }) {
+        const idOrigem = graficoOrigem.canvas.id;
+        const eGraficoSolar = Boolean(graficoOrigem.$solarDayTimes);
         const plugins = [];
         if (eGraficoSolar) plugins.push(ClimateSolar.solarDayBackgroundPlugin);
-        if (Array.isArray(sourceChart.$zoomPlugins)) plugins.push(...sourceChart.$zoomPlugins);
-        const config = {
-            type: sourceChart.config.type || "line",
-            data: cloneChartData(sourceChart),
-            options: getZoomOptions?.(sourceId) || {},
+        if (Array.isArray(graficoOrigem.$zoomPlugins)) plugins.push(...graficoOrigem.$zoomPlugins);
+        const configuracao = {
+            type: graficoOrigem.config.type || "line",
+            data: copiarDadosGrafico(graficoOrigem),
+            options: obterOpcoesAmpliacao?.(idOrigem) || {},
             plugins,
         };
 
-        const zoomChart = new Chart(targetCtx, config);
+        const graficoAmpliado = new Chart(contextoDestino, configuracao);
         if (eGraficoSolar) {
-            zoomChart.$solarDayTimes = sourceChart.$solarDayTimes;
+            graficoAmpliado.$solarDayTimes = graficoOrigem.$solarDayTimes;
         }
-        if (sourceChart.$comfortBand) {
-            zoomChart.$comfortBand = sourceChart.$comfortBand;
-            zoomChart.update();
+        if (graficoOrigem.$comfortBand) {
+            graficoAmpliado.$comfortBand = graficoOrigem.$comfortBand;
+            graficoAmpliado.update();
         }
-        if (sourceChart.$marcadorAgora) {
-            zoomChart.$marcadorAgora = { ...sourceChart.$marcadorAgora };
-            zoomChart.update("none");
+        if (graficoOrigem.$marcadorAgora) {
+            graficoAmpliado.$marcadorAgora = { ...graficoOrigem.$marcadorAgora };
+            graficoAmpliado.update("none");
         }
-        zoomOverlay._chart = zoomChart;
-        return zoomChart;
+        sobreposicaoAmpliacao._chart = graficoAmpliado;
+        return graficoAmpliado;
     }
 
     function conterFocoNoDialogo(evento, dialogo) {
@@ -142,79 +142,79 @@
         }
     }
 
-    function handleZoom(card, { chartInstances, getZoomOptions }, disparador = document.activeElement) {
-        closeZoom({ restaurarFoco: false });
+    function tratarAmpliacao(card, { chartInstances: instanciasGraficos, getZoomOptions: obterOpcoesAmpliacao }, disparador = document.activeElement) {
+        fecharAmpliacao({ restaurarFoco: false });
 
-        const sourceCanvas = card.querySelector("canvas");
-        if (!sourceCanvas) return;
+        const canvasOrigem = card.querySelector("canvas");
+        if (!canvasOrigem) return;
 
-        const sourceChart = chartInstances[sourceCanvas.id];
-        if (!sourceChart) return;
+        const graficoOrigem = instanciasGraficos[canvasOrigem.id];
+        if (!graficoOrigem) return;
 
-        const overlay = document.createElement("div");
-        overlay.className = "plot-zoom-overlay";
-        overlay.setAttribute("role", "dialog");
-        overlay.setAttribute("aria-modal", "true");
-        overlay.setAttribute("tabindex", "-1");
-        if (isTouchDevice()) {
-            overlay.classList.add("plot-zoom-overlay--touch");
+        const sobreposicao = document.createElement("div");
+        sobreposicao.className = "plot-zoom-overlay";
+        sobreposicao.setAttribute("role", "dialog");
+        sobreposicao.setAttribute("aria-modal", "true");
+        sobreposicao.setAttribute("tabindex", "-1");
+        if (ehDispositivoToque()) {
+            sobreposicao.classList.add("plot-zoom-overlay--touch");
         }
 
-        const clone = card.cloneNode(false);
-        const label = card.querySelector(".chart-label");
-        const closeButton = document.createElement("button");
-        const zoomCanvas = document.createElement("canvas");
-        closeButton.type = "button";
-        closeButton.className = "plot-zoom-close";
-        closeButton.setAttribute("aria-label", "Fechar gráfico ampliado");
-        closeButton.innerHTML = "&times;";
-        zoomCanvas.className = "plot plot--zoom";
-        zoomCanvas.setAttribute("aria-label", sourceCanvas.getAttribute("aria-label") || "Gráfico ampliado");
-        zoomCanvas.setAttribute("role", "img");
+        const cardAmpliado = card.cloneNode(false);
+        const rotulo = card.querySelector(".chart-label");
+        const botaoFechar = document.createElement("button");
+        const canvasAmpliado = document.createElement("canvas");
+        botaoFechar.type = "button";
+        botaoFechar.className = "plot-zoom-close";
+        botaoFechar.setAttribute("aria-label", "Fechar gráfico ampliado");
+        botaoFechar.innerHTML = "&times;";
+        canvasAmpliado.className = "plot plot--zoom";
+        canvasAmpliado.setAttribute("aria-label", canvasOrigem.getAttribute("aria-label") || "Gráfico ampliado");
+        canvasAmpliado.setAttribute("role", "img");
 
-        if (label) {
-            const rotuloAmpliado = label.cloneNode(true);
-            rotuloAmpliado.id = `zoom-chart-label-${sourceCanvas.id}`;
-            overlay.setAttribute("aria-labelledby", rotuloAmpliado.id);
-            clone.appendChild(rotuloAmpliado);
+        if (rotulo) {
+            const rotuloAmpliado = rotulo.cloneNode(true);
+            rotuloAmpliado.id = `zoom-chart-label-${canvasOrigem.id}`;
+            sobreposicao.setAttribute("aria-labelledby", rotuloAmpliado.id);
+            cardAmpliado.appendChild(rotuloAmpliado);
         } else {
-            overlay.setAttribute("aria-label", sourceCanvas.getAttribute("aria-label") || "Gráfico ampliado");
+            sobreposicao.setAttribute("aria-label", canvasOrigem.getAttribute("aria-label") || "Gráfico ampliado");
         }
-        clone.appendChild(closeButton);
-        clone.appendChild(zoomCanvas);
-        overlay.appendChild(clone);
+        cardAmpliado.appendChild(botaoFechar);
+        cardAmpliado.appendChild(canvasAmpliado);
+        sobreposicao.appendChild(cardAmpliado);
 
-        const fecharSeFundo = event => {
-            if (event.target === overlay) closeZoom();
+        const fecharSeFundo = evento => {
+            if (evento.target === sobreposicao) fecharAmpliacao();
         };
 
-        overlay.addEventListener("pointerdown", fecharSeFundo);
-        overlay.addEventListener("click", fecharSeFundo);
-        clone.addEventListener("pointerdown", event => event.stopPropagation());
-        clone.addEventListener("touchstart", event => event.stopPropagation(), { passive: true });
-        zoomCanvas.addEventListener("pointerdown", event => event.stopPropagation());
-        zoomCanvas.addEventListener("touchstart", event => event.stopPropagation(), { passive: true });
-        closeButton.addEventListener("click", event => {
-            event.stopPropagation();
-            closeZoom();
+        sobreposicao.addEventListener("pointerdown", fecharSeFundo);
+        sobreposicao.addEventListener("click", fecharSeFundo);
+        cardAmpliado.addEventListener("pointerdown", evento => evento.stopPropagation());
+        cardAmpliado.addEventListener("touchstart", evento => evento.stopPropagation(), { passive: true });
+        canvasAmpliado.addEventListener("pointerdown", evento => evento.stopPropagation());
+        canvasAmpliado.addEventListener("touchstart", evento => evento.stopPropagation(), { passive: true });
+        botaoFechar.addEventListener("click", evento => {
+            evento.stopPropagation();
+            fecharAmpliacao();
         });
-        overlay.addEventListener("keydown", event => conterFocoNoDialogo(event, overlay));
+        sobreposicao.addEventListener("keydown", evento => conterFocoNoDialogo(evento, sobreposicao));
 
         disparadorZoom = disparador instanceof HTMLElement ? disparador : null;
-        zoomOverlay = overlay;
-        document.body.appendChild(overlay);
-        createZoomChart({ sourceChart, targetCtx: zoomCanvas.getContext("2d"), getZoomOptions });
-        closeButton.focus({ preventScroll: true });
+        sobreposicaoAmpliacao = sobreposicao;
+        document.body.appendChild(sobreposicao);
+        criarGraficoAmpliado({ sourceChart: graficoOrigem, targetCtx: canvasAmpliado.getContext("2d"), getZoomOptions: obterOpcoesAmpliacao });
+        botaoFechar.focus({ preventScroll: true });
     }
 
-    function createZoomButton(card, zoomOptions) {
+    function criarBotaoAmpliacao(card, opcoesAmpliacao) {
         if (card.querySelector(".chart-zoom-button")) return;
 
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "chart-zoom-button";
-        button.setAttribute("aria-label", "Ampliar gráfico");
-        button.innerHTML = `
+        const botao = document.createElement("button");
+        botao.type = "button";
+        botao.className = "chart-zoom-button";
+        botao.setAttribute("aria-label", "Ampliar gráfico");
+        botao.innerHTML = `
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <path d="M15 3h6v6"/>
                 <path d="M21 3l-7 7"/>
@@ -222,37 +222,37 @@
                 <path d="M3 21l7-7"/>
             </svg>
         `;
-        button.addEventListener("click", event => {
-            event.stopPropagation();
-            void abrirZoom(card, zoomOptions, button);
+        botao.addEventListener("click", evento => {
+            evento.stopPropagation();
+            void abrirZoom(card, opcoesAmpliacao, botao);
         });
 
-        card.appendChild(button);
+        card.appendChild(botao);
     }
 
-    function setup(zoomOptions) {
+    function configurarModulo(opcoesAmpliacao) {
         registrarFechamentoPorEscape();
-        registrarCards(document, zoomOptions);
+        registrarCards(document, opcoesAmpliacao);
     }
 
-    function registrarCards(raiz = document, zoomOptions) {
+    function registrarCards(raiz = document, opcoesAmpliacao) {
         registrarFechamentoPorEscape();
         raiz.querySelectorAll(".chart-card").forEach(card => {
             if (card.dataset.zoomRegistrado === "true") return;
             card.dataset.zoomRegistrado = "true";
             card.classList.add("chart-card--zoomable");
             card.removeAttribute("title");
-            createZoomButton(card, zoomOptions);
+            criarBotaoAmpliacao(card, opcoesAmpliacao);
             card.addEventListener("dblclick", () => {
                 const botaoZoom = card.querySelector(".chart-zoom-button");
-                void abrirZoom(card, zoomOptions, botaoZoom || card);
+                void abrirZoom(card, opcoesAmpliacao, botaoZoom || card);
             });
         });
     }
 
     window.ClimateZoom = {
-        closeZoom,
-        setup,
+        closeZoom: fecharAmpliacao,
+        setup: configurarModulo,
         registrarCards,
     };
 })();

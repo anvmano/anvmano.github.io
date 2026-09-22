@@ -1,83 +1,87 @@
 'use strict';
 
 (function () {
-    const { ids, fields, humidityComfortBand } = window.AppConfig;
-    const livingRoomFields = fields.livingRoom;
-    const temperatureChart = document.getElementById(ids.charts.livingRoomTemperature).getContext("2d");
-    const feelsLikeChart = document.getElementById(ids.charts.livingRoomFeelsLike).getContext("2d");
-    const humidityChart = document.getElementById(ids.charts.livingRoomHumidity).getContext("2d");
-    const pressureChart = document.getElementById(ids.charts.livingRoomPressure).getContext("2d");
+    const { ids, fields: campos, humidityComfortBand: faixaConfortoUmidade } = window.AppConfig;
+    const camposSala = campos.livingRoom;
+    const graficoTemperatura = document.getElementById(ids.charts.livingRoomTemperature).getContext("2d");
+    const graficoSensacaoTermica = document.getElementById(ids.charts.livingRoomFeelsLike).getContext("2d");
+    const graficoUmidade = document.getElementById(ids.charts.livingRoomHumidity).getContext("2d");
+    const graficoPressao = document.getElementById(ids.charts.livingRoomPressure).getContext("2d");
 
-    function createTable(data) {
+    function criarTabela(dados) {
         return ClimateData.createTables([
-            livingRoomFields.date,
-            livingRoomFields.time,
-            livingRoomFields.co,
-            livingRoomFields.co2,
-            livingRoomFields.acetone,
-            livingRoomFields.alcohol,
-            livingRoomFields.nh4,
-            livingRoomFields.toluene,
-        ], data);
+            camposSala.date,
+            camposSala.time,
+            camposSala.co,
+            camposSala.co2,
+            camposSala.acetone,
+            camposSala.alcohol,
+            camposSala.nh4,
+            camposSala.toluene,
+        ], dados);
     }
 
-    function render({ data, selectedDate, createChart, colors, ui }) {
-        const filteredData = ClimateData.filterDataByDays(data, 2, selectedDate);
-        const chartData = ClimateData.filterDataByRollingHours(data, selectedDate, 24);
-        ClimateAnalytics.renderStats("sala", filteredData, selectedDate);
-        ClimateAnalytics.renderAdvancedClimateViews(data, selectedDate, {
-            metricKey: livingRoomFields.temperature,
+    function renderizar({ data: dados, selectedDate: dataSelecionada, createChart: criarGrafico, colors: cores, ui: interfaceUsuario }) {
+        const dadosFiltrados = ClimateData.filterDataByDays(dados, 2, dataSelecionada);
+        const dadosGrafico = ClimateData.filterDataByRollingHours(dados, dataSelecionada, 24);
+        ClimateAnalytics.renderStats("sala", dadosFiltrados, dataSelecionada);
+        ClimateAnalytics.renderAdvancedClimateViews(dados, dataSelecionada, {
+            metricKey: camposSala.temperature,
             containers: ids.advancedViews.livingRoom,
         });
 
-        createChart({
-            canvasCtx: temperatureChart,
+        criarGrafico({
+            canvasCtx: graficoTemperatura,
             containerId: ids.chartContainers.livingRoomTemperature,
-            data: chartData,
-            key: livingRoomFields.temperature,
+            data: dadosGrafico,
+            key: camposSala.temperature,
             label: "Temperatura",
-            color: colors.blue,
+            color: cores.blue,
             yAxisTitle: "(°C)",
             yAxisSuffix: "°",
-            emptyMessage: `Sem dados de temperatura da sala em ${selectedDate.replace(/-/g, "/")}.`
+            grupoSincronizacao: "sala",
+            emptyMessage: `Sem dados de temperatura da sala em ${dataSelecionada.replace(/-/g, "/")}.`
         });
-        createChart({
-            canvasCtx: feelsLikeChart,
+        criarGrafico({
+            canvasCtx: graficoSensacaoTermica,
             containerId: ids.chartContainers.livingRoomFeelsLike,
-            data: chartData,
-            key: livingRoomFields.feelsLike,
+            data: dadosGrafico,
+            key: camposSala.feelsLike,
             label: "Sensação Térmica",
-            color: colors.green,
+            color: cores.green,
             yAxisTitle: "(°C)",
             yAxisSuffix: "°",
-            emptyMessage: `Sem dados de sensação térmica da sala em ${selectedDate.replace(/-/g, "/")}.`
+            grupoSincronizacao: "sala",
+            emptyMessage: `Sem dados de sensação térmica da sala em ${dataSelecionada.replace(/-/g, "/")}.`
         });
-        createChart({
-            canvasCtx: humidityChart,
+        criarGrafico({
+            canvasCtx: graficoUmidade,
             containerId: ids.chartContainers.livingRoomHumidity,
-            data: chartData,
-            key: livingRoomFields.humidity,
+            data: dadosGrafico,
+            key: camposSala.humidity,
             label: "Umidade",
-            color: colors.purple,
+            color: cores.purple,
             yAxisTitle: "%",
             yAxisSuffix: "%",
-            comfortBand: humidityComfortBand,
-            emptyMessage: `Sem dados de umidade da sala em ${selectedDate.replace(/-/g, "/")}.`
+            comfortBand: faixaConfortoUmidade,
+            grupoSincronizacao: "sala",
+            emptyMessage: `Sem dados de umidade da sala em ${dataSelecionada.replace(/-/g, "/")}.`
         });
-        createChart({
-            canvasCtx: pressureChart,
+        criarGrafico({
+            canvasCtx: graficoPressao,
             containerId: ids.chartContainers.livingRoomPressure,
-            data: chartData,
-            key: livingRoomFields.pressure,
+            data: dadosGrafico,
+            key: camposSala.pressure,
             label: "Pressão (hPa)",
-            color: colors.amber,
+            color: cores.amber,
             yAxisTitle: "hPa",
             yAxisSuffix: "hPa",
-            emptyMessage: `Sem dados de pressão em ${selectedDate.replace(/-/g, "/")}.`
+            grupoSincronizacao: "sala",
+            emptyMessage: `Sem dados de pressão em ${dataSelecionada.replace(/-/g, "/")}.`
         });
 
-        ui.renderTable(ids.tables.livingRoom, createTable(filteredData), `Sem registros da sala em ${selectedDate.replace(/-/g, "/")}.`);
+        interfaceUsuario.renderTable(ids.tables.livingRoom, criarTabela(dadosFiltrados), `Sem registros da sala em ${dataSelecionada.replace(/-/g, "/")}.`);
     }
 
-    window.SalaView = { render };
+    window.SalaView = { render: renderizar };
 })();

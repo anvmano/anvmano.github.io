@@ -1,29 +1,29 @@
-import assert from "node:assert/strict";
-import fs from "node:fs";
-import http from "node:http";
-import os from "node:os";
-import path from "node:path";
+import verificar from "node:assert/strict";
+import arquivos from "node:fs";
+import servidorHttp from "node:http";
+import sistemaOperacional from "node:os";
+import caminho from "node:path";
 import { chromium } from "playwright-core";
-import { getDocument, OPS } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { getDocument as obterDocumento, OPS } from "pdfjs-dist/legacy/build/pdf.mjs";
 
 const raiz = process.cwd();
 const executavel = [
     "C:/Program Files/Google/Chrome/Application/chrome.exe",
     "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
     "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
-].find(fs.existsSync);
-assert.ok(executavel, "Chrome ou Edge não encontrado para testar o PDF.");
+].find(arquivos.existsSync);
+verificar.ok(executavel, "Chrome ou Edge não encontrado para testar o PDF.");
 
-const servidor = http.createServer((requisicao, resposta) => {
+const servidor = servidorHttp.createServer((requisicao, resposta) => {
     const relativo = decodeURIComponent(new URL(requisicao.url, "http://localhost").pathname.slice(1));
-    const arquivo = path.resolve(raiz, relativo);
-    if (!arquivo.startsWith(raiz) || !fs.existsSync(arquivo)) return resposta.writeHead(404).end();
-    fs.createReadStream(arquivo).pipe(resposta);
+    const arquivo = caminho.resolve(raiz, relativo);
+    if (!arquivo.startsWith(raiz) || !arquivos.existsSync(arquivo)) return resposta.writeHead(404).end();
+    arquivos.createReadStream(arquivo).pipe(resposta);
 });
-await new Promise(resolve => servidor.listen(0, "127.0.0.1", resolve));
+await new Promise(resolver => servidor.listen(0, "127.0.0.1", resolver));
 const porta = servidor.address().port;
 const navegador = await chromium.launch({ executablePath: executavel, headless: true });
-const destino = path.join(os.tmpdir(), `relatorio-estacao-teste-${Date.now()}.pdf`);
+const destino = caminho.join(sistemaOperacional.tmpdir(), `relatorio-estacao-teste-${Date.now()}.pdf`);
 
 try {
     const pagina = await navegador.newPage({ viewport: { width: 1280, height: 900 } });
@@ -39,29 +39,29 @@ try {
     await pagina.addScriptTag({ content: "window.ClimatePdfReportModules={format:{formatDateTime:()=>\"16/08/2026 12:00\"}}" });
     await pagina.addScriptTag({ url: `http://127.0.0.1:${porta}/scripts/reports/pdf-report-pdf.js` });
 
-    const download = pagina.waitForEvent("download");
+    const arquivoBaixado = pagina.waitForEvent("download");
     await pagina.evaluate(() => window.ClimatePdfReportModules.pdf.generatePdf(document.getElementById("report"), "teste.pdf"));
-    await (await download).saveAs(destino);
+    await (await arquivoBaixado).saveAs(destino);
 
-    const bytes = new Uint8Array(fs.readFileSync(destino));
-    const documento = await getDocument({ data: bytes, disableWorker: true, useSystemFonts: true, verbosity: 0 }).promise;
-    assert.ok(documento.numPages >= 4, "O relatório deve separar resumo, gráficos e tabela em páginas.");
+    const bytes = new Uint8Array(arquivos.readFileSync(destino));
+    const documento = await obterDocumento({ data: bytes, disableWorker: true, useSystemFonts: true, verbosity: 0 }).promise;
+    verificar.ok(documento.numPages >= 4, "O relatório deve separar resumo, gráficos e tabela em páginas.");
 
     let textoCompleto = "";
     let imagens = 0;
     for (let indice = 1; indice <= documento.numPages; indice += 1) {
         const paginaPdf = await documento.getPage(indice);
-        assert.deepEqual(paginaPdf.view.slice(0, 2), [0, 0]);
+        verificar.deepEqual(paginaPdf.view.slice(0, 2), [0, 0]);
         textoCompleto += (await paginaPdf.getTextContent()).items.map(item => item.str).join(" ");
         const operadores = await paginaPdf.getOperatorList();
         imagens += operadores.fnArray.filter(codigo => [OPS.paintImageXObject, OPS.paintInlineImageXObject].includes(codigo)).length;
     }
-    assert.match(textoCompleto, /Estação Climática/);
-    assert.match(textoCompleto, /Página 1/);
-    assert.ok(imagens >= 5, "Cabeçalho, resumo, gráficos e tabela devem ser capturados no PDF.");
+    verificar.match(textoCompleto, /Estação Climática/);
+    verificar.match(textoCompleto, /Página 1/);
+    verificar.ok(imagens >= 5, "Cabeçalho, resumo, gráficos e tabela devem ser capturados no PDF.");
     console.log(`PDF validado: ${documento.numPages} páginas e ${imagens} blocos visuais.`);
 } finally {
     await navegador.close();
-    await new Promise(resolve => servidor.close(resolve));
-    if (fs.existsSync(destino)) fs.unlinkSync(destino);
+    await new Promise(resolver => servidor.close(resolver));
+    if (arquivos.existsSync(destino)) arquivos.unlinkSync(destino);
 }

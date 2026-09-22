@@ -1,7 +1,7 @@
-import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
-import vm from "node:vm";
+import verificar from "node:assert/strict";
+import arquivos from "node:fs";
+import caminho from "node:path";
+import maquinaVirtual from "node:vm";
 
 class ListaClasses {
     constructor(...classes) {
@@ -21,7 +21,7 @@ class BotaoAba {
         this.listeners = new Map();
     }
 
-    addEventListener(tipo, callback) { this.listeners.set(tipo, callback); }
+    addEventListener(tipo, aoConcluir) { this.listeners.set(tipo, aoConcluir); }
     setAttribute(nome, valor) { this.atributos.set(nome, String(valor)); }
     getAttribute(nome) { return this.atributos.get(nome); }
     focus() { documento.activeElement = this; }
@@ -78,38 +78,38 @@ const contexto = {
     CustomEvent: class {},
 };
 contexto.window = contexto;
-vm.createContext(contexto);
-vm.runInContext(
-    fs.readFileSync(path.join(process.cwd(), "scripts/ui/ui.js"), "utf8"),
+maquinaVirtual.createContext(contexto);
+maquinaVirtual.runInContext(
+    arquivos.readFileSync(caminho.join(process.cwd(), "scripts/ui/ui.js"), "utf8"),
     contexto,
     { filename: "scripts/ui/ui.js" }
 );
 
 contexto.ClimateUI.setupTabs("Tab0");
-assert.equal(botoes[0].getAttribute("tabindex"), "0");
-assert.deepEqual(botoes.slice(1).map(botao => botao.getAttribute("tabindex")), ["-1", "-1", "-1"]);
+verificar.equal(botoes[0].getAttribute("tabindex"), "0");
+verificar.deepEqual(botoes.slice(1).map(botao => botao.getAttribute("tabindex")), ["-1", "-1", "-1"]);
 
-assert.equal(botoes[0].dispararTecla("ArrowLeft"), true);
-assert.equal(botoes[3].classList.contains("active"), true);
-assert.equal(documento.activeElement, botoes[3]);
+verificar.equal(botoes[0].dispararTecla("ArrowLeft"), true);
+verificar.equal(botoes[3].classList.contains("active"), true);
+verificar.equal(documento.activeElement, botoes[3]);
 
-assert.equal(botoes[3].dispararTecla("ArrowRight"), true);
-assert.equal(botoes[0].classList.contains("active"), true);
+verificar.equal(botoes[3].dispararTecla("ArrowRight"), true);
+verificar.equal(botoes[0].classList.contains("active"), true);
 
 botoes[2].dispararTecla("Home");
-assert.equal(botoes[0].classList.contains("active"), true);
+verificar.equal(botoes[0].classList.contains("active"), true);
 botoes[0].dispararTecla("End");
-assert.equal(botoes[3].classList.contains("active"), true);
-assert.equal(botoes.filter(botao => botao.getAttribute("tabindex") === "0").length, 1);
+verificar.equal(botoes[3].classList.contains("active"), true);
+verificar.equal(botoes.filter(botao => botao.getAttribute("tabindex") === "0").length, 1);
 
-const codigoZoom = fs.readFileSync(path.join(process.cwd(), "scripts/charts/zoom.js"), "utf8");
-assert.match(codigoZoom, /setAttribute\("role", "dialog"\)/);
-assert.match(codigoZoom, /setAttribute\("aria-modal", "true"\)/);
-assert.match(codigoZoom, /aria-labelledby/);
-assert.match(codigoZoom, /conterFocoNoDialogo/);
-assert.match(codigoZoom, /closeButton\.focus/);
-assert.match(codigoZoom, /disparadorAnterior\.focus/);
-assert.match(codigoZoom, /await garantirEstilosZoom\(\)/);
-assert.doesNotMatch(codigoZoom, /window\.scrollTo/);
+const codigoZoom = arquivos.readFileSync(caminho.join(process.cwd(), "scripts/charts/zoom.js"), "utf8");
+verificar.match(codigoZoom, /setAttribute\("role", "dialog"\)/);
+verificar.match(codigoZoom, /setAttribute\("aria-modal", "true"\)/);
+verificar.match(codigoZoom, /aria-labelledby/);
+verificar.match(codigoZoom, /conterFocoNoDialogo/);
+verificar.match(codigoZoom, /botaoFechar\.focus/);
+verificar.match(codigoZoom, /disparadorAnterior\.focus/);
+verificar.match(codigoZoom, /await garantirEstilosZoom\(\)/);
+verificar.doesNotMatch(codigoZoom, /window\.scrollTo/);
 
 console.log("Testes de acessibilidade de abas e zoom concluídos com sucesso.");

@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-    const HEADER_LABELS = {
+    const ROTULOS_CABECALHOS = {
         temperaturaDS18B20: "Temperatura",
         "Sensacao termica": "Sensação térmica",
         sensacaoTermica: "Sensação térmica",
@@ -12,31 +12,31 @@
         Toluen: "Tolueno"
     };
 
-    function getMeasurementUnit(key) {
-        return window.AppConfig?.measurementUnits?.[key] || "";
+    function obterUnidadeMedicao(chave) {
+        return window.AppConfig?.measurementUnits?.[chave] || "";
     }
 
-    function normalizeMeasurementValue(key, value) {
-        if (value === null || value === undefined || (typeof value === "string" && value.trim() === "")) {
+    function normalizarValorMedicao(chave, valor) {
+        if (valor === null || valor === undefined || (typeof valor === "string" && valor.trim() === "")) {
             return null;
         }
-        const numericValue = Number(value);
-        if (!Number.isFinite(numericValue)) return null;
+        const valorNumerico = Number(valor);
+        if (!Number.isFinite(valorNumerico)) return null;
 
-        const schema = window.AppConfig?.sensorSchemas?.[key];
-        if (schema?.sentinels?.includes(numericValue)) return null;
-        if (Number.isFinite(schema?.divisor) && schema.divisor !== 0) return numericValue / schema.divisor;
-        if (key === "TDS") return numericValue / 10;
-        if (key === "Turbidez") return numericValue / 1000;
-        return numericValue;
+        const esquema = window.AppConfig?.sensorSchemas?.[chave];
+        if (esquema?.sentinels?.includes(valorNumerico)) return null;
+        if (Number.isFinite(esquema?.divisor) && esquema.divisor !== 0) return valorNumerico / esquema.divisor;
+        if (chave === "TDS") return valorNumerico / 10;
+        if (chave === "Turbidez") return valorNumerico / 1000;
+        return valorNumerico;
     }
 
-    function formatTableValue(key, value) {
-        const numericValue = normalizeMeasurementValue(key, value);
-        if (numericValue === null) return "--";
+    function formatarValorTabela(chave, valor) {
+        const valorNumerico = normalizarValorMedicao(chave, valor);
+        if (valorNumerico === null) return "--";
 
-        const unit = getMeasurementUnit(key);
-        return unit ? `${numericValue.toFixed(2)}${unit}` : numericValue.toFixed(2);
+        const unidade = obterUnidadeMedicao(chave);
+        return unidade ? `${valorNumerico.toFixed(2)}${unidade}` : valorNumerico.toFixed(2);
     }
 
     function dataAtual() {
@@ -44,175 +44,175 @@
         return `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
     }
 
-    function parseFirebaseDate(str) {
-        const [d, m, y] = str.split("-").map(Number);
+    function interpretarDataFirebase(textoString) {
+        const [d, m, y] = textoString.split("-").map(Number);
         return new Date(y, m - 1, d);
     }
 
-    function filterDataByDays(data, days, selectedDate, useSelectedDate = true) {
-        if (useSelectedDate && selectedDate) {
-            const selectedData = data[selectedDate];
+    function filtrarDadosPorDias(dados, dias, dataSelecionada, usarDataSelecionada = true) {
+        if (usarDataSelecionada && dataSelecionada) {
+            const dadosSelecionados = dados[dataSelecionada];
 
-            if (!selectedData) return {};
+            if (!dadosSelecionados) return {};
 
             return {
-                [selectedDate]: selectedData
+                [dataSelecionada]: dadosSelecionados
             };
         }
 
-        const cutoff = new Date();
-        cutoff.setDate(cutoff.getDate() - days);
-        cutoff.setHours(0, 0, 0, 0);
+        const dataLimite = new Date();
+        dataLimite.setDate(dataLimite.getDate() - dias);
+        dataLimite.setHours(0, 0, 0, 0);
 
-        const filtered = {};
+        const filtrado = {};
 
-        for (const date of Object.keys(data).sort((a, b) => parseFirebaseDate(a) - parseFirebaseDate(b))) {
-            if (parseFirebaseDate(date) >= cutoff) {
-                filtered[date] = data[date];
+        for (const dataReferencia of Object.keys(dados).sort((a, b) => interpretarDataFirebase(a) - interpretarDataFirebase(b))) {
+            if (interpretarDataFirebase(dataReferencia) >= dataLimite) {
+                filtrado[dataReferencia] = dados[dataReferencia];
             }
         }
 
-        return filtered;
+        return filtrado;
     }
 
-    function filterDataByRollingHours(data, selectedDate, hours = 24, referenceDate = new Date()) {
-        const selectedDateParts = parseFirebaseDateParts(selectedDate || dataAtual());
-        if (!selectedDateParts) return {};
+    function filtrarDadosPorJanelaHoras(dados, dataSelecionada, horas = 24, dataReferenciaAtual = new Date()) {
+        const partesDataSelecionada = interpretarPartesDataFirebase(dataSelecionada || dataAtual());
+        if (!partesDataSelecionada) return {};
 
-        const windowEnd = new Date(
-            selectedDateParts.year,
-            selectedDateParts.month - 1,
-            selectedDateParts.day,
-            referenceDate.getHours(),
-            referenceDate.getMinutes(),
-            referenceDate.getSeconds(),
-            referenceDate.getMilliseconds()
+        const fimJanela = new Date(
+            partesDataSelecionada.year,
+            partesDataSelecionada.month - 1,
+            partesDataSelecionada.day,
+            dataReferenciaAtual.getHours(),
+            dataReferenciaAtual.getMinutes(),
+            dataReferenciaAtual.getSeconds(),
+            dataReferenciaAtual.getMilliseconds()
         );
-        const windowStart = new Date(windowEnd);
-        windowStart.setHours(windowStart.getHours() - hours);
+        const inicioJanela = new Date(fimJanela);
+        inicioJanela.setHours(inicioJanela.getHours() - horas);
 
-        const filtered = {};
+        const filtrado = {};
 
-        for (const date of Object.keys(data || {}).sort((a, b) => parseFirebaseDate(a) - parseFirebaseDate(b))) {
-            const dateData = data[date];
-            if (!dateData || typeof dateData !== "object") continue;
+        for (const dataReferencia of Object.keys(dados || {}).sort((a, b) => interpretarDataFirebase(a) - interpretarDataFirebase(b))) {
+            const dadosData = dados[dataReferencia];
+            if (!dadosData || typeof dadosData !== "object") continue;
 
-            for (const time of Object.keys(dateData).sort()) {
-                const timestamp = parseFirebaseDateTime(date, time);
-                if (!timestamp || timestamp < windowStart || timestamp > windowEnd) continue;
+            for (const horario of Object.keys(dadosData).sort()) {
+                const instanteRegistro = interpretarDataHoraFirebase(dataReferencia, horario);
+                if (!instanteRegistro || instanteRegistro < inicioJanela || instanteRegistro > fimJanela) continue;
 
-                filtered[date] ||= {};
-                filtered[date][time] = dateData[time];
+                filtrado[dataReferencia] ||= {};
+                filtrado[dataReferencia][horario] = dadosData[horario];
             }
         }
 
-        return filtered;
+        return filtrado;
     }
 
-    function parseFirebaseDateTime(date, time) {
-        const dateParts = parseFirebaseDateParts(date);
-        if (!dateParts) return null;
+    function interpretarDataHoraFirebase(dataReferencia, horario) {
+        const partesData = interpretarPartesDataFirebase(dataReferencia);
+        if (!partesData) return null;
 
-        const [hourText, minuteText = "0"] = String(time || "").split("-");
-        const hour = Number(hourText);
-        const minute = Number(minuteText);
-        if (!Number.isInteger(hour) || !Number.isInteger(minute)) return null;
-        if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+        const [textoHora, textoMinuto = "0"] = String(horario || "").split("-");
+        const hora = Number(textoHora);
+        const minuto = Number(textoMinuto);
+        if (!Number.isInteger(hora) || !Number.isInteger(minuto)) return null;
+        if (hora < 0 || hora > 23 || minuto < 0 || minuto > 59) return null;
 
-        return new Date(dateParts.year, dateParts.month - 1, dateParts.day, hour, minute, 0, 0);
+        return new Date(partesData.year, partesData.month - 1, partesData.day, hora, minuto, 0, 0);
     }
 
-    function parseFirebaseDateParts(date) {
-        const [day, month, year] = String(date || "").split("-").map(Number);
-        if (!Number.isInteger(day) || !Number.isInteger(month) || !Number.isInteger(year)) return null;
-        if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-        return { day, month, year };
+    function interpretarPartesDataFirebase(dataReferencia) {
+        const [dia, mes, ano] = String(dataReferencia || "").split("-").map(Number);
+        if (!Number.isInteger(dia) || !Number.isInteger(mes) || !Number.isInteger(ano)) return null;
+        if (mes < 1 || mes > 12 || dia < 1 || dia > 31) return null;
+        return { day: dia, month: mes, year: ano };
     }
 
-    function convertInputDateToFirebase(dateString) {
-        if (!dateString) return dataAtual();
+    function converterDataEntradaParaFirebase(textoData) {
+        if (!textoData) return dataAtual();
 
-        const [year, month, day] = dateString.split("-");
+        const [ano, mes, dia] = textoData.split("-");
 
-        return `${day}-${month}-${year}`;
+        return `${dia}-${mes}-${ano}`;
     }
 
-    function convertFirebaseDateToInput(dateString) {
-        const [day, month, year] = dateString.split("-");
+    function converterDataFirebaseParaEntrada(textoData) {
+        const [dia, mes, ano] = textoData.split("-");
 
-        return `${year}-${month}-${day}`;
+        return `${ano}-${mes}-${dia}`;
     }
 
-    function createTables(headers, data) {
-        const table = document.createElement("table");
-        table.dataset.exportName = "estacao-climatica";
-        const analisesQualidade = Object.fromEntries(headers.slice(2).map(campo => [
+    function criarTabelas(cabecalhos, dados) {
+        const tabela = document.createElement("table");
+        tabela.dataset.exportName = "estacao-climatica";
+        const analisesQualidade = Object.fromEntries(cabecalhos.slice(2).map(campo => [
             campo,
-            window.ClimateDataQuality?.analisarSerie?.(data, campo) || null,
+            window.ClimateDataQuality?.analisarSerie?.(dados, campo) || null,
         ]));
 
-        const headerRow = table.createTHead().insertRow();
-        headers.forEach(key => {
+        const linhaCabecalho = tabela.createTHead().insertRow();
+        cabecalhos.forEach(chave => {
             const th = document.createElement("th");
-            th.innerText = HEADER_LABELS[key] || key;
-            headerRow.appendChild(th);
+            th.innerText = ROTULOS_CABECALHOS[chave] || chave;
+            linhaCabecalho.appendChild(th);
         });
 
-        const allDates = Object.keys(data).sort((a, b) => parseFirebaseDate(b) - parseFirebaseDate(a));
+        const todasDatas = Object.keys(dados).sort((a, b) => interpretarDataFirebase(b) - interpretarDataFirebase(a));
 
-        let lastDate = null;
-        let rowCount = 0;
-        const corpo = table.createTBody();
+        let ultimaData = null;
+        let quantidadeLinhas = 0;
+        const corpo = tabela.createTBody();
 
-        for (const date of allDates) {
-            if (rowCount >= 24) break;
-            const dateData = data[date];
-            if (!dateData || typeof dateData !== "object") continue;
-            const allTimes = Object.keys(dateData).sort().reverse();
+        for (const dataReferencia of todasDatas) {
+            if (quantidadeLinhas >= 24) break;
+            const dadosData = dados[dataReferencia];
+            if (!dadosData || typeof dadosData !== "object") continue;
+            const todosHorarios = Object.keys(dadosData).sort().reverse();
 
-            for (const time of allTimes) {
-                const timeData = dateData[time];
-                if (!timeData || typeof timeData !== "object") continue;
-                for (const key in timeData) {
-                    if (rowCount >= 24) break;
-                    const item = timeData[key];
+            for (const horario of todosHorarios) {
+                const dadosHorario = dadosData[horario];
+                if (!dadosHorario || typeof dadosHorario !== "object") continue;
+                for (const chave in dadosHorario) {
+                    if (quantidadeLinhas >= 24) break;
+                    const item = dadosHorario[chave];
                     if (!item || typeof item !== "object") continue;
-                    const row = corpo.insertRow();
-                    row.dataset.timestamp = `${formatarDataOrdenavel(date)}T${formatarHorarioOrdenavel(time)}`;
+                    const linha = corpo.insertRow();
+                    linha.dataset.timestamp = `${formatarDataOrdenavel(dataReferencia)}T${formatarHorarioOrdenavel(horario)}`;
 
-                    row.insertCell().innerText = date !== lastDate ? date.replace(/-/g, "/") : "";
-                    const [hour, minute] = time.split("-");
-                    row.insertCell().innerText = `${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
+                    linha.insertCell().innerText = dataReferencia !== ultimaData ? dataReferencia.replace(/-/g, "/") : "";
+                    const [hora, minuto] = horario.split("-");
+                    linha.insertCell().innerText = `${hora.padStart(2, "0")}:${minuto.padStart(2, "0")}`;
 
-                    for (let i = 2; i < headers.length; i++) {
-                        const campo = headers[i];
-                        const val = item[campo];
-                        const cell = row.insertCell();
+                    for (let i = 2; i < cabecalhos.length; i++) {
+                        const campo = cabecalhos[i];
+                        const valorAbreviado = item[campo];
+                        const celula = linha.insertCell();
                         const qualidade = window.ClimateDataQuality?.obterQualidadeLeitura?.(
                             analisesQualidade[campo],
-                            date,
-                            time,
-                            key
+                            dataReferencia,
+                            horario,
+                            chave
                         );
-                        cell.innerText = formatTableValue(campo, val);
+                        celula.innerText = formatarValorTabela(campo, valorAbreviado);
                         if (qualidade && qualidade.nivel !== "normal") {
-                            cell.classList.add(`table-cell--${qualidade.nivel}`);
-                            cell.title = qualidade.motivos.join(" ");
-                            cell.innerText += " ⚠";
+                            celula.classList.add(`table-cell--${qualidade.nivel}`);
+                            celula.title = qualidade.motivos.join(" ");
+                            celula.innerText += " ⚠";
                         }
                     }
 
-                    rowCount++;
-                    lastDate = date;
+                    quantidadeLinhas++;
+                    ultimaData = dataReferencia;
                 }
             }
         }
 
-        return table;
+        return tabela;
     }
 
-    function formatarDataOrdenavel(data) {
-        const [dia, mes, ano] = String(data || "").split("-");
+    function formatarDataOrdenavel(dados) {
+        const [dia, mes, ano] = String(dados || "").split("-");
         return `${ano}-${mes}-${dia}`;
     }
 
@@ -221,72 +221,72 @@
         return `${String(hora).padStart(2, "0")}:${String(minuto).padStart(2, "0")}`;
     }
 
-    function extractData(data, keys) {
-        const allDates = Object.keys(data || {});
-        const hours = [];
-        const extractedData = Object.fromEntries(keys.map(k => [k, []]));
+    function extrairDados(dados, chaves) {
+        const todasDatas = Object.keys(dados || {});
+        const horas = [];
+        const dadosExtraidos = Object.fromEntries(chaves.map(k => [k, []]));
 
-        for (const date of allDates.sort((a, b) => parseFirebaseDate(a) - parseFirebaseDate(b))) {
-            const dateData = data[date];
-            if (!dateData || typeof dateData !== "object") continue;
-            const allTimes = Object.keys(dateData).sort();
-            for (const time of allTimes) {
-                const timeData = dateData[time];
-                if (!timeData || typeof timeData !== "object") continue;
-                const [hourPart, minutePart = "0"] = time.split("-");
-                const hour = Number(hourPart);
-                const minute = Number(minutePart);
-                const decimalHour = hour + (Number.isFinite(minute) ? minute / 60 : 0);
-                for (const itemKey in timeData) {
-                    const item = timeData[itemKey];
+        for (const dataReferencia of todasDatas.sort((a, b) => interpretarDataFirebase(a) - interpretarDataFirebase(b))) {
+            const dadosData = dados[dataReferencia];
+            if (!dadosData || typeof dadosData !== "object") continue;
+            const todosHorarios = Object.keys(dadosData).sort();
+            for (const horario of todosHorarios) {
+                const dadosHorario = dadosData[horario];
+                if (!dadosHorario || typeof dadosHorario !== "object") continue;
+                const [parteHora, parteMinuto = "0"] = horario.split("-");
+                const hora = Number(parteHora);
+                const minuto = Number(parteMinuto);
+                const horaDecimal = hora + (Number.isFinite(minuto) ? minuto / 60 : 0);
+                for (const chaveItem in dadosHorario) {
+                    const item = dadosHorario[chaveItem];
                     if (!item || typeof item !== "object") continue;
-                    hours.push(decimalHour);
-                    keys.forEach(dataKey => {
-                        extractedData[dataKey].push(normalizeMeasurementValue(dataKey, item[dataKey]));
+                    horas.push(horaDecimal);
+                    chaves.forEach(chaveDados => {
+                        dadosExtraidos[chaveDados].push(normalizarValorMedicao(chaveDados, item[chaveDados]));
                     });
                 }
             }
         }
 
-        return { hours, ...extractedData };
+        return { hours: horas, ...dadosExtraidos };
     }
 
-    function mapRange(value, inMin, inMax, outMin, outMax) {
-        return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
+    function mapearIntervalo(valor, minimoEntrada, maximoEntrada, minimoSaida, maximoSaida) {
+        return (valor - minimoEntrada) * (maximoSaida - minimoSaida) / (maximoEntrada - minimoEntrada) + minimoSaida;
     }
 
-    function formatTime(value) {
-        const numericValue = Number(value);
-        if (!Number.isFinite(numericValue)) return "--";
+    function formatarTempo(valor) {
+        const valorNumerico = Number(valor);
+        if (!Number.isFinite(valorNumerico)) return "--";
 
-        const totalMinutes = Math.round(numericValue * 60);
-        const hours = Math.floor(totalMinutes / 60) % 24;
-        const minutes = ((totalMinutes % 60) + 60) % 60;
-        return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+        const totalMinutosSolar = Math.round(valorNumerico * 60);
+        const horas = Math.floor(totalMinutosSolar / 60) % 24;
+        const minutos = ((totalMinutosSolar % 60) + 60) % 60;
+        return `${String(horas).padStart(2, "0")}:${String(minutos).padStart(2, "0")}`;
     }
 
-    function formatHoursArray(hours) {
-        return hours.map(h => formatTime(h));
+    function formatarListaHoras(horas) {
+        return horas.map(h => formatarTempo(h));
     }
 
-    function secondsToHours(seconds) {
-        return seconds / 3600;
+    function converterSegundosParaHoras(segundos) {
+        return segundos / 3600;
     }
 
     window.ClimateData = {
         dataAtual,
-        parseFirebaseDate,
-        parseFirebaseDateTime,
-        filterDataByDays,
-        filterDataByRollingHours,
-        convertInputDateToFirebase,
-        convertFirebaseDateToInput,
-        createTables,
-        extractData,
-        normalizeMeasurementValue,
-        mapRange,
-        formatTime,
-        formatHoursArray,
-        secondsToHours,
+        parseFirebaseDate: interpretarDataFirebase,
+        parseFirebaseDateTime: interpretarDataHoraFirebase,
+        filterDataByDays: filtrarDadosPorDias,
+        filterDataByRollingHours: filtrarDadosPorJanelaHoras,
+        convertInputDateToFirebase: converterDataEntradaParaFirebase,
+        convertFirebaseDateToInput: converterDataFirebaseParaEntrada,
+        createTables: criarTabelas,
+        extractData: extrairDados,
+        normalizeMeasurementValue: normalizarValorMedicao,
+        mapRange: mapearIntervalo,
+        formatTime: formatarTempo,
+        formatHoursArray: formatarListaHoras,
+        secondsToHours: converterSegundosParaHoras,
     };
 })();

@@ -1,13 +1,13 @@
 'use strict';
 
 (function () {
-    const DEFAULT_COMFORT_BAND = {
+    const FAIXA_CONFORTO_PADRAO = {
         min: 20,
         max: 26,
         label: "Faixa de conforto",
     };
 
-    function createDefaults(colors) {
+    function criarPadroes(cores) {
         return {
             responsive: true,
             maintainAspectRatio: false,
@@ -20,6 +20,12 @@
             hover: {
                 mode: 'index',
                 intersect: false
+            },
+            onHover: (evento, elementosAtivos, grafico) => {
+                window.ClimateChartSync?.tratarInteracao(grafico, evento, elementosAtivos);
+            },
+            onClick: (evento, elementosAtivos, grafico) => {
+                window.ClimateChartSync?.tratarInteracao(grafico, evento, elementosAtivos);
             },
             plugins: {
                 legend: { display: false },
@@ -38,234 +44,239 @@
             },
             scales: {
                 x: {
-                    grid: { color: colors.grid, drawBorder: false },
+                    grid: { color: cores.grid, drawBorder: false },
                     ticks: {
-                        color: colors.text,
+                        color: cores.text,
                         font: { size: 11 },
                         minRotation: 45,
                         maxRotation: 45,
                     },
                 },
                 y: {
-                    grid: { color: colors.grid, drawBorder: false },
-                    ticks: { color: colors.text, font: { size: 11 } },
+                    grid: { color: cores.grid, drawBorder: false },
+                    ticks: { color: cores.text, font: { size: 11 } },
                 }
             }
         };
     }
 
-    function mergeDeep(target, source) {
-        const result = { ...target };
-        for (const key of Object.keys(source)) {
-            if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-                result[key] = mergeDeep(target[key] || {}, source[key]);
+    function mesclarRecursivamente(destino, origem) {
+        const resultado = { ...destino };
+        for (const chave of Object.keys(origem)) {
+            if (origem[chave] && typeof origem[chave] === 'object' && !Array.isArray(origem[chave])) {
+                resultado[chave] = mesclarRecursivamente(destino[chave] || {}, origem[chave]);
             } else {
-                result[key] = source[key];
+                resultado[chave] = origem[chave];
             }
         }
-        return result;
+        return resultado;
     }
 
-    function shouldShowComfortBand(key, suffix) {
-        const normalizedKey = key.toLowerCase();
-        if (suffix === "%" && (
-            normalizedKey.includes("umidade") ||
-            normalizedKey.includes("humidity")
+    function deveMostrarFaixaConforto(chave, sufixo) {
+        const chaveNormalizada = chave.toLowerCase();
+        if (sufixo === "%" && (
+            chaveNormalizada.includes("umidade") ||
+            chaveNormalizada.includes("humidity")
         )) {
             return true;
         }
 
-        return suffix === "°" && (
-            normalizedKey.includes("temperatura") ||
-            normalizedKey.includes("sensacao")
+        return sufixo === "°" && (
+            chaveNormalizada.includes("temperatura") ||
+            chaveNormalizada.includes("sensacao")
         );
     }
 
-    function getNumericValue(value) {
-        if (value === null || value === undefined || value === "") return null;
-        const number = Number(value);
-        return Number.isFinite(number) ? number : null;
+    function obterValorNumerico(valor) {
+        if (valor === null || valor === undefined || valor === "") return null;
+        const numero = Number(valor);
+        return Number.isFinite(numero) ? numero : null;
     }
 
-    function getDataScaleBounds(values) {
-        const numericValues = (values || [])
-            .map(getNumericValue)
-            .filter(value => value !== null);
+    function obterLimitesEscalaDados(valores) {
+        const valoresNumericos = (valores || [])
+            .map(obterValorNumerico)
+            .filter(valor => valor !== null);
 
-        if (!numericValues.length) return {};
+        if (!valoresNumericos.length) return {};
 
-        const min = Math.min(...numericValues);
-        const max = Math.max(...numericValues);
-        const range = max - min;
-        const padding = range > 0 ? Math.max(range * 0.12, 0.1) : 1;
+        const minimo = Math.min(...valoresNumericos);
+        const maximo = Math.max(...valoresNumericos);
+        const intervalo = maximo - minimo;
+        const espacamento = intervalo > 0 ? Math.max(intervalo * 0.12, 0.1) : 1;
 
         return {
-            min: min - padding,
-            max: max + padding,
+            min: minimo - espacamento,
+            max: maximo + espacamento,
         };
     }
 
-    function formatAxisTick(value, suffix) {
-        const number = Number(value);
-        if (!Number.isFinite(number)) return value;
+    function formatarMarcadorEixo(valor, sufixo) {
+        const numero = Number(valor);
+        if (!Number.isFinite(numero)) return valor;
 
-        const absolute = Math.abs(number);
-        const decimals = absolute < 10 ? 2 : 1;
-        const formatted = number
-            .toFixed(decimals)
+        const valorAbsoluto = Math.abs(numero);
+        const casasDecimais = valorAbsoluto < 10 ? 2 : 1;
+        const formatado = numero
+            .toFixed(casasDecimais)
             .replace(/\.?0+$/, "");
 
-        return `${formatted}${suffix || ""}`;
+        return `${formatado}${sufixo || ""}`;
     }
 
-    const comfortBandPlugin = {
+    const pluginFaixaConforto = {
         id: "comfortBand",
-        beforeDatasetsDraw(chart) {
-            const band = chart.$comfortBand;
-            const yScale = chart.scales.y;
-            const area = chart.chartArea;
-            if (!band || !yScale || !area) return;
+        beforeDatasetsDraw(grafico) {
+            const faixa = grafico.$comfortBand;
+            const escalaY = grafico.scales.y;
+            const areaDesenho = grafico.chartArea;
+            if (!faixa || !escalaY || !areaDesenho) return;
 
-            const visibleMin = Math.min(yScale.min, yScale.max);
-            const visibleMax = Math.max(yScale.min, yScale.max);
-            const bandMin = Math.max(band.min, visibleMin);
-            const bandMax = Math.min(band.max, visibleMax);
-            if (bandMin >= bandMax) return;
+            const minimoVisivel = Math.min(escalaY.min, escalaY.max);
+            const maximoVisivel = Math.max(escalaY.min, escalaY.max);
+            const minimoFaixa = Math.max(faixa.min, minimoVisivel);
+            const maximoFaixa = Math.min(faixa.max, maximoVisivel);
+            if (minimoFaixa >= maximoFaixa) return;
 
-            const yMin = yScale.getPixelForValue(bandMin);
-            const yMax = yScale.getPixelForValue(bandMax);
-            const top = Math.min(yMin, yMax);
-            const height = Math.abs(yMax - yMin);
-            if (height <= 0) return;
+            const minimoY = escalaY.getPixelForValue(minimoFaixa);
+            const maximoY = escalaY.getPixelForValue(maximoFaixa);
+            const topo = Math.min(minimoY, maximoY);
+            const altura = Math.abs(maximoY - minimoY);
+            if (altura <= 0) return;
 
-            const ctx = chart.ctx;
-            ctx.save();
-            ctx.fillStyle = "rgba(52, 211, 153, 0.08)";
-            ctx.fillRect(area.left, top, area.right - area.left, height);
-            ctx.strokeStyle = "rgba(52, 211, 153, 0.20)";
-            ctx.setLineDash([4, 4]);
-            ctx.beginPath();
-            if (band.min >= visibleMin && band.min <= visibleMax) {
-                const lineMin = yScale.getPixelForValue(band.min);
-                ctx.moveTo(area.left, lineMin);
-                ctx.lineTo(area.right, lineMin);
+            const contextoDesenho = grafico.ctx;
+            contextoDesenho.save();
+            contextoDesenho.fillStyle = "rgba(52, 211, 153, 0.08)";
+            contextoDesenho.fillRect(areaDesenho.left, topo, areaDesenho.right - areaDesenho.left, altura);
+            contextoDesenho.strokeStyle = "rgba(52, 211, 153, 0.20)";
+            contextoDesenho.setLineDash([4, 4]);
+            contextoDesenho.beginPath();
+            if (faixa.min >= minimoVisivel && faixa.min <= maximoVisivel) {
+                const minimoLinha = escalaY.getPixelForValue(faixa.min);
+                contextoDesenho.moveTo(areaDesenho.left, minimoLinha);
+                contextoDesenho.lineTo(areaDesenho.right, minimoLinha);
             }
-            if (band.max >= visibleMin && band.max <= visibleMax) {
-                const lineMax = yScale.getPixelForValue(band.max);
-                ctx.moveTo(area.left, lineMax);
-                ctx.lineTo(area.right, lineMax);
+            if (faixa.max >= minimoVisivel && faixa.max <= maximoVisivel) {
+                const maximoLinha = escalaY.getPixelForValue(faixa.max);
+                contextoDesenho.moveTo(areaDesenho.left, maximoLinha);
+                contextoDesenho.lineTo(areaDesenho.right, maximoLinha);
             }
-            ctx.stroke();
-            ctx.restore();
+            contextoDesenho.stroke();
+            contextoDesenho.restore();
         }
     };
 
-    function registerComfortBand() {
+    function registrarFaixaConforto() {
         if (window.Chart && typeof window.Chart.register === "function") {
-            window.Chart.register(comfortBandPlugin);
+            window.Chart.register(pluginFaixaConforto);
         }
     }
 
-    function createLineChart({
-        canvasCtx,
-        data,
-        key,
-        label,
-        color,
-        yAxisTitle,
-        yAxisSuffix = "",
-        existingChart,
-        defaults,
-        colors,
-        comfortBand = DEFAULT_COMFORT_BAND,
-        onEmpty,
-        onReady
+    function criarGraficoLinha({
+        canvasCtx: contextoCanvas,
+        data: dados,
+        key: chave,
+        label: rotulo,
+        color: cor,
+        yAxisTitle: tituloEixoY,
+        yAxisSuffix: sufixoEixoY = "",
+        existingChart: graficoExistente,
+        defaults: padroes,
+        colors: cores,
+        comfortBand: faixaConforto = FAIXA_CONFORTO_PADRAO,
+        grupoSincronizacao,
+        onEmpty: aoEstarVazio,
+        onReady: aoEstarPronto
     }) {
-        if (existingChart) existingChart.destroy();
+        if (graficoExistente) {
+            window.ClimateChartSync?.desregistrar(graficoExistente);
+            graficoExistente.destroy();
+        }
 
-        const { hours, [key]: chartData } = ClimateData.extractData(data, [key]);
+        const { hours: horas, [chave]: dadosGrafico } = ClimateData.extractData(dados, [chave]);
 
-        const hasPoints = Array.isArray(chartData) && chartData.some(value => getNumericValue(value) !== null);
-        if (!hasPoints) {
-            canvasCtx.clearRect(0, 0, canvasCtx.canvas.width, canvasCtx.canvas.height);
-            if (onEmpty) onEmpty();
+        const temPontos = Array.isArray(dadosGrafico) && dadosGrafico.some(valor => obterValorNumerico(valor) !== null);
+        if (!temPontos) {
+            contextoCanvas.clearRect(0, 0, contextoCanvas.canvas.width, contextoCanvas.canvas.height);
+            if (aoEstarVazio) aoEstarVazio();
             return null;
         }
 
-        if (onReady) onReady();
+        if (aoEstarPronto) aoEstarPronto();
         if (!window.Chart) return null;
 
-        const gradient = canvasCtx.createLinearGradient(0, 0, 0, 220);
-        gradient.addColorStop(0, color + '33');
-        gradient.addColorStop(1, color + '00');
-        const showComfortBand = shouldShowComfortBand(key, yAxisSuffix);
-        const dataBounds = getDataScaleBounds(chartData);
+        const gradiente = contextoCanvas.createLinearGradient(0, 0, 0, 220);
+        gradiente.addColorStop(0, cor + '33');
+        gradiente.addColorStop(1, cor + '00');
+        const mostrarFaixaConforto = deveMostrarFaixaConforto(chave, sufixoEixoY);
+        const limitesDados = obterLimitesEscalaDados(dadosGrafico);
 
-        const options = mergeDeep(defaults, {
+        const opcoes = mesclarRecursivamente(padroes, {
             plugins: {
                 tooltip: {
                     callbacks: {
-                        label: context => {
-                            const value = context.parsed.y;
-                            const formatted = Number.isFinite(value) ? value.toFixed(2) : "--";
-                            return `${context.dataset.label || label}: ${formatted}${yAxisSuffix || ""}`;
+                        label: contexto => {
+                            const valor = contexto.parsed.y;
+                            const formatado = Number.isFinite(valor) ? valor.toFixed(2) : "--";
+                            return `${contexto.dataset.label || rotulo}: ${formatado}${sufixoEixoY || ""}`;
                         }
                     }
                 }
             },
             scales: {
                 y: {
-                    min: dataBounds.min,
-                    max: dataBounds.max,
+                    min: limitesDados.min,
+                    max: limitesDados.max,
                     title: {
-                        display: !!yAxisTitle,
-                        text: yAxisTitle,
-                        color: colors.text,
+                        display: !!tituloEixoY,
+                        text: tituloEixoY,
+                        color: cores.text,
                         font: { size: 11 }
                     },
                     ticks: {
                         precision: 1,
-                        callback: v => formatAxisTick(v, yAxisSuffix)
+                        callback: v => formatarMarcadorEixo(v, sufixoEixoY)
                     }
                 }
             }
         });
 
-        const chart = new Chart(canvasCtx, {
+        const grafico = new Chart(contextoCanvas, {
             type: "line",
             data: {
-                labels: ClimateData.formatHoursArray(hours),
+                labels: ClimateData.formatHoursArray(horas),
                 datasets: [{
-                    label,
-                    data: chartData,
-                    borderColor: color,
+                    label: rotulo,
+                    data: dadosGrafico,
+                    borderColor: cor,
                     borderWidth: 2,
-                    backgroundColor: gradient,
+                    backgroundColor: gradiente,
                     fill: true,
                     tension: 0.4,
                     pointRadius: 0,
                     pointHitRadius: 18,
                     pointHoverRadius: 6,
-                    pointHoverBackgroundColor: color,
+                    pointHoverBackgroundColor: cor,
                     pointHoverBorderColor: '#0b1120',
                     pointHoverBorderWidth: 2,
                 }]
             },
-            options
+            options: opcoes
         });
 
-        if (showComfortBand) {
-            chart.$comfortBand = comfortBand;
-            chart.update();
+        if (mostrarFaixaConforto) {
+            grafico.$comfortBand = faixaConforto;
+            grafico.update();
         }
+        if (grupoSincronizacao) window.ClimateChartSync?.registrar(grafico, grupoSincronizacao);
 
-        return chart;
+        return grafico;
     }
 
     window.ClimateCharts = {
-        createDefaults,
-        createLineChart,
-        mergeDeep,
-        registerComfortBand,
+        createDefaults: criarPadroes,
+        createLineChart: criarGraficoLinha,
+        mergeDeep: mesclarRecursivamente,
+        registerComfortBand: registrarFaixaConforto,
     };
 })();

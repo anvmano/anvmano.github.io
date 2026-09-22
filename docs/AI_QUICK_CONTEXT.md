@@ -51,7 +51,9 @@ Arquivos principais:
 - `scripts/assistant/assistant-format.js`: formatacao e normalizacao compartilhada.
 - `scripts/data/data-utils.js`: datas, filtros, tabelas e series.
 - `scripts/data/data-quality.js`: contrato central de cobertura, atualidade, plausibilidade, saltos e repeticao; classifica cada metrica como `ok`, `parcial`, `desatualizado`, `suspeito` ou `offline` e expoe `window.ClimateDataQuality`.
-- `scripts/charts/chart-utils.js`: Chart.js comum e faixa de conforto.
+- `scripts/charts/chart-utils.js`: Chart.js comum, faixa de conforto e callbacks de interacao temporal.
+- `scripts/charts/chart-sync.js`: sincronizacao do horario selecionado entre graficos temporais compativeis.
+- `scripts/charts/rain.js`: estado de chuva atual e grafico combinado de precipitacao/probabilidade para dados externos.
 - `scripts/charts/aqi.js`: AQI estimado da Sala/MQ135, chip do header e popover.
 - `scripts/charts/season.js`: estacao do ano atual, chip do header, popover, posicao na faixa anual e progresso dentro da estacao atual.
 - `scripts/charts/moon.js`: fase da lua, chip do header, popover e estado lunar por data.
@@ -70,6 +72,9 @@ Arquivos principais:
 - `tools/testar-acessibilidade.mjs`: valida abas ARIA e contrato acessivel do zoom; execute com `npm run test:accessibility`.
 - `tools/testar-qualidade-dados.mjs`: valida cobertura, amostra unica, pH suspeito e turbidez constante; execute com `npm run test:data-quality`.
 - `tools/testar-modo-publico.mjs`: valida concorrencia de consultas, estados acessiveis, limpeza de contexto e zoom publico; execute com `npm run test:public`.
+- `tools/testar-sincronizacao-graficos.mjs`: valida propagacao temporal, isolamento entre grupos e preservacao de lacunas como ausencia.
+- `tools/testar-chuva.mjs`: valida chuva atual, janela 24h + 12h, tooltip solar e posicao mobile do chip de duracao.
+- `tools/testar-pdf-chuva.mjs`: monta e abre um PDF real da Estacao com card e grafico de chuva externa; execute com `npm run test:pdf-rain`.
 - `tools/testar-axe.mjs`, `tools/testar-tabelas.mjs`, `tools/testar-exportacao.mjs` e `tools/testar-pdf-artifact.mjs`: validam acessibilidade/contraste, ordenacao/CSV, progresso/timeout e o PDF baixado.
 
 ## Fluxo Principal
@@ -87,8 +92,8 @@ Arquivos principais:
    - `historico/AirQuality`
 8. Dados internos sao armazenados em `latestData`.
 9. Views filtram pela data selecionada, aplicam `ClimateDataQuality` e renderizam estatisticas/tabelas imediatamente; graficos carregam Chart.js antes do primeiro desenho real.
-10. No modo publico, CEP, cidade brasileira ou localizacao consulta APIs externas e renderiza temperatura, sensacao termica, umidade, pressao, AQI externo, estacao do ano, fase da lua, recomendacao de ventilacao, chuva nas proximas 6h, indice UV, ponto de orvalho/risco estimado de mofo e graficos de temperatura, sensacao, umidade, pressao e ciclo solar. A busca alterna entre `CEP` e `Cidade`: cidade usa Open-Meteo Geocoding limitada ao Brasil, segue direto quando ha um resultado e oferece ate cinco opcoes quando houver ambiguidade. Correspondencias exatas aparecem primeiro; localidades homonimas incluem a regiao administrativa entre parenteses para nao parecerem duplicadas. Os quatro graficos meteorologicos combinam as ultimas 24h observadas com as 12h seguintes de previsao: a medicao usa linha continua, a previsao comeca na proxima hora completa e usa linha mais clara/tracejada, separada pelo marcador `Agora`. O CEP recebe mascara progressiva `00000-000`. A ultima resposta pode ser restaurada em `sessionStorage` por ate 60 minutos, sem termo pesquisado, CEP, latitude, longitude ou precisao, exibindo idade e estado desatualizado apos 20 minutos.
-11. Na aba Estacao, ventilacao e risco de mofo usam os sensores internos mesmo sem localizacao. Chuva, UV e ventilacao combinada com o exterior so sao carregados quando o usuario aciona a consulta por localizacao; latitude/longitude permanecem apenas em memoria. A grade privada tambem nao possui faixa de titulo; o controle e o retorno da localizacao ficam no card de chuva.
+10. No modo publico, CEP, cidade brasileira ou localizacao consulta APIs externas e renderiza temperatura, sensacao termica, umidade, pressao, AQI externo, estacao do ano, fase da lua, recomendacao de ventilacao, chuva nas proximas 6h, indice UV, ponto de orvalho/risco estimado de mofo e graficos de temperatura, sensacao, umidade, pressao, chuva e ciclo solar. A busca alterna entre `CEP` e `Cidade`: cidade usa Open-Meteo Geocoding limitada ao Brasil, segue direto quando ha um resultado e oferece ate cinco opcoes quando houver ambiguidade. Correspondencias exatas aparecem primeiro; localidades homonimas incluem a regiao administrativa entre parenteses para nao parecerem duplicadas. Os graficos meteorologicos combinam as ultimas 24h observadas com as 12h seguintes de previsao. Temperatura, sensacao, umidade e pressao usam linha continua para medicao e linha mais clara/tracejada para previsao. Chuva usa barras em milimetros para precipitacao registrada/prevista e linha percentual somente para a chance futura, todas separadas pelo marcador `Agora`. O CEP recebe mascara progressiva `00000-000`. A ultima resposta pode ser restaurada em `sessionStorage` por ate 60 minutos, sem termo pesquisado, CEP, latitude, longitude ou precisao, exibindo idade e estado desatualizado apos 20 minutos.
+11. Na aba Estacao, ventilacao e risco de mofo usam os sensores internos mesmo sem localizacao. Chuva, UV, ventilacao combinada com o exterior e o grafico horario de chuva so sao carregados quando o usuario aciona a consulta por localizacao; latitude/longitude permanecem apenas em memoria. A grade privada tambem nao possui faixa de titulo; o controle e o retorno da localizacao ficam no card de chuva.
 
 ## Componentes Criticos
 
@@ -140,6 +145,8 @@ Arquivos principais:
 - Eixo Y dos graficos deve exibir a unidade da metrica quando houver: `°C`, `%`, `hPa`, `ppm`, `NTU`.
 - Graficos comuns de series temporais usam horarios no eixo X em diagonal; graficos solares e heatmaps preservam seu layout especifico.
 - No grafico Ciclo Solar do Dia, a tooltip dos eventos solares deve aparecer somente quando o cursor/toque estiver realmente sobre ou proximo do ponto solar ativo, sem ativacao por eixo X distante. O card do grafico exibe chip `Duracao do dia: <h>h<mm>` quando nascer e por do sol existem, tanto no modo interno quanto no modo publico, calculado como por do sol menos nascer do sol. Nos graficos comparativos da aba Estacao, a tooltip deve listar as series na ordem visual das linhas no ponto consultado, do maior valor para o menor. No grafico Nascer & Por do Sol, a tooltip tambem deve seguir a ordem visual real das linhas no canvas, considerando seus dois eixos Y.
+- Ao passar o mouse ou tocar um grafico temporal, o horario selecionado deve ser sincronizado nos demais graficos compativeis da mesma visao: Sala, Quarto, Aquario, comparativos da Estacao ou os cinco graficos meteorologicos publicos. O grafico externo de chuva da Estacao procura a leitura interna mais proxima, limitada a 45 minutos. Horarios sem leitura mantem ausencia, sem virar zero. Graficos solares nao participam, pois usam eventos e escalas temporais proprias.
+- No mobile, o chip de duracao do dia participa do fluxo vertical do card solar, abaixo do titulo, e nunca pode cobrir o botao de ampliacao.
 - Zoom de graficos: duplo clique ou botao amplia; `Esc`, botao de fechar ou clique/toque no fundo do overlay fecha. Em mobile/touch, `pointerdown`/`touchstart` dentro do canvas ampliado nao fecha o overlay para preservar tooltip e leitura do dado. Abrir o zoom nao pode mover a pagina para o topo; o overlay so e montado depois que `styles/zoom.css` estiver aplicado.
 - Mensagens de graficos vazios devem seguir `Sem dados de <tipo_grafico> em <DD/MM/AAAA>`.
 - Aba ativa e persistida em `localStorage.activeTab`.
@@ -156,7 +163,7 @@ Arquivos principais:
 - AQI interno do header e uma estimativa local: usa categorias oficiais AQI (`0-50`, `51-100`, `101-150`, `151-200`, `201-300`, `301+`), mas o calculo vem dos gases disponiveis no MQ135 e deve ser exibido como `AQI estimado da Sala`. AQI publico vem da Open-Meteo Air Quality e deve ser exibido como `AQI externo`.
 - Insights ambientais ficam centralizados em `ClimateInsightsAmbientais`: ponto de orvalho usa aproximacao de Magnus; risco de mofo/condensacao e recomendacao de ventilacao sao estimativas orientativas, nao diagnosticos; chuva usa as proximas 6h e UV usa valor atual com maxima diaria quando disponivel.
 - Solar usa data selecionada para ciclo do dia e filtro de 365 dias para historico.
-- Exportacao PDF/JSON usa automaticamente aba ativa, data selecionada e `latestData`; nao reconsulta Firebase nem reutiliza as series ativas da interface, pois os graficos visiveis podem representar a janela movel de 24h.
+- Exportacao PDF/JSON usa automaticamente aba ativa, data selecionada, `latestData` e o clima externo mantido em memoria quando a localizacao foi consultada; nao reconsulta Firebase/APIs nem reutiliza as series ativas da interface.
 - A raiz temporaria usada para capturar o PDF fica fixa fora do viewport e deve ser removida ao final; ela nao pode alterar largura, rolagem ou geometria das abas durante a exportacao.
 - `scripts/reports/pdf-report-data.js` cria uma unica fonte normalizada filtrada por `selectedDate`; resumo, alertas, graficos, tabela e JSON devem derivar desse mesmo recorte.
 - Valores ausentes (`null`, `undefined` ou string vazia) permanecem `null` nas series do relatorio, geram lacunas no grafico e nao participam de media, minima ou maxima.
@@ -167,10 +174,10 @@ Arquivos principais:
 - Bibliotecas de PDF (`html2canvas` e `jsPDF`) sao carregadas sob demanda apenas quando o formato PDF e executado; exportacao JSON nao deve carregar essas dependencias.
 - PDF usa primeira pagina como resumo executivo, com metadados, cards principais e alertas do dia.
 - PDF junta Temperatura e Sensacao termica no mesmo grafico quando a aba possui as duas metricas.
-- PDF usa contrato por aba: Estacao mostra no resumo os cards contextuais de Estacao do ano e Fase da lua com rotulos proprios de detalhe, alem dos 6 cards globais da propria aba (AQI estimado, Temp. Sala, Temp. Quarto, Temp. Aquario, Umidade Sala e Umidade Quarto), graficos comparativos de temperatura/umidade por ambiente e ciclo solar, sem tabela; Sala mostra temperatura, sensacao, umidade e pressao, mas tabela MQ135; Quarto mostra temperatura, sensacao e umidade; Aquario mostra apenas temperatura, PH, TDS e Turbidez, sem ciclo solar.
+- PDF usa contrato por aba: Estacao mostra os cards de Estacao do ano, Fase da lua, 6 indicadores globais e, quando a localizacao externa foi consultada, card de chuva atual/previsao e grafico proprio de 24h + 12h; tambem inclui comparativos de temperatura/umidade e ciclo solar, sem tabela. Sala mostra temperatura, sensacao, umidade e pressao, mas tabela MQ135; Quarto mostra temperatura, sensacao e umidade; Aquario mostra apenas temperatura, PH, TDS e Turbidez, sem ciclo solar.
 - PDF renderiza o ciclo solar compacto em um Chart.js offscreen a partir dos eventos solares de `latestData.solar` filtrados pela data selecionada, usando `ClimateSolar.getSolarTodayOptions` e `solarDayBackgroundPlugin` para manter o visual da pagina sem depender do estado da interface.
 - Na data atual, quando os eventos solares ainda nao tiverem sido processados, o relatorio pode informar `Ciclo solar ainda nao processado para hoje.`.
-- PDF usa tabela resumida por horario, com status geral por linha. JSON exporta `resumo` com `detalhes`, `tabelaResumida`, `tabelaDetalhada`, `dadosBrutos` e mantem `tabela` como alias de compatibilidade para a tabela detalhada antiga.
+- PDF usa tabela resumida por horario, com status geral por linha. JSON exporta `resumo` com `detalhes`, `tabelaResumida`, `tabelaDetalhada`, `dadosBrutos`, `climaExterno` e mantem `tabela` como alias de compatibilidade para a tabela detalhada antiga.
 - PDF e montado manualmente em paginas A4; resumo, graficos e tabela iniciam em paginas proprias, com rodape em todas as paginas.
 - Chat usa `latestData`, aba ativa, data selecionada e intenção classificada para selecionar dados. Nao envia o Firebase inteiro ao modelo.
 - Chat/assistente IA e exclusivo para usuarios internos autorizados. No modo publico, `#aiChat` fica oculto e `ClimateChat.setup` nao e chamado.
@@ -225,6 +232,10 @@ Arquivos principais:
 15. Views por aba
 
 ## Regras Importantes
+
+### Estado da nomenclatura interna em PT-BR
+
+Em 08/09/2026 foi concluída uma rodada transversal de nomenclatura interna: variáveis, parâmetros, funções privadas, estados locais e testes receberam nomes em PT-BR, com aliases nas fronteiras existentes. Permanecem em inglês apenas contratos externos ou compartilhados, incluindo campos/paths Firebase, DOM/CSS, objetos e membros públicos em `window.*`, propriedades de payloads, APIs e bibliotecas. O inventário e a regressão estão documentados em `docs/nomenclatura-pt-br/RELATORIO.md`.
 
 - Nao mudar ordem dos scripts sem revisar dependencias globais. Os scripts externos do fim do `body` usam `defer`, preservando a mesma ordem para reduzir bloqueio de renderizacao.
 - O modo publico deve funcionar sem login. Login Google e opcional; se o usuario logado nao for autorizado, continua no modo publico.

@@ -1,7 +1,7 @@
-import assert from "node:assert/strict";
-import fs from "node:fs";
-import http from "node:http";
-import path from "node:path";
+import verificar from "node:assert/strict";
+import arquivos from "node:fs";
+import servidorHttp from "node:http";
+import caminho from "node:path";
 import { chromium } from "playwright-core";
 
 const raiz = process.cwd();
@@ -9,31 +9,31 @@ const executavel = [
     "C:/Program Files/Google/Chrome/Application/chrome.exe",
     "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
     "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
-].find(fs.existsSync);
+].find(arquivos.existsSync);
 
-assert.ok(executavel, "Chrome ou Edge não encontrado para o teste axe.");
+verificar.ok(executavel, "Chrome ou Edge não encontrado para o teste axe.");
 
-const servidor = http.createServer((requisicao, resposta) => {
+const servidor = servidorHttp.createServer((requisicao, resposta) => {
     const url = new URL(requisicao.url, "http://localhost");
     const relativo = url.pathname === "/" ? "index.html" : decodeURIComponent(url.pathname.slice(1));
-    const arquivo = path.resolve(raiz, relativo);
-    if (!arquivo.startsWith(raiz) || !fs.existsSync(arquivo) || fs.statSync(arquivo).isDirectory()) {
+    const arquivo = caminho.resolve(raiz, relativo);
+    if (!arquivo.startsWith(raiz) || !arquivos.existsSync(arquivo) || arquivos.statSync(arquivo).isDirectory()) {
         resposta.writeHead(404).end();
         return;
     }
     const tipos = { ".html": "text/html", ".css": "text/css", ".js": "text/javascript", ".svg": "image/svg+xml", ".png": "image/png" };
-    resposta.setHeader("Content-Type", tipos[path.extname(arquivo)] || "application/octet-stream");
-    fs.createReadStream(arquivo).pipe(resposta);
+    resposta.setHeader("Content-Type", tipos[caminho.extname(arquivo)] || "application/octet-stream");
+    arquivos.createReadStream(arquivo).pipe(resposta);
 });
 
-await new Promise(resolve => servidor.listen(0, "127.0.0.1", resolve));
+await new Promise(resolver => servidor.listen(0, "127.0.0.1", resolver));
 const porta = servidor.address().port;
 const navegador = await chromium.launch({ executablePath: executavel, headless: true });
 
 try {
     const pagina = await navegador.newPage({ viewport: { width: 390, height: 844 } });
     await pagina.goto(`http://127.0.0.1:${porta}/`, { waitUntil: "domcontentloaded" });
-    await pagina.addScriptTag({ path: path.join(raiz, "node_modules/axe-core/axe.min.js") });
+    await pagina.addScriptTag({ path: caminho.join(raiz, "node_modules/axe-core/axe.min.js") });
 
     async function validarEstado(nome, preparar) {
         if (preparar) await pagina.evaluate(preparar);
@@ -42,7 +42,7 @@ try {
             rules: { "color-contrast": { enabled: true } },
         }));
         const graves = resultado.violations.filter(item => ["critical", "serious"].includes(item.impact));
-        assert.deepEqual(graves.map(item => `${item.id}: ${item.help}`), [], `Falhas axe em ${nome}`);
+        verificar.deepEqual(graves.map(item => `${item.id}: ${item.help}`), [], `Falhas axe em ${nome}`);
     }
 
     await validarEstado("estado inicial");
@@ -56,7 +56,7 @@ try {
     });
 
     const canvasesSemNome = await pagina.locator("canvas:not([aria-label])").count();
-    assert.equal(canvasesSemNome, 0, "Todos os canvases devem possuir nome acessível.");
+    verificar.equal(canvasesSemNome, 0, "Todos os canvases devem possuir nome acessível.");
 
     const paginaPaisagem = await navegador.newPage({ viewport: { width: 720, height: 360 } });
     await paginaPaisagem.goto(`http://127.0.0.1:${porta}/`, { waitUntil: "domcontentloaded" });
@@ -73,14 +73,14 @@ try {
             toolbarSemEstouro: grupoToolbar?.scrollWidth === grupoToolbar?.clientWidth,
         };
     });
-    assert.equal(layoutPaisagem.colunas, 4, "Paisagem deve manter as quatro abas em colunas equivalentes.");
-    assert.ok(layoutPaisagem.abasAntesDoToolbar, "Em paisagem, abas e toolbar devem ocupar linhas separadas.");
-    assert.ok(Math.abs(layoutPaisagem.larguraAbas - layoutPaisagem.larguraToolbar) < 1, "Abas e toolbar devem usar toda a largura útil.");
-    assert.ok(layoutPaisagem.toolbarSemEstouro, "A toolbar em paisagem não deve criar rolagem horizontal.");
+    verificar.equal(layoutPaisagem.colunas, 4, "Paisagem deve manter as quatro abas em colunas equivalentes.");
+    verificar.ok(layoutPaisagem.abasAntesDoToolbar, "Em paisagem, abas e toolbar devem ocupar linhas separadas.");
+    verificar.ok(Math.abs(layoutPaisagem.larguraAbas - layoutPaisagem.larguraToolbar) < 1, "Abas e toolbar devem usar toda a largura útil.");
+    verificar.ok(layoutPaisagem.toolbarSemEstouro, "A toolbar em paisagem não deve criar rolagem horizontal.");
     await paginaPaisagem.close();
 
     console.log("Testes axe, contraste e nomes acessíveis concluídos com sucesso.");
 } finally {
     await navegador.close();
-    await new Promise(resolve => servidor.close(resolve));
+    await new Promise(resolver => servidor.close(resolver));
 }

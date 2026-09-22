@@ -2,11 +2,11 @@
 
 (function () {
     function obterConfiguracao(campo) {
-        const schema = window.AppConfig?.sensorSchemas?.[campo] || {};
+        const esquema = window.AppConfig?.sensorSchemas?.[campo] || {};
         const especifica = window.AppConfig?.dataQuality?.metrics?.[campo] || {};
         return {
-            criticalMin: schema.plausibleMin,
-            criticalMax: schema.plausibleMax,
+            criticalMin: esquema.plausibleMin,
+            criticalMax: esquema.plausibleMax,
             ...especifica,
         };
     }
@@ -77,20 +77,20 @@
         const leituras = [];
         const datas = Object.keys(dados || {}).sort((a, b) => ClimateData.parseFirebaseDate(a) - ClimateData.parseFirebaseDate(b));
 
-        for (const data of datas) {
-            const dadosData = dados[data];
+        for (const dataLeitura of datas) {
+            const dadosData = dados[dataLeitura];
             for (const horario of Object.keys(dadosData || {}).sort()) {
                 const dadosHorario = dadosData[horario];
-                for (const itemId of Object.keys(dadosHorario || {}).sort()) {
-                    const item = dadosHorario[itemId];
+                for (const idItem of Object.keys(dadosHorario || {}).sort()) {
+                    const item = dadosHorario[idItem];
                     if (!item || typeof item !== "object") continue;
                     const valor = ClimateData.normalizeMeasurementValue(campo, item[campo]);
                     if (valor === null) continue;
                     leituras.push({
-                        chave: criarChaveLeitura(data, horario, itemId),
-                        data,
+                        chave: criarChaveLeitura(dataLeitura, horario, idItem),
+                        data: dataLeitura,
                         horario,
-                        itemId,
+                        itemId: idItem,
                         valor,
                     });
                 }
@@ -110,7 +110,7 @@
             : Number(window.AppConfig?.dataQuality?.expectedReadingsPerDay) || 24;
         const hoje = ClimateData.dataAtual();
         const horaAtual = new Date().getHours();
-        return datas.reduce((total, data) => total + (data === hoje ? Math.min(porDia, horaAtual + 1) : porDia), 0);
+        return datas.reduce((total, dataLeitura) => total + (dataLeitura === hoje ? Math.min(porDia, horaAtual + 1) : porDia), 0);
     }
 
     function aplicarFaixaCritica(leituras, mapa, configuracao, avisos) {
@@ -178,11 +178,11 @@
         return Date.now() - ultimaLeituraEm.getTime() > limiteMinutos * 60 * 1000;
     }
 
-    function analisarDataHora(data, horario) {
+    function analisarDataHora(dados, horario) {
         if (typeof ClimateData.parseFirebaseDateTime === "function") {
-            return ClimateData.parseFirebaseDateTime(data, horario);
+            return ClimateData.parseFirebaseDateTime(dados, horario);
         }
-        const [dia, mes, ano] = String(data || "").split("-").map(Number);
+        const [dia, mes, ano] = String(dados || "").split("-").map(Number);
         const [hora, minuto = 0] = String(horario || "").split("-").map(Number);
         const resultado = new Date(ano, mes - 1, dia, hora, minuto);
         return Number.isNaN(resultado.getTime()) ? null : resultado;
@@ -216,12 +216,12 @@
         qualidade.motivos.push(motivo);
     }
 
-    function obterQualidadeLeitura(analise, data, horario, itemId) {
-        return analise?.qualidadePorLeitura?.get(criarChaveLeitura(data, horario, itemId)) || null;
+    function obterQualidadeLeitura(analise, dados, horario, idItem) {
+        return analise?.qualidadePorLeitura?.get(criarChaveLeitura(dados, horario, idItem)) || null;
     }
 
-    function criarChaveLeitura(data, horario, itemId) {
-        return `${data}|${horario}|${itemId}`;
+    function criarChaveLeitura(dados, horario, idItem) {
+        return `${dados}|${horario}|${idItem}`;
     }
 
     function obterRotuloNivel(nivel) {
@@ -258,17 +258,17 @@
         return `${String(hora).padStart(2, "0")}:${String(minuto).padStart(2, "0")}`;
     }
 
-    function aplicarAoGrafico(containerId, analise) {
-        const container = document.getElementById(containerId);
-        if (!container) return;
-        container.querySelector(".chart-quality-badge")?.remove();
+    function aplicarAoGrafico(idRecipiente, analise) {
+        const recipiente = document.getElementById(idRecipiente);
+        if (!recipiente) return;
+        recipiente.querySelector(".chart-quality-badge")?.remove();
         if (!analise || ["adequada", "sem_dados"].includes(analise.nivel)) return;
 
-        const badge = document.createElement("span");
-        badge.className = `chart-quality-badge chart-quality-badge--${analise.nivel}`;
-        badge.textContent = analise.rotulo;
-        badge.title = analise.avisos.join(" ");
-        container.appendChild(badge);
+        const selo = document.createElement("span");
+        selo.className = `chart-quality-badge chart-quality-badge--${analise.nivel}`;
+        selo.textContent = analise.rotulo;
+        selo.title = analise.avisos.join(" ");
+        recipiente.appendChild(selo);
     }
 
     window.ClimateDataQuality = {

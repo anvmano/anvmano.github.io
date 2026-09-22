@@ -1,7 +1,7 @@
-import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
-import vm from "node:vm";
+import verificar from "node:assert/strict";
+import arquivos from "node:fs";
+import moduloCaminho from "node:path";
+import maquinaVirtual from "node:vm";
 
 const raiz = process.cwd();
 const contexto = {
@@ -17,8 +17,8 @@ const contexto = {
 contexto.window = contexto;
 contexto.ClimateDiagnostics = { depurar() {} };
 contexto.ClimateAIService = {
-    async generateText(prompt) {
-        if (String(prompt).includes("Schema obrigatório")) return "{}";
+    async generateText(instrucaoModelo) {
+        if (String(instrucaoModelo).includes("Schema obrigatório")) return "{}";
         throw new Error("Resposta final desativada para validar o fallback local.");
     },
 };
@@ -42,16 +42,16 @@ contexto.ClimateData = {
     },
 };
 contexto.ClimateSolar = {
-    getSolarEventsForSelectedDate(origem, data) {
-        return origem?.[data] || null;
+    getSolarEventsForSelectedDate(origem, dados) {
+        return origem?.[dados] || null;
     },
 };
 
-vm.createContext(contexto);
+maquinaVirtual.createContext(contexto);
 
 function carregarScript(caminhoRelativo) {
-    const caminho = path.join(raiz, caminhoRelativo);
-    vm.runInContext(fs.readFileSync(caminho, "utf8"), contexto, { filename: caminhoRelativo });
+    const caminho = moduloCaminho.join(raiz, caminhoRelativo);
+    maquinaVirtual.runInContext(arquivos.readFileSync(caminho, "utf8"), contexto, { filename: caminhoRelativo });
 }
 
 [
@@ -76,23 +76,23 @@ async function resolver(pergunta) {
 for (const [quantidade, dataInicial] of [[2, "14-08-2026"], [3, "13-08-2026"], [5, "11-08-2026"], [10, "06-08-2026"], [30, "17-07-2026"]]) {
     const intencao = await resolver(`Qual a média da temperatura da sala nos últimos ${quantidade} dias?`);
     const datas = contexto.ClimateAssistant.intent.resolvePeriodDates(intencao.period);
-    assert.equal(intencao.period.days, quantidade);
-    assert.equal(datas[0], dataInicial);
-    assert.equal(datas.at(-1), "15-08-2026");
+    verificar.equal(intencao.period.days, quantidade);
+    verificar.equal(datas[0], dataInicial);
+    verificar.equal(datas.at(-1), "15-08-2026");
 }
 
 const cincoDias = await resolver("Qual a média da temperatura da sala nos últimos cinco dias?");
-assert.equal(cincoDias.period.days, 5);
+verificar.equal(cincoDias.period.days, 5);
 
 const quarentaCincoDias = await resolver("Qual a média da temperatura da sala nos últimos 45 dias?");
-assert.equal(quarentaCincoDias.period.days, 30);
-assert.equal(quarentaCincoDias.period.requestedDays, 45);
-assert.equal(quarentaCincoDias.period.limited, true);
+verificar.equal(quarentaCincoDias.period.days, 30);
+verificar.equal(quarentaCincoDias.period.requestedDays, 45);
+verificar.equal(quarentaCincoDias.period.limited, true);
 
 const quarentaOitoHoras = await resolver("Qual a média da temperatura da sala nas últimas 48 horas?");
-assert.equal(quarentaOitoHoras.period.type, "rolling_hours");
-assert.equal(quarentaOitoHoras.period.hours, 48);
-assert.equal(quarentaOitoHoras.period.selectedDate, "15-08-2026");
+verificar.equal(quarentaOitoHoras.period.type, "rolling_hours");
+verificar.equal(quarentaOitoHoras.period.hours, 48);
+verificar.equal(quarentaOitoHoras.period.selectedDate, "15-08-2026");
 
 const perguntaIntervaloSolar = "Qual o dia mais longo entre 16/08/2025 e 16/08/2026?";
 const intencaoIntervaloSolar = await resolver(perguntaIntervaloSolar);
@@ -102,11 +102,11 @@ const planoIntervaloSolar = contexto.ClimateAssistant.planner.planQuestionIntent
     contextoPergunta
 );
 const datasIntervaloSolar = contexto.ClimateAssistant.intent.resolvePeriodDates(planoIntervaloSolar.period);
-assert.equal(planoIntervaloSolar.operation, "solar_maior_duracao_luz");
-assert.equal(planoIntervaloSolar.period.type, "solar_range");
-assert.equal(datasIntervaloSolar[0], "16-08-2025");
-assert.equal(datasIntervaloSolar.at(-1), "16-08-2026");
-assert.equal(datasIntervaloSolar.length, 366);
+verificar.equal(planoIntervaloSolar.operation, "solar_maior_duracao_luz");
+verificar.equal(planoIntervaloSolar.period.type, "solar_range");
+verificar.equal(datasIntervaloSolar[0], "16-08-2025");
+verificar.equal(datasIntervaloSolar.at(-1), "16-08-2026");
+verificar.equal(datasIntervaloSolar.length, 366);
 
 const perguntaAnoSolar = "Qual o dia mais longo desse ano?";
 const intencaoAnoSolar = await resolver(perguntaAnoSolar);
@@ -115,8 +115,8 @@ const planoAnoSolar = contexto.ClimateAssistant.planner.planQuestionIntent(
     perguntaAnoSolar,
     contextoPergunta
 );
-assert.equal(planoAnoSolar.period.type, "selected_year");
-assert.equal(planoAnoSolar.period.selectedDate.endsWith("-2026"), true);
+verificar.equal(planoAnoSolar.period.type, "selected_year");
+verificar.equal(planoAnoSolar.period.selectedDate.endsWith("-2026"), true);
 
 const casosOperacao = [
     ["Qual a média da temperatura da sala nos últimos 7 dias?", "media"],
@@ -133,7 +133,7 @@ const casosOperacao = [
 for (const [pergunta, operacao] of casosOperacao) {
     const intencao = await resolver(pergunta);
     const plano = contexto.ClimateAssistant.planner.planQuestionIntent(intencao, pergunta, contextoPergunta);
-    assert.equal(plano.operation, operacao, pergunta);
+    verificar.equal(plano.operation, operacao, pergunta);
 }
 
 const resumoGlobal = contexto.ClimateAssistant.planner.planQuestionIntent({
@@ -141,33 +141,33 @@ const resumoGlobal = contexto.ClimateAssistant.planner.planQuestionIntent({
     metrics: [],
     operation: "resumo",
 }, "Faça um resumo da data selecionada.", { ...contextoPergunta, activeTab: "Tab0" });
-assert.equal(resumoGlobal.environments.length, 4);
-assert.equal(resumoGlobal.operation, "resumo");
+verificar.equal(resumoGlobal.environments.length, 4);
+verificar.equal(resumoGlobal.operation, "resumo");
 
 const alertaGlobal = contexto.ClimateAssistant.planner.planQuestionIntent({
     environments: [contexto.ClimateAssistant.config.ENVIRONMENTS.estacao],
     metrics: [],
     operation: "resumo",
 }, "Quais indicadores ficaram fora da faixa ideal?", { ...contextoPergunta, activeTab: "Tab0" });
-assert.equal(alertaGlobal.environments.length, 3);
-assert.equal(alertaGlobal.operation, "status_faixa");
+verificar.equal(alertaGlobal.environments.length, 3);
+verificar.equal(alertaGlobal.operation, "status_faixa");
 
 const maximaGlobal = contexto.ClimateAssistant.planner.planQuestionIntent({
     environments: [contexto.ClimateAssistant.config.ENVIRONMENTS.estacao],
     metrics: ["ciclo_solar"],
     operation: "resumo",
 }, "Qual foi a temperatura máxima da data selecionada?", { ...contextoPergunta, activeTab: "Tab0" });
-assert.equal(maximaGlobal.environments.length, 3);
-assert.deepEqual([...maximaGlobal.metrics], ["temperatura"]);
-assert.equal(maximaGlobal.operation, "maxima");
+verificar.equal(maximaGlobal.environments.length, 3);
+verificar.deepEqual([...maximaGlobal.metrics], ["temperatura"]);
+verificar.equal(maximaGlobal.operation, "maxima");
 
 const mediaGlobal = contexto.ClimateAssistant.planner.planQuestionIntent({
     environments: [contexto.ClimateAssistant.config.ENVIRONMENTS.estacao],
     metrics: ["ciclo_solar"],
     operation: "resumo",
 }, "Qual foi a temperatura média da data selecionada?", { ...contextoPergunta, activeTab: "Tab0" });
-assert.equal(mediaGlobal.environments.length, 3);
-assert.equal(mediaGlobal.operation, "media");
+verificar.equal(mediaGlobal.environments.length, 3);
+verificar.equal(mediaGlobal.operation, "media");
 
 const metrica = { label: "Temperatura", key: "temperatura", unit: "°C", aliases: ["temperatura"] };
 const ambiente = contexto.ClimateAssistant.config.ENVIRONMENTS.sala;
@@ -194,18 +194,18 @@ function montarResultado(operacao) {
     );
 }
 
-assert.deepEqual(
+verificar.deepEqual(
     [montarResultado("media").tipo_resultado, montarResultado("maxima").tipo_resultado, montarResultado("minima").tipo_resultado],
     ["estatistica_media", "estatistica_extremo", "estatistica_extremo"]
 );
-assert.equal(montarResultado("maxima").valor, 24);
-assert.equal(montarResultado("minima").valor, 20);
-assert.equal(montarResultado("delta").diferenca, 4);
-assert.equal(montarResultado("tendencia").tendencia, "subindo");
-assert.equal("amostras" in montarResultado("media"), false);
+verificar.equal(montarResultado("maxima").valor, 24);
+verificar.equal(montarResultado("minima").valor, 20);
+verificar.equal(montarResultado("delta").diferenca, 4);
+verificar.equal(montarResultado("tendencia").tendencia, "subindo");
+verificar.equal("amostras" in montarResultado("media"), false);
 const estatisticaUmaMedicao = contexto.ClimateAssistant.metrics.calculateStats([28.06]);
-assert.equal(estatisticaUmaMedicao.delta, null);
-assert.equal(contexto.ClimateAssistant.metrics.trendFromDelta(estatisticaUmaMedicao.delta), "dados insuficientes");
+verificar.equal(estatisticaUmaMedicao.delta, null);
+verificar.equal(contexto.ClimateAssistant.metrics.trendFromDelta(estatisticaUmaMedicao.delta), "dados insuficientes");
 
 const resultadoTendenciaInsuficiente = contexto.ClimateAssistant.metrics.buildMetricResult(
     contexto.ClimateAssistant.config.ENVIRONMENTS.aquario,
@@ -223,14 +223,14 @@ const resultadoTendenciaInsuficiente = contexto.ClimateAssistant.metrics.buildMe
     {},
     {}
 );
-assert.equal(resultadoTendenciaInsuficiente.tipo_resultado, "dados_insuficientes_tendencia");
+verificar.equal(resultadoTendenciaInsuficiente.tipo_resultado, "dados_insuficientes_tendencia");
 
 const metricasIncompativeis = contexto.ClimateAssistant.metrics.resolveMetricsForEnvironments(
     [contexto.ClimateAssistant.config.ENVIRONMENTS.estacao],
     ["temperatura"],
     "temperatura"
 );
-assert.equal(metricasIncompativeis.length, 0);
+verificar.equal(metricasIncompativeis.length, 0);
 
 const contextoComDados = {
     ...contextoPergunta,
@@ -252,22 +252,22 @@ const respostaMedia = await contexto.ClimateAssistant.query.answerQuestionDetail
     "Qual a média da temperatura da sala nos últimos 2 dias?",
     contextoComDados
 );
-assert.match(respostaMedia.answer, /média de Temperatura/i);
-assert.doesNotMatch(respostaMedia.answer, /Mínima:|Máxima:/i);
+verificar.match(respostaMedia.answer, /média de Temperatura/i);
+verificar.doesNotMatch(respostaMedia.answer, /Mínima:|Máxima:/i);
 
 const respostaMaxima = await contexto.ClimateAssistant.query.answerQuestionDetailed(
     "Qual foi a temperatura mais alta da sala nos últimos 2 dias?",
     contextoComDados
 );
-assert.match(respostaMaxima.answer, /máxima de Temperatura/i);
-assert.match(respostaMaxima.answer, /24\.00°C/);
-assert.doesNotMatch(respostaMaxima.answer, /Média:|Mínima:/i);
+verificar.match(respostaMaxima.answer, /máxima de Temperatura/i);
+verificar.match(respostaMaxima.answer, /24\.00°C/);
+verificar.doesNotMatch(respostaMaxima.answer, /Média:|Mínima:/i);
 
 const respostaTendencia = await contexto.ClimateAssistant.query.answerQuestionDetailed(
     "Qual a tendência da temperatura da sala nos últimos 2 dias?",
     contextoComDados
 );
-assert.match(respostaTendencia.answer, /tendência foi subindo/i);
+verificar.match(respostaTendencia.answer, /tendência foi subindo/i);
 
 const contextoSolar = {
     ...contextoPergunta,
@@ -285,11 +285,11 @@ const respostaIntervaloSolar = await contexto.ClimateAssistant.query.answerQuest
     contextoSolar
 );
 const metricaSolar = respostaIntervaloSolar.result.results[0].metricas[0];
-assert.equal(metricaSolar.tipo_resultado, "solar_extremo_duracao_luz");
-assert.equal(metricaSolar.data, "01/01/2026");
-assert.equal(metricaSolar.periodo, "16/08/2025 a 16/08/2026");
-assert.equal("datas_consultadas" in metricaSolar, false);
-assert.match(respostaIntervaloSolar.answer, /01\/01\/2026/);
-assert.match(respostaIntervaloSolar.answer, /16\/08\/2025 a 16\/08\/2026/);
+verificar.equal(metricaSolar.tipo_resultado, "solar_extremo_duracao_luz");
+verificar.equal(metricaSolar.data, "01/01/2026");
+verificar.equal(metricaSolar.periodo, "16/08/2025 a 16/08/2026");
+verificar.equal("datas_consultadas" in metricaSolar, false);
+verificar.match(respostaIntervaloSolar.answer, /01\/01\/2026/);
+verificar.match(respostaIntervaloSolar.answer, /16\/08\/2025 a 16\/08\/2026/);
 
 console.log("Testes de regressão da assistente concluídos com sucesso.");

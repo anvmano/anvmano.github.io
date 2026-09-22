@@ -1,8 +1,8 @@
 'use strict';
 
 (function () {
-    const namespace = window.ClimateAssistant || {};
-    const { formatDate: formatarData, formatPeriodLabel: formatarRotuloPeriodo } = namespace.format;
+    const espacoNomes = window.ClimateAssistant || {};
+    const { formatDate: formatarData, formatPeriodLabel: formatarRotuloPeriodo } = espacoNomes.format;
 
     function montarResultadoCicloSolar(ambiente, contexto, datasPeriodo, intencao) {
         const origemSolar =
@@ -13,7 +13,7 @@
             {};
 
         const dadosSolaresDiarios = datasPeriodo
-            .map(data => montarCicloSolarDiarioPorEventos(origemSolar, data))
+            .map(dados => montarCicloSolarDiarioPorEventos(origemSolar, dados))
             .filter(Boolean);
 
         const base = {
@@ -173,8 +173,8 @@
         };
     }
 
-    function montarCicloSolarDiarioPorEventos(origemSolar, data) {
-        const eventos = window.ClimateSolar?.getSolarEventsForSelectedDate?.(origemSolar, data);
+    function montarCicloSolarDiarioPorEventos(origemSolar, dados) {
+        const eventos = window.ClimateSolar?.getSolarEventsForSelectedDate?.(origemSolar, dados);
         if (!eventos) return null;
 
         const amanhecer = window.ClimateData.formatTime(eventos.dawn);
@@ -184,7 +184,7 @@
         const anoitecer = window.ClimateData.formatTime(eventos.dusk);
 
         return {
-            data: formatarData(data),
+            data: formatarData(dados),
             amanhecer,
             nascer_do_sol: nascerDoSol,
             zenite,
@@ -237,6 +237,6 @@
         return hora * 60 + minuto;
     }
 
-    namespace.solar = { buildSolarCycleResult: montarResultadoCicloSolar };
-    window.ClimateAssistant = namespace;
+    espacoNomes.solar = { buildSolarCycleResult: montarResultadoCicloSolar };
+    window.ClimateAssistant = espacoNomes;
 })();
