@@ -408,16 +408,6 @@
         white-space: nowrap;
     }
 
-    .ai-chat__panel {
-        position: fixed;
-        left: 12px;
-        right: 12px;
-        bottom: calc(72px + env(safe-area-inset-bottom));
-        width: auto;
-        max-height: min(72vh, 640px);
-        transform-origin: center bottom;
-    }
-
     .ai-chat__quick-actions {
         grid-template-columns: 1fr 1fr;
         padding-inline: 12px;

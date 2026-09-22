@@ -11,6 +11,23 @@
     backdrop-filter: blur(12px);
 }
 
+@media (max-width: 640px) {
+    .app-header {
+        transition: transform 0.22s ease;
+        will-change: transform;
+    }
+
+    .app-header.is-hidden-on-scroll {
+        transform: translateY(calc(-100% - 1px));
+    }
+}
+
+@media (max-width: 640px) and (prefers-reduced-motion: reduce) {
+    .app-header {
+        transition: none;
+    }
+}
+
 .header-inner {
     max-width: 1280px;
     margin: 0 auto;

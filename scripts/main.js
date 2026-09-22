@@ -714,6 +714,7 @@ function obterMensagemErroLogin(erro) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+    ClimateUI.setupMobileHeader();
     ClimateAqi.setup();
     ClimateSeason.setup();
     ClimateMoon.setup();

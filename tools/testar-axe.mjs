@@ -54,9 +54,33 @@ try {
         document.getElementById("aqiPopover")?.setAttribute("hidden", "");
         const chat = document.getElementById("aiChat");
         const painel = document.getElementById("aiChatPanel");
+        chat?.removeAttribute("hidden");
         chat?.classList.add("is-open");
         painel?.removeAttribute("hidden");
+        document.documentElement.classList.add("ai-chat-scroll-locked");
+        document.body.classList.add("ai-chat-scroll-locked");
+        document.body.style.top = "-900px";
     });
+
+    await pagina.waitForFunction(() => {
+        const folhaChat = Array.from(document.styleSheets).find(folha => folha.href?.includes("styles/chat.css"));
+        return !!folhaChat && getComputedStyle(document.getElementById("aiChatPanel")).position === "fixed";
+    });
+    const limitesChatMovel = await pagina.evaluate(() => {
+        const caixa = document.getElementById("aiChatPanel").getBoundingClientRect();
+        return {
+            esquerda: caixa.left,
+            direita: caixa.right,
+            topo: caixa.top,
+            base: caixa.bottom,
+            larguraViewport: window.innerWidth,
+            alturaViewport: window.innerHeight,
+        };
+    });
+    verificar.ok(limitesChatMovel.esquerda >= 0, "Chat móvel não pode ultrapassar a borda esquerda.");
+    verificar.ok(limitesChatMovel.direita <= limitesChatMovel.larguraViewport, "Chat móvel não pode ultrapassar a borda direita.");
+    verificar.ok(limitesChatMovel.topo >= 0, "Chat móvel não pode ultrapassar o topo.");
+    verificar.ok(limitesChatMovel.base <= limitesChatMovel.alturaViewport, "Chat móvel não pode ultrapassar a base.");
 
     const canvasesSemNome = await pagina.locator("canvas:not([aria-label])").count();
     verificar.equal(canvasesSemNome, 0, "Todos os canvases devem possuir nome acessível.");
@@ -111,6 +135,34 @@ try {
     verificar.ok(Math.abs(layoutPaisagem.larguraAbas - layoutPaisagem.larguraToolbar) < 1, "Abas e toolbar devem usar toda a largura útil.");
     verificar.ok(layoutPaisagem.toolbarSemEstouro, "A toolbar em paisagem não deve criar rolagem horizontal.");
     await paginaPaisagem.close();
+
+    const paginaCabecalho = await navegador.newPage({ viewport: { width: 390, height: 844 } });
+    await paginaCabecalho.goto(`http://127.0.0.1:${porta}/`, { waitUntil: "domcontentloaded" });
+    await paginaCabecalho.evaluate(() => {
+        document.body.style.minHeight = "3000px";
+        document.getElementById("publicApp")?.removeAttribute("hidden");
+    });
+    await paginaCabecalho.evaluate(() => window.scrollTo(0, 500));
+    await paginaCabecalho.waitForFunction(() => document.querySelector(".app-header")?.classList.contains("is-hidden-on-scroll"));
+    await paginaCabecalho.waitForFunction(() => document.querySelector(".app-header")?.getBoundingClientRect().bottom <= 1);
+    const cabecalhoOculto = await paginaCabecalho.locator(".app-header").evaluate(elemento => elemento.getBoundingClientRect().bottom <= 1);
+    verificar.equal(cabecalhoOculto, true, "Cabeçalho móvel deve recolher ao rolar para baixo.");
+
+    await paginaCabecalho.evaluate(() => window.scrollTo(0, 320));
+    await paginaCabecalho.waitForFunction(() => !document.querySelector(".app-header")?.classList.contains("is-hidden-on-scroll"));
+    await paginaCabecalho.waitForFunction(() => document.querySelector(".app-header")?.getBoundingClientRect().top >= -1);
+    const cabecalhoVisivel = await paginaCabecalho.locator(".app-header").evaluate(elemento => elemento.getBoundingClientRect().top >= -1);
+    verificar.equal(cabecalhoVisivel, true, "Cabeçalho móvel deve reaparecer ao rolar para cima.");
+
+    await paginaCabecalho.evaluate(() => {
+        document.getElementById("seasonIndicator")?.setAttribute("aria-expanded", "true");
+        window.dispatchEvent(new CustomEvent("header-popover-open", { detail: { source: "season" } }));
+        window.scrollTo(0, 700);
+    });
+    await paginaCabecalho.waitForTimeout(100);
+    const cabecalhoComPopover = await paginaCabecalho.locator(".app-header").evaluate(elemento => !elemento.classList.contains("is-hidden-on-scroll"));
+    verificar.equal(cabecalhoComPopover, true, "Cabeçalho móvel deve permanecer visível com popover aberto.");
+    await paginaCabecalho.close();
 
     console.log("Testes axe, contraste e nomes acessíveis concluídos com sucesso.");
 } finally {

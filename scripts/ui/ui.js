@@ -268,6 +268,58 @@
         });
     }
 
+    function configurarCabecalhoMovel() {
+        const cabecalho = document.querySelector(".app-header");
+        if (!cabecalho || cabecalho.dataset.autoHideReady === "true") return;
+
+        const consultaMovel = window.matchMedia("(max-width: 640px)");
+        const limiteMovimento = 8;
+        let posicaoReferencia = Math.max(0, window.scrollY);
+        let quadroPendente = false;
+
+        cabecalho.dataset.autoHideReady = "true";
+
+        function possuiPopoverAberto() {
+            return !!cabecalho.querySelector('.header-status [aria-expanded="true"]');
+        }
+
+        function mostrarCabecalho() {
+            cabecalho.classList.remove("is-hidden-on-scroll");
+        }
+
+        function atualizarCabecalho() {
+            quadroPendente = false;
+            const posicaoAtual = Math.max(0, window.scrollY);
+
+            if (!consultaMovel.matches || possuiPopoverAberto() || posicaoAtual <= cabecalho.offsetHeight) {
+                mostrarCabecalho();
+                posicaoReferencia = posicaoAtual;
+                return;
+            }
+
+            const deslocamento = posicaoAtual - posicaoReferencia;
+            if (deslocamento >= limiteMovimento) {
+                cabecalho.classList.add("is-hidden-on-scroll");
+                posicaoReferencia = posicaoAtual;
+            } else if (deslocamento <= -limiteMovimento) {
+                mostrarCabecalho();
+                posicaoReferencia = posicaoAtual;
+            }
+        }
+
+        window.addEventListener("scroll", () => {
+            if (quadroPendente) return;
+            quadroPendente = true;
+            window.requestAnimationFrame(atualizarCabecalho);
+        }, { passive: true });
+        window.addEventListener("header-popover-open", mostrarCabecalho);
+        cabecalho.addEventListener("focusin", mostrarCabecalho);
+        consultaMovel.addEventListener?.("change", () => {
+            mostrarCabecalho();
+            posicaoReferencia = Math.max(0, window.scrollY);
+        });
+    }
+
     function configurarControlesData({ getSelectedDate: obterDataSelecionada, setSelectedDate: definirDataSelecionada, getTodayDate: obterDataHoje, onDateChange: aoAlterarData }) {
         const entradaData = document.getElementById("selectedDate");
         const botaoHoje = document.getElementById("btnToday");
@@ -299,6 +351,7 @@
         baixarTabelaCsv,
         getActiveTabName: obterNomeAbaAtiva,
         setupCollapsibleSections: configurarSecoesRecolhiveis,
+        setupMobileHeader: configurarCabecalhoMovel,
         setupDateControls: configurarControlesData,
         setupTabSwipe: configurarDeslizeAbas,
         setupTabs: configurarAbas,

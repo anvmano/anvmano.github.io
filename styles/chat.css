@@ -294,6 +294,23 @@ body.ai-chat-scroll-locked {
     cursor: wait;
 }
 
+/* Este arquivo e carregado sob demanda depois do agregador principal.
+   A geometria movel fica aqui para nao ser sobrescrita pela regra desktop. */
+@media (max-width: 640px) {
+    .ai-chat .ai-chat__panel {
+        position: fixed;
+        top: auto;
+        left: max(12px, env(safe-area-inset-left));
+        right: max(12px, env(safe-area-inset-right));
+        bottom: calc(72px + env(safe-area-inset-bottom));
+        width: auto;
+        max-width: none;
+        max-height: min(72vh, 640px);
+        max-height: min(72dvh, 640px);
+        transform-origin: center bottom;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .ai-chat__panel,
     .ai-chat__toggle {
