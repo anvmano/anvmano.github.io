@@ -3,6 +3,7 @@
 (function () {
     const HORAS_OBSERVADAS = 24;
     const HORAS_PREVISTAS = 12;
+    const CONSULTA_MOVEL = "(max-width: 640px)";
 
     const pluginMarcadorAgora = {
         id: "marcadorAgoraChuva",
@@ -25,6 +26,13 @@
             contexto.lineTo(x, area.bottom);
             contexto.stroke();
             contexto.restore();
+        },
+    };
+
+    const pluginControleResponsivo = {
+        id: "controleResponsivoChuva",
+        beforeDestroy(grafico) {
+            removerControleMovel(grafico);
         },
     };
 
@@ -96,6 +104,7 @@
         const corChuva = cores?.blue || "#38bdf8";
         const corPrevisao = "rgba(125, 211, 252, 0.48)";
         const corProbabilidade = cores?.purple || "#a78bfa";
+        const movel = estaEmTelaMovel();
         const grafico = new Chart(canvas.getContext("2d"), {
             type: "bar",
             data: {
@@ -138,29 +147,34 @@
                         spanGaps: false,
                         tipoDado: "previsao",
                         order: 1,
+                        hidden: movel,
                     },
                 ],
             },
             options: obterOpcoes({ janela, cores }),
-            plugins: [pluginMarcadorAgora],
+            plugins: [pluginMarcadorAgora, pluginControleResponsivo],
         });
 
         grafico.$indiceAgora = janela.indiceAgora;
         grafico.$marcadorAgora = { indice: janela.indiceAgora };
         grafico.$zoomPlugins = [pluginMarcadorAgora];
+        grafico.$modoChuvaMovel = "precipitacao";
+        sincronizarModoResponsivo(grafico);
         if (grupoSincronizacao) window.ClimateChartSync?.registrar(grafico, grupoSincronizacao);
         grafico.update("none");
         return grafico;
     }
 
     function obterOpcoes({ janela = null, cores = window.AppConfig?.colors || {} } = {}) {
-        const limiteTicks = window.matchMedia?.("(max-width: 600px)")?.matches ? 7 : 13;
+        const movel = estaEmTelaMovel();
+        const limiteTicks = movel ? 5 : 13;
         const padroes = window.ClimateCharts.createDefaults(cores);
         const opcoes = window.ClimateCharts.mergeDeep(padroes, {
+            onResize: grafico => sincronizarModoResponsivo(grafico),
             interaction: { mode: "index", intersect: false, axis: "x" },
             plugins: {
                 legend: {
-                    display: true,
+                    display: !movel,
                     labels: { color: cores.text, boxWidth: 12, padding: 12 },
                 },
                 tooltip: {
@@ -185,7 +199,8 @@
                     type: "linear",
                     position: "left",
                     beginAtZero: true,
-                    title: { display: true, text: "mm", color: cores.text },
+                    display: true,
+                    title: { display: !movel, text: "mm", color: cores.text },
                     ticks: { color: cores.text, callback: valor => `${valor} mm` },
                     grid: { color: cores.grid },
                 },
@@ -194,7 +209,8 @@
                     position: "right",
                     min: 0,
                     max: 100,
-                    title: { display: true, text: "%", color: cores.text },
+                    display: !movel,
+                    title: { display: !movel, text: "%", color: cores.text },
                     ticks: { color: cores.text, callback: valor => `${valor}%` },
                     grid: { drawOnChartArea: false },
                 },
@@ -202,6 +218,84 @@
         });
         delete opcoes.scales.y;
         return opcoes;
+    }
+
+    function estaEmTelaMovel() {
+        return !!window.matchMedia?.(CONSULTA_MOVEL)?.matches;
+    }
+
+    function sincronizarModoResponsivo(grafico) {
+        if (!grafico?.data?.datasets || !grafico.options?.scales) return;
+        const movel = estaEmTelaMovel();
+        grafico.options.plugins.legend.display = !movel;
+        grafico.options.scales.x.ticks.maxTicksLimit = movel ? 5 : 13;
+        grafico.options.scales.yMilimetros.title.display = !movel;
+        grafico.options.scales.yProbabilidade.title.display = !movel;
+
+        if (!movel) {
+            grafico.data.datasets.forEach(serie => { serie.hidden = false; });
+            grafico.options.scales.yMilimetros.display = true;
+            grafico.options.scales.yProbabilidade.display = true;
+            removerControleMovel(grafico);
+            return;
+        }
+
+        criarControleMovel(grafico);
+        aplicarModoMovel(grafico, grafico.$modoChuvaMovel || "precipitacao", false);
+    }
+
+    function criarControleMovel(grafico) {
+        const canvas = grafico?.canvas;
+        const recipiente = canvas?.parentElement;
+        if (!canvas || !recipiente) return;
+
+        const seletor = `.rain-chart-toggle[data-rain-chart="${canvas.id}"]`;
+        if (recipiente.querySelector(seletor)) return;
+
+        const controle = document.createElement("div");
+        controle.className = "rain-chart-toggle";
+        controle.dataset.rainChart = canvas.id;
+        controle.setAttribute("role", "group");
+        controle.setAttribute("aria-label", "Dado exibido no gráfico de chuva");
+        controle.innerHTML = `
+            <button type="button" data-rain-mode="precipitacao" aria-pressed="true">Precipitação</button>
+            <button type="button" data-rain-mode="probabilidade" aria-pressed="false">Chance</button>
+        `;
+        controle.addEventListener("click", evento => {
+            const botao = evento.target.closest?.("[data-rain-mode]");
+            if (!botao) return;
+            aplicarModoMovel(grafico, botao.dataset.rainMode);
+        });
+        recipiente.insertBefore(controle, canvas);
+    }
+
+    function aplicarModoMovel(grafico, modo, atualizar = true) {
+        if (!grafico?.data?.datasets || !estaEmTelaMovel()) return;
+        const mostrarProbabilidade = modo === "probabilidade";
+        grafico.$modoChuvaMovel = mostrarProbabilidade ? "probabilidade" : "precipitacao";
+        grafico.data.datasets.forEach(serie => {
+            serie.hidden = mostrarProbabilidade
+                ? serie.yAxisID !== "yProbabilidade"
+                : serie.yAxisID === "yProbabilidade";
+        });
+        grafico.options.scales.yMilimetros.display = !mostrarProbabilidade;
+        grafico.options.scales.yProbabilidade.display = mostrarProbabilidade;
+
+        const controle = grafico.canvas?.parentElement?.querySelector(
+            `.rain-chart-toggle[data-rain-chart="${grafico.canvas.id}"]`
+        );
+        controle?.querySelectorAll("[data-rain-mode]").forEach(botao => {
+            botao.setAttribute("aria-pressed", String(botao.dataset.rainMode === grafico.$modoChuvaMovel));
+        });
+        if (atualizar) grafico.update("none");
+    }
+
+    function removerControleMovel(grafico) {
+        const canvas = grafico?.canvas;
+        if (!canvas?.parentElement) return;
+        canvas.parentElement
+            .querySelector(`.rain-chart-toggle[data-rain-chart="${canvas.id}"]`)
+            ?.remove();
     }
 
     function dataValida(valor) {

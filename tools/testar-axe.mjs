@@ -45,7 +45,10 @@ try {
         verificar.deepEqual(graves.map(item => `${item.id}: ${item.help}`), [], `Falhas axe em ${nome}`);
     }
 
-    await validarEstado("estado inicial");
+    await validarEstado("modo público inicial", () => {
+        document.getElementById("publicApp")?.removeAttribute("hidden");
+        document.getElementById("privateApp")?.setAttribute("hidden", "");
+    });
     await validarEstado("popover AQI", () => document.getElementById("aqiPopover")?.removeAttribute("hidden"));
     await validarEstado("chat aberto", () => {
         document.getElementById("aqiPopover")?.setAttribute("hidden", "");
@@ -57,6 +60,36 @@ try {
 
     const canvasesSemNome = await pagina.locator("canvas:not([aria-label])").count();
     verificar.equal(canvasesSemNome, 0, "Todos os canvases devem possuir nome acessível.");
+
+    const estruturaPublica = await pagina.evaluate(() => ({
+        mainVisivel: !!document.querySelector("main#publicApp:not([hidden])"),
+        h1Visivel: !!document.querySelector("main#publicApp:not([hidden]) h1"),
+        controlesPequenos: Array.from(document.querySelectorAll("#publicApp button:not([hidden])"))
+            .filter(botao => botao.getBoundingClientRect().height < 44)
+            .map(botao => botao.textContent.trim()),
+    }));
+    verificar.equal(estruturaPublica.mainVisivel, true, "Modo público deve usar landmark main.");
+    verificar.equal(estruturaPublica.h1Visivel, true, "Modo público deve possuir h1.");
+    verificar.deepEqual(estruturaPublica.controlesPequenos, [], "Controles públicos móveis devem ter ao menos 44px.");
+
+    const paginaTablet = await navegador.newPage({ viewport: { width: 768, height: 1024 } });
+    await paginaTablet.goto(`http://127.0.0.1:${porta}/`, { waitUntil: "domcontentloaded" });
+    const layoutTablet = await paginaTablet.evaluate(() => {
+        document.getElementById("publicApp")?.setAttribute("hidden", "");
+        document.getElementById("privateApp")?.removeAttribute("hidden");
+        const abas = document.querySelector(".tab-nav");
+        const caixaAbas = abas?.getBoundingClientRect();
+        const caixaToolbar = document.querySelector(".toolbar")?.getBoundingClientRect();
+        return {
+            colunas: getComputedStyle(abas).gridTemplateColumns.split(" ").length,
+            semCorte: abas?.scrollWidth === abas?.clientWidth,
+            abasAntesDoToolbar: (caixaAbas?.bottom ?? 0) <= (caixaToolbar?.top ?? 0),
+        };
+    });
+    verificar.equal(layoutTablet.colunas, 4, "Tablet deve manter quatro abas equivalentes.");
+    verificar.equal(layoutTablet.semCorte, true, "Abas não podem ser cortadas no tablet.");
+    verificar.equal(layoutTablet.abasAntesDoToolbar, true, "Tablet deve posicionar toolbar abaixo das abas.");
+    await paginaTablet.close();
 
     const paginaPaisagem = await navegador.newPage({ viewport: { width: 720, height: 360 } });
     await paginaPaisagem.goto(`http://127.0.0.1:${porta}/`, { waitUntil: "domcontentloaded" });

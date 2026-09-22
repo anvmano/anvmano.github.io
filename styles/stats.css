@@ -32,7 +32,7 @@
 
 .stats-card__label {
     color: var(--text-secondary);
-    font-size: 0.70rem;
+    font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.07em;
     text-transform: uppercase;
@@ -40,7 +40,7 @@
 
 .stats-card__trend {
     flex-shrink: 0;
-    font-size: 0.70rem;
+    font-size: 0.72rem;
     font-weight: 700;
     padding: 2px 7px;
     border-radius: 999px;
@@ -91,7 +91,7 @@
 
 .stats-card__details dt {
     color: var(--text-muted);
-    font-size: 0.66rem;
+    font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
 }
@@ -110,7 +110,7 @@
     padding-top: 0.55rem;
     border-top: 1px solid var(--border);
     color: var(--text-secondary);
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     font-weight: 650;
     line-height: 1.35;
     display: grid;
@@ -139,7 +139,7 @@
     top: 0.3rem;
     right: 0.55rem;
     color: var(--text-muted);
-    font-size: 0.68rem;
+    font-size: 0.72rem;
     font-weight: 700;
 }
 
@@ -192,7 +192,7 @@
     display: grid;
     gap: 0.2rem;
     color: var(--text-secondary);
-    font-size: 0.74rem;
+    font-size: 0.76rem;
     font-weight: 600;
     line-height: 1.25;
     min-width: 0;
@@ -344,7 +344,7 @@
 
 .moon-summary__content span {
     color: var(--text-secondary);
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -377,7 +377,7 @@
 
 .moon-summary__details dt {
     color: var(--text-secondary);
-    font-size: 0.64rem;
+    font-size: 0.70rem;
     font-weight: 800;
     letter-spacing: 0.06em;
     text-transform: uppercase;

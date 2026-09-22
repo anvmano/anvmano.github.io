@@ -197,6 +197,9 @@ npm run test:accessibility
 npm run test:axe
 npm run test:data-quality
 npm run test:public
+npm run test:chart-sync
+npm run test:rain
+npm run test:pdf-rain
 npm run test:tables
 ```
 
@@ -231,6 +234,7 @@ A validação verifica:
 - Persistência da aba ativa em `localStorage`.
 - Gráficos globais de temperatura/umidade por ambiente na aba Estação.
 - Aba Estação com ventilação e risco de mofo a partir dos sensores internos; chuva e UV entram por consulta opcional da localização, mantida somente em memória.
+- No modo privado, o card e o gráfico de chuva permanecem ocultos até a consulta de localização retornar dados externos válidos; depois disso exibem a janela de 24h observadas + 12h previstas.
 - Gráficos de temperatura, sensação térmica, umidade, pressão, qualidade do ar e aquário.
 - Hover ou toque sincroniza o horário nos gráficos temporais compatíveis da mesma aba, inclusive chuva externa, sem transformar lacunas de dados em zero.
 - Chuva atual no card e gráfico de 24h anteriores + 12h previstas, com precipitação em milímetros e chance futura em porcentagem.

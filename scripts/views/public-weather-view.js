@@ -83,7 +83,6 @@
 
         if (!usuario) {
             elementos.publicUserStatus.innerHTML = `
-                <span>Modo público</span>
                 <button type="button" id="publicLoginButton">Entrar com Google</button>
             `;
             elementos.btnEntrar = document.getElementById("publicLoginButton");
@@ -224,6 +223,7 @@
 
     function renderizarMensagem(mensagem, tipo = "empty") {
         if (!elementos.publicResults) return;
+        elementos.publicApp?.classList.remove("has-results");
         limparContextoConsultaPublica();
         // A live region oculta anuncia o estado; a mensagem visível evita duplicar role=alert.
         elementos.publicResults.innerHTML = `<p class="state-message state-message--${tipo}">${mensagem}</p>`;
@@ -239,8 +239,11 @@
 
         elementos.publicResults.innerHTML = `
             <div class="public-location ${atualidade.desatualizado ? "is-stale" : ""}">
-                <span>${escaparHtml(dados.origem.rotulo)}</span>
-                <strong>Atualizado ${formatarDataHora(dados.atualizadoEm)} · ${atualidade.rotulo}</strong>
+                <div>
+                    <span>${escaparHtml(dados.origem.rotulo)}</span>
+                    <strong>Atualizado ${formatarDataHora(dados.atualizadoEm)} · ${atualidade.rotulo}</strong>
+                </div>
+                <button class="public-change-location" type="button">Alterar local</button>
             </div>
             <div class="stats-grid public-stats-grid">
                 ${card("Temperatura", dados.climaAtual.temperatura, "°C")}
@@ -254,7 +257,7 @@
                 <section class="moon-summary public-moon" id="publicMoonSummary"></section>
             </div>
             ${montarSecaoInsightsPublicos(insights, dados.climaAtual)}
-            <div class="charts-grid">
+            <div class="charts-grid public-metric-charts" tabindex="0" aria-label="Gráficos climáticos; deslize horizontalmente para alternar no celular">
                 ${cardCanvas("publicChartTemperature", "Temperatura", "Temperatura externa")}
                 ${cardCanvas("publicChartFeelsLike", "Sensação Térmica", "Sensação térmica externa")}
                 ${cardCanvas("publicChartHumidity", "Umidade", "Umidade externa")}
@@ -267,6 +270,13 @@
                 <canvas aria-label="Ciclo solar público" class="plot plot--solar-day" id="publicChartSolar" role="img"></canvas>
             </div>
         `;
+
+        elementos.publicApp?.classList.add("has-results");
+        elementos.publicResults.querySelector(".public-change-location")?.addEventListener("click", () => {
+            elementos.publicApp?.classList.remove("has-results");
+            document.querySelector(".public-hero")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            window.setTimeout(() => elementos.entradaBusca?.focus(), 320);
+        });
 
         renderizarContextoAstronomico(dados);
         window.ClimateAqi?.updateExternal?.({
@@ -322,7 +332,7 @@
 
         return `
             <section class="environment-insights" aria-label="Condições e recomendações da localização">
-                <div class="environment-insights__grid">
+                <div class="environment-insights__grid" tabindex="0" aria-label="Recomendações ambientais; deslize horizontalmente para ver todas no celular">
                     ${montarCardInsight({
                         titulo: "Ventilação",
                         valor: ventilacao.rotulo,

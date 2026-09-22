@@ -2,7 +2,7 @@
    Responsive
    ===================================================================== */
 @media (max-width: 640px) {
-    .app-body { padding: 0 0.85rem 2rem; }
+    .app-body { padding: 0 0.85rem calc(5rem + env(safe-area-inset-bottom)); }
 
     .header-inner {
         padding: 0 1rem;
@@ -16,7 +16,7 @@
 
     .header-status {
         --header-status-chip-width: auto;
-        --header-status-chip-height: 36px;
+        --header-status-chip-height: 44px;
         width: 100%;
         flex: 1 1 auto;
         justify-content: space-between;
@@ -32,7 +32,8 @@
     }
 
     .aqi-indicator__value {
-        display: none;
+        display: block;
+        font-size: 0.72rem;
     }
 
     .aqi-indicator__prefix {
@@ -161,7 +162,7 @@
         justify-content: center;
         width: 100%;
         min-width: 0;
-        min-height: 42px;
+        min-height: 44px;
         padding: 9px 3px;
         gap: 5px;
         font-size: 0.76rem;
@@ -227,11 +228,13 @@
     .date-picker {
         width: 100%;
         min-width: 0;
+        min-height: 44px;
     }
 
     .toolbar-button {
         width: 100%;
         min-width: 0;
+        min-height: 44px;
         padding-inline: 0.65rem;
         white-space: nowrap;
     }
@@ -257,8 +260,12 @@
         grid-template-columns: 1fr;
     }
 
+    .public-stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     #statsEstacao {
-        min-height: 520px;
+        min-height: 0;
     }
 
     .season-timeline__segment {
@@ -341,9 +348,14 @@
         height: 220px !important;
     }
 
+    #plotRain,
+    #publicChartRain {
+        height: 300px !important;
+    }
+
     .chart-zoom-button {
-        width: 34px;
-        height: 34px;
+        width: 44px;
+        height: 44px;
         top: 8px;
         right: 8px;
     }
@@ -362,8 +374,8 @@
     .plot-zoom-close {
         top: 8px;
         right: 8px;
-        width: 36px;
-        height: 36px;
+        width: 44px;
+        height: 44px;
     }
 
     .plot-zoom-overlay .plot {
@@ -375,19 +387,35 @@
 
     .ai-chat {
         right: 12px;
-        bottom: 12px;
+        bottom: calc(12px + env(safe-area-inset-bottom));
     }
 
     .ai-chat__toggle {
-        min-height: 40px;
-        padding: 0 14px 0 10px;
+        width: 48px;
+        height: 48px;
+        min-height: 48px;
+        justify-content: center;
+        padding: 0;
+        border-radius: 50%;
+    }
+
+    .ai-chat__toggle > span:last-child {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
     }
 
     .ai-chat__panel {
-        right: -4px;
-        bottom: 52px;
-        width: calc(100vw - 24px);
-        max-height: calc(100vh - 100px);
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        bottom: calc(72px + env(safe-area-inset-bottom));
+        width: auto;
+        max-height: min(72vh, 640px);
+        transform-origin: center bottom;
     }
 
     .ai-chat__quick-actions {
@@ -405,6 +433,95 @@
 
     .ai-chat__form {
         align-items: stretch;
+    }
+}
+
+@media (min-width: 360px) and (max-width: 640px) {
+    #statsEstacao {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #statsEstacao .stats-card {
+        min-height: 116px;
+        padding: 0.8rem;
+    }
+}
+
+/* Tablets e janelas intermediarias precisam separar navegacao e acoes,
+   mantendo o restante do dashboard com densidade de desktop. */
+@media (min-width: 641px) and (max-width: 960px) {
+    .app-body {
+        padding-inline: 1.25rem;
+        padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+    }
+
+    .tab-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 0.65rem;
+        padding-top: 14px;
+    }
+
+    .tab-nav {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        width: 100%;
+        gap: 4px;
+        padding: 3px;
+        border: 1px solid var(--border);
+        border-bottom-color: rgba(56, 189, 248, 0.24);
+        border-radius: 16px 16px 0 0;
+        overflow: visible;
+    }
+
+    .tablink {
+        justify-content: center;
+        width: 100%;
+        min-width: 0;
+        min-height: 44px;
+        padding-inline: 8px;
+    }
+
+    .toolbar {
+        width: 100%;
+        padding-bottom: 10px;
+    }
+
+    .toolbar-group {
+        width: 100%;
+        display: grid;
+        grid-template-columns: auto minmax(150px, 1fr) auto auto auto;
+        justify-content: stretch;
+        gap: 0.5rem;
+    }
+
+    .date-picker,
+    .toolbar-button,
+    .export-format-toggle {
+        min-height: 44px;
+    }
+
+    .ai-chat {
+        right: 14px;
+        bottom: calc(14px + env(safe-area-inset-bottom));
+    }
+
+    .ai-chat__toggle {
+        width: 48px;
+        height: 48px;
+        min-height: 48px;
+        justify-content: center;
+        padding: 0;
+        border-radius: 50%;
+    }
+
+    .ai-chat__toggle > span:last-child {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
     }
 }
 
@@ -435,7 +552,7 @@
         justify-content: center;
         width: 100%;
         min-width: 0;
-        min-height: 38px;
+        min-height: 44px;
         padding: 7px 3px;
         font-size: 0.74rem;
         gap: 5px;

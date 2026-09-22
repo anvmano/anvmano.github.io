@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link href="style.css?v=20260922-3" rel="stylesheet" />
+    <link href="style.css?v=20260922-4" rel="stylesheet" />
     <link rel="preload" href="styles/chat.css?v=20260623-4" as="style" onload="this.onload=null;this.rel='stylesheet'" />
     <noscript><link href="styles/chat.css?v=20260623-4" rel="stylesheet" /></noscript>
 </head>
@@ -26,7 +26,7 @@
                     <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
                     <circle cx="12" cy="12" r="4"/>
                 </svg>
-                <h1>Estação Climática</h1>
+                <span class="header-brand__title">Estação Climática</span>
             </a>
             <div class="header-status">
                 <button class="season-indicator season-indicator--unknown" id="seasonIndicator" type="button" aria-expanded="false" aria-controls="seasonPopover" title="Estação do ano indisponível">
@@ -86,12 +86,12 @@
         </div>
     </header>
 
-    <section class="public-app" id="publicApp" hidden>
+    <main class="public-app" id="publicApp" aria-labelledby="publicPageTitle" hidden>
         <div class="public-shell">
             <div class="public-hero">
                 <div class="public-hero__content">
                     <span class="public-eyebrow">Modo público</span>
-                    <h2>Clima por localização</h2>
+                    <h1 id="publicPageTitle">Clima por localização</h1>
                     <p>Consulte por CEP, nome da cidade ou use a localização do navegador para ver clima atual, chuva, índice UV, qualidade do ar e recomendações ambientais.</p>
                     <div class="public-feature-list" aria-label="Dados exibidos no modo público">
                         <span>Temperatura</span>
@@ -103,7 +103,6 @@
                 </div>
                 <div class="public-hero__panel">
                     <div class="public-user-status" id="publicUserStatus">
-                        <span>Modo público</span>
                         <button type="button" id="publicLoginButton">Entrar com Google</button>
                     </div>
                     <div class="public-controls" aria-label="Consulta pública de clima">
@@ -125,9 +124,10 @@
 
             <div class="public-results" id="publicResults" aria-busy="false"></div>
         </div>
-    </section>
+    </main>
 
     <div class="app-body" id="privateApp" hidden>
+        <h1 class="visually-hidden">Estação Climática</h1>
         <div class="tab-toolbar">
             <nav class="tab-nav" role="tablist" aria-label="Ambientes monitorados">
                 <button class="tablink active" id="tabEstacao" type="button" role="tab" aria-selected="true" aria-controls="Tab0" tabindex="0" data-tab-target="Tab0">
@@ -410,7 +410,7 @@
     <script defer src="scripts/charts/solar.js?v=20260922-2"></script>
     <script defer src="scripts/charts/chart-utils.js?v=20260922-1"></script>
     <script defer src="scripts/charts/chart-sync.js?v=20260922-2"></script>
-    <script defer src="scripts/charts/rain.js?v=20260922-2"></script>
+    <script defer src="scripts/charts/rain.js?v=20260922-3"></script>
     <script defer src="scripts/charts/aqi.js?v=20260623-2"></script>
     <script defer src="scripts/charts/season.js?v=20260622-2"></script>
     <script defer src="scripts/charts/moon.js?v=20260622-6"></script>
@@ -427,7 +427,7 @@
     <script defer src="scripts/views/sala-view.js?v=20260922-1"></script>
     <script defer src="scripts/views/solar-view.js?v=20260812-1"></script>
     <script defer src="scripts/views/estacao-view.js?v=20260922-3"></script>
-    <script defer src="scripts/views/public-weather-view.js?v=20260922-2"></script>
+    <script defer src="scripts/views/public-weather-view.js?v=20260922-3"></script>
     <script defer src="scripts/main.js?v=20260922-3"></script>
 </body>
 

@@ -166,6 +166,10 @@
     height: 260px !important;
 }
 
+.rain-chart-toggle {
+    display: none;
+}
+
 @media (max-width: 640px) {
     .chart-card__meta-chip {
         position: static;
@@ -177,5 +181,38 @@
 
     .plot--solar-day {
         margin-top: 0;
+    }
+
+    .rain-chart-toggle {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 4px;
+        width: 100%;
+        padding: 4px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        background: rgba(15, 23, 42, 0.62);
+    }
+
+    .rain-chart-toggle button {
+        min-height: 44px;
+        border: 0;
+        border-radius: var(--radius-sm);
+        background: transparent;
+        color: var(--text-secondary);
+        font: inherit;
+        font-size: 0.78rem;
+        font-weight: 750;
+        cursor: pointer;
+    }
+
+    .rain-chart-toggle button[aria-pressed="true"] {
+        background: var(--accent-dim);
+        color: var(--accent);
+    }
+
+    .rain-chart-toggle button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
     }
 }

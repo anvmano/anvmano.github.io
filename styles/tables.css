@@ -31,7 +31,7 @@
 .table-tools__actions { display: flex; gap: 0.4rem; }
 
 .table-tools button {
-    min-height: 30px;
+    min-height: 36px;
     padding: 0.3rem 0.55rem;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
@@ -104,4 +104,23 @@
     color: #fb7185;
     background: rgba(251, 113, 133, 0.1);
     font-weight: 700;
+}
+
+@media (max-width: 640px) {
+    .table-tools button {
+        min-height: 44px;
+    }
+
+    .table-wrapper th:first-child,
+    .table-wrapper td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        background: #172033;
+        box-shadow: 1px 0 0 var(--border);
+    }
+
+    .table-wrapper th:first-child {
+        z-index: 4;
+    }
 }

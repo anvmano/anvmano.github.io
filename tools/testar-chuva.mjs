@@ -44,6 +44,11 @@ verificar.match(servicoExterno, /precipitacao: normalizarSerie\(clima\.hourly\?\
 verificar.match(viewPublica, /publicChartRain/);
 verificar.match(viewPublica, /grupoSincronizacao: "publico"/);
 verificar.match(viewEstacao, /grupoSincronizacao: "estacao"/);
+verificar.match(codigoChuva, /rain-chart-toggle/);
+verificar.match(codigoChuva, /data-rain-mode="precipitacao"/);
+verificar.match(codigoChuva, /data-rain-mode="probabilidade"/);
+verificar.match(codigoChuva, /limiteTicks = movel \? 5 : 13/);
+verificar.match(estilosGraficos, /\.rain-chart-toggle/);
 
 const executavel = [
     "C:/Program Files/Google/Chrome/Application/chrome.exe",

@@ -35,7 +35,7 @@
     outline-offset: 4px;
 }
 
-.header-brand:hover h1 {
+.header-brand:hover .header-brand__title {
     color: var(--accent);
 }
 
@@ -46,7 +46,7 @@
     flex-shrink: 0;
 }
 
-h1 {
+.header-brand__title {
     font-size: 1.1rem;
     font-weight: 600;
     color: var(--text-primary);
