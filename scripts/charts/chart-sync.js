@@ -39,10 +39,10 @@
 
         const indice = elementosAtivos[0].index;
         const chaveTemporal = graficoOrigem.$chavesSincronizacao?.[indice] || null;
-        sincronizarIndice(grupo, indice, chaveTemporal);
+        sincronizarIndice(grupo, indice, chaveTemporal, graficoOrigem);
     }
 
-    function sincronizarIndice(grupo, indice, chaveTemporal = null) {
+    function sincronizarIndice(grupo, indice, chaveTemporal = null, graficoOrigem = null) {
         const assinatura = chaveTemporal || indice;
         if (!Number.isInteger(indice) || indiceAtivoPorGrupo.get(grupo) === assinatura) return;
 
@@ -55,6 +55,7 @@
                 desregistrar(grafico);
                 continue;
             }
+            if (grafico === graficoOrigem) continue;
             const indiceGrafico = localizarIndiceTemporal(grafico, indice, chaveTemporal);
             ativarIndice(grafico, indiceGrafico);
         }

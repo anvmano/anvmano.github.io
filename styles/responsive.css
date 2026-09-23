@@ -32,12 +32,37 @@
     }
 
     .aqi-indicator__value {
-        display: block;
+        position: absolute;
+        z-index: 2;
+        top: 4px;
+        right: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 25px;
+        min-height: 17px;
+        padding: 0 4px;
+        border: 1px solid color-mix(in srgb, var(--aqi-color), transparent 48%);
+        border-radius: 999px;
+        background: rgba(8, 15, 30, 0.88);
+        color: #f8fafc;
+        box-shadow: 0 2px 8px rgba(2, 6, 23, 0.38);
         font-size: 0.72rem;
+        font-weight: 850;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
     }
 
     .aqi-indicator__prefix {
-        display: none;
+        position: absolute;
+        z-index: 2;
+        top: 7px;
+        left: 7px;
+        display: block;
+        color: #e2e8f0;
+        font-size: 0.55rem;
+        font-weight: 850;
+        line-height: 1;
     }
 
     .aqi-indicator__status {
@@ -350,7 +375,7 @@
 
     #plotRain,
     #publicChartRain {
-        height: 300px !important;
+        height: 200px !important;
     }
 
     .chart-zoom-button {

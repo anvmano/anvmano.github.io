@@ -9,6 +9,7 @@ const servicoExterno = arquivos.readFileSync("scripts/external/external-weather-
 const viewPublica = arquivos.readFileSync("scripts/views/public-weather-view.js", "utf8");
 const viewEstacao = arquivos.readFileSync("scripts/views/estacao-view.js", "utf8");
 const estilosGraficos = arquivos.readFileSync("styles/charts.css", "utf8");
+const estilosResponsivos = arquivos.readFileSync("styles/responsive.css", "utf8");
 
 const contexto = { Date };
 contexto.window = contexto;
@@ -38,11 +39,25 @@ verificar.equal(contexto.ClimateChuva.analisarAgora({}).disponivel, false);
 
 verificar.match(codigoSolar, /interaction:\s*\{\s*mode: 'index'/);
 verificar.match(codigoSolar, /itemSort: ordenarTooltipPorPosicaoVisual/);
+const contextoSolar = {
+    window: null,
+    Chart: { Tooltip: { positioners: {} } },
+    ClimateData: { formatTime: valor => String(valor) },
+    matchMedia: () => ({ matches: true }),
+};
+contextoSolar.window = contextoSolar;
+maquinaVirtual.runInNewContext(codigoSolar, contextoSolar);
+const pontosSolaresMoveis = contextoSolar.ClimateSolar.getSolarEventPointOptions();
+verificar.equal(pontosSolaresMoveis.pointRadius, 7);
+verificar.equal(pontosSolaresMoveis.pointHitRadius, 24);
+verificar.equal(pontosSolaresMoveis.pointHoverRadius, 9);
 verificar.match(estilosGraficos, /@media \(max-width: 640px\)[\s\S]*?\.chart-card__meta-chip \{[\s\S]*?position: static/);
+verificar.match(estilosResponsivos, /#plotRain,[\s\S]*?#publicChartRain[\s\S]*?height:\s*200px\s*!important/);
 verificar.match(servicoExterno, /probabilidadeChuva: normalizarSerie\(clima\.hourly\?\.precipitation_probability\)/);
 verificar.match(servicoExterno, /precipitacao: normalizarSerie\(clima\.hourly\?\.precipitation\)/);
 verificar.match(viewPublica, /publicChartRain/);
 verificar.match(viewPublica, /grupoSincronizacao: "publico"/);
+verificar.match(viewPublica, /getSolarEventPointOptions\(\)/);
 verificar.match(viewEstacao, /grupoSincronizacao: "estacao"/);
 verificar.match(codigoChuva, /rain-chart-toggle/);
 verificar.match(codigoChuva, /data-rain-mode="precipitacao"/);

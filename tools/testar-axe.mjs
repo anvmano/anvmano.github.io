@@ -96,6 +96,28 @@ try {
     verificar.equal(estruturaPublica.h1Visivel, true, "Modo público deve possuir h1.");
     verificar.deepEqual(estruturaPublica.controlesPequenos, [], "Controles públicos móveis devem ter ao menos 44px.");
 
+    const legibilidadeAqi = await pagina.evaluate(() => {
+        const indicador = document.getElementById("aqiIndicator");
+        const prefixo = indicador.querySelector(".aqi-indicator__prefix");
+        const valor = indicador.querySelector(".aqi-indicator__value");
+        indicador.className = "aqi-indicator aqi-indicator--moderate";
+        valor.textContent = "72";
+        const caixaIndicador = indicador.getBoundingClientRect();
+        const caixaValor = valor.getBoundingClientRect();
+        return {
+            prefixoVisivel: getComputedStyle(prefixo).display !== "none",
+            valorVisivel: getComputedStyle(valor).display !== "none",
+            valorDentroDoChip: caixaValor.left >= caixaIndicador.left && caixaValor.right <= caixaIndicador.right,
+            valorAcimaDoGrafico: Number(getComputedStyle(valor).zIndex) >= 2,
+            fundoValor: getComputedStyle(valor).backgroundColor,
+        };
+    });
+    verificar.equal(legibilidadeAqi.prefixoVisivel, true, "Chip móvel deve identificar o valor como AQI.");
+    verificar.equal(legibilidadeAqi.valorVisivel, true, "Valor móvel do AQI deve permanecer visível.");
+    verificar.equal(legibilidadeAqi.valorDentroDoChip, true, "Valor do AQI deve caber dentro do chip.");
+    verificar.equal(legibilidadeAqi.valorAcimaDoGrafico, true, "Valor do AQI deve ficar acima do medidor decorativo.");
+    verificar.match(legibilidadeAqi.fundoValor, /rgba?\(/, "Valor do AQI deve possuir fundo de contraste.");
+
     const paginaTablet = await navegador.newPage({ viewport: { width: 768, height: 1024 } });
     await paginaTablet.goto(`http://127.0.0.1:${porta}/`, { waitUntil: "domcontentloaded" });
     const layoutTablet = await paginaTablet.evaluate(() => {

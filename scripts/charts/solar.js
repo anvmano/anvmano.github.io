@@ -336,6 +336,15 @@
         };
     }
 
+    function obterOpcoesPontosEventosSolares() {
+        const movel = !!window.matchMedia?.("(max-width: 640px)")?.matches;
+        return {
+            pointRadius: movel ? 7 : 5,
+            pointHitRadius: movel ? 24 : 18,
+            pointHoverRadius: movel ? 9 : 7,
+        };
+    }
+
     function registrarPosicionadorTooltipSolar() {
         const posicionadores = window.Chart?.Tooltip?.positioners;
         if (!posicionadores || posicionadores.solarEvent) return;
@@ -419,9 +428,7 @@
                         backgroundColor: ["#fde68a", "#fb923c", "#facc15", "#f87171", "#818cf8"],
                         pointBorderColor: "#0b1120",
                         pointBorderWidth: 2,
-                        pointRadius: 5,
-                        pointHitRadius: 18,
-                        pointHoverRadius: 7,
+                        ...obterOpcoesPontosEventosSolares(),
                         order: 1
                     }
                 ]
@@ -441,6 +448,7 @@
         formatarDuracaoDia,
         getSunHistoryOptions: obterOpcoesHistoricoSolar,
         getSolarTodayOptions: obterOpcoesSolarDia,
+        getSolarEventPointOptions: obterOpcoesPontosEventosSolares,
         solarDayBackgroundPlugin: pluginFundoDiaSolar,
     };
 })();

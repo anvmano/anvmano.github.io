@@ -48,12 +48,12 @@ contexto.ClimateChartSync.registrar(graficoSensor, "estacao");
 contexto.ClimateChartSync.registrar(graficoChuva, "estacao");
 
 contexto.ClimateChartSync.tratarInteracao(graficoTemperatura, { type: "mousemove" }, [{ datasetIndex: 0, index: 0 }]);
-assert.equal(JSON.stringify(graficoTemperatura.chamadas.ativos.at(-1)), JSON.stringify([{ datasetIndex: 0, index: 0 }]));
+assert.equal(graficoTemperatura.chamadas.ativos.length, 0, "O gráfico de origem deve manter somente o ponto nativo do Chart.js.");
 assert.equal(JSON.stringify(graficoUmidade.chamadas.ativos.at(-1)), JSON.stringify([{ datasetIndex: 0, index: 0 }]));
 assert.equal(graficoOutroGrupo.chamadas.ativos.length, 0);
 
 contexto.ClimateChartSync.tratarInteracao(graficoTemperatura, { type: "mousemove" }, [{ datasetIndex: 0, index: 1 }]);
-assert.equal(JSON.stringify(graficoTemperatura.chamadas.ativos.at(-1)), JSON.stringify([{ datasetIndex: 0, index: 1 }]));
+assert.equal(graficoTemperatura.chamadas.ativos.length, 0, "A sincronização não deve duplicar o ponto ativo na origem.");
 assert.equal(JSON.stringify(graficoUmidade.chamadas.ativos.at(-1)), JSON.stringify([]));
 
 contexto.ClimateChartSync.tratarInteracao(graficoTemperatura, { type: "mouseout" }, []);
