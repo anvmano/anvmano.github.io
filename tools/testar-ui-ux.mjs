@@ -536,18 +536,19 @@ async function testarLayoutEstacao() {
             });
             await page.waitForTimeout(400);
             assert.equal(await page.locator("#statsEstacao .stats-card").count(), 6);
-            assert.equal(await page.locator("#stationAstronomyDetails").getAttribute("open"), "");
-            assert.equal(await page.locator("#stationAstronomyDetails .station-context-row").isVisible(), true);
+            assert.equal(await page.locator("#stationAstronomyContext").isVisible(), true);
+            assert.equal(await page.locator("#stationAstronomyContext > section").count(), 2);
             assert.deepEqual(await page.evaluate(() => {
-                const astronomia = document.getElementById("stationAstronomyDetails");
+                const astronomia = document.getElementById("stationAstronomyContext");
                 const insights = document.getElementById("environmentInsights");
                 const grafico = document.getElementById("chart-container-global-temp");
                 return {
                     depoisDosResumos: astronomia.previousElementSibling?.id === "statsEstacao",
                     antesDosInsights: astronomia.compareDocumentPosition(insights) === Node.DOCUMENT_POSITION_FOLLOWING,
                     antesDosGraficos: astronomia.compareDocumentPosition(grafico) === Node.DOCUMENT_POSITION_FOLLOWING,
+                    estruturaDireta: astronomia.parentElement?.id === "Tab0" && !astronomia.querySelector("summary"),
                 };
-            }), { depoisDosResumos: true, antesDosInsights: true, antesDosGraficos: true });
+            }), { depoisDosResumos: true, antesDosInsights: true, antesDosGraficos: true, estruturaDireta: true });
             const legendas = await page.evaluate(() => {
                 const graficos = Object.values(window.instanciasTeste).filter(grafico => grafico?.data?.datasets?.length > 1);
                 return { quantidade: graficos.length, preservadas: graficos.every(grafico => grafico.options.plugins.legend.display === true) };

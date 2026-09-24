@@ -26,14 +26,6 @@
     margin-block: var(--space-3);
 }
 
-.station-details--astronomy {
-    margin: 0 0 var(--space-4);
-}
-
-.station-details--astronomy .station-context-row {
-    margin-bottom: 0;
-}
-
 #environmentInsights .environment-insights__grid {
     grid-template-columns: 1fr;
     gap: 0;
