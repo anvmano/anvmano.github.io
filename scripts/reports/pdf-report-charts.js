@@ -243,7 +243,7 @@
         const canvas = document.createElement("canvas");
         canvas.width = 1200;
         canvas.height = 520;
-        const opcoes = window.ClimateChuva.obterOpcoes({ janela, cores: AppConfig.colors });
+        const opcoes = window.ClimateChuva.obterOpcoes({ janela, cores: AppConfig.colors, impressao: true });
         opcoes.responsive = false;
         opcoes.animation = false;
         opcoes.maintainAspectRatio = false;

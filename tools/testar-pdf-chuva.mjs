@@ -33,7 +33,8 @@ const navegador = await chromium.launch({ executablePath: executavel, headless: 
 const destino = caminho.join(sistemaOperacional.tmpdir(), `relatorio-chuva-teste-${Date.now()}.pdf`);
 
 try {
-    const pagina = await navegador.newPage({ viewport: { width: 1280, height: 900 } });
+    for (const largura of [390, 1440]) {
+    const pagina = await navegador.newPage({ viewport: { width: largura, height: 900 } });
     await pagina.goto(`http://127.0.0.1:${porta}/`, { waitUntil: "domcontentloaded" });
     await pagina.evaluate(async () => {
         await window.ClimateAssets.carregarChart();
@@ -41,6 +42,21 @@ try {
     });
 
     const resultado = await pagina.evaluate(async () => {
+        let escalasChuva = null;
+        window.Chart.register({
+            id: "auditoriaChuvaPdf",
+            afterDraw(grafico) {
+                if (grafico.options.responsive || !grafico.scales.yProbabilidade) return;
+                escalasChuva = {
+                    legenda: grafico.options.plugins.legend.display,
+                    milimetros: grafico.scales.yMilimetros.width,
+                    porcentagem: grafico.scales.yProbabilidade.width,
+                    limite: grafico.scales.yProbabilidade.max,
+                    series: grafico.data.datasets.filter((_, indice) => grafico.isDatasetVisible(indice)).length,
+                    ticks: grafico.options.scales.x.ticks.maxTicksLimit,
+                };
+            },
+        });
         const previsao = [];
         const inicio = new Date("2026-09-21T12:00:00");
         for (let indice = 0; indice < 38; indice += 1) {
@@ -67,6 +83,8 @@ try {
         const cardGrafico = relatorio.chartCards.find(card => card.label.startsWith("Chuva"));
         window.__relatorioChuvaTeste = relatorio;
         return {
+            escalasChuva,
+            imagemChuva: cardGrafico?.image,
             resumo: cardResumo ? { atual: cardResumo.current, origem: cardResumo.details.at(-1)?.value } : null,
             grafico: cardGrafico ? {
                 imagem: cardGrafico.image?.startsWith("data:image/png") || false,
@@ -77,6 +95,15 @@ try {
     });
 
     verificar.deepEqual(resultado.resumo, { atual: "Chovendo agora", origem: "Campinas - São Paulo" });
+    verificar.equal(resultado.escalasChuva.legenda, true);
+    verificar.ok(resultado.escalasChuva.milimetros > 0);
+    verificar.ok(resultado.escalasChuva.porcentagem > 0);
+    verificar.equal(resultado.escalasChuva.limite, 100);
+    verificar.equal(resultado.escalasChuva.series, 3);
+    verificar.equal(resultado.escalasChuva.ticks, 13);
+    const pastaEvidencias = caminho.join(raiz, "ui-ux-evidence/2026-09-23-etapa-1");
+    arquivos.mkdirSync(pastaEvidencias, { recursive: true });
+    arquivos.writeFileSync(caminho.join(pastaEvidencias, `chuva-pdf-${largura}.png`), Buffer.from(resultado.imagemChuva.split(",")[1], "base64"));
     verificar.equal(resultado.grafico?.imagem, true);
     verificar.equal(resultado.grafico?.largo, true);
     verificar.match(resultado.grafico?.estatisticas?.[0] || "", /Registrado 24h:/);
@@ -97,6 +124,9 @@ try {
         "relatorio-chuva-teste.pdf"
     ));
     await (await arquivoBaixado).saveAs(destino);
+    const pastaPaginacao = caminho.join(raiz, "ui-ux-evidence/2026-09-23-etapa-6");
+    arquivos.mkdirSync(pastaPaginacao, { recursive: true });
+    arquivos.copyFileSync(destino, caminho.join(pastaPaginacao, `relatorio-${largura}.pdf`));
 
     const bytes = new Uint8Array(arquivos.readFileSync(destino));
     const documento = await obterDocumento({ data: bytes, disableWorker: true, useSystemFonts: true, verbosity: 0 }).promise;
@@ -105,10 +135,16 @@ try {
     for (let indice = 1; indice <= documento.numPages; indice += 1) {
         const paginaPdf = await documento.getPage(indice);
         const operadores = await paginaPdf.getOperatorList();
+        if (indice === 1) {
+            const imagensPrimeiraPagina = operadores.fnArray.filter(codigo => [OPS.paintImageXObject, OPS.paintInlineImageXObject].includes(codigo)).length;
+            verificar.ok(imagensPrimeiraPagina >= 2, "A primeira pagina deve conter cabecalho e indicadores, nao apenas o cabecalho.");
+        }
         imagens += operadores.fnArray.filter(codigo => [OPS.paintImageXObject, OPS.paintInlineImageXObject].includes(codigo)).length;
     }
     verificar.ok(imagens >= 3, "O PDF deve conter os blocos visuais, incluindo o gráfico de chuva.");
     console.log("Card e gráfico de chuva do relatório PDF concluídos com sucesso.");
+    await pagina.close();
+    }
 } finally {
     await navegador.close();
     await new Promise(resolver => servidor.close(resolver));

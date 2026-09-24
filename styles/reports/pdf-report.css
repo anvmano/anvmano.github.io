@@ -147,6 +147,11 @@
     gap: 8px;
 }
 
+.pdf-summary-rows {
+    display: grid;
+    gap: 8px;
+}
+
 .pdf-summary-card,
 .pdf-chart-card {
     background: #1a2234;

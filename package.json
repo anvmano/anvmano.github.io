@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "test": "node tools/testar-projeto.mjs",
     "validate": "node tools/validate-project.mjs",
     "lint": "eslint scripts tools",
     "format": "prettier --write index.html style.css styles scripts tools docs/*.md",
@@ -9,12 +10,14 @@
     "test:pdf-rain": "node tools/testar-pdf-chuva.mjs",
     "test:export": "node tools/testar-exportacao.mjs",
     "test:accessibility": "node tools/testar-acessibilidade.mjs",
+    "test:zoom": "node tools/testar-zoom-geometria.mjs",
     "test:data-quality": "node tools/testar-qualidade-dados.mjs",
     "test:public": "node tools/testar-modo-publico.mjs",
     "test:chart-sync": "node tools/testar-sincronizacao-graficos.mjs",
     "test:rain": "node tools/testar-chuva.mjs",
     "test:axe": "node tools/testar-axe.mjs",
-    "test:tables": "node tools/testar-tabelas.mjs"
+    "test:tables": "node tools/testar-tabelas.mjs",
+    "test:ui-ux": "node tools/testar-ui-ux.mjs"
   },
   "devDependencies": {
     "axe-core": "^4.13.0",

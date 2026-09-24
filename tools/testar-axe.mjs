@@ -87,7 +87,7 @@ try {
 
     const estruturaPublica = await pagina.evaluate(() => ({
         mainVisivel: !!document.querySelector("main#publicApp:not([hidden])"),
-        h1Visivel: !!document.querySelector("main#publicApp:not([hidden]) h1"),
+        h1Visivel: !!document.querySelector("main#publicApp h1")?.checkVisibility(),
         controlesPequenos: Array.from(document.querySelectorAll("#publicApp button:not([hidden])"))
             .filter(botao => botao.getBoundingClientRect().height < 44)
             .map(botao => botao.textContent.trim()),
@@ -117,6 +117,26 @@ try {
     verificar.equal(legibilidadeAqi.valorDentroDoChip, true, "Valor do AQI deve caber dentro do chip.");
     verificar.equal(legibilidadeAqi.valorAcimaDoGrafico, true, "Valor do AQI deve ficar acima do medidor decorativo.");
     verificar.match(legibilidadeAqi.fundoValor, /rgba?\(/, "Valor do AQI deve possuir fundo de contraste.");
+
+    for (const largura of [320, 390]) {
+        const paginaChip = await navegador.newPage({ viewport: { width: largura, height: 844 } });
+        await paginaChip.route("**/scripts/main.js?*", rota => rota.fulfill({ contentType: "text/javascript", body: "" }));
+        await paginaChip.goto(`http://127.0.0.1:${porta}/`, { waitUntil: "domcontentloaded" });
+        const medidas = await paginaChip.evaluate(() => {
+            const chip = document.getElementById("aqiIndicator");
+            const prefixo = chip.querySelector(".aqi-indicator__prefix");
+            const valor = chip.querySelector(".aqi-indicator__value");
+            valor.textContent = "500";
+            const c = chip.getBoundingClientRect(), p = prefixo.getBoundingClientRect(), v = valor.getBoundingClientRect();
+            return { cabe: v.right <= c.right && v.bottom <= c.bottom && v.left >= p.right, fonte: parseFloat(getComputedStyle(valor).fontSize), prefixo: parseFloat(getComputedStyle(prefixo).fontSize) };
+        });
+        verificar.equal(medidas.cabe, true, "AQI de tres digitos nao deve sobrepor o prefixo.");
+        verificar.ok(medidas.fonte >= 13 && medidas.prefixo >= 10);
+        const pasta = caminho.join(raiz, "ui-ux-evidence/2026-09-23-etapa-7");
+        arquivos.mkdirSync(pasta, { recursive: true });
+        await paginaChip.locator(".app-header").screenshot({ path: caminho.join(pasta, `cabecalho-${largura}.png`) });
+        await paginaChip.close();
+    }
 
     const paginaTablet = await navegador.newPage({ viewport: { width: 768, height: 1024 } });
     await paginaTablet.goto(`http://127.0.0.1:${porta}/`, { waitUntil: "domcontentloaded" });

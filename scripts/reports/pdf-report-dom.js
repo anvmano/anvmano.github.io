@@ -39,8 +39,15 @@
         secao.innerHTML = `<span class="pdf-report__section-title">Indicadores principais</span>`;
 
         const grade = document.createElement("div");
-        grade.className = "pdf-summary-grid";
-        cards.forEach(card => grade.appendChild(criarCardResumoRelatorio(card)));
+        grade.className = "pdf-summary-rows";
+        cards.forEach((card, indice) => {
+            if (indice % 2 === 0) {
+                const linha = document.createElement("div");
+                linha.className = "pdf-summary-grid";
+                grade.appendChild(linha);
+            }
+            grade.lastElementChild.appendChild(criarCardResumoRelatorio(card));
+        });
         secao.appendChild(grade);
         secao.appendChild(criarPainelAlertas(alertas));
         return secao;

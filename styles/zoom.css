@@ -16,6 +16,8 @@
 
 .plot-zoom-overlay .chart-card {
     width: min(92vw, 900px);
+    max-height: calc(100dvh - 24px);
+    margin: 0;
     cursor: default;
     transform: none;
     pointer-events: auto;
@@ -37,8 +39,8 @@
     position: absolute;
     top: 12px;
     right: 12px;
-    width: 34px;
-    height: 34px;
+    width: 44px;
+    height: 44px;
     border: 1px solid rgba(148, 163, 184, 0.22);
     border-radius: var(--radius-md);
     background: rgba(15, 23, 42, 0.82);
@@ -63,7 +65,19 @@
 }
 
 .plot-zoom-overlay .plot {
-    height: 420px !important;
+    height: min(420px, calc(100vh - 120px)) !important;
+    height: min(420px, calc(100dvh - 120px)) !important;
+    min-height: 0;
+    flex-shrink: 0;
+}
+
+.plot-zoom-overlay .chart-label {
+    min-height: 44px;
+    padding-right: 52px;
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .plot--zoom {

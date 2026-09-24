@@ -18,7 +18,7 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Firebase App Check com reCAPTCHA Enterprise.
 - Firebase AI Logic com Gemini Developer API.
 - APIs publicas externas BrasilAPI/ViaCEP e Open-Meteo para o modo publico e para insights externos opcionais da aba Estacao interna.
-- Sem framework frontend, sem backend local, sem testes funcionais automatizados e sem build tooling.
+- Sem framework frontend, sem backend local e sem build de producao. Ha testes Node e Playwright, validacao estrutural e lint; `npm test` executa a suite consolidada.
 
 ## Arquivos importantes
 
@@ -118,7 +118,7 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Firebase e lido no cliente.
 - `onValue` escuta paths completos somente no modo interno autorizado.
 - Existe autenticacao Firebase Auth como portao de experiencia; regras do Firebase continuam sendo a seguranca real dos dados.
-- Nao existem testes funcionais automatizados, mas existe validacao estrutural por `npm run validate`.
+- Existem testes funcionais Node/Playwright e exportacoes reais de PDF, alem de `npm run validate` e lint. Veja a secao "Guia de validacao de UI/UX" em `UI_UX_ANALYSIS.md` para cobertura e limites; emulacao nao substitui aparelho fisico.
 - CSS foi dividido em arquivos por responsabilidade, com `style.css` como manifesto de imports.
 - Copias legadas ficam isoladas em `legacy/scripts/`, fora do runtime e da validacao; a aplicacao ativa usa os caminhos de `index.html`.
 - Qualidade por metrica usa estado `ok`, `parcial`, `desatualizado`, `suspeito` ou `offline`, com ultima leitura, amostras e cobertura compartilhadas por UI, relatorio e assistente; cards integrais omitem o aviso visual e so exibem qualidade quando houver anormalidade ou cobertura inferior a 100%.

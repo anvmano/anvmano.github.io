@@ -36,6 +36,7 @@
 
         const elementoDom = document.getElementById(configuracao.containerId);
         if (!elementoDom) return;
+        configuracao.metrics.forEach(metrica => window.ClimateUI?.renderRollingPeriod(metrica.chartContainerId, dataSelecionada));
 
         elementoDom.innerHTML = "";
         const temAlgumDado = Object.keys(dados || {}).length > 0;
@@ -51,7 +52,12 @@
             const qualidade = window.ClimateDataQuality?.analisarSerie?.(dados, metrica.key) || null;
             const valores = qualidade?.valores || extrairValoresMetrica(dados, metrica.key);
             const estatisticas = calcularEstatisticas(valores, qualidade);
-            elementoDom.appendChild(criarCardEstatisticas(metrica, estatisticas, qualidade));
+            const card = criarCardEstatisticas(metrica, estatisticas, qualidade);
+            const contexto = document.createElement("p");
+            contexto.className = "stats-card__period";
+            contexto.textContent = `Média do dia · ${formatarDataFirebaseRelatorio(dataSelecionada)}`;
+            card.querySelector(".stats-card__value").after(contexto);
+            elementoDom.appendChild(card);
             window.ClimateDataQuality?.aplicarAoGrafico?.(metrica.chartContainerId, qualidade);
         });
     }
@@ -312,6 +318,7 @@
             celula.className = "heatmap-cell calendar-heatmap__day";
             if (dia === diaSelecionado) celula.classList.add("is-selected");
             celula.style.backgroundColor = obterCorMapaCalor(valor, escala);
+            celula.classList.toggle("has-value", Number.isFinite(valor));
             celula.innerHTML = `<span>${dia}</span><strong>${formatarValorMapaCalor(valor)}</strong>`;
             celula.title = valor == null ? `${preencherDigitos(dia)}/${preencherDigitos(mesSelecionado)} sem dados` : `${preencherDigitos(dia)}/${preencherDigitos(mesSelecionado)} média ${valor.toFixed(1)}°C`;
             elementoDom.appendChild(celula);
@@ -335,6 +342,7 @@
             celula.className = "heatmap-cell hourly-heatmap__cell";
             if (deveDestacarHoraAtual && hora === horaAtual) celula.classList.add("is-selected");
             celula.style.backgroundColor = obterCorMapaCalor(valor, escala);
+            celula.classList.toggle("has-value", Number.isFinite(valor));
             celula.innerHTML = `<span>${preencherDigitos(hora)}h</span><strong>${formatarValorMapaCalor(valor)}</strong>`;
             celula.title = valor == null ? `${preencherDigitos(hora)}h sem dados` : `${preencherDigitos(hora)}h média ${valor.toFixed(1)}°C`;
             elementoDom.appendChild(celula);
@@ -345,6 +353,8 @@
         const elementoDom = document.getElementById(idRecipiente);
         if (!elementoDom) return;
 
+        const restaurarFoco = elementoDom.contains(document.activeElement);
+        const indiceAnterior = Number(elementoDom.querySelector('[tabindex="0"]')?.dataset.indice);
         elementoDom.innerHTML = "";
         const partesData = interpretarDataSelecionada(dataSelecionada);
         if (!partesData) return;
@@ -367,6 +377,13 @@
         const deveDestacarFaixaAtual = partesData.firebaseDate === ClimateData.dataAtual();
         const diaSemanaAtual = hoje.getDay();
         const horaAtual = hoje.getHours();
+        const inicioSemana = new Date(partesData.year, partesData.month - 1, partesData.day);
+        inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
+        const formatarData = data => `${preencherDigitos(data.getDate())}/${preencherDigitos(data.getMonth() + 1)}/${data.getFullYear()}`;
+        const descricaoPeriodo = `Temperatura média horária, de ${formatarData(inicioSemana)} até ${formatarDataFirebaseRelatorio(dataSelecionada)}`;
+        elementoDom.setAttribute("role", "group");
+        elementoDom.setAttribute("aria-label", descricaoPeriodo);
+        const celulas = [];
 
         const canto = document.createElement("span");
         canto.className = "weekly-heatmap__axis weekly-heatmap__axis--corner";
@@ -387,16 +404,80 @@
 
             for (let hora = 0; hora < 24; hora++) {
                 const valor = mediasCalculadas[`${diaSemana}-${hora}`];
-                const celula = document.createElement("span");
+                const celula = document.createElement("button");
+                celula.type = "button";
+                celula.tabIndex = -1;
+                celula.dataset.indice = String(diaSemana * 24 + hora);
                 celula.className = "heatmap-cell weekly-heatmap__cell";
                 if (deveDestacarFaixaAtual && diaSemana === diaSemanaAtual && hora === horaAtual) {
                     celula.classList.add("is-selected");
                 }
                 celula.style.backgroundColor = obterCorMapaCalor(valor, escala);
-                celula.title = valor == null ? `${rotulosSemana[diaSemana]} ${hora}h sem dados` : `${rotulosSemana[diaSemana]} ${hora}h média ${valor.toFixed(1)}°C`;
+                const dataCelula = new Date(inicioSemana);
+                dataCelula.setDate(inicioSemana.getDate() + diaSemana);
+                const rotulo = `${rotulosSemana[diaSemana]}, ${formatarData(dataCelula)}, ${preencherDigitos(hora)}:00: ${Number.isFinite(valor) ? `média ${valor.toFixed(1)} °C` : "sem dados"}`;
+                celula.title = rotulo;
+                celula.setAttribute("aria-label", rotulo);
+                celula.setAttribute("aria-pressed", "false");
+                celulas.push(celula);
                 elementoDom.appendChild(celula);
             }
         }
+        let detalhe = document.getElementById(`${idRecipiente}Detalhe`);
+        if (!detalhe) {
+            detalhe = document.createElement("p");
+            detalhe.id = `${idRecipiente}Detalhe`;
+            detalhe.className = "heatmap-detail";
+            detalhe.setAttribute("role", "status");
+            elementoDom.after(detalhe);
+        }
+        let legenda = document.getElementById(`${idRecipiente}Legenda`);
+        if (!legenda) {
+            legenda = document.createElement("p");
+            legenda.id = `${idRecipiente}Legenda`;
+            legenda.className = "heatmap-legend";
+            detalhe.after(legenda);
+        }
+        legenda.textContent = `${descricaoPeriodo}. ${Object.keys(mediasCalculadas).length ? `Escala relativa: azul ${escala.min.toFixed(1)} °C; verde intermediário; rosa ${escala.max.toFixed(1)} °C.` : "Sem leituras no período."} Células escuras: sem dados.`;
+
+        function selecionar(indice, focar = false) {
+            celulas.forEach((celula, posicao) => {
+                celula.tabIndex = posicao === indice ? 0 : -1;
+                celula.setAttribute("aria-pressed", String(posicao === indice));
+            });
+            const celula = celulas[indice];
+            detalhe.textContent = celula.getAttribute("aria-label");
+            if (focar) {
+                celula.focus({ preventScroll: true });
+                const area = elementoDom.getBoundingClientRect();
+                const caixa = celula.getBoundingClientRect();
+                const margemEsquerda = area.left + 56;
+                if (caixa.left < margemEsquerda) elementoDom.scrollLeft -= margemEsquerda - caixa.left;
+                else if (caixa.right > area.right - 4) elementoDom.scrollLeft += caixa.right - area.right + 4;
+            }
+        }
+        elementoDom.onclick = evento => {
+            const celula = evento.target.closest("button[data-indice]");
+            if (celula && elementoDom.contains(celula)) selecionar(Number(celula.dataset.indice), true);
+        };
+        elementoDom.onkeydown = evento => {
+            const celula = evento.target.closest("button[data-indice]");
+            if (!celula) return;
+            const indice = Number(celula.dataset.indice);
+            const hora = indice % 24;
+            const movimentos = {
+                ArrowLeft: hora > 0 ? indice - 1 : indice,
+                ArrowRight: hora < 23 ? indice + 1 : indice,
+                ArrowUp: indice >= 24 ? indice - 24 : indice,
+                ArrowDown: indice < 144 ? indice + 24 : indice,
+                Home: evento.ctrlKey ? 0 : indice - hora,
+                End: evento.ctrlKey ? 167 : indice - hora + 23,
+            };
+            if (!(evento.key in movimentos)) return;
+            evento.preventDefault();
+            selecionar(movimentos[evento.key], true);
+        };
+        selecionar(Number.isInteger(indiceAnterior) ? indiceAnterior : 0, restaurarFoco);
     }
 
     function filtrarRegistrosDesdeInicioSemana(registros, partesData) {
@@ -492,7 +573,7 @@
 
     function interpolarCor(de, ate, proporcao) {
         const cor = de.map((inicio, indice) => Math.round(inicio + (ate[indice] - inicio) * proporcao));
-        return `rgba(${cor[0]}, ${cor[1]}, ${cor[2]}, 0.72)`;
+        return `rgb(${cor[0]}, ${cor[1]}, ${cor[2]})`;
     }
 
     function formatarEstatistica(valor, sufixo) {

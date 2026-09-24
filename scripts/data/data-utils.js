@@ -75,9 +75,9 @@
         return filtrado;
     }
 
-    function filtrarDadosPorJanelaHoras(dados, dataSelecionada, horas = 24, dataReferenciaAtual = new Date()) {
+    function obterJanelaHoras(dataSelecionada, horas = 24, dataReferenciaAtual = new Date()) {
         const partesDataSelecionada = interpretarPartesDataFirebase(dataSelecionada || dataAtual());
-        if (!partesDataSelecionada) return {};
+        if (!partesDataSelecionada) return null;
 
         const fimJanela = new Date(
             partesDataSelecionada.year,
@@ -90,6 +90,13 @@
         );
         const inicioJanela = new Date(fimJanela);
         inicioJanela.setHours(inicioJanela.getHours() - horas);
+        return { inicio: inicioJanela, fim: fimJanela };
+    }
+
+    function filtrarDadosPorJanelaHoras(dados, dataSelecionada, horas = 24, dataReferenciaAtual = new Date()) {
+        const janela = obterJanelaHoras(dataSelecionada, horas, dataReferenciaAtual);
+        if (!janela) return {};
+        const { inicio: inicioJanela, fim: fimJanela } = janela;
 
         const filtrado = {};
 
@@ -279,6 +286,7 @@
         parseFirebaseDateTime: interpretarDataHoraFirebase,
         filterDataByDays: filtrarDadosPorDias,
         filterDataByRollingHours: filtrarDadosPorJanelaHoras,
+        getRollingWindow: obterJanelaHoras,
         convertInputDateToFirebase: converterDataEntradaParaFirebase,
         convertFirebaseDateToInput: converterDataFirebaseParaEntrada,
         createTables: criarTabelas,

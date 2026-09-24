@@ -9,8 +9,6 @@
     background: var(--bg-elevated);
     box-shadow: var(--shadow-card);
     scrollbar-color: rgba(56, 189, 248, 0.45) rgba(15, 23, 42, 0.4);
-    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
-    mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
 }
 
 .table-tools {
@@ -118,9 +116,27 @@
         z-index: 2;
         background: #172033;
         box-shadow: 1px 0 0 var(--border);
+        min-width: 100px;
+        padding: 11px 8px;
     }
 
-    .table-wrapper th:first-child {
+    .table-wrapper th:nth-child(2),
+    .table-wrapper td:nth-child(2) {
+        position: sticky;
+        left: var(--table-date-width, 100px);
+        z-index: 2;
+        min-width: 60px;
+        padding: 11px 8px;
+        background: #172033;
+        box-shadow: 1px 0 0 var(--border);
+    }
+
+    .table-wrapper th:first-child,
+    .table-wrapper th:nth-child(2) {
         z-index: 4;
+    }
+
+    .table-wrapper tr:hover td:nth-child(-n+2) {
+        background: #172033;
     }
 }

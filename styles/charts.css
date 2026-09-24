@@ -8,6 +8,20 @@
     margin-bottom: var(--space-4);
 }
 
+#Tab1 > .charts-grid,
+#Tab2 > .charts-grid,
+#Tab3 > .charts-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+    #Tab1 > .charts-grid,
+    #Tab2 > .charts-grid,
+    #Tab3 > .charts-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
 .chart-card {
     position: relative;
     background: var(--bg-elevated);
@@ -105,6 +119,23 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--text-secondary);
+}
+
+.chart-period {
+    display: block;
+    margin-top: 0.3rem;
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.chart-card:has(.chart-period) .chart-quality-badge {
+    position: static;
+    align-self: flex-start;
 }
 
 .chart-card__meta-chip {

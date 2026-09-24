@@ -165,12 +165,12 @@
         return grafico;
     }
 
-    function obterOpcoes({ janela = null, cores = window.AppConfig?.colors || {} } = {}) {
-        const movel = estaEmTelaMovel();
+    function obterOpcoes({ janela = null, cores = window.AppConfig?.colors || {}, impressao = false } = {}) {
+        const movel = !impressao && estaEmTelaMovel();
         const limiteTicks = movel ? 5 : 13;
         const padroes = window.ClimateCharts.createDefaults(cores);
         const opcoes = window.ClimateCharts.mergeDeep(padroes, {
-            onResize: grafico => sincronizarModoResponsivo(grafico),
+            onResize: impressao ? undefined : grafico => sincronizarModoResponsivo(grafico),
             interaction: { mode: "index", intersect: false, axis: "x" },
             plugins: {
                 legend: {

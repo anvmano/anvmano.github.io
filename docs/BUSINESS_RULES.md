@@ -184,7 +184,7 @@ Regras:
 - recomendacao de ventilacao externa considera AQI, chuva, rajadas, temperatura e umidade; nao deve recomendar abertura quando houver condicao externa limitante
 - durante uma consulta, campo de busca, modos CEP/Cidade, botao Buscar e botao Usar localizacao devem ficar desabilitados e `#publicResults` deve usar `aria-busy="true"`
 - somente a consulta publica mais recente pode atualizar a tela; respostas atrasadas de uma busca anterior devem ser ignoradas
-- nova consulta ou erro deve limpar AQI, ciclo solar, contexto astronomico e graficos anteriores para nao exibir dados obsoletos
+- nova consulta, selecao de cidade ou erro preserva o ultimo resultado valido, incluindo graficos e contexto astronomico/AQI, com aviso explicito do local e horario da consulta anterior; a resposta valida substitui o conjunto e destroi os graficos antigos. Respostas atrasadas nao podem sobrescrever a consulta mais recente.
 - erros esperados de validacao, como CEP incompleto, cidade curta ou local nao encontrado, devem aparecer na interface sem gerar `console.error`; falhas tecnicas continuam registradas
 - mensagens de carregamento, escolha, sucesso e erro devem ser anunciadas por `#publicSearchStatus` com `aria-live`; entrada invalida usa `aria-invalid` e descricao associada; a primeira opcao de cidade recebe foco quando a lista e exibida
 - graficos publicos renderizados dinamicamente devem receber o mesmo zoom acessivel dos graficos internos
@@ -712,7 +712,7 @@ Entradas:
 
 Saidas:
 
-- desktop e mobile: chip compacto no mesmo formato visual dos demais chips do header, mostrando apenas um mini medidor colorido interno
+- desktop: chip compacto com mini medidor colorido; mobile: mini medidor com prefixo AQI e valor numerico sobre fundo de contraste, sem sobreposicao entre texto e numero
 - o mini medidor deve comunicar visualmente a faixa AQI, com ponteiro mais a esquerda para valores melhores e mais a direita para valores piores
 - tooltip/`aria-label`: valor, classificacao e dominante
 - clique/toque: popover com valor, classificacao, impacto, dominante, horario e principais subindices

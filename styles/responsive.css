@@ -39,15 +39,15 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-width: 25px;
-        min-height: 17px;
+        min-width: 29px;
+        min-height: 20px;
         padding: 0 4px;
         border: 1px solid color-mix(in srgb, var(--aqi-color), transparent 48%);
         border-radius: 999px;
         background: rgba(8, 15, 30, 0.88);
         color: #f8fafc;
         box-shadow: 0 2px 8px rgba(2, 6, 23, 0.38);
-        font-size: 0.72rem;
+        font-size: 0.87rem;
         font-weight: 850;
         font-variant-numeric: tabular-nums;
         line-height: 1;
@@ -60,7 +60,7 @@
         left: 7px;
         display: block;
         color: #e2e8f0;
-        font-size: 0.55rem;
+        font-size: 0.67rem;
         font-weight: 850;
         line-height: 1;
     }
@@ -347,7 +347,7 @@
     }
 
     .public-moon .moon-summary__details div {
-        grid-template-columns: max-content minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr);
         justify-content: start;
         min-width: 0;
     }
@@ -355,8 +355,9 @@
     .public-moon .moon-summary__details dt,
     .public-moon .moon-summary__details dd {
         min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        overflow: visible;
+        text-overflow: clip;
+        white-space: normal;
     }
 
     .advanced-grid {
@@ -464,7 +465,7 @@
 
 /* Tablets e janelas intermediarias precisam separar navegacao e acoes,
    mantendo o restante do dashboard com densidade de desktop. */
-@media (min-width: 641px) and (max-width: 960px) {
+@media (min-width: 641px) and (max-width: 1200px) {
     .app-body {
         padding-inline: 1.25rem;
         padding-bottom: calc(5rem + env(safe-area-inset-bottom));
@@ -516,6 +517,9 @@
         min-height: 44px;
     }
 
+}
+
+@media (min-width: 641px) and (max-width: 960px) {
     .ai-chat {
         right: 14px;
         bottom: calc(14px + env(safe-area-inset-bottom));

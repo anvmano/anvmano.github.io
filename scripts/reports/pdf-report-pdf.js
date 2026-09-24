@@ -36,7 +36,13 @@
         pintarPaginaPdf(pdf, leiaute);
 
         posicaoAtualY = await adicionarBlocoElemento(pdf, cabecalho, leiaute, posicaoAtualY, { gap: 6 });
-        await adicionarBlocoElemento(pdf, secaoResumo, leiaute, posicaoAtualY, { gap: 0 });
+        if (secaoResumo) {
+            posicaoAtualY = adicionarTituloSecao(pdf, "Indicadores principais", leiaute, posicaoAtualY);
+            for (const linha of secaoResumo.querySelectorAll(".pdf-summary-grid")) {
+                posicaoAtualY = await adicionarBlocoElemento(pdf, linha, leiaute, posicaoAtualY, { gap: 3 });
+            }
+            await adicionarBlocoElemento(pdf, secaoResumo.querySelector(".pdf-alert-panel"), leiaute, posicaoAtualY, { gap: 0 });
+        }
 
         posicaoAtualY = adicionarPaginaPdf(pdf, leiaute);
         posicaoAtualY = adicionarTituloSecao(pdf, "Gráficos", leiaute, posicaoAtualY);

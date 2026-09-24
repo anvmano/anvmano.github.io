@@ -7,9 +7,10 @@
     const VERSOES = {
         chartJs: "4.5.1",
         chat: "20260614-3",
+        chatCss: "20260923-7",
         pdf: "20260622-5",
         css: "20260623-4",
-        zoomCss: "20260816-1",
+        zoomCss: "20260923-4",
     };
 
     const MODULOS_ASSISTENTE = [
@@ -22,16 +23,16 @@
         "scripts/assistant/assistant-intent.js?v=20260816-2",
         "scripts/assistant/assistant-planner.js?v=20260816-2",
         "scripts/assistant/assistant-query.js?v=20260816-2",
-        "scripts/assistant/assistant-ui.js?v=20260816-1",
+        "scripts/assistant/assistant-ui.js?v=20260923-1",
     ];
 
     const MODULOS_RELATORIO = [
         "scripts/reports/pdf-report-config.js?v=20260612-1",
         "scripts/reports/pdf-report-format.js?v=20260612-1",
         "scripts/reports/pdf-report-data.js?v=20260922-3",
-        "scripts/reports/pdf-report-dom.js?v=20260622-1",
+        "scripts/reports/pdf-report-dom.js?v=20260923-6",
         "scripts/reports/pdf-report-charts.js?v=20260922-3",
-        "scripts/reports/pdf-report-pdf.js?v=20260816-1",
+        "scripts/reports/pdf-report-pdf.js?v=20260923-6",
         "scripts/reports/pdf-report-export.js?v=20260922-3",
     ];
 
@@ -106,7 +107,7 @@
     }
 
     function carregarAssistente() {
-        return carregarCssUmaVez(`styles/chat.css?v=${VERSOES.css}`, "climate-chat-css")
+        return carregarCssUmaVez(`styles/chat.css?v=${VERSOES.chatCss}`, "climate-chat-css")
             .then(() => carregarSequencialmente(MODULOS_ASSISTENTE));
     }
 
@@ -115,7 +116,7 @@
     }
 
     function carregarCssRelatorio() {
-        return carregarCssUmaVez("styles/reports/pdf-report.css?v=20260816-1", "climate-pdf-css");
+        return carregarCssUmaVez("styles/reports/pdf-report.css?v=20260923-6", "climate-pdf-css");
     }
 
     function carregarCssZoom() {

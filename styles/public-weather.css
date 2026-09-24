@@ -10,28 +10,27 @@
 .public-shell {
     display: grid;
     gap: clamp(18px, 2.4vw, 28px);
-    max-width: 1240px;
+    max-width: 1120px;
     margin: 0 auto;
 }
 
 .public-hero {
     display: grid;
-    grid-template-columns: minmax(0, 1.05fr) minmax(340px, 0.78fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: clamp(18px, 2.6vw, 32px);
     align-items: stretch;
-    padding: clamp(18px, 3vw, 30px);
-    border: 1px solid rgba(132, 163, 214, 0.18);
-    border-radius: 16px;
-    background:
-        linear-gradient(135deg, rgba(23, 32, 51, 0.94), rgba(15, 23, 42, 0.84)),
-        var(--bg-elevated);
-    box-shadow: var(--shadow-card);
+    padding-block: 12px;
+    border-bottom: 1px solid var(--border);
+    width: 100%;
+    max-width: 100%;
+    margin-inline: auto;
 }
 
 .public-hero__content {
     display: flex;
-    flex-direction: column;
-    justify-content: center;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
     min-width: 0;
 }
 
@@ -44,14 +43,31 @@
     text-transform: uppercase;
 }
 
+.public-card .stats-card__value {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.1rem 0.25rem;
+}
+
+.public-card__number {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.public-card__unit {
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
 .public-hero h1 {
     max-width: 720px;
-    margin: 0.45rem 0 0.75rem;
+    margin: 0;
     color: var(--text-primary);
-    font-size: clamp(2rem, 5vw, 3.35rem);
+    font-size: 1.75rem;
     font-weight: 820;
     letter-spacing: 0;
-    line-height: 1.02;
+    line-height: 1.25;
 }
 
 .public-hero p {
@@ -87,10 +103,7 @@
     align-content: start;
     gap: 14px;
     min-width: 0;
-    padding: 14px;
-    border: 1px solid rgba(132, 163, 214, 0.16);
-    border-radius: var(--radius-lg);
-    background: rgba(10, 16, 32, 0.38);
+    width: 100%;
 }
 
 .public-user-status {
@@ -101,6 +114,8 @@
     min-width: 0;
     color: var(--text-secondary);
     font-size: 0.86rem;
+    max-width: 48%;
+    flex-wrap: wrap;
 }
 
 .public-user-status:has(> button:only-child) {
@@ -117,7 +132,7 @@
 .public-user-status button,
 .public-search-form button,
 .public-location-button {
-    min-height: 42px;
+    min-height: 48px;
     border: 1px solid rgba(56, 189, 248, 0.34);
     border-radius: var(--radius-md);
     background: rgba(14, 165, 233, 0.14);
@@ -128,7 +143,7 @@
 }
 
 .public-user-status button {
-    min-height: 42px;
+    min-height: 48px;
     padding: 0 12px;
     color: #dff7ff;
     background: rgba(15, 23, 42, 0.72);
@@ -144,10 +159,16 @@
 
 .public-controls {
     display: grid;
+    grid-template-columns: 180px minmax(0, 1fr) 170px;
+    align-items: end;
     gap: 10px;
 }
 
-.public-location-button {
+.public-city-results {
+    grid-column: 1 / -1;
+}
+
+.public-controls .public-location-button {
     width: 100%;
     min-height: 48px;
 }
@@ -155,15 +176,15 @@
 .public-search-mode {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 4px;
-    padding: 4px;
+    gap: 2px;
+    padding: 1px;
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     background: rgba(15, 23, 42, 0.66);
 }
 
 .public-search-mode button {
-    min-height: 42px;
+    min-height: 44px;
     border: 0;
     border-radius: 6px;
     background: transparent;
@@ -209,7 +230,7 @@
 .public-search-form input {
     width: 100%;
     min-width: 0;
-    min-height: 44px;
+    min-height: 48px;
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     background: rgba(15, 23, 42, 0.86);
@@ -262,7 +283,7 @@
 
 .public-city-option {
     width: 100%;
-    min-height: 40px;
+    min-height: 44px;
     padding: 8px 12px;
     border: 1px solid rgba(132, 163, 214, 0.18);
     border-radius: var(--radius-md);
@@ -402,18 +423,37 @@
     min-height: 292px;
 }
 
+@media (min-width: 641px) {
+    .public-metric-charts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .public-app .station-context-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: stretch;
+    }
+
+    .public-app .station-context-row > section {
+        min-width: 0;
+    }
+}
+
+@media (min-width: 641px) and (max-width: 1100px) {
+    .public-app .environment-insights__grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 900px) {
+    .public-card--aqi {
+        grid-column: 1 / -1;
+    }
     .public-hero {
         grid-template-columns: 1fr;
     }
 
-    .public-user-status {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .public-user-status button {
-        width: 100%;
+    .public-controls {
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .public-stats-grid {
@@ -422,21 +462,58 @@
 }
 
 @media (max-width: 640px) {
+    .public-hero__content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .public-user-status {
+        max-width: 100%;
+    }
     .public-app {
         padding: 14px 14px calc(5rem + env(safe-area-inset-bottom));
     }
 
     .public-hero {
-        padding: 16px;
-        border-radius: 14px;
+        padding-block: 8px 16px;
     }
 
     .public-hero__panel {
-        padding: 12px;
+        padding: 0;
     }
 
     .public-app.has-results .public-hero {
+        gap: 8px;
+        padding: 0;
+        border: 0;
+        background: none;
+        box-shadow: none;
+    }
+
+    .public-app.has-results .public-hero__panel {
         display: none;
+    }
+
+    .public-app.has-results .public-hero h1 {
+        margin: 0;
+        font-size: 1.2rem;
+        line-height: 1.3;
+    }
+
+    .public-app.has-results .public-hero__panel {
+        padding: 0;
+        border: 0;
+        background: none;
+    }
+
+    .public-app.has-results .public-user-status {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .public-app.has-results .public-user-status button {
+        width: auto;
+        flex-shrink: 0;
     }
 
     .public-feature-list {
@@ -512,8 +589,7 @@
     }
 
     .public-user-status button,
-    .public-search-mode button,
     .public-search-form button {
-        min-height: 44px;
+        min-height: 48px;
     }
 }

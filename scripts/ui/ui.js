@@ -14,6 +14,7 @@
     function renderizarTabela(id, tabela, mensagemVazia = "Sem registros recentes.") {
         const elementoDom = document.getElementById(id);
         if (!elementoDom) return;
+        elementoDom._observadorColuna?.disconnect();
         elementoDom.innerHTML = "";
         if (tabela.rows && tabela.rows.length <= 1) {
             renderizarEstadoVazio(id, mensagemVazia);
@@ -21,6 +22,35 @@
         }
         elementoDom.appendChild(criarFerramentasTabela(tabela));
         elementoDom.appendChild(tabela);
+        elementoDom.tabIndex = 0;
+        elementoDom.setAttribute("role", "region");
+        elementoDom.setAttribute("aria-label", "Registros por data e hora");
+        const cabecalhoData = tabela.querySelector("th");
+        if (cabecalhoData && window.ResizeObserver) {
+            elementoDom._observadorColuna = new ResizeObserver(() => {
+                elementoDom.style.setProperty("--table-date-width", `${cabecalhoData.getBoundingClientRect().width}px`);
+            });
+            elementoDom._observadorColuna.observe(cabecalhoData);
+        }
+    }
+
+    function renderizarContextoGrafico(id, texto) {
+        const titulo = document.getElementById(id)?.querySelector(".chart-label");
+        if (!titulo) return;
+        let contexto = titulo.querySelector(".chart-period");
+        if (!contexto) {
+            contexto = document.createElement("span");
+            contexto.className = "chart-period";
+            titulo.appendChild(contexto);
+        }
+        contexto.textContent = texto;
+    }
+
+    function renderizarPeriodoMovel(id, dataSelecionada) {
+        const janela = ClimateData.getRollingWindow(dataSelecionada);
+        if (!janela) return;
+        const formatar = data => data.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+        renderizarContextoGrafico(id, `24h: ${formatar(janela.inicio)} a ${formatar(janela.fim)}`);
     }
 
     function criarFerramentasTabela(tabela) {
@@ -347,6 +377,8 @@
         renderEmptyState: renderizarEstadoVazio,
         renderStartupError: renderizarErroInicializacao,
         renderTable: renderizarTabela,
+        renderChartContext: renderizarContextoGrafico,
+        renderRollingPeriod: renderizarPeriodoMovel,
         ordenarTabelaPorHorario,
         baixarTabelaCsv,
         getActiveTabName: obterNomeAbaAtiva,

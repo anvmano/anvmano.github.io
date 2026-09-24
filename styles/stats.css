@@ -78,6 +78,13 @@
     font-variant-numeric: tabular-nums;
 }
 
+.stats-card__period {
+    margin: -0.35rem 0 0.65rem;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    line-height: 1.4;
+}
+
 .stats-card__details {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -179,9 +186,8 @@
 
 .station-summary-card .stats-card__trend {
     max-width: 42%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .station-summary-card .stats-card__value {
@@ -200,9 +206,8 @@
 
 .station-summary-card__meta span {
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .station-summary-card__meta span:first-child {

@@ -11,6 +11,8 @@
     let temporizadorFechamento = null;
     let posicaoRolagemTravada = 0;
     let memoriaConversa = null;
+    let focoAnterior = null;
+    const elementosInertes = new Map();
 
     function configurar(opcoes = {}) {
         obterContexto = opcoes.getContext;
@@ -21,6 +23,11 @@
         elementos.close?.addEventListener("click", fecharChat);
         elementos.form.addEventListener("submit", aoEnviarFormulario);
         document.addEventListener("pointerdown", aoPressionarFora);
+        document.addEventListener("keydown", aoPressionarTecla);
+        document.addEventListener("focusin", conterFoco);
+        window.addEventListener("resize", atualizarViewport);
+        window.visualViewport?.addEventListener("resize", atualizarViewport);
+        window.visualViewport?.addEventListener("scroll", atualizarViewport);
         elementos.quickActions.forEach(botao => {
             botao.addEventListener("click", () => enviarPergunta(botao.dataset.chatQuestion));
         });
@@ -38,6 +45,7 @@
             input: document.getElementById("aiChatInput"),
             submit: document.getElementById("aiChatSubmit"),
             messages: document.getElementById("aiChatMessages"),
+            shortcuts: document.getElementById("aiChatShortcuts"),
         };
     }
 
@@ -46,26 +54,93 @@
     }
 
     function abrirChat() {
+        if (estaAberto) return;
+        focoAnterior = document.activeElement;
         estaAberto = true;
         clearTimeout(temporizadorFechamento);
         travarRolagemPagina();
         elementos.toggle?.setAttribute("aria-expanded", "true");
         elementos.panel?.removeAttribute("hidden");
+        elementos.panel.inert = false;
+        atualizarViewport();
+        // Torna inativos os irmaos de cada ancestral, sem desativar o dialogo.
+        for (let ramo = elementos.panel; ramo && ramo !== document.body; ramo = ramo.parentElement) {
+            for (const irmao of ramo.parentElement.children) {
+                if (irmao === ramo) continue;
+                elementosInertes.set(irmao, irmao.inert);
+                irmao.inert = true;
+            }
+        }
         requestAnimationFrame(() => {
+            if (!estaAberto) return;
             elementos.root?.classList.add("is-open");
+            const foco = window.matchMedia("(pointer: coarse)").matches || estaOcupado
+                ? elementos.close : elementos.input;
+            foco?.focus({ preventScroll: true });
         });
-        setTimeout(() => elementos.input?.focus(), 50);
     }
 
     function fecharChat() {
+        if (!estaAberto) return;
         estaAberto = false;
+        elementos.panel.inert = true;
+        elementosInertes.forEach((valor, elemento) => { elemento.inert = valor; });
+        elementosInertes.clear();
         elementos.root?.classList.remove("is-open");
         elementos.toggle?.setAttribute("aria-expanded", "false");
         liberarRolagemPagina();
+        const destino = focoAnterior?.isConnected && focoAnterior !== document.body && !focoAnterior.closest("[inert]")
+            ? focoAnterior : elementos.toggle;
+        destino?.focus({ preventScroll: true });
         clearTimeout(temporizadorFechamento);
         temporizadorFechamento = setTimeout(() => {
             if (!estaAberto) elementos.panel?.setAttribute("hidden", "");
         }, 220);
+    }
+
+    function atualizarViewport() {
+        if (!estaAberto) return;
+        const viewport = window.visualViewport;
+        const altura = viewport?.height || window.innerHeight;
+        const compacto = altura <= 500;
+        if (compacto !== elementos.root.classList.contains("is-compact")) {
+            elementos.shortcuts.open = !compacto;
+            if (compacto && elementos.shortcuts.contains(document.activeElement)) {
+                elementos.close.focus({ preventScroll: true });
+            }
+        }
+        elementos.root.classList.toggle("is-compact", compacto);
+        elementos.root.style.setProperty("--chat-viewport-height", `${altura}px`);
+        elementos.root.style.setProperty("--chat-viewport-top", `${viewport?.offsetTop || 0}px`);
+    }
+
+    function conterFoco(evento) {
+        if (estaAberto && !elementos.panel.contains(evento.target)) {
+            elementos.close.focus({ preventScroll: true });
+        }
+    }
+
+    function aoPressionarTecla(evento) {
+        if (!estaAberto) return;
+        if (evento.key === "Escape") {
+            evento.preventDefault();
+            fecharChat();
+            return;
+        }
+        if (evento.key !== "Tab") return;
+        const focaveis = Array.from(elementos.panel.querySelectorAll(
+            'button:not(:disabled), input:not(:disabled), summary, [tabindex="0"]'
+        )).filter(elemento => elemento.getClientRects().length && getComputedStyle(elemento).visibility !== "hidden");
+        const primeiro = focaveis[0];
+        const ultimo = focaveis.at(-1);
+        if (!primeiro) return;
+        if (evento.shiftKey && (document.activeElement === primeiro || document.activeElement === elementos.panel)) {
+            evento.preventDefault();
+            ultimo.focus();
+        } else if (!evento.shiftKey && document.activeElement === ultimo) {
+            evento.preventDefault();
+            primeiro.focus();
+        }
     }
 
     function travarRolagemPagina() {
@@ -145,6 +220,9 @@
 
     function definirOcupado(valor) {
         estaOcupado = valor;
+        if (valor && estaAberto && (document.activeElement === elementos.input || document.activeElement === elementos.submit || document.activeElement?.matches("[data-chat-question]"))) {
+            elementos.close.focus({ preventScroll: true });
+        }
         elementos.submit.disabled = valor;
         elementos.input.disabled = valor;
         elementos.quickActions.forEach(botao => {

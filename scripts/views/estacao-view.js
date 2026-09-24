@@ -135,6 +135,15 @@
             </div>
         `;
 
+        const detalhes = document.getElementById("environmentDetails");
+        if (detalhes) {
+            // Apenas condicoes favoraveis podem sair da area sempre visivel.
+            detalhes.replaceChildren();
+            const acao = recipiente.querySelector(".environment-insight__action");
+            if (acao) recipiente.appendChild(acao);
+            recipiente.querySelectorAll(".environment-insight--favoravel").forEach(card => detalhes.appendChild(card));
+            document.getElementById("stationEnvironmentDetails").hidden = !detalhes.childElementCount;
+        }
         document.getElementById("environmentLocationButton")?.addEventListener("click", consultarClimaExterno);
     }
 
@@ -208,6 +217,7 @@
         }
 
         recipiente.hidden = false;
+        window.ClimateUI.renderChartContext(ids.chartContainers.rain, `Consulta externa atualizada em ${new Date(dadosExternosAtuais.atualizadoEm).toLocaleString("pt-BR")} · independente da data selecionada`);
         if (!window.Chart) {
             dependencias.interfaceUsuario.renderChartMessage(ids.chartContainers.rain, "Carregando gráfico...", "loading");
             dependencias.garantirGrafico?.();
@@ -247,12 +257,12 @@
         }
 
         return montarCardInsight({
-            titulo: "Índice UV",
+            titulo: "Índice UV atual",
             valor: Number.isFinite(indiceUv.valor) ? indiceUv.valor.toFixed(1) : "--",
             status: indiceUv.rotulo,
             classe: indiceUv.classe,
             descricao: indiceUv.descricao,
-            detalhe: Number.isFinite(indiceUv.maximo) ? `Máxima do dia: ${indiceUv.maximo.toFixed(1)}` : "Valor atual",
+            detalhe: Number.isFinite(indiceUv.maximo) ? `Máxima prevista hoje: ${indiceUv.maximo.toFixed(1)}` : "Valor atual",
         });
     }
 
@@ -350,7 +360,7 @@
             titulo: "AQI estimado",
             valor: String(resultado.aqi),
             detalhePrincipal: resultado.category.label,
-            detalheSecundario: `Dominante: ${resultado.dominant.label}`,
+            detalheSecundario: `Dominante: ${resultado.dominant.label} · Última leitura: ${new Date(resultado.timestamp).toLocaleString("pt-BR")}`,
             tendencia: resultado.category.label,
             classe: resultado.category.className === "good" ? "stable" : "down",
             temValor: true,
@@ -376,7 +386,7 @@
         return {
             titulo,
             valor: formatarValor(registro.valor, unidade),
-            detalhePrincipal: `${registro.data.replace(/-/g, "/")} · ${registro.horario}`,
+            detalhePrincipal: `Última leitura: ${registro.data.replace(/-/g, "/")} · ${registro.horario}`,
             detalheSecundario: montarDetalheQualidadeAtual(qualidade),
             tendencia: "",
             classe: "stable",
@@ -486,6 +496,7 @@
         mensagemVazia,
     }) {
         const id = contextoCanvas.canvas.id;
+        window.ClimateUI.renderRollingPeriod(idRecipiente, dataSelecionada);
         if (instanciasGraficos[id]) {
             window.ClimateChartSync?.desregistrar(instanciasGraficos[id]);
             instanciasGraficos[id].destroy();

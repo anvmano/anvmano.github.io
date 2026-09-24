@@ -50,6 +50,7 @@
     let retornos = {};
     let sequenciaBusca = 0;
     let consultaRestaurada = false;
+    let ultimaConsultaExibida = null;
     let modoBusca = "cep";
     const valoresBusca = { cep: "", cidade: "" };
 
@@ -224,6 +225,17 @@
     function renderizarMensagem(mensagem, tipo = "empty") {
         if (!elementos.publicResults) return;
         elementos.publicApp?.classList.remove("has-results");
+        if (ultimaConsultaExibida) {
+            let aviso = elementos.publicResults.querySelector(".public-query-feedback");
+            if (!aviso) {
+                aviso = document.createElement("p");
+                elementos.publicResults.prepend(aviso);
+            }
+            aviso.className = `public-query-feedback state-message state-message--${tipo}`;
+            aviso.textContent = `${mensagem} Exibindo a consulta anterior: ${ultimaConsultaExibida.local}, atualizada em ${ultimaConsultaExibida.data}.`;
+            anunciarEstado(aviso.textContent, tipo === "error" ? "alert" : "status");
+            return;
+        }
         limparContextoConsultaPublica();
         // A live region oculta anuncia o estado; a mensagem visível evita duplicar role=alert.
         elementos.publicResults.innerHTML = `<p class="state-message state-message--${tipo}">${mensagem}</p>`;
@@ -236,6 +248,7 @@
         window.ClimateCharts.registerComfortBand();
         const insights = analisarDadosPublicos(dados);
         const atualidade = calcularAtualidade(dados.atualizadoEm);
+        limparGraficos();
 
         elementos.publicResults.innerHTML = `
             <div class="public-location ${atualidade.desatualizado ? "is-stale" : ""}">
@@ -296,6 +309,7 @@
             chartInstances: graficos,
             getZoomOptions: obterOpcoesZoomPublico,
         });
+        ultimaConsultaExibida = { local: dados.origem.rotulo, data: formatarDataHora(dados.atualizadoEm) };
         return true;
     }
 
@@ -712,7 +726,9 @@
     }
 
     function card(titulo, valor, unidade) {
-        const texto = Number.isFinite(valor) ? `${valor.toFixed(2)}${unidade}` : "--";
+        const texto = Number.isFinite(valor)
+            ? `<span class="public-card__number">${valor.toFixed(2)}</span><span class="public-card__unit">${unidade}</span>`
+            : "--";
         return `
             <article class="stats-card public-card">
                 <span class="stats-card__label">${titulo}</span>
