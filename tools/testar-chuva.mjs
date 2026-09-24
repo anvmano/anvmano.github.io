@@ -37,6 +37,7 @@ verificar.equal(janela.chance.horarios.length, 25);
 verificar.equal(janela.chance.indiceAgora, 12);
 verificar.equal(janela.chance.horarios[0], "2026-09-22T04:00");
 verificar.equal(janela.chance.horarios[janela.chance.indiceAgora + 1], "2026-09-22T17:00");
+verificar.equal(janela.chance.precipitacao[0], 0);
 verificar.equal(janela.chance.probabilidade[0], 24);
 
 verificar.equal(contexto.ClimateChuva.analisarAgora({ precipitacao: 0, chuva: 0, codigoTempo: 1 }).rotulo, "Sem chuva agora");

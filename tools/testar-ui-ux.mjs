@@ -406,10 +406,10 @@ async function testarPublicoResponsivo() {
                 } else {
                     assert.equal(await page.locator('.rain-chart-toggle[data-rain-chart="publicChartRain"]').count(), 0);
                     assert.equal(chuva.total, 25);
-                    assert.deepEqual(chuva.seriesVisiveis, ["Chance de chuva"]);
+                    assert.deepEqual(chuva.seriesVisiveis, ["Precipitação observada", "Precipitação prevista", "Chance de chuva"]);
                     assert.deepEqual([chuva.observados, chuva.previstos, chuva.indiceAgora], [13, 12, 12]);
                     assert.match(chuva.titulo, /12h anteriores \+ próximas 12h/);
-                    assert.deepEqual([chuva.eixoMilimetros, chuva.eixoProbabilidade], [false, true]);
+                    assert.deepEqual([chuva.eixoMilimetros, chuva.eixoProbabilidade], [true, true]);
                 }
                 const cortes = await page.locator(".public-card .stats-card__value, .public-moon dd").evaluateAll(els => els.filter(el => el.scrollWidth > el.clientWidth + 1).map(el => el.textContent));
                 assert.deepEqual(cortes, []);

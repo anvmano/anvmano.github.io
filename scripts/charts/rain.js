@@ -54,6 +54,7 @@
             chance: {
                 horarios: [],
                 tipos: [],
+                precipitacao: [],
                 probabilidade: [],
                 indiceAgora: -1,
             },
@@ -76,6 +77,7 @@
             if (observadoNaChance || previsto) {
                 resultado.chance.horarios.push(item.horario);
                 resultado.chance.tipos.push(observadoNaChance ? "observado" : "previsao");
+                resultado.chance.precipitacao.push(numeroOuNulo(item.precipitacao));
                 resultado.chance.probabilidade.push(numeroOuNulo(item.probabilidadeChuva));
                 if (observadoNaChance) resultado.chance.indiceAgora = resultado.chance.horarios.length - 1;
             }
@@ -126,8 +128,8 @@
             tipos: [...(janela.chance?.tipos || [])],
             indiceAgora: janela.chance?.indiceAgora ?? -1,
             series: {
-                observada: [],
-                prevista: [],
+                observada: (janela.chance?.precipitacao || []).map((valor, indice) => janela.chance.tipos[indice] === "observado" ? valor : null),
+                prevista: (janela.chance?.precipitacao || []).map((valor, indice) => janela.chance.tipos[indice] === "previsao" ? valor : null),
                 probabilidade: [...(janela.chance?.probabilidade || [])],
             },
         };
@@ -159,7 +161,7 @@
                         chaveChuva: "observada",
                         tipoDado: "observado",
                         order: 2,
-                        hidden: !movel,
+                        hidden: false,
                     },
                     {
                         label: "Precipitação prevista",
@@ -172,7 +174,7 @@
                         chaveChuva: "prevista",
                         tipoDado: "previsao",
                         order: 2,
-                        hidden: !movel,
+                        hidden: false,
                     },
                     {
                         type: "line",
@@ -294,7 +296,7 @@
 
         if (!movel) {
             removerControleMovel(grafico);
-            aplicarVisualizacao(grafico, "probabilidade", false);
+            aplicarVisualizacao(grafico, "completo", false);
             return;
         }
 
@@ -334,18 +336,17 @@
     }
 
     function aplicarVisualizacao(grafico, modo, atualizar = true) {
-        const mostrarProbabilidade = modo === "probabilidade";
+        const mostrarProbabilidade = modo !== "precipitacao";
+        const mostrarPrecipitacao = modo !== "probabilidade";
         const visualizacao = grafico.$visualizacoesChuva?.[mostrarProbabilidade ? "probabilidade" : "precipitacao"];
         if (!visualizacao) return;
 
         grafico.data.labels = visualizacao.horarios.map(formatarHora);
         grafico.data.datasets.forEach(serie => {
             serie.data = [...(visualizacao.series[serie.chaveChuva] || [])];
-            serie.hidden = mostrarProbabilidade
-                ? serie.chaveChuva !== "probabilidade"
-                : serie.chaveChuva === "probabilidade";
+            serie.hidden = serie.chaveChuva === "probabilidade" ? !mostrarProbabilidade : !mostrarPrecipitacao;
         });
-        grafico.options.scales.yMilimetros.display = !mostrarProbabilidade;
+        grafico.options.scales.yMilimetros.display = mostrarPrecipitacao;
         grafico.options.scales.yProbabilidade.display = mostrarProbabilidade;
         grafico.$indiceAgora = visualizacao.indiceAgora;
         grafico.$marcadorAgora = { indice: visualizacao.indiceAgora };
@@ -357,13 +358,17 @@
 
         const titulo = grafico.canvas?.parentElement?.querySelector(".chart-label");
         if (titulo) {
-            titulo.textContent = mostrarProbabilidade
+            titulo.textContent = mostrarProbabilidade && mostrarPrecipitacao
+                ? "Chuva · 12h anteriores + próximas 12h"
+                : mostrarProbabilidade
                 ? "Chance de chuva · 12h anteriores + próximas 12h"
                 : "Chuva · 24h anteriores + próximas 12h";
         }
         grafico.canvas?.setAttribute(
             "aria-label",
-            mostrarProbabilidade
+            mostrarProbabilidade && mostrarPrecipitacao
+                ? "Precipitação e probabilidade de chuva nas 12 horas anteriores e próximas 12 horas"
+                : mostrarProbabilidade
                 ? "Probabilidade de chuva nas 12 horas anteriores e próximas 12 horas"
                 : "Precipitação nas 24 horas anteriores e próximas 12 horas"
         );
