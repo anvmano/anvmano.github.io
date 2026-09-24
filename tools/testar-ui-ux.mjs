@@ -192,8 +192,8 @@ async function testarContextoTabelas() {
         for (const width of [320, 390, 1440]) {
             const page = await browser.newPage({ viewport: { width, height: 900 } });
             await page.clock.install({ time: new Date(2026, 8, 23, 12, 30) });
-            await page.setContent('<main style="padding:12px"><div id="statsSala" class="stats-grid"></div><div id="chart-container-temp-sala" class="chart-card"><div class="chart-label">Temperatura</div></div><div id="tabela" class="table-wrapper"></div></main>');
-            for (const file of ["tokens", "base", "stats", "charts", "tables", "responsive"]) await page.addStyleTag({ path: path.join(raiz, `styles/${file}.css`) });
+            await page.setContent('<main style="padding:12px"><div id="statsSala" class="stats-grid"></div><div id="chart-container-temp-sala" class="chart-card"><div class="chart-label">Temperatura</div></div><section class="advanced-section table-section"><button class="collapsible-trigger" type="button"><span class="chart-label">Tabela</span></button><div id="tabela" class="table-wrapper"></div></section></main>');
+            for (const file of ["tokens", "base", "stats", "charts", "advanced-views", "tables", "responsive"]) await page.addStyleTag({ path: path.join(raiz, `styles/${file}.css`) });
             for (const file of ["config", "data/data-utils", "ui/ui", "data/analytics"]) await page.addScriptTag({ path: path.join(raiz, `scripts/${file}.js`) });
             const resultado = await page.evaluate(() => {
                 const dados = {
@@ -209,7 +209,7 @@ async function testarContextoTabelas() {
             });
             assert.deepEqual(resultado, { inicio: 19, fim: 20, hora: 12, media: "20.00°C" });
             assert.match(await page.locator(".stats-card__period").first().innerText(), /Média do dia · 20\/09\/2026/);
-            assert.match(await page.locator(".chart-period").innerText(), /24h: 19\/09\/2026.*12:30 a 20\/09\/2026.*12:30/);
+            assert.equal(await page.locator(".chart-period").count(), 0);
             await page.waitForTimeout(100);
             if (width < 640) {
                 for (const scroll of [0, 180, 10000]) {
@@ -219,12 +219,14 @@ async function testarContextoTabelas() {
                         const data = el.querySelector("tbody td:first-child").getBoundingClientRect();
                         const hora = el.querySelector("tbody td:nth-child(2)").getBoundingClientRect();
                         const topo = el.querySelector("th:nth-child(2)").getBoundingClientRect();
-                        return { dataFixa: Math.abs(data.left - area.left) < 2, horaFixa: Math.abs(hora.left - data.right) < 2, alinhada: Math.abs(topo.left - hora.left) < 1, restante: area.right - hora.right, mascara: getComputedStyle(el).maskImage };
+                        return { dataFixa: Math.abs(data.left - area.left) < 2, horaFixa: Math.abs(hora.left - data.right) < 2, alinhada: Math.abs(topo.left - hora.left) < 1, fixas: hora.right - area.left, restante: area.right - hora.right, largura: area.width, mascara: getComputedStyle(el).maskImage };
                     });
                     assert.equal(medidas.dataFixa, true);
                     assert.equal(medidas.horaFixa, true);
                     assert.equal(medidas.alinhada, true);
-                    assert.ok(medidas.restante >= 90, JSON.stringify(medidas));
+                    assert.ok(medidas.fixas <= 142, JSON.stringify(medidas));
+                    assert.ok(medidas.restante >= 145, JSON.stringify(medidas));
+                    assert.ok(medidas.largura >= width - 28, JSON.stringify(medidas));
                     assert.equal(medidas.mascara, "none");
                 }
             }
@@ -238,8 +240,7 @@ async function testarContextoTabelas() {
             await page.screenshot({ path: path.join(pasta, `contexto-tabela-${width}.png`), fullPage: true });
             await page.evaluate(() => window.ClimateAnalytics.renderStats("sala", {}, "01-09-2026"));
             assert.match(await page.locator("#statsSala").innerText(), /Sem resumo.*01\/09\/2026/);
-            assert.match(await page.locator(".chart-period").innerText(), /31\/08\/2026.*01\/09\/2026/);
-            assert.equal(await page.locator(".chart-period").count(), 1);
+            assert.equal(await page.locator(".chart-period").count(), 0);
             await page.evaluate(() => {
                 const stats = document.createElement("div");
                 stats.id = "statsEstacao";
@@ -317,12 +318,18 @@ async function testarPublicoResponsivo() {
                     window.loginsTeste = 0;
                     window.PublicWeatherView.setup({ onLogin: () => { window.loginsTeste++; } });
                     window.PublicWeatherView.mostrar();
-                    const agora = new Date();
+                    const agora = new Date(2026, 8, 24, 12, 0, 0);
+                    const inicioChuva = new Date(agora.getTime() - 24 * 60 * 60 * 1000);
+                    const previsaoCurtoPrazo = Array.from({ length: 37 }, (_, indice) => ({
+                        horario: new Date(inicioChuva.getTime() + indice * 60 * 60 * 1000).toISOString(),
+                        precipitacao: indice % 4 === 0 ? 1.2 : 0,
+                        probabilidadeChuva: 20 + indice,
+                    }));
                     window.ExternalWeatherService.buscarPorCep = async () => ({
                         atualizadoEm: agora, origem: { tipo: "cidade", rotulo: "Campinas - São Paulo" },
                         climaAtual: { temperatura: -12.34, sensacaoTermica: -15.6, umidade: 58, pressao: 1025.55, precipitacao: 0, chuva: 0, codigoTempo: 1, indiceUv: 6, pontoOrvalho: 17, ventoVelocidade: 8 },
                         aqi: { valor: 72 }, previsaoDiaria: { indiceUvMaximo: 8 },
-                        previsaoCurtoPrazo: [{ horario: agora.toISOString(), precipitacao: 0, probabilidadeChuva: 10 }],
+                        previsaoCurtoPrazo,
                         seriesHorarias: { horarios: [agora.toISOString()], temperatura: [25], sensacaoTermica: [26], umidade: [58], pressao: [1025.55] },
                         cicloSolar: { dawn: 5.5, sunrise: 6, zenith: 12, sunset: 18, dusk: 18.5 },
                     });
@@ -370,8 +377,64 @@ async function testarPublicoResponsivo() {
                     await page.waitForTimeout(100);
                     assert.match(await page.locator(".public-location").innerText(), /Consulta mais recente/);
                 }
+                await page.waitForFunction(() => !!window.Chart?.getChart?.("publicChartRain"));
+                const lerChuva = () => page.evaluate(() => {
+                    const grafico = window.Chart.getChart("publicChartRain");
+                    return {
+                        total: grafico.data.labels.length,
+                        seriesVisiveis: grafico.data.datasets.filter(serie => !serie.hidden).map(serie => serie.label),
+                        observados: grafico.$tiposAtivos.filter(tipo => tipo === "observado").length,
+                        previstos: grafico.$tiposAtivos.filter(tipo => tipo === "previsao").length,
+                        indiceAgora: grafico.$indiceAgora,
+                        titulo: grafico.canvas.parentElement.querySelector(".chart-label")?.textContent,
+                        eixoMilimetros: grafico.options.scales.yMilimetros.display,
+                        eixoProbabilidade: grafico.options.scales.yProbabilidade.display,
+                    };
+                });
+                let chuva = await lerChuva();
+                if (width <= 640) {
+                    assert.equal(await page.locator('.rain-chart-toggle[data-rain-chart="publicChartRain"]').isVisible(), true);
+                    assert.equal(chuva.total, 37);
+                    assert.deepEqual(chuva.seriesVisiveis, ["Precipitação observada", "Precipitação prevista"]);
+                    await page.locator('.rain-chart-toggle[data-rain-chart="publicChartRain"] [data-rain-mode="probabilidade"]').click();
+                    chuva = await lerChuva();
+                    assert.equal(chuva.total, 25);
+                    assert.deepEqual(chuva.seriesVisiveis, ["Chance de chuva"]);
+                    assert.deepEqual([chuva.observados, chuva.previstos, chuva.indiceAgora], [13, 12, 12]);
+                    assert.match(chuva.titulo, /12h anteriores \+ próximas 12h/);
+                    assert.deepEqual([chuva.eixoMilimetros, chuva.eixoProbabilidade], [false, true]);
+                } else {
+                    assert.equal(await page.locator('.rain-chart-toggle[data-rain-chart="publicChartRain"]').count(), 0);
+                    assert.equal(chuva.total, 25);
+                    assert.deepEqual(chuva.seriesVisiveis, ["Chance de chuva"]);
+                    assert.deepEqual([chuva.observados, chuva.previstos, chuva.indiceAgora], [13, 12, 12]);
+                    assert.match(chuva.titulo, /12h anteriores \+ próximas 12h/);
+                    assert.deepEqual([chuva.eixoMilimetros, chuva.eixoProbabilidade], [false, true]);
+                }
                 const cortes = await page.locator(".public-card .stats-card__value, .public-moon dd").evaluateAll(els => els.filter(el => el.scrollWidth > el.clientWidth + 1).map(el => el.textContent));
                 assert.deepEqual(cortes, []);
+                if (width <= 640) {
+                    const contextoMovel = await page.evaluate(() => {
+                        const resumo = document.querySelector(".public-stats-grid").getBoundingClientRect();
+                        const astronomia = document.querySelector(".public-app .station-context-row").getBoundingClientRect();
+                        const pares = [...document.querySelectorAll(".public-moon .moon-summary__details div")].filter(item => item.checkVisibility()).map(item => {
+                            const rotulo = item.querySelector("dt").getBoundingClientRect();
+                            const data = item.querySelector("dd").getBoundingClientRect();
+                            return {
+                                alinhado: Math.abs(rotulo.left - data.left) < 1,
+                                agrupado: data.top - rotulo.bottom <= 5,
+                                rotulo: item.querySelector("dt").textContent,
+                            };
+                        });
+                        return {
+                            espaco: Math.round(astronomia.top - resumo.bottom),
+                            pares,
+                        };
+                    });
+                    assert.ok(contextoMovel.espaco <= 13, `Espaco excessivo antes do contexto astronomico: ${contextoMovel.espaco}px`);
+                    assert.deepEqual(contextoMovel.pares.map(item => item.rotulo), ["Próxima cheia", "Próxima nova"]);
+                    assert.ok(contextoMovel.pares.every(item => item.alinhado && item.agrupado));
+                }
                 if (width > 900) {
                     const proporcoes = await page.evaluate(() => {
                         const busca = document.querySelector(".public-hero").getBoundingClientRect();
@@ -473,10 +536,52 @@ async function testarLayoutEstacao() {
             });
             await page.waitForTimeout(400);
             assert.equal(await page.locator("#statsEstacao .stats-card").count(), 6);
+            assert.equal(await page.locator("#stationAstronomyDetails").getAttribute("open"), "");
+            assert.equal(await page.locator("#stationAstronomyDetails .station-context-row").isVisible(), true);
+            assert.deepEqual(await page.evaluate(() => {
+                const astronomia = document.getElementById("stationAstronomyDetails");
+                const insights = document.getElementById("environmentInsights");
+                const grafico = document.getElementById("chart-container-global-temp");
+                return {
+                    depoisDosResumos: astronomia.previousElementSibling?.id === "statsEstacao",
+                    antesDosInsights: astronomia.compareDocumentPosition(insights) === Node.DOCUMENT_POSITION_FOLLOWING,
+                    antesDosGraficos: astronomia.compareDocumentPosition(grafico) === Node.DOCUMENT_POSITION_FOLLOWING,
+                };
+            }), { depoisDosResumos: true, antesDosInsights: true, antesDosGraficos: true });
+            const legendas = await page.evaluate(() => {
+                const graficos = Object.values(window.instanciasTeste).filter(grafico => grafico?.data?.datasets?.length > 1);
+                return { quantidade: graficos.length, preservadas: graficos.every(grafico => grafico.options.plugins.legend.display === true) };
+            });
+            assert.ok(legendas.quantidade > 0);
+            assert.equal(legendas.preservadas, true);
+            assert.equal(await page.locator(".chart-period").count(), 0);
+            assert.equal(await page.locator("#chart-container-global-temp").evaluate(card => {
+                const titulo = card.querySelector(".chart-label").getBoundingClientRect();
+                const canvas = card.querySelector("canvas").getBoundingClientRect();
+                return Math.abs(canvas.top - titulo.bottom) <= 1;
+            }), true);
             assert.ok(await page.locator("#environmentDetails .environment-insight").count() >= 2);
             assert.equal(await page.locator("#environmentInsights .environment-insight--favoravel").count(), 0);
             assert.equal(await page.locator("#environmentLocationButton").isVisible(), true);
             assert.ok(await page.locator("#environmentInsights .environment-insight--indisponivel").count() >= 2);
+            const composicaoInsights = await page.locator("#environmentInsights").evaluate((recipiente, largura) => {
+                const card = recipiente.querySelector(".environment-insight");
+                const selo = recipiente.querySelector(".environment-insight__header > small");
+                const estiloSelo = getComputedStyle(selo);
+                return {
+                    colunas: getComputedStyle(card).gridTemplateColumns.split(" ").length,
+                    colunasEsperadas: largura <= 640 ? 1 : largura <= 900 ? 2 : 3,
+                    seloCentralizado: ["flex", "inline-flex"].includes(estiloSelo.display) && estiloSelo.alignItems === "center" && estiloSelo.justifyContent === "center",
+                    seloInteiro: estiloSelo.whiteSpace === "nowrap" && selo.scrollWidth <= selo.clientWidth + 1,
+                    semRepeticao: !recipiente.innerText.includes("Nenhuma localização é armazenada") && ![...recipiente.querySelectorAll(".environment-insight")].some(item => item.innerText.includes("Consulte a localização")),
+                    detalhesVazios: recipiente.querySelectorAll(".environment-insight__detail").length === 0,
+                };
+            }, width);
+            assert.equal(composicaoInsights.colunas, composicaoInsights.colunasEsperadas);
+            assert.equal(composicaoInsights.seloCentralizado, true);
+            assert.equal(composicaoInsights.seloInteiro, true);
+            assert.equal(composicaoInsights.semRepeticao, true);
+            assert.equal(composicaoInsights.detalhesVazios, true);
             const medida = await page.evaluate(() => {
                 const grafico = document.getElementById("chart-container-global-temp");
                 const inicio = document.getElementById("Tab0").getBoundingClientRect().top;
@@ -487,6 +592,36 @@ async function testarLayoutEstacao() {
             medidas.push(medida);
             await page.screenshot({ path: path.join(pasta, `estacao-${width}.png`), fullPage: true });
             assert.equal(await page.locator(".station-summary-card__meta span").evaluateAll(els => els.every(el => el.scrollWidth <= el.clientWidth + 1 && getComputedStyle(el).whiteSpace === "normal")), true);
+            if (width <= 640) {
+                await page.evaluate(() => {
+                    window.calcularAqiOriginalTeste = window.ClimateAqi.calculate;
+                    window.ClimateAqi.calculate = () => ({
+                        aqi: 301,
+                        category: { label: "Perigoso", className: "hazardous" },
+                        dominant: { label: "Álcool" },
+                        timestamp: Date.now(),
+                    });
+                    window.renderizarTeste();
+                });
+                const seloAqi = page.locator("#statsEstacao .stats-card__trend").first();
+                assert.equal(await seloAqi.innerText(), "Perigoso");
+                assert.deepEqual(await seloAqi.evaluate(el => {
+                    const selo = el.getBoundingClientRect();
+                    const card = el.closest(".stats-card").getBoundingClientRect();
+                    const faixa = document.createRange();
+                    faixa.selectNodeContents(el);
+                    return {
+                        umaLinha: faixa.getClientRects().length === 1,
+                        dentroDoCard: selo.left >= card.left && selo.right <= card.right,
+                        semQuebra: getComputedStyle(el).whiteSpace === "nowrap",
+                    };
+                }), { umaLinha: true, dentroDoCard: true, semQuebra: true });
+                await page.screenshot({ path: path.join(pasta, `aqi-perigoso-${width}.png`), fullPage: true });
+                await page.evaluate(() => {
+                    window.ClimateAqi.calculate = window.calcularAqiOriginalTeste;
+                    window.renderizarTeste();
+                });
+            }
             // Reconstroi a ordem anterior com a mesma fixture para medir a reducao de rolagem.
             medida.distanciaComOrdemAnterior = await page.evaluate(() => {
                 const contexto = document.querySelector("#Tab0 .station-context-row");

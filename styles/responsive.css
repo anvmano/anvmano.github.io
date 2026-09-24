@@ -348,7 +348,7 @@
 
     .public-moon .moon-summary__details div {
         grid-template-columns: minmax(0, 1fr);
-        justify-content: start;
+        justify-content: stretch;
         min-width: 0;
     }
 
@@ -358,6 +358,7 @@
         overflow: visible;
         text-overflow: clip;
         white-space: normal;
+        text-align: left;
     }
 
     .advanced-grid {

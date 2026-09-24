@@ -34,23 +34,12 @@
         }
     }
 
-    function renderizarContextoGrafico(id, texto) {
-        const titulo = document.getElementById(id)?.querySelector(".chart-label");
-        if (!titulo) return;
-        let contexto = titulo.querySelector(".chart-period");
-        if (!contexto) {
-            contexto = document.createElement("span");
-            contexto.className = "chart-period";
-            titulo.appendChild(contexto);
-        }
-        contexto.textContent = texto;
+    function renderizarContextoGrafico(id) {
+        document.getElementById(id)?.querySelectorAll(".chart-period").forEach(elemento => elemento.remove());
     }
 
-    function renderizarPeriodoMovel(id, dataSelecionada) {
-        const janela = ClimateData.getRollingWindow(dataSelecionada);
-        if (!janela) return;
-        const formatar = data => data.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
-        renderizarContextoGrafico(id, `24h: ${formatar(janela.inicio)} a ${formatar(janela.fim)}`);
+    function renderizarPeriodoMovel(id) {
+        renderizarContextoGrafico(id);
     }
 
     function criarFerramentasTabela(tabela) {

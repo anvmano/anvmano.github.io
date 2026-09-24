@@ -31,6 +31,13 @@ verificar.equal(janela.tipos.filter(tipo => tipo === "observado").length, 25);
 verificar.equal(janela.tipos.filter(tipo => tipo === "previsao").length, 12);
 verificar.equal(janela.indiceAgora, 24);
 verificar.equal(janela.horarios[janela.indiceAgora + 1], "2026-09-22T17:00");
+verificar.equal(janela.chance.tipos.filter(tipo => tipo === "observado").length, 13);
+verificar.equal(janela.chance.tipos.filter(tipo => tipo === "previsao").length, 12);
+verificar.equal(janela.chance.horarios.length, 25);
+verificar.equal(janela.chance.indiceAgora, 12);
+verificar.equal(janela.chance.horarios[0], "2026-09-22T04:00");
+verificar.equal(janela.chance.horarios[janela.chance.indiceAgora + 1], "2026-09-22T17:00");
+verificar.equal(janela.chance.probabilidade[0], 24);
 
 verificar.equal(contexto.ClimateChuva.analisarAgora({ precipitacao: 0, chuva: 0, codigoTempo: 1 }).rotulo, "Sem chuva agora");
 verificar.equal(contexto.ClimateChuva.analisarAgora({ precipitacao: 0.3, chuva: 0.3, codigoTempo: 61 }).rotulo, "Chovendo agora");
@@ -63,6 +70,7 @@ verificar.match(codigoChuva, /rain-chart-toggle/);
 verificar.match(codigoChuva, /data-rain-mode="precipitacao"/);
 verificar.match(codigoChuva, /data-rain-mode="probabilidade"/);
 verificar.match(codigoChuva, /limiteTicks = movel \? 5 : 13/);
+verificar.match(codigoChuva, /Chance de chuva · 12h anteriores \+ próximas 12h/);
 verificar.match(estilosGraficos, /\.rain-chart-toggle/);
 
 const executavel = [

@@ -33,7 +33,7 @@
     transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 0;
     overflow: hidden;
 }
 
@@ -121,23 +121,6 @@
     color: var(--text-secondary);
 }
 
-.chart-period {
-    display: block;
-    margin-top: 0.3rem;
-    color: var(--text-secondary);
-    font-size: 0.72rem;
-    font-weight: 400;
-    text-transform: none;
-    letter-spacing: 0;
-    line-height: 1.4;
-    overflow-wrap: anywhere;
-}
-
-.chart-card:has(.chart-period) .chart-quality-badge {
-    position: static;
-    align-self: flex-start;
-}
-
 .chart-card__meta-chip {
     position: absolute;
     top: 13px;
@@ -207,6 +190,7 @@
         align-self: flex-start;
         max-width: calc(100% - 24px);
         min-height: 24px;
+        margin-top: 0.45rem;
         font-size: 0.68rem;
     }
 
@@ -219,6 +203,7 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 4px;
         width: 100%;
+        margin: 0.5rem 0 0.25rem;
         padding: 4px;
         border: 1px solid var(--border);
         border-radius: var(--radius-md);

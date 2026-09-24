@@ -26,16 +26,29 @@
     margin-block: var(--space-3);
 }
 
+.station-details--astronomy {
+    margin: 0 0 var(--space-4);
+}
+
+.station-details--astronomy .station-context-row {
+    margin-bottom: 0;
+}
+
 #environmentInsights .environment-insights__grid {
     grid-template-columns: 1fr;
     gap: 0;
 }
 
 #environmentInsights .environment-insight {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-    grid-template-rows: auto;
+    grid-template-columns: minmax(160px, 0.85fr) minmax(180px, 1fr) minmax(0, 2fr);
+    grid-template-areas:
+        "header value description"
+        "header value detail";
+    grid-template-rows: auto auto;
+    align-items: center;
+    gap: 0.3rem 1rem;
     min-height: 0;
-    padding: 12px;
+    padding: 0.85rem 1rem;
     border: 0;
     border-bottom: 1px solid var(--border);
     border-radius: 0;
@@ -44,21 +57,59 @@
 }
 
 #environmentInsights .environment-insight__header {
-    grid-row: span 3;
+    grid-area: header;
     display: grid;
-    align-content: start;
+    align-content: center;
+    justify-items: start;
+    gap: 0.5rem;
 }
 
 #environmentInsights .environment-insight__header > small {
-    max-width: none;
-    white-space: normal;
-    text-align: left;
-    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+    min-height: 24px;
+    padding-inline: 0.55rem;
+    white-space: nowrap;
+    text-align: center;
 }
 
 #environmentInsights .environment-insight__header > span {
-    letter-spacing: 0;
+    letter-spacing: 0.035em;
     overflow-wrap: anywhere;
+}
+
+#environmentInsights .environment-insight > strong {
+    grid-area: value;
+    align-self: center;
+    font-size: 1rem;
+}
+
+#environmentInsights .environment-insight > p {
+    grid-area: description;
+    max-width: 68ch;
+}
+
+#environmentInsights .environment-insight__detail {
+    grid-area: detail;
+    align-self: start;
+}
+
+@media (max-width: 900px) {
+    #environmentInsights .environment-insight {
+        grid-template-columns: minmax(140px, 0.8fr) minmax(0, 2fr);
+        grid-template-areas:
+            "header value"
+            "header description"
+            "header detail";
+        grid-template-rows: auto auto auto;
+        align-items: start;
+    }
+
+    #environmentInsights .environment-insight > strong {
+        align-self: start;
+    }
 }
 
 .environment-insights__location {
@@ -233,5 +284,29 @@
 
     .environment-insight {
         min-height: 148px;
+    }
+
+    #environmentInsights .environment-insight {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+            "header"
+            "value"
+            "description"
+            "detail";
+        grid-template-rows: auto;
+        gap: 0.38rem;
+        padding: 0.8rem 0.85rem;
+    }
+
+    #environmentInsights .environment-insight__header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.4rem 0.65rem;
+    }
+
+    #environmentInsights .environment-insight__header > small {
+        flex: 0 0 auto;
     }
 }

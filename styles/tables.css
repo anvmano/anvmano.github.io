@@ -105,6 +105,11 @@
 }
 
 @media (max-width: 640px) {
+    .table-wrapper {
+        overscroll-behavior-inline: contain;
+        touch-action: pan-x pan-y;
+    }
+
     .table-tools button {
         min-height: 44px;
     }
@@ -116,19 +121,23 @@
         z-index: 2;
         background: #172033;
         box-shadow: 1px 0 0 var(--border);
-        min-width: 100px;
-        padding: 11px 8px;
+        width: 88px;
+        min-width: 88px;
+        max-width: 88px;
+        padding: 9px 4px;
     }
 
     .table-wrapper th:nth-child(2),
     .table-wrapper td:nth-child(2) {
         position: sticky;
-        left: var(--table-date-width, 100px);
+        left: var(--table-date-width, 88px);
         z-index: 2;
-        min-width: 60px;
-        padding: 11px 8px;
+        width: 52px;
+        min-width: 52px;
+        max-width: 52px;
+        padding: 9px 4px;
         background: #172033;
-        box-shadow: 1px 0 0 var(--border);
+        box-shadow: 4px 0 10px rgba(2, 6, 23, 0.32), 1px 0 0 var(--border);
     }
 
     .table-wrapper th:first-child,

@@ -3,6 +3,7 @@
 (function () {
     const HORAS_OBSERVADAS = 24;
     const HORAS_PREVISTAS = 12;
+    const HORAS_PROBABILIDADE_ANTERIORES = 12;
     const CONSULTA_MOVEL = "(max-width: 640px)";
 
     const pluginMarcadorAgora = {
@@ -39,6 +40,7 @@
     function montarJanela(previsao = [], atualizadoEm = new Date(), horasObservadas = HORAS_OBSERVADAS, horasPrevistas = HORAS_PREVISTAS) {
         const agora = dataValida(atualizadoEm) || new Date();
         const inicio = new Date(agora.getTime() - horasObservadas * 60 * 60 * 1000);
+        const inicioProbabilidade = new Date(agora.getTime() - HORAS_PROBABILIDADE_ANTERIORES * 60 * 60 * 1000);
         const inicioPrevisao = new Date(agora);
         inicioPrevisao.setMinutes(0, 0, 0);
         inicioPrevisao.setHours(inicioPrevisao.getHours() + 1);
@@ -49,6 +51,12 @@
             precipitacao: [],
             probabilidade: [],
             indiceAgora: -1,
+            chance: {
+                horarios: [],
+                tipos: [],
+                probabilidade: [],
+                indiceAgora: -1,
+            },
         };
 
         previsao.forEach(item => {
@@ -63,6 +71,14 @@
             resultado.precipitacao.push(numeroOuNulo(item.precipitacao));
             resultado.probabilidade.push(numeroOuNulo(item.probabilidadeChuva));
             if (observado) resultado.indiceAgora = resultado.horarios.length - 1;
+
+            const observadoNaChance = horario >= inicioProbabilidade && horario <= agora;
+            if (observadoNaChance || previsto) {
+                resultado.chance.horarios.push(item.horario);
+                resultado.chance.tipos.push(observadoNaChance ? "observado" : "previsao");
+                resultado.chance.probabilidade.push(numeroOuNulo(item.probabilidadeChuva));
+                if (observadoNaChance) resultado.chance.indiceAgora = resultado.chance.horarios.length - 1;
+            }
         });
 
         return resultado;
@@ -95,57 +111,86 @@
         }
         if (!canvas || !window.Chart || !janela?.horarios?.length) return null;
 
-        const observada = janela.precipitacao.map((valor, indice) => janela.tipos[indice] === "observado" ? valor : null);
-        const prevista = janela.precipitacao.map((valor, indice) => janela.tipos[indice] === "previsao" ? valor : null);
-        const probabilidade = janela.probabilidade.map((valor, indice) => janela.tipos[indice] === "previsao" ? valor : null);
-        const temDados = [...observada, ...prevista, ...probabilidade].some(valor => numeroOuNulo(valor) !== null);
+        const visualizacaoPrecipitacao = {
+            horarios: [...janela.horarios],
+            tipos: [...janela.tipos],
+            indiceAgora: janela.indiceAgora,
+            series: {
+                observada: janela.precipitacao.map((valor, indice) => janela.tipos[indice] === "observado" ? valor : null),
+                prevista: janela.precipitacao.map((valor, indice) => janela.tipos[indice] === "previsao" ? valor : null),
+                probabilidade: [],
+            },
+        };
+        const visualizacaoChance = {
+            horarios: [...(janela.chance?.horarios || [])],
+            tipos: [...(janela.chance?.tipos || [])],
+            indiceAgora: janela.chance?.indiceAgora ?? -1,
+            series: {
+                observada: [],
+                prevista: [],
+                probabilidade: [...(janela.chance?.probabilidade || [])],
+            },
+        };
+        const temDados = [
+            ...visualizacaoPrecipitacao.series.observada,
+            ...visualizacaoPrecipitacao.series.prevista,
+            ...visualizacaoChance.series.probabilidade,
+        ].some(valor => numeroOuNulo(valor) !== null);
         if (!temDados) return null;
 
         const corChuva = cores?.blue || "#38bdf8";
         const corPrevisao = "rgba(125, 211, 252, 0.48)";
         const corProbabilidade = cores?.purple || "#a78bfa";
         const movel = estaEmTelaMovel();
+        const visualizacaoInicial = movel ? visualizacaoPrecipitacao : visualizacaoChance;
         const grafico = new Chart(canvas.getContext("2d"), {
             type: "bar",
             data: {
-                labels: janela.horarios.map(formatarHora),
+                labels: visualizacaoInicial.horarios.map(formatarHora),
                 datasets: [
                     {
                         label: "Precipitação observada",
-                        data: observada,
+                        data: visualizacaoInicial.series.observada,
                         yAxisID: "yMilimetros",
                         backgroundColor: `${corChuva}aa`,
                         borderColor: corChuva,
                         borderWidth: 1,
                         borderRadius: 3,
+                        chaveChuva: "observada",
                         tipoDado: "observado",
                         order: 2,
+                        hidden: !movel,
                     },
                     {
                         label: "Precipitação prevista",
-                        data: prevista,
+                        data: visualizacaoInicial.series.prevista,
                         yAxisID: "yMilimetros",
                         backgroundColor: corPrevisao,
                         borderColor: corPrevisao,
                         borderWidth: 1,
                         borderRadius: 3,
+                        chaveChuva: "prevista",
                         tipoDado: "previsao",
                         order: 2,
+                        hidden: !movel,
                     },
                     {
                         type: "line",
                         label: "Chance de chuva",
-                        data: probabilidade,
+                        data: visualizacaoInicial.series.probabilidade,
                         yAxisID: "yProbabilidade",
                         borderColor: corProbabilidade,
                         backgroundColor: "transparent",
-                        borderDash: [6, 4],
                         borderWidth: 2,
                         tension: 0.3,
                         pointRadius: 0,
                         pointHitRadius: 18,
                         spanGaps: false,
-                        tipoDado: "previsao",
+                        segment: {
+                            borderDash: contexto => contexto.chart.$tiposAtivos?.[contexto.p1DataIndex] === "previsao" ? [6, 4] : undefined,
+                        },
+                        chaveChuva: "probabilidade",
+                        tipoDado: "probabilidade",
                         order: 1,
                         hidden: movel,
                     },
@@ -155,8 +200,15 @@
             plugins: [pluginMarcadorAgora, pluginControleResponsivo],
         });
 
-        grafico.$indiceAgora = janela.indiceAgora;
-        grafico.$marcadorAgora = { indice: janela.indiceAgora };
+        grafico.$visualizacoesChuva = {
+            precipitacao: visualizacaoPrecipitacao,
+            probabilidade: visualizacaoChance,
+        };
+        grafico.$indiceAgora = visualizacaoInicial.indiceAgora;
+        grafico.$marcadorAgora = { indice: visualizacaoInicial.indiceAgora };
+        grafico.$horariosAtivos = [...visualizacaoInicial.horarios];
+        grafico.$tiposAtivos = [...visualizacaoInicial.tipos];
+        grafico.$chavesSincronizacao = [...visualizacaoInicial.horarios];
         grafico.$zoomPlugins = [pluginMarcadorAgora];
         grafico.$modoChuvaMovel = "precipitacao";
         sincronizarModoResponsivo(grafico);
@@ -175,7 +227,15 @@
             plugins: {
                 legend: {
                     display: !movel,
-                    labels: { color: cores.text, boxWidth: 12, padding: 12 },
+                    labels: {
+                        color: cores.text,
+                        boxWidth: 12,
+                        padding: 12,
+                        filter: (item, dados) => {
+                            const serie = dados.datasets[item.datasetIndex];
+                            return !serie.hidden && (serie.data || []).some(valor => numeroOuNulo(valor) !== null);
+                        },
+                    },
                 },
                 tooltip: {
                     mode: "index",
@@ -184,7 +244,7 @@
                     callbacks: {
                         title: itens => {
                             const indice = itens[0]?.dataIndex;
-                            const horario = janela?.horarios?.[indice];
+                            const horario = itens[0]?.chart?.$horariosAtivos?.[indice] || janela?.horarios?.[indice];
                             return horario ? formatarDataHora(horario) : itens[0]?.label || "--";
                         },
                         label: contexto => contexto.dataset.yAxisID === "yProbabilidade"
@@ -199,8 +259,8 @@
                     type: "linear",
                     position: "left",
                     beginAtZero: true,
-                    display: true,
-                    title: { display: !movel, text: "mm", color: cores.text },
+                    display: impressao || movel,
+                    title: { display: impressao, text: "mm", color: cores.text },
                     ticks: { color: cores.text, callback: valor => `${valor} mm` },
                     grid: { color: cores.grid },
                 },
@@ -209,7 +269,7 @@
                     position: "right",
                     min: 0,
                     max: 100,
-                    display: !movel,
+                    display: impressao || !movel,
                     title: { display: !movel, text: "%", color: cores.text },
                     ticks: { color: cores.text, callback: valor => `${valor}%` },
                     grid: { drawOnChartArea: false },
@@ -229,14 +289,12 @@
         const movel = estaEmTelaMovel();
         grafico.options.plugins.legend.display = !movel;
         grafico.options.scales.x.ticks.maxTicksLimit = movel ? 5 : 13;
-        grafico.options.scales.yMilimetros.title.display = !movel;
+        grafico.options.scales.yMilimetros.title.display = false;
         grafico.options.scales.yProbabilidade.title.display = !movel;
 
         if (!movel) {
-            grafico.data.datasets.forEach(serie => { serie.hidden = false; });
-            grafico.options.scales.yMilimetros.display = true;
-            grafico.options.scales.yProbabilidade.display = true;
             removerControleMovel(grafico);
+            aplicarVisualizacao(grafico, "probabilidade", false);
             return;
         }
 
@@ -271,15 +329,44 @@
 
     function aplicarModoMovel(grafico, modo, atualizar = true) {
         if (!grafico?.data?.datasets || !estaEmTelaMovel()) return;
+        grafico.$modoChuvaMovel = modo === "probabilidade" ? "probabilidade" : "precipitacao";
+        aplicarVisualizacao(grafico, grafico.$modoChuvaMovel, atualizar);
+    }
+
+    function aplicarVisualizacao(grafico, modo, atualizar = true) {
         const mostrarProbabilidade = modo === "probabilidade";
-        grafico.$modoChuvaMovel = mostrarProbabilidade ? "probabilidade" : "precipitacao";
+        const visualizacao = grafico.$visualizacoesChuva?.[mostrarProbabilidade ? "probabilidade" : "precipitacao"];
+        if (!visualizacao) return;
+
+        grafico.data.labels = visualizacao.horarios.map(formatarHora);
         grafico.data.datasets.forEach(serie => {
+            serie.data = [...(visualizacao.series[serie.chaveChuva] || [])];
             serie.hidden = mostrarProbabilidade
-                ? serie.yAxisID !== "yProbabilidade"
-                : serie.yAxisID === "yProbabilidade";
+                ? serie.chaveChuva !== "probabilidade"
+                : serie.chaveChuva === "probabilidade";
         });
         grafico.options.scales.yMilimetros.display = !mostrarProbabilidade;
         grafico.options.scales.yProbabilidade.display = mostrarProbabilidade;
+        grafico.$indiceAgora = visualizacao.indiceAgora;
+        grafico.$marcadorAgora = { indice: visualizacao.indiceAgora };
+        grafico.$horariosAtivos = [...visualizacao.horarios];
+        grafico.$tiposAtivos = [...visualizacao.tipos];
+        grafico.$chavesSincronizacao = [...visualizacao.horarios];
+        grafico.setActiveElements?.([]);
+        grafico.tooltip?.setActiveElements?.([], { x: 0, y: 0 });
+
+        const titulo = grafico.canvas?.parentElement?.querySelector(".chart-label");
+        if (titulo) {
+            titulo.textContent = mostrarProbabilidade
+                ? "Chance de chuva · 12h anteriores + próximas 12h"
+                : "Chuva · 24h anteriores + próximas 12h";
+        }
+        grafico.canvas?.setAttribute(
+            "aria-label",
+            mostrarProbabilidade
+                ? "Probabilidade de chuva nas 12 horas anteriores e próximas 12 horas"
+                : "Precipitação nas 24 horas anteriores e próximas 12 horas"
+        );
 
         const controle = grafico.canvas?.parentElement?.querySelector(
             `.rain-chart-toggle[data-rain-chart="${grafico.canvas.id}"]`

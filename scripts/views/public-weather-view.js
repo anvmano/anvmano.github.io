@@ -429,8 +429,8 @@
                 </div>
                 <dl class="moon-summary__details">
                     <div><dt>Idade</dt><dd>${estadoLua.idade.toFixed(1)} dias</dd></div>
-                    <div><dt>Próx. cheia</dt><dd>${formatarDataCompleta(estadoLua.proximaCheia)}</dd></div>
-                    <div><dt>Próx. nova</dt><dd>${formatarDataCompleta(estadoLua.proximaNova)}</dd></div>
+                    <div><dt>Próxima cheia</dt><dd>${formatarDataCompleta(estadoLua.proximaCheia)}</dd></div>
+                    <div><dt>Próxima nova</dt><dd>${formatarDataCompleta(estadoLua.proximaNova)}</dd></div>
                 </dl>
             `;
         }

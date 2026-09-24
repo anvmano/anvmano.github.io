@@ -75,6 +75,21 @@
     margin-bottom: 1rem;
 }
 
+@media (max-width: 640px) {
+    .table-section {
+        padding-inline: 0;
+    }
+
+    .table-section .collapsible-trigger {
+        padding-inline: 0.85rem;
+    }
+
+    .table-section:not(.is-collapsed) .table-wrapper {
+        border-inline: 0;
+        border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    }
+}
+
 .advanced-panel {
     min-width: 0;
     background: var(--bg-panel);

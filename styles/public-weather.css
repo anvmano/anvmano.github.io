@@ -387,6 +387,7 @@
 
 .public-stats-grid {
     grid-template-columns: repeat(5, minmax(0, 1fr));
+    margin-bottom: 0;
 }
 
 .public-card {
@@ -413,6 +414,10 @@
 .public-season,
 .public-moon {
     min-height: 58px;
+}
+
+.public-app .station-context-row {
+    margin-bottom: 0;
 }
 
 .public-app .charts-grid {
@@ -462,6 +467,10 @@
 }
 
 @media (max-width: 640px) {
+    .public-results {
+        gap: 12px;
+    }
+
     .public-hero__content {
         flex-direction: column;
         align-items: flex-start;
@@ -563,6 +572,32 @@
     .public-card--aqi {
         grid-column: 1 / -1;
         min-height: 96px;
+    }
+
+    .public-moon {
+        padding: 0.75rem;
+    }
+
+    .public-moon .moon-summary__details {
+        gap: 0;
+        padding-top: 0.65rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .public-moon .moon-summary__details div {
+        display: grid;
+        justify-content: stretch;
+        gap: 0.18rem;
+        padding-inline: 0.65rem;
+    }
+
+    .public-moon .moon-summary__details div:last-child {
+        border-left: 1px solid var(--border);
+    }
+
+    .public-moon .moon-summary__details dt,
+    .public-moon .moon-summary__details dd {
+        text-align: left;
     }
 
     .public-app .environment-insights__grid,

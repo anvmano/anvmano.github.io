@@ -180,14 +180,15 @@
 }
 
 .station-summary-card .stats-card__label {
-    max-width: 58%;
+    flex: 1 1 auto;
+    min-width: 0;
     overflow-wrap: anywhere;
 }
 
 .station-summary-card .stats-card__trend {
-    max-width: 42%;
-    white-space: normal;
-    overflow-wrap: anywhere;
+    max-width: none;
+    white-space: nowrap;
+    overflow-wrap: normal;
 }
 
 .station-summary-card .stats-card__value {
@@ -212,6 +213,17 @@
 
 .station-summary-card__meta span:first-child {
     color: var(--text-primary);
+}
+
+@media (max-width: 640px) {
+    .station-summary-card .stats-card__header {
+        gap: 0.3rem;
+    }
+
+    .station-summary-card .stats-card__trend {
+        padding-inline: 5px;
+        font-size: 0.68rem;
+    }
 }
 
 .station-context-row {

@@ -118,6 +118,10 @@
             });
         }
 
+        const descricaoVentilacao = dadosExternosAtuais
+            ? ventilacao.descricao
+            : ventilacao.descricao.replace(/\s*Consulte o clima externo[^.]*\./i, "").trim();
+
         recipiente.innerHTML = `
             <div class="environment-insights__grid">
                 ${montarCardInsight({
@@ -125,8 +129,8 @@
                     valor: ventilacao.rotulo,
                     status: dadosExternosAtuais ? "Interior + exterior" : "Sensores internos",
                     classe: ventilacao.classe,
-                    descricao: ventilacao.descricao,
-                    detalhe: dadosExternosAtuais ? `Clima externo: ${dadosExternosAtuais.origem.rotulo}` : "Consulte a localização para combinar o clima externo",
+                    descricao: descricaoVentilacao,
+                    detalhe: dadosExternosAtuais ? `Clima externo: ${dadosExternosAtuais.origem.rotulo}` : "",
                 })}
                 ${montarCardPrevisaoChuva(chuva, dadosExternosAtuais?.climaAtual)}
                 ${montarCardIndiceUv(indiceUv)}
@@ -182,8 +186,8 @@
                 valor: "--",
                 status: "Localização necessária",
                 classe: "indisponivel",
-                descricao: "Use a localização para carregar probabilidade e intensidade de chuva.",
-                detalhe: "Nenhuma localização é armazenada",
+                descricao: "Probabilidade e intensidade nas próximas 6h.",
+                detalhe: "",
                 acao: montarAcaoLocalizacao(),
             });
         }
@@ -251,8 +255,8 @@
                 valor: "--",
                 status: "Localização necessária",
                 classe: "indisponivel",
-                descricao: "Use a localização para carregar o índice UV e a recomendação solar.",
-                detalhe: "Nenhuma localização é armazenada",
+                descricao: "Índice atual e recomendação solar.",
+                detalhe: "",
             });
         }
 
@@ -279,6 +283,7 @@
     }
 
     function montarCardInsight({ titulo, valor, status: estado, classe, descricao, detalhe, acao = "" }) {
+        const detalheHtml = detalhe ? `<span class="environment-insight__detail">${detalhe}</span>` : "";
         return `
             <article class="environment-insight environment-insight--${classe}">
                 <div class="environment-insight__header">
@@ -287,7 +292,7 @@
                 </div>
                 <strong>${valor}</strong>
                 <p>${descricao}</p>
-                <span class="environment-insight__detail">${detalhe}</span>
+                ${detalheHtml}
                 ${acao}
             </article>
         `;
