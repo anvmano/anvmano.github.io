@@ -12,6 +12,7 @@
 
     const graficos = {};
     const HORAS_PREVISAO_GRAFICOS = 12;
+    const GRUPO_PREVISAO_QUINZE_DIAS = "publico-15-dias";
     const marcadorAgoraPlugin = {
         id: "marcadorAgoraPublico",
         afterDraw(grafico) {
@@ -43,6 +44,29 @@
             contexto.fillRect(centroSeguro - larguraTexto / 2 - 5, areaDesenho.top + 4, larguraTexto + 10, 17);
             contexto.fillStyle = "#cbd5e1";
             contexto.fillText("Agora", centroSeguro, areaDesenho.top + 7);
+            contexto.restore();
+        },
+    };
+    const previsaoEstendidaPlugin = {
+        id: "previsaoEstendidaPublica",
+        beforeDraw(grafico) {
+            const escalaX = grafico.scales?.x;
+            const area = grafico.chartArea;
+            if (!escalaX || !area || (grafico.data?.labels?.length || 0) < 8) return;
+
+            const anterior = escalaX.getPixelForValue(6);
+            const seguinte = escalaX.getPixelForValue(7);
+            const inicio = (anterior + seguinte) / 2;
+            const contexto = grafico.ctx;
+            contexto.save();
+            contexto.fillStyle = "rgba(148, 163, 184, 0.045)";
+            contexto.fillRect(inicio, area.top, area.right - inicio, area.bottom - area.top);
+            contexto.strokeStyle = "rgba(148, 163, 184, 0.38)";
+            contexto.setLineDash([4, 4]);
+            contexto.beginPath();
+            contexto.moveTo(inicio, area.top);
+            contexto.lineTo(inicio, area.bottom);
+            contexto.stroke();
             contexto.restore();
         },
     };
@@ -275,8 +299,9 @@
                 ${cardCanvas("publicChartFeelsLike", "Sensação Térmica", "Sensação térmica externa")}
                 ${cardCanvas("publicChartHumidity", "Umidade", "Umidade externa")}
                 ${cardCanvas("publicChartPressure", "Pressão", "Pressão externa")}
+                ${cardCanvas("publicChartRain", "Chuva · 24h + previsão 12h", "Precipitação e chance de chuva")}
             </div>
-            ${cardCanvas("publicChartRain", "Chuva · 24h + previsão 12h", "Precipitação e chance de chuva", true)}
+            ${montarSecaoPrevisaoQuinzeDias(dados.previsaoQuinzeDias)}
             <div class="chart-card chart-card--wide" id="public-solar-container">
                 <span class="chart-label">Ciclo Solar do Dia</span>
                 <span class="chart-card__meta-chip" id="publicSolarDuration" hidden></span>
@@ -304,6 +329,7 @@
         renderizarGraficoLinha("publicChartHumidity", janelaGraficos, "umidade", "Umidade", "%", window.AppConfig.colors.purple);
         renderizarGraficoLinha("publicChartPressure", janelaGraficos, "pressao", "Pressão", "hPa", window.AppConfig.colors.amber);
         renderizarGraficoChuva(dados);
+        renderizarPrevisaoQuinzeDias(dados.previsaoQuinzeDias);
         renderizarGraficoSolar(dados.cicloSolar);
         window.ClimateZoom?.registrarCards?.(elementos.publicResults, {
             chartInstances: graficos,
@@ -434,6 +460,306 @@
                 </dl>
             `;
         }
+    }
+
+    function montarSecaoPrevisaoQuinzeDias(previsao) {
+        if (!Array.isArray(previsao) || !previsao.length) return "";
+        return `
+            <section class="public-forecast" aria-labelledby="publicForecastTitle">
+                <div class="public-forecast__header">
+                    <h2 id="publicForecastTitle">Previsão para os próximos 15 dias</h2>
+                    <span>A partir do 8º dia, a previsão possui maior incerteza</span>
+                </div>
+                <div class="public-forecast-map" id="publicForecastMap" role="group" aria-label="Resumo diário de temperatura máxima, chuva e índice UV"></div>
+                <div class="charts-grid public-forecast-charts" tabindex="0" aria-label="Gráficos da previsão de 15 dias; deslize horizontalmente para alternar no celular">
+                    ${cardCanvas("publicChartForecastTemperature", "Temperatura mínima e máxima", "Temperaturas mínima e máxima previstas para 15 dias")}
+                    ${cardCanvas("publicChartForecastRain", "Chuva", "Probabilidade e volume de chuva previstos para 15 dias")}
+                    ${cardCanvas("publicChartForecastUv", "Índice UV", "Índice UV máximo previsto para 15 dias")}
+                </div>
+            </section>
+        `;
+    }
+
+    function renderizarPrevisaoQuinzeDias(previsao) {
+        if (!Array.isArray(previsao) || !previsao.length) return;
+        const dias = previsao.slice(0, 15);
+        renderizarMapaPrevisaoQuinzeDias(dias);
+        renderizarGraficoTemperaturaQuinzeDias(dias);
+        renderizarGraficoChuvaQuinzeDias(dias);
+        renderizarGraficoUvQuinzeDias(dias);
+        configurarInteracaoMapaPrevisao(dias);
+    }
+
+    function renderizarMapaPrevisaoQuinzeDias(dias) {
+        const mapa = document.getElementById("publicForecastMap");
+        if (!mapa) return;
+
+        mapa.innerHTML = `
+            <div class="public-forecast-map__labels" aria-hidden="true">
+                <span>Dia</span><span>Máx.</span><span>Chuva</span><span>UV</span>
+            </div>
+            <div class="public-forecast-map__days">
+                ${dias.map((dia, indice) => {
+                    const maxima = numeroValido(dia.temperaturaMaxima);
+                    const chuva = numeroValido(dia.probabilidadeChuva);
+                    const uv = numeroValido(dia.indiceUv);
+                    const rotulo = `${formatarDataCurta(dia.data)}: máxima ${formatarValor(maxima, "°C", 1)}, chuva ${formatarValor(chuva, "%", 0)}, UV ${formatarValor(uv, "", 1)}`;
+                    return `
+                        <button class="public-forecast-day${indice >= 7 ? " public-forecast-day--extended" : ""}" type="button" data-forecast-index="${indice}" aria-label="${rotulo}">
+                            <strong>${formatarDataCurta(dia.data)}</strong>
+                            <span class="public-forecast-day__temperature" style="--nivel: ${normalizarNivel(maxima, 18, 40)}">${formatarValor(maxima, "°", 0)}</span>
+                            <span class="public-forecast-day__rain" style="--nivel: ${normalizarNivel(chuva, 0, 100)}">${formatarValor(chuva, "%", 0)}</span>
+                            <span class="public-forecast-day__uv" style="--nivel: ${normalizarNivel(uv, 0, 11)}">${formatarValor(uv, "", 1)}</span>
+                        </button>
+                    `;
+                }).join("")}
+            </div>
+        `;
+    }
+
+    function renderizarGraficoTemperaturaQuinzeDias(dias) {
+        const canvas = document.getElementById("publicChartForecastTemperature");
+        if (!canvas) return;
+        destruirGrafico("publicChartForecastTemperature");
+        const cores = window.AppConfig.colors;
+        const grafico = new Chart(canvas.getContext("2d"), {
+            type: "line",
+            data: {
+                labels: dias.map(dia => formatarDataCurta(dia.data)),
+                datasets: [
+                    {
+                        label: "Máxima",
+                        data: dias.map(dia => dia.temperaturaMaxima),
+                        borderColor: cores.amber,
+                        backgroundColor: corComTransparencia(cores.amber, 0.08),
+                        tension: 0.3,
+                        pointRadius: 3,
+                        pointHitRadius: 18,
+                        spanGaps: false,
+                    },
+                    {
+                        label: "Mínima",
+                        data: dias.map(dia => dia.temperaturaMinima),
+                        borderColor: cores.blue,
+                        backgroundColor: corComTransparencia(cores.blue, 0.1),
+                        fill: "-1",
+                        tension: 0.3,
+                        pointRadius: 3,
+                        pointHitRadius: 18,
+                        spanGaps: false,
+                    },
+                ],
+            },
+            options: criarOpcoesPrevisaoQuinzeDias({ unidade: "°C", casasDecimais: 1 }),
+            plugins: [previsaoEstendidaPlugin],
+        });
+        registrarGraficoQuinzeDias("publicChartForecastTemperature", grafico, dias);
+    }
+
+    function renderizarGraficoChuvaQuinzeDias(dias) {
+        const canvas = document.getElementById("publicChartForecastRain");
+        if (!canvas) return;
+        destruirGrafico("publicChartForecastRain");
+        const cores = window.AppConfig.colors;
+        const grafico = new Chart(canvas.getContext("2d"), {
+            type: "bar",
+            data: {
+                labels: dias.map(dia => formatarDataCurta(dia.data)),
+                datasets: [
+                    {
+                        label: "Volume",
+                        data: dias.map(dia => dia.precipitacao),
+                        yAxisID: "yMilimetros",
+                        backgroundColor: corComTransparencia(cores.blue, 0.56),
+                        borderColor: cores.blue,
+                        borderWidth: 1,
+                        borderRadius: 3,
+                        order: 2,
+                    },
+                    {
+                        type: "line",
+                        label: "Probabilidade",
+                        data: dias.map(dia => dia.probabilidadeChuva),
+                        yAxisID: "yProbabilidade",
+                        borderColor: cores.purple,
+                        backgroundColor: "transparent",
+                        tension: 0.3,
+                        pointRadius: 3,
+                        pointHitRadius: 18,
+                        order: 1,
+                    },
+                ],
+            },
+            options: criarOpcoesChuvaQuinzeDias(),
+            plugins: [previsaoEstendidaPlugin],
+        });
+        registrarGraficoQuinzeDias("publicChartForecastRain", grafico, dias);
+    }
+
+    function renderizarGraficoUvQuinzeDias(dias) {
+        const canvas = document.getElementById("publicChartForecastUv");
+        if (!canvas) return;
+        destruirGrafico("publicChartForecastUv");
+        const cores = window.AppConfig.colors;
+        const grafico = new Chart(canvas.getContext("2d"), {
+            type: "bar",
+            data: {
+                labels: dias.map(dia => formatarDataCurta(dia.data)),
+                datasets: [{
+                    label: "UV máximo",
+                    data: dias.map(dia => dia.indiceUv),
+                    backgroundColor: corComTransparencia(cores.amber, 0.66),
+                    borderColor: cores.amber,
+                    borderWidth: 1,
+                    borderRadius: 3,
+                }],
+            },
+            options: criarOpcoesPrevisaoQuinzeDias({ unidade: "", casasDecimais: 1, iniciarEmZero: true }),
+            plugins: [previsaoEstendidaPlugin],
+        });
+        registrarGraficoQuinzeDias("publicChartForecastUv", grafico, dias);
+    }
+
+    function registrarGraficoQuinzeDias(id, grafico, dias) {
+        grafico.$chavesSincronizacao = dias.map(dia => dia.data);
+        grafico.$zoomPlugins = [previsaoEstendidaPlugin];
+        graficos[id] = grafico;
+        window.ClimateChartSync?.registrar(grafico, GRUPO_PREVISAO_QUINZE_DIAS);
+        grafico.update("none");
+    }
+
+    function destruirGrafico(id) {
+        if (!graficos[id]) return;
+        window.ClimateChartSync?.desregistrar(graficos[id]);
+        graficos[id].destroy();
+        delete graficos[id];
+    }
+
+    function criarOpcoesPrevisaoQuinzeDias({ unidade, casasDecimais, iniciarEmZero = false }) {
+        const opcoes = window.ClimateCharts.mergeDeep(window.ClimateCharts.createDefaults(window.AppConfig.colors), {
+            interaction: { mode: "index", intersect: false, axis: "x" },
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: { color: window.AppConfig.colors.text, boxWidth: 18, boxHeight: 2, padding: 12 },
+                },
+                tooltip: {
+                    callbacks: {
+                        label: contexto => `${contexto.dataset.label}: ${Number(contexto.parsed.y).toFixed(casasDecimais)}${unidade}`,
+                    },
+                },
+            },
+            scales: {
+                x: { ticks: { maxTicksLimit: limiteTicksQuinzeDias() } },
+                y: {
+                    beginAtZero: iniciarEmZero,
+                    title: { display: Boolean(unidade), text: unidade, color: window.AppConfig.colors.text },
+                },
+            },
+        });
+        return adicionarInteracaoMapaPrevisao(opcoes);
+    }
+
+    function criarOpcoesChuvaQuinzeDias() {
+        const cores = window.AppConfig.colors;
+        const opcoes = window.ClimateCharts.mergeDeep(window.ClimateCharts.createDefaults(cores), {
+            interaction: { mode: "index", intersect: false, axis: "x" },
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: { color: cores.text, boxWidth: 12, padding: 12 },
+                },
+                tooltip: {
+                    callbacks: {
+                        label: contexto => contexto.dataset.yAxisID === "yProbabilidade"
+                            ? `${contexto.dataset.label}: ${Number(contexto.parsed.y).toFixed(0)}%`
+                            : `${contexto.dataset.label}: ${Number(contexto.parsed.y).toFixed(1)} mm`,
+                    },
+                },
+            },
+            scales: {
+                x: { ticks: { maxTicksLimit: limiteTicksQuinzeDias() } },
+                yMilimetros: {
+                    type: "linear",
+                    position: "left",
+                    beginAtZero: true,
+                    title: { display: true, text: "mm", color: cores.text },
+                    ticks: { color: cores.text, callback: valor => `${valor} mm` },
+                    grid: { color: cores.grid },
+                },
+                yProbabilidade: {
+                    type: "linear",
+                    position: "right",
+                    min: 0,
+                    max: 100,
+                    title: { display: true, text: "%", color: cores.text },
+                    ticks: { color: cores.text, callback: valor => `${valor}%` },
+                    grid: { drawOnChartArea: false },
+                },
+            },
+        });
+        delete opcoes.scales.y;
+        return adicionarInteracaoMapaPrevisao(opcoes);
+    }
+
+    function adicionarInteracaoMapaPrevisao(opcoes) {
+        const tratar = (evento, elementosAtivos, grafico) => {
+            window.ClimateChartSync?.tratarInteracao(grafico, evento, elementosAtivos);
+            destacarDiaPrevisao(elementosAtivos?.[0]?.index ?? -1);
+        };
+        opcoes.onHover = tratar;
+        opcoes.onClick = tratar;
+        return opcoes;
+    }
+
+    function configurarInteracaoMapaPrevisao(dias) {
+        const mapa = document.getElementById("publicForecastMap");
+        if (!mapa) return;
+        mapa.querySelectorAll("[data-forecast-index]").forEach(botao => {
+            const ativar = () => {
+                const indice = Number(botao.dataset.forecastIndex);
+                destacarDiaPrevisao(indice);
+                window.ClimateChartSync?.sincronizarIndice(GRUPO_PREVISAO_QUINZE_DIAS, indice, dias[indice]?.data);
+            };
+            botao.addEventListener("pointerenter", ativar);
+            botao.addEventListener("focus", ativar);
+            botao.addEventListener("click", ativar);
+        });
+        mapa.addEventListener("pointerleave", limparDestaquePrevisao);
+        mapa.addEventListener("focusout", evento => {
+            if (!mapa.contains(evento.relatedTarget)) limparDestaquePrevisao();
+        });
+    }
+
+    function destacarDiaPrevisao(indice) {
+        document.querySelectorAll("#publicForecastMap [data-forecast-index]").forEach(botao => {
+            botao.classList.toggle("is-active", Number(botao.dataset.forecastIndex) === indice);
+        });
+    }
+
+    function limparDestaquePrevisao() {
+        destacarDiaPrevisao(-1);
+        window.ClimateChartSync?.limparGrupo(GRUPO_PREVISAO_QUINZE_DIAS);
+    }
+
+    function limiteTicksQuinzeDias() {
+        return window.matchMedia?.("(max-width: 600px)")?.matches ? 5 : 15;
+    }
+
+    function normalizarNivel(valor, minimo, maximo) {
+        const numero = numeroValido(valor);
+        if (numero === null) return 0;
+        return Math.max(0, Math.min(1, (numero - minimo) / (maximo - minimo))).toFixed(2);
+    }
+
+    function formatarValor(valor, unidade, casasDecimais) {
+        return valor === null ? "--" : `${valor.toFixed(casasDecimais)}${unidade}`;
+    }
+
+    function formatarDataCurta(valor) {
+        const data = new Date(`${String(valor || "").slice(0, 10)}T12:00:00`);
+        if (Number.isNaN(data.getTime())) return "--";
+        return `${String(data.getDate()).padStart(2, "0")}/${String(data.getMonth() + 1).padStart(2, "0")}`;
     }
 
     function renderizarGraficoLinha(id, janela, chaveMetrica, rotulo, unidade, cor) {
@@ -676,6 +1002,18 @@
 
         if (idGrafico === "publicChartRain") {
             return window.ClimateChuva.obterOpcoes({ cores: window.AppConfig.colors });
+        }
+
+        if (idGrafico === "publicChartForecastRain") {
+            return criarOpcoesChuvaQuinzeDias();
+        }
+
+        if (idGrafico === "publicChartForecastTemperature") {
+            return criarOpcoesPrevisaoQuinzeDias({ unidade: "°C", casasDecimais: 1 });
+        }
+
+        if (idGrafico === "publicChartForecastUv") {
+            return criarOpcoesPrevisaoQuinzeDias({ unidade: "", casasDecimais: 1, iniciarEmZero: true });
         }
 
         const unidades = {

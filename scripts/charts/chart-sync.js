@@ -154,6 +154,7 @@
         registrar,
         desregistrar,
         tratarInteracao,
+        sincronizarIndice,
         limparGrupo,
     };
 })();

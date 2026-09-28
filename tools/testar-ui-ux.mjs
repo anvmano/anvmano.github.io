@@ -325,11 +325,24 @@ async function testarPublicoResponsivo() {
                         precipitacao: indice % 4 === 0 ? 1.2 : 0,
                         probabilidadeChuva: 20 + indice,
                     }));
+                    const previsaoQuinzeDias = Array.from({ length: 15 }, (_, indice) => {
+                        const data = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() + indice, 12);
+                        return {
+                            data: data.toISOString().slice(0, 10),
+                            temperaturaMaxima: 29 + indice / 3,
+                            temperaturaMinima: 18 + indice / 4,
+                            probabilidadeChuva: (indice * 13) % 100,
+                            precipitacao: indice % 3 === 0 ? 2.4 : 0,
+                            indiceUv: 5 + indice / 4,
+                            codigoTempo: 1,
+                        };
+                    });
                     window.ExternalWeatherService.buscarPorCep = async () => ({
                         atualizadoEm: agora, origem: { tipo: "cidade", rotulo: "Campinas - São Paulo" },
                         climaAtual: { temperatura: -12.34, sensacaoTermica: -15.6, umidade: 58, pressao: 1025.55, precipitacao: 0, chuva: 0, codigoTempo: 1, indiceUv: 6, pontoOrvalho: 17, ventoVelocidade: 8 },
                         aqi: { valor: 72 }, previsaoDiaria: { indiceUvMaximo: 8 },
                         previsaoCurtoPrazo,
+                        previsaoQuinzeDias,
                         seriesHorarias: { horarios: [agora.toISOString()], temperatura: [25], sensacaoTermica: [26], umidade: [58], pressao: [1025.55] },
                         cicloSolar: { dawn: 5.5, sunrise: 6, zenith: 12, sunset: 18, dusk: 18.5 },
                     });
@@ -378,6 +391,24 @@ async function testarPublicoResponsivo() {
                     assert.match(await page.locator(".public-location").innerText(), /Consulta mais recente/);
                 }
                 await page.waitForFunction(() => !!window.Chart?.getChart?.("publicChartRain"));
+                await page.waitForFunction(() => !!window.Chart?.getChart?.("publicChartForecastTemperature"));
+                assert.equal(await page.locator("#publicForecastMap [data-forecast-index]").count(), 15);
+                assert.equal(await page.locator(".public-forecast-charts .chart-card").count(), 3);
+                await page.locator('#publicForecastMap [data-forecast-index="4"]').click();
+                const indicesSincronizados = await page.evaluate(() => [
+                    "publicChartForecastTemperature",
+                    "publicChartForecastRain",
+                    "publicChartForecastUv",
+                ].map(id => window.Chart.getChart(id).getActiveElements()[0]?.index));
+                assert.deepEqual(indicesSincronizados, [4, 4, 4]);
+                assert.equal(await page.locator('#publicForecastMap [data-forecast-index="4"]').evaluate(el => el.classList.contains("is-active")), true);
+                const ordemGraficos = await page.evaluate(() => {
+                    const chuva = document.getElementById("publicChartRain-container").getBoundingClientRect();
+                    const previsao = document.querySelector(".public-forecast").getBoundingClientRect();
+                    const solar = document.getElementById("public-solar-container").getBoundingClientRect();
+                    return chuva.bottom <= previsao.top && previsao.bottom <= solar.top;
+                });
+                assert.equal(ordemGraficos, true);
                 const lerChuva = () => page.evaluate(() => {
                     const grafico = window.Chart.getChart("publicChartRain");
                     return {
@@ -440,10 +471,17 @@ async function testarPublicoResponsivo() {
                         const busca = document.querySelector(".public-hero").getBoundingClientRect();
                         const resultado = document.getElementById("publicResults").getBoundingClientRect();
                         const contexto = [...document.querySelectorAll(".public-app .station-context-row > section")].map(el => el.getBoundingClientRect().width);
-                        return { alinhado: Math.abs(busca.left - resultado.left) < 1 && Math.abs(busca.right - resultado.right) < 1, colunas: getComputedStyle(document.querySelector(".public-metric-charts")).gridTemplateColumns.split(" ").length, contexto };
+                        const gradeGraficos = document.querySelector(".public-metric-charts");
+                        const limiteDireitoGraficos = gradeGraficos.getBoundingClientRect().right;
+                        const graficos = [...gradeGraficos.children].map(el => el.getBoundingClientRect());
+                        return { alinhado: Math.abs(busca.left - resultado.left) < 1 && Math.abs(busca.right - resultado.right) < 1, colunas: getComputedStyle(gradeGraficos).gridTemplateColumns.split(" ").length, contexto, graficos, limiteDireitoGraficos };
                     });
                     assert.equal(proporcoes.alinhado, true);
-                    assert.equal(proporcoes.colunas, 2);
+                    assert.equal(proporcoes.colunas, width > 1100 ? 6 : 2);
+                    if (width > 1100) {
+                        assert.ok(proporcoes.graficos[3].width > proporcoes.graficos[0].width);
+                        assert.ok(Math.abs(proporcoes.graficos[4].right - proporcoes.limiteDireitoGraficos) < 1);
+                    }
                     assert.ok(Math.abs(proporcoes.contexto[0] - proporcoes.contexto[1]) < 1);
                 }
                 await page.screenshot({ path: path.join(pastaLayout, `resultado-${width}.png`), fullPage: true });

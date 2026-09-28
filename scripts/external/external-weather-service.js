@@ -159,11 +159,12 @@
         url.searchParams.set("latitude", latitude);
         url.searchParams.set("longitude", longitude);
         url.searchParams.set("timezone", "auto");
-        url.searchParams.set("past_days", "1");
-        url.searchParams.set("forecast_days", "2");
+        url.searchParams.set("past_hours", "24");
+        url.searchParams.set("forecast_hours", "13");
+        url.searchParams.set("forecast_days", "15");
         url.searchParams.set("current", "temperature_2m,relative_humidity_2m,apparent_temperature,dew_point_2m,pressure_msl,precipitation,rain,weather_code,cloud_cover,wind_speed_10m,wind_gusts_10m,uv_index");
         url.searchParams.set("hourly", "temperature_2m,relative_humidity_2m,apparent_temperature,dew_point_2m,pressure_msl,precipitation_probability,precipitation,rain,showers,weather_code,cloud_cover,wind_speed_10m,wind_gusts_10m,uv_index");
-        url.searchParams.set("daily", "sunrise,sunset,daylight_duration,uv_index_max,precipitation_probability_max,precipitation_sum,weather_code");
+        url.searchParams.set("daily", "temperature_2m_max,temperature_2m_min,sunrise,sunset,daylight_duration,uv_index_max,precipitation_probability_max,precipitation_sum,weather_code");
 
         const resposta = await fetch(url);
         if (!resposta.ok) throw new Error("Não foi possível consultar o clima externo.");
@@ -298,6 +299,7 @@
                 precipitacaoTotal: numeroOuNulo(clima.daily?.precipitation_sum?.[indiceDiario]),
                 codigoTempo: numeroOuNulo(clima.daily?.weather_code?.[indiceDiario]),
             },
+            previsaoQuinzeDias: montarPrevisaoQuinzeDias(clima.daily, indiceDiario),
             aqi: {
                 valor: numeroOuNulo(qualidadeAr?.current?.us_aqi),
                 horarios: qualidadeAr?.hourly?.time || [],
@@ -349,6 +351,21 @@
             rajadaVento: numeroOuNulo(porHora?.wind_gusts_10m?.[indice]),
             indiceUv: numeroOuNulo(porHora?.uv_index?.[indice]),
         }));
+    }
+
+    function montarPrevisaoQuinzeDias(diario, indiceInicial) {
+        return (diario?.time || []).slice(indiceInicial, indiceInicial + 15).map((data, deslocamento) => {
+            const indice = indiceInicial + deslocamento;
+            return {
+                data,
+                temperaturaMaxima: numeroOuNulo(diario?.temperature_2m_max?.[indice]),
+                temperaturaMinima: numeroOuNulo(diario?.temperature_2m_min?.[indice]),
+                probabilidadeChuva: numeroOuNulo(diario?.precipitation_probability_max?.[indice]),
+                precipitacao: numeroOuNulo(diario?.precipitation_sum?.[indice]),
+                indiceUv: numeroOuNulo(diario?.uv_index_max?.[indice]),
+                codigoTempo: numeroOuNulo(diario?.weather_code?.[indice]),
+            };
+        });
     }
 
     function horaDecimal(dados) {

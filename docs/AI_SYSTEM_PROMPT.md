@@ -84,7 +84,7 @@ Exibir em uma pagina web estatica dados de uma estacao climatica armazenados no 
 - Header usa chips na ordem Estacao do ano, AQI, ciclo solar, fase da lua e relogio; em mobile, relogio e marca Estacao Climatica podem ser ocultados, e os chips principais devem ocupar toda a largura util do header.
 - Popovers do header sao mutuamente exclusivos: Estacao do ano, AQI, ciclo solar e Lua.
 - Estacao do ano usa data atual do navegador; fase da lua do header usa data atual e bloco lunar da aba Estacao usa data selecionada.
-- Modo publico deve funcionar sem login, por CEP ou localizacao do navegador, exibindo temperatura, sensacao, umidade, pressao, AQI externo, estacao do ano, fase da lua e ciclo solar da localizacao consultada.
+- Modo publico deve funcionar sem login, por CEP, cidade ou localizacao do navegador, exibindo temperatura, sensacao, umidade, pressao, AQI externo, estacao do ano, fase da lua, chuva, previsao diaria de 15 dias e ciclo solar da localizacao consultada.
 - Modo publico nao deve iniciar listeners internos do Firebase, nao deve exibir assistente IA e nao deve carregar contexto privado.
 - Somente `anvmano@gmail.com` e `clarissamikado@gmail.com` acessam o dashboard interno completo.
 - Logout no modo interno cancela listeners Firebase, limpa `latestData`, limpa AQI interno e retorna para o modo publico.

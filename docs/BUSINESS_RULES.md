@@ -147,7 +147,8 @@ Entradas:
 Saidas:
 
 - cards de temperatura, sensacao termica, umidade, pressao e AQI externo
-- graficos de temperatura, sensacao termica, umidade, pressao e ciclo solar do dia
+- graficos de temperatura, sensacao termica, umidade, pressao, chuva e ciclo solar do dia
+- previsao diaria de 15 dias com mapa compacto de temperatura maxima/chuva/UV e graficos de temperatura minima/maxima, chuva e UV
 - contexto de estacao do ano e fase da lua
 - recomendacao de ventilacao externa
 - probabilidade e intensidade de chuva nas proximas 6h
@@ -165,11 +166,14 @@ Regras:
 - um unico resultado de cidade inicia a consulta climatica diretamente; resultados ambiguos devem ser apresentados como botoes acessiveis para escolha do usuario
 - correspondencias exatas do nome pesquisado devem aparecer antes de resultados parciais; localidades homonimas devem incluir a regiao administrativa entre parenteses quando ela for diferente do nome e do estado
 - a cidade escolhida reutiliza exatamente o mesmo fluxo por coordenadas de clima, AQI, insights e ciclo solar usado por CEP/localizacao
-- graficos publicos de temperatura, sensacao termica, umidade e pressao devem combinar as ultimas 24h observadas com as 12h seguintes de previsao
+- graficos publicos de temperatura, sensacao termica, umidade, pressao e chuva devem ocupar a mesma grade de curto prazo e combinar as ultimas 24h observadas com as 12h seguintes de previsao
 - a parte observada termina na data/hora retornada pela localizacao consultada; a previsao comeca somente na proxima hora completa, sem duplicar a hora atual, e inclui exatamente 12 pontos horarios quando todos estiverem disponiveis
 - medicao usa a cor principal e linha continua; previsao usa a mesma familia de cor com menor opacidade e linha tracejada; o marcador vertical `Agora` separa visualmente os periodos
 - tooltips identificam `Medido` ou `Previsao`; no mobile todos os pontos permanecem, mas o eixo X reduz a quantidade de rotulos
-- a consulta Open-Meteo publica deve trazer dados horarios suficientes para montar tanto o historico quanto a previsao; o ciclo solar continua independente e nao recebe prolongamento meteorologico
+- a consulta Open-Meteo publica deve limitar os dados horarios a 24h anteriores e 13 pontos futuros, suficientes para a hora atual e as 12h previstas, e trazer 15 dias de agregados diarios na mesma resposta
+- abaixo da grade de curto prazo, a previsao de 15 dias deve apresentar primeiro o mapa compacto e depois tres graficos sincronizados por data: temperatura minima/maxima, probabilidade/volume de chuva e UV maximo
+- o mapa compacto deve sincronizar a data ativa nos tres graficos; do 8º dia em diante, mapa e graficos devem sinalizar visualmente a maior incerteza sem ocultar os valores
+- o ciclo solar publico deve ser o ultimo grafico da pagina e continua independente, sem prolongamento meteorologico
 - ciclo solar publico usa coordenadas da localizacao/CEP, nao `historico/NascePorDoSol`
 - no modo publico, o chip/popover solar do header deve usar os eventos solares da localizacao consultada por CEP, cidade ou navegador; antes da consulta, deve orientar os meios publicos de busca em vez de apresentar fallback interno como se fosse dado real
 - o card publico de fase da lua deve seguir o mesmo comportamento do card interno: fase, iluminacao, idade, proxima cheia e proxima nova; ele nao deve exibir horarios solares como nascer ou por do sol

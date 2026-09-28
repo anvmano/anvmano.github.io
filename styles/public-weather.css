@@ -433,6 +433,10 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .public-forecast-charts {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
     .public-app .station-context-row {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         align-items: stretch;
@@ -441,6 +445,140 @@
     .public-app .station-context-row > section {
         min-width: 0;
     }
+}
+
+@media (min-width: 1101px) {
+    .public-metric-charts {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
+    .public-metric-charts > .chart-card {
+        grid-column: span 2;
+    }
+
+    .public-metric-charts > .chart-card:nth-last-child(-n + 2) {
+        grid-column: span 3;
+    }
+}
+
+.public-forecast {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.public-forecast__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.public-forecast__header h2 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1rem;
+    letter-spacing: 0;
+}
+
+.public-forecast__header span {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.public-forecast-map {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 0.45rem;
+    overflow-x: auto;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--bg-elevated);
+    scrollbar-width: thin;
+}
+
+.public-forecast-map__labels,
+.public-forecast-day {
+    display: grid;
+    grid-template-rows: repeat(4, 30px);
+    align-items: center;
+}
+
+.public-forecast-map__labels {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    color: var(--text-muted);
+    background: var(--bg-elevated);
+    font-size: 0.68rem;
+    font-weight: 750;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.public-forecast-map__days {
+    display: grid;
+    grid-template-columns: repeat(15, minmax(48px, 1fr));
+    min-width: 720px;
+}
+
+.public-forecast-day {
+    position: relative;
+    min-width: 0;
+    padding: 0 3px;
+    border: 0;
+    border-left: 1px solid rgba(148, 163, 184, 0.12);
+    background: transparent;
+    color: var(--text-primary);
+    font: inherit;
+    cursor: crosshair;
+}
+
+.public-forecast-day--extended:first-of-type,
+.public-forecast-day:nth-child(8) {
+    border-left: 1px dashed rgba(148, 163, 184, 0.55);
+}
+
+.public-forecast-day strong {
+    font-size: 0.7rem;
+    font-weight: 750;
+}
+
+.public-forecast-day span {
+    display: grid;
+    place-items: center;
+    min-height: 24px;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.public-forecast-day__temperature {
+    background: rgb(251 191 36 / calc(0.1 + var(--nivel) * 0.48));
+}
+
+.public-forecast-day__rain {
+    background: rgb(56 189 248 / calc(0.1 + var(--nivel) * 0.48));
+}
+
+.public-forecast-day__uv {
+    background: rgb(167 139 250 / calc(0.1 + var(--nivel) * 0.48));
+}
+
+.public-forecast-day--extended span {
+    filter: saturate(0.75);
+}
+
+.public-forecast-day:hover,
+.public-forecast-day:focus-visible,
+.public-forecast-day.is-active {
+    z-index: 1;
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+}
+
+.public-forecast-charts {
+    margin-bottom: 0;
 }
 
 @media (min-width: 641px) and (max-width: 1100px) {
@@ -601,7 +739,8 @@
     }
 
     .public-app .environment-insights__grid,
-    .public-metric-charts {
+    .public-metric-charts,
+    .public-forecast-charts {
         display: flex;
         gap: 0.75rem;
         overflow-x: auto;
@@ -617,10 +756,22 @@
         scroll-snap-align: start;
     }
 
-    .public-metric-charts .chart-card {
+    .public-metric-charts .chart-card,
+    .public-forecast-charts .chart-card {
         flex: 0 0 calc(100vw - 64px);
         min-height: 286px;
         scroll-snap-align: start;
+    }
+
+    .public-forecast__header {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .public-forecast-map {
+        grid-template-columns: 52px minmax(0, 1fr);
+        padding: 0.65rem;
     }
 
     .public-user-status button,

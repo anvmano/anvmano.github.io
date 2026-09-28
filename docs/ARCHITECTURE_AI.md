@@ -131,7 +131,7 @@ Responsabilidades:
 - `scripts/firebase-service.js`: inicializacao separada de Firebase App/Auth e Database, listeners `onValue`, loading bar e erros.
 - `scripts/auth/auth-service.js`: inicializacao Firebase Auth, login/logout Google, usuario atual e regra de usuario interno autorizado.
 - `scripts/external/browser-location-service.js`: localizacao do navegador para o modo publico e para insights externos opcionais da aba Estacao interna, com fallback de cache, busca normal e alta precisao.
-- `scripts/external/external-weather-service.js`: CEP, fallback ViaCEP, pesquisa de cidades brasileiras, geocodificacao, clima/AQI, chuva, UV, vento, ponto de orvalho e eventos solares externos via Open-Meteo.
+- `scripts/external/external-weather-service.js`: CEP, fallback ViaCEP, pesquisa de cidades brasileiras, geocodificacao, clima/AQI, chuva, UV, vento, ponto de orvalho, eventos solares e agregados diarios de 15 dias via Open-Meteo.
 - `scripts/chat.js`: fachada publica leve do chat, mantendo `window.ClimateChat.setup` para o `scripts/main.js`, carregando `scripts/assistant/*` no primeiro clique e abrindo o painel apos a inicializacao.
 - `scripts/assistant/ai-service.js`: inicializacao do Firebase AI Logic e envio de prompts ao Gemini.
 - `scripts/assistant/assistant-ui.js`: painel do chat, atalhos de perguntas, mensagens, abertura/fechamento, clique/toque fora para fechar e estado ocupado.
@@ -170,7 +170,7 @@ Responsabilidades:
 - `scripts/views/sala-view.js`: renderizacao da aba Sala.
 - `scripts/views/aquario-view.js`: renderizacao da aba Aquario.
 - `scripts/views/solar-view.js`: integracao dos graficos solares usados pela visao global da aba Estacao.
-- `scripts/views/public-weather-view.js`: renderizacao do modo publico por CEP/cidade/localizacao, controle segmentado do modo de busca, escolha acessivel de cidades homonimas, cards, contexto sazonal/lunar, insights ambientais e graficos externos; as series meteorologicas separam 24h observadas e 12h previstas, com marcador temporal e datasets distintos preservados no zoom.
+- `scripts/views/public-weather-view.js`: renderizacao do modo publico por CEP/cidade/localizacao, controle segmentado do modo de busca, escolha acessivel de cidades homonimas, cards, contexto sazonal/lunar, insights ambientais e graficos externos; a grade curta reune temperatura, sensacao, umidade, pressao e chuva com 24h observadas + 12h previstas. Em seguida, um mapa compacto e tres graficos sincronizados mostram temperatura, chuva e UV para 15 dias, com sinalizacao de maior incerteza apos o 7º dia; o ciclo solar fica por ultimo.
 - `tools/validate-project.mjs`: validacao estrutural local de sintaxe, referencias, imports CSS e ids.
 - `tools/testar-assistente.mjs`: regressao local de interpretacao de periodos, operacoes e contratos de resposta da assistente.
 - `tools/testar-relatorio.mjs`, `tools/testar-pdf-artifact.mjs`, `tools/testar-pdf-chuva.mjs`, `tools/testar-acessibilidade.mjs`, `tools/testar-axe.mjs`, `tools/testar-qualidade-dados.mjs`, `tools/testar-modo-publico.mjs`, `tools/testar-sincronizacao-graficos.mjs`, `tools/testar-chuva.mjs` e `tools/testar-tabelas.mjs`: regressao de relatorio/artefato, PDF real com chuva, ARIA/contraste, qualidade, fluxo publico, sincronizacao temporal, chuva e tabelas.

@@ -320,7 +320,7 @@ Impacto da alteracao: Medio. Afeta modo publico e consulta externa opcional da a
 
 ## scripts/external/external-weather-service.js
 
-Responsabilidade: consultar CEP, pesquisar cidades brasileiras, resolver coordenadas e buscar clima/AQI, chuva, UV, vento, ponto de orvalho e eventos solares externos.
+Responsabilidade: consultar CEP, pesquisar cidades brasileiras, resolver coordenadas e buscar clima/AQI, chuva, UV, vento, ponto de orvalho, eventos solares e previsao diaria de 15 dias. A mesma chamada limita a serie horaria a 24h anteriores + 13 pontos futuros e retorna 15 agregados diarios.
 
 Dependencias diretas:
 
