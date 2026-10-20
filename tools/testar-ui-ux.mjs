@@ -448,6 +448,10 @@ async function testarPublicoResponsivo() {
                     const contextoMovel = await page.evaluate(() => {
                         const resumo = document.querySelector(".public-stats-grid").getBoundingClientRect();
                         const astronomia = document.querySelector(".public-app .station-context-row").getBoundingClientRect();
+                        const cardTemperatura = document.getElementById("publicChartTemperature-container");
+                        const caixaCard = cardTemperatura.getBoundingClientRect();
+                        const caixaCanvas = document.getElementById("publicChartTemperature").getBoundingClientRect();
+                        const paddingInferior = parseFloat(getComputedStyle(cardTemperatura).paddingBottom);
                         const pares = [...document.querySelectorAll(".public-moon .moon-summary__details div")].filter(item => item.checkVisibility()).map(item => {
                             const rotulo = item.querySelector("dt").getBoundingClientRect();
                             const data = item.querySelector("dd").getBoundingClientRect();
@@ -459,10 +463,12 @@ async function testarPublicoResponsivo() {
                         });
                         return {
                             espaco: Math.round(astronomia.top - resumo.bottom),
+                            espacoAbaixoDoGrafico: Math.round(caixaCard.bottom - caixaCanvas.bottom - paddingInferior),
                             pares,
                         };
                     });
                     assert.ok(contextoMovel.espaco <= 13, `Espaco excessivo antes do contexto astronomico: ${contextoMovel.espaco}px`);
+                    assert.ok(contextoMovel.espacoAbaixoDoGrafico <= 2, `Espaco excessivo abaixo do grafico publico: ${contextoMovel.espacoAbaixoDoGrafico}px`);
                     assert.deepEqual(contextoMovel.pares.map(item => item.rotulo), ["Próxima cheia", "Próxima nova"]);
                     assert.ok(contextoMovel.pares.every(item => item.alinhado && item.agrupado));
                 }
@@ -553,7 +559,7 @@ async function testarLayoutEstacao() {
     fs.mkdirSync(pasta, { recursive: true });
     const medidas = [];
     try {
-        for (const width of [320, 390, 768, 1024, 1440]) {
+        for (const width of [320, 360, 390, 768, 1024, 1440]) {
             const page = await browser.newPage({ viewport: { width, height: 900 } });
             await page.route("**/scripts/main.js?*", route => route.fulfill({ contentType: "text/javascript", body: "" }));
             await page.goto(`http://127.0.0.1:${servidor.address().port}/`);
@@ -635,27 +641,28 @@ async function testarLayoutEstacao() {
                 await page.evaluate(() => {
                     window.calcularAqiOriginalTeste = window.ClimateAqi.calculate;
                     window.ClimateAqi.calculate = () => ({
-                        aqi: 301,
-                        category: { label: "Perigoso", className: "hazardous" },
-                        dominant: { label: "Álcool" },
+                        aqi: 101,
+                        category: { label: "Insalubre para grupos sensíveis", className: "sensitive" },
+                        dominant: { label: "Amônia" },
                         timestamp: Date.now(),
                     });
                     window.renderizarTeste();
                 });
                 const seloAqi = page.locator("#statsEstacao .stats-card__trend").first();
-                assert.equal(await seloAqi.innerText(), "Perigoso");
+                assert.equal(await seloAqi.innerText(), "Insalubre para grupos sensíveis");
                 assert.deepEqual(await seloAqi.evaluate(el => {
                     const selo = el.getBoundingClientRect();
                     const card = el.closest(".stats-card").getBoundingClientRect();
-                    const faixa = document.createRange();
-                    faixa.selectNodeContents(el);
+                    const rotulo = el.parentElement.querySelector(".stats-card__label");
+                    const faixaRotulo = document.createRange();
+                    faixaRotulo.selectNodeContents(rotulo);
                     return {
-                        umaLinha: faixa.getClientRects().length === 1,
-                        dentroDoCard: selo.left >= card.left && selo.right <= card.right,
-                        semQuebra: getComputedStyle(el).whiteSpace === "nowrap",
+                        rotuloEmAteDuasLinhas: faixaRotulo.getClientRects().length <= 2,
+                        dentroDoCard: selo.left >= card.left && selo.right <= card.right && selo.bottom <= card.bottom,
+                        quebraControlada: getComputedStyle(el).whiteSpace === "normal",
                     };
-                }), { umaLinha: true, dentroDoCard: true, semQuebra: true });
-                await page.screenshot({ path: path.join(pasta, `aqi-perigoso-${width}.png`), fullPage: true });
+                }), { rotuloEmAteDuasLinhas: true, dentroDoCard: true, quebraControlada: true });
+                await page.screenshot({ path: path.join(pasta, `aqi-status-longo-${width}.png`), fullPage: true });
                 await page.evaluate(() => {
                     window.ClimateAqi.calculate = window.calcularAqiOriginalTeste;
                     window.renderizarTeste();
