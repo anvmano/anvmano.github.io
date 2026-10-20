@@ -897,7 +897,8 @@ Regras obrigatorias:
 - a previsao resumida continua cobrindo as proximas 6 horas, com maior probabilidade, acumulado e pico em milimetros
 - o grafico cobre as ultimas 24 horas e as proximas 12 horas
 - barras distinguem precipitacao registrada e prevista em milimetros; a linha percentual representa somente a chance futura de chuva
-- no modo publico o grafico aparece apos qualquer consulta valida; no privado aparece na aba Estacao somente depois da consulta opcional de localizacao
+- no modo publico precipitacao e chance de chuva usam cards separados, sincronizados e com a mesma altura; no privado e no PDF permanecem combinados em largura total
+- no modo publico os dois graficos aparecem apos qualquer consulta valida; no privado o grafico aparece na aba Estacao somente depois da consulta opcional de localizacao
 - coordenadas continuam apenas em memoria e nao devem ser persistidas
 - quando houver clima externo em memoria, o PDF/JSON da Estacao deve incluir card de chuva atual/previsao; o PDF deve reconstruir o grafico de 24h + 12h sem capturar o canvas da tela
 - sem consulta de localizacao, o PDF/JSON preserva o contrato anterior e nao inventa dados de chuva

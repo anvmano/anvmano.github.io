@@ -106,7 +106,7 @@
         };
     }
 
-    function criarGrafico({ canvas, janela, graficoExistente, cores, grupoSincronizacao = null }) {
+    function criarGrafico({ canvas, janela, graficoExistente, cores, grupoSincronizacao = null, modo = null }) {
         if (graficoExistente) {
             window.ClimateChartSync?.desregistrar(graficoExistente);
             graficoExistente.destroy();
@@ -133,18 +133,24 @@
                 probabilidade: [...(janela.chance?.probabilidade || [])],
             },
         };
-        const temDados = [
-            ...visualizacaoPrecipitacao.series.observada,
-            ...visualizacaoPrecipitacao.series.prevista,
-            ...visualizacaoChance.series.probabilidade,
-        ].some(valor => numeroOuNulo(valor) !== null);
+        const modoFixo = modo === "precipitacao" || modo === "probabilidade" ? modo : null;
+        const valoresDisponiveis = modoFixo === "precipitacao"
+            ? [...visualizacaoPrecipitacao.series.observada, ...visualizacaoPrecipitacao.series.prevista]
+            : modoFixo === "probabilidade"
+            ? visualizacaoChance.series.probabilidade
+            : [...visualizacaoPrecipitacao.series.observada, ...visualizacaoPrecipitacao.series.prevista, ...visualizacaoChance.series.probabilidade];
+        const temDados = valoresDisponiveis.some(valor => numeroOuNulo(valor) !== null);
         if (!temDados) return null;
 
         const corChuva = cores?.blue || "#38bdf8";
         const corPrevisao = "rgba(125, 211, 252, 0.48)";
         const corProbabilidade = cores?.purple || "#a78bfa";
         const movel = estaEmTelaMovel();
-        const visualizacaoInicial = movel ? visualizacaoPrecipitacao : visualizacaoChance;
+        const visualizacaoInicial = modoFixo === "precipitacao"
+            ? visualizacaoPrecipitacao
+            : modoFixo === "probabilidade"
+            ? visualizacaoChance
+            : movel ? visualizacaoPrecipitacao : visualizacaoChance;
         const grafico = new Chart(canvas.getContext("2d"), {
             type: "bar",
             data: {
@@ -198,7 +204,7 @@
                     },
                 ],
             },
-            options: obterOpcoes({ janela, cores }),
+            options: obterOpcoes({ janela, cores, modo: modoFixo }),
             plugins: [pluginMarcadorAgora, pluginControleResponsivo],
         });
 
@@ -212,6 +218,7 @@
         grafico.$tiposAtivos = [...visualizacaoInicial.tipos];
         grafico.$chavesSincronizacao = [...visualizacaoInicial.horarios];
         grafico.$zoomPlugins = [pluginMarcadorAgora];
+        grafico.$modoChuvaFixo = modoFixo;
         grafico.$modoChuvaMovel = "precipitacao";
         sincronizarModoResponsivo(grafico);
         if (grupoSincronizacao) window.ClimateChartSync?.registrar(grafico, grupoSincronizacao);
@@ -219,12 +226,13 @@
         return grafico;
     }
 
-    function obterOpcoes({ janela = null, cores = window.AppConfig?.colors || {}, impressao = false } = {}) {
+    function obterOpcoes({ janela = null, cores = window.AppConfig?.colors || {}, impressao = false, modo = null, controleResponsivo = true } = {}) {
         const movel = !impressao && estaEmTelaMovel();
+        const modoFixo = modo === "precipitacao" || modo === "probabilidade" ? modo : null;
         const limiteTicks = movel ? 5 : 13;
         const padroes = window.ClimateCharts.createDefaults(cores);
         const opcoes = window.ClimateCharts.mergeDeep(padroes, {
-            onResize: impressao ? undefined : grafico => sincronizarModoResponsivo(grafico),
+            onResize: impressao || !controleResponsivo ? undefined : grafico => sincronizarModoResponsivo(grafico),
             interaction: { mode: "index", intersect: false, axis: "x" },
             plugins: {
                 legend: {
@@ -261,7 +269,7 @@
                     type: "linear",
                     position: "left",
                     beginAtZero: true,
-                    display: impressao || movel,
+                    display: impressao || modoFixo === "precipitacao" || (!modoFixo && movel),
                     title: { display: impressao, text: "mm", color: cores.text },
                     ticks: { color: cores.text, callback: valor => `${valor} mm` },
                     grid: { color: cores.grid },
@@ -271,7 +279,7 @@
                     position: "right",
                     min: 0,
                     max: 100,
-                    display: impressao || !movel,
+                    display: impressao || modoFixo === "probabilidade" || (!modoFixo && !movel),
                     title: { display: !movel, text: "%", color: cores.text },
                     ticks: { color: cores.text, callback: valor => `${valor}%` },
                     grid: { drawOnChartArea: false },
@@ -293,6 +301,12 @@
         grafico.options.scales.x.ticks.maxTicksLimit = movel ? 5 : 13;
         grafico.options.scales.yMilimetros.title.display = false;
         grafico.options.scales.yProbabilidade.title.display = !movel;
+
+        if (grafico.$modoChuvaFixo) {
+            removerControleMovel(grafico);
+            aplicarVisualizacao(grafico, grafico.$modoChuvaFixo, false);
+            return;
+        }
 
         if (!movel) {
             removerControleMovel(grafico);

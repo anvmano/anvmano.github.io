@@ -390,10 +390,11 @@ async function testarPublicoResponsivo() {
                     await page.waitForTimeout(100);
                     assert.match(await page.locator(".public-location").innerText(), /Consulta mais recente/);
                 }
-                await page.waitForFunction(() => !!window.Chart?.getChart?.("publicChartRain"));
+                await page.waitForFunction(() => !!window.Chart?.getChart?.("publicChartRainPrecipitation") && !!window.Chart?.getChart?.("publicChartRainProbability"));
                 await page.waitForFunction(() => !!window.Chart?.getChart?.("publicChartForecastTemperature"));
                 assert.equal(await page.locator("#publicForecastMap [data-forecast-index]").count(), 15);
                 assert.equal(await page.locator(".public-forecast-charts .chart-card").count(), 3);
+                assert.equal(await page.locator(".public-metric-charts .chart-card").count(), 6);
                 await page.locator('#publicForecastMap [data-forecast-index="4"]').click();
                 const indicesSincronizados = await page.evaluate(() => [
                     "publicChartForecastTemperature",
@@ -403,14 +404,14 @@ async function testarPublicoResponsivo() {
                 assert.deepEqual(indicesSincronizados, [4, 4, 4]);
                 assert.equal(await page.locator('#publicForecastMap [data-forecast-index="4"]').evaluate(el => el.classList.contains("is-active")), true);
                 const ordemGraficos = await page.evaluate(() => {
-                    const chuva = document.getElementById("publicChartRain-container").getBoundingClientRect();
+                    const chuva = document.getElementById("publicChartRainProbability-container").getBoundingClientRect();
                     const previsao = document.querySelector(".public-forecast").getBoundingClientRect();
                     const solar = document.getElementById("public-solar-container").getBoundingClientRect();
                     return chuva.bottom <= previsao.top && previsao.bottom <= solar.top;
                 });
                 assert.equal(ordemGraficos, true);
-                const lerChuva = () => page.evaluate(() => {
-                    const grafico = window.Chart.getChart("publicChartRain");
+                const lerChuva = id => page.evaluate(idGrafico => {
+                    const grafico = window.Chart.getChart(idGrafico);
                     return {
                         total: grafico.data.labels.length,
                         seriesVisiveis: grafico.data.datasets.filter(serie => !serie.hidden).map(serie => serie.label),
@@ -421,27 +422,20 @@ async function testarPublicoResponsivo() {
                         eixoMilimetros: grafico.options.scales.yMilimetros.display,
                         eixoProbabilidade: grafico.options.scales.yProbabilidade.display,
                     };
-                });
-                let chuva = await lerChuva();
-                if (width <= 640) {
-                    assert.equal(await page.locator('.rain-chart-toggle[data-rain-chart="publicChartRain"]').isVisible(), true);
-                    assert.equal(chuva.total, 37);
-                    assert.deepEqual(chuva.seriesVisiveis, ["Precipitação observada", "Precipitação prevista"]);
-                    await page.locator('.rain-chart-toggle[data-rain-chart="publicChartRain"] [data-rain-mode="probabilidade"]').click();
-                    chuva = await lerChuva();
-                    assert.equal(chuva.total, 25);
-                    assert.deepEqual(chuva.seriesVisiveis, ["Chance de chuva"]);
-                    assert.deepEqual([chuva.observados, chuva.previstos, chuva.indiceAgora], [13, 12, 12]);
-                    assert.match(chuva.titulo, /12h anteriores \+ próximas 12h/);
-                    assert.deepEqual([chuva.eixoMilimetros, chuva.eixoProbabilidade], [false, true]);
-                } else {
-                    assert.equal(await page.locator('.rain-chart-toggle[data-rain-chart="publicChartRain"]').count(), 0);
-                    assert.equal(chuva.total, 25);
-                    assert.deepEqual(chuva.seriesVisiveis, ["Precipitação observada", "Precipitação prevista", "Chance de chuva"]);
-                    assert.deepEqual([chuva.observados, chuva.previstos, chuva.indiceAgora], [13, 12, 12]);
-                    assert.match(chuva.titulo, /12h anteriores \+ próximas 12h/);
-                    assert.deepEqual([chuva.eixoMilimetros, chuva.eixoProbabilidade], [true, true]);
-                }
+                }, id);
+                const precipitacao = await lerChuva("publicChartRainPrecipitation");
+                const chance = await lerChuva("publicChartRainProbability");
+                assert.equal(await page.locator(".public-metric-charts .rain-chart-toggle").count(), 0);
+                assert.equal(precipitacao.total, 37);
+                assert.deepEqual(precipitacao.seriesVisiveis, ["Precipitação observada", "Precipitação prevista"]);
+                assert.deepEqual([precipitacao.observados, precipitacao.previstos, precipitacao.indiceAgora], [25, 12, 24]);
+                assert.match(precipitacao.titulo, /24h anteriores \+ próximas 12h/);
+                assert.deepEqual([precipitacao.eixoMilimetros, precipitacao.eixoProbabilidade], [true, false]);
+                assert.equal(chance.total, 25);
+                assert.deepEqual(chance.seriesVisiveis, ["Chance de chuva"]);
+                assert.deepEqual([chance.observados, chance.previstos, chance.indiceAgora], [13, 12, 12]);
+                assert.match(chance.titulo, /12h anteriores \+ próximas 12h/);
+                assert.deepEqual([chance.eixoMilimetros, chance.eixoProbabilidade], [false, true]);
                 const cortes = await page.locator(".public-card .stats-card__value, .public-moon dd").evaluateAll(els => els.filter(el => el.scrollWidth > el.clientWidth + 1).map(el => el.textContent));
                 assert.deepEqual(cortes, []);
                 if (width <= 640) {
@@ -461,16 +455,19 @@ async function testarPublicoResponsivo() {
                                 rotulo: item.querySelector("dt").textContent,
                             };
                         });
+                        const alturasGraficos = [...document.querySelectorAll(".public-metric-charts .chart-card")].map(item => Math.round(item.getBoundingClientRect().height));
                         return {
                             espaco: Math.round(astronomia.top - resumo.bottom),
                             espacoAbaixoDoGrafico: Math.round(caixaCard.bottom - caixaCanvas.bottom - paddingInferior),
                             pares,
+                            alturasGraficos,
                         };
                     });
                     assert.ok(contextoMovel.espaco <= 13, `Espaco excessivo antes do contexto astronomico: ${contextoMovel.espaco}px`);
                     assert.ok(contextoMovel.espacoAbaixoDoGrafico <= 2, `Espaco excessivo abaixo do grafico publico: ${contextoMovel.espacoAbaixoDoGrafico}px`);
                     assert.deepEqual(contextoMovel.pares.map(item => item.rotulo), ["Próxima cheia", "Próxima nova"]);
                     assert.ok(contextoMovel.pares.every(item => item.alinhado && item.agrupado));
+                    assert.ok(Math.max(...contextoMovel.alturasGraficos) - Math.min(...contextoMovel.alturasGraficos) <= 1);
                 }
                 if (width > 900) {
                     const proporcoes = await page.evaluate(() => {
@@ -483,10 +480,10 @@ async function testarPublicoResponsivo() {
                         return { alinhado: Math.abs(busca.left - resultado.left) < 1 && Math.abs(busca.right - resultado.right) < 1, colunas: getComputedStyle(gradeGraficos).gridTemplateColumns.split(" ").length, contexto, graficos, limiteDireitoGraficos };
                     });
                     assert.equal(proporcoes.alinhado, true);
-                    assert.equal(proporcoes.colunas, width > 1100 ? 6 : 2);
+                    assert.equal(proporcoes.colunas, width > 1100 ? 3 : 2);
                     if (width > 1100) {
-                        assert.ok(proporcoes.graficos[3].width > proporcoes.graficos[0].width);
-                        assert.ok(Math.abs(proporcoes.graficos[4].right - proporcoes.limiteDireitoGraficos) < 1);
+                        assert.ok(proporcoes.graficos.every(item => Math.abs(item.width - proporcoes.graficos[0].width) < 1));
+                        assert.ok(Math.abs(proporcoes.graficos[5].right - proporcoes.limiteDireitoGraficos) < 1);
                     }
                     assert.ok(Math.abs(proporcoes.contexto[0] - proporcoes.contexto[1]) < 1);
                 }

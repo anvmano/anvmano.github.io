@@ -147,7 +147,7 @@ Responsabilidades:
 - `scripts/data/data-quality.js`: analise compartilhada de cobertura, atualidade, plausibilidade, saltos, repeticao e zero constante, sem modificar o valor medido.
 - `scripts/charts/chart-utils.js`: defaults Chart.js, criacao de graficos de linha, fallback de grafico vazio, faixa de conforto e callbacks de hover/toque.
 - `scripts/charts/chart-sync.js`: grupos de graficos temporais, propagacao do indice selecionado, limpeza de tooltip e preservacao de lacunas.
-- `scripts/charts/rain.js`: janela externa de 24h observadas + 12h previstas, estado atual e grafico de precipitacao/probabilidade.
+- `scripts/charts/rain.js`: janela externa de 24h observadas + 12h previstas, estado atual e graficos de precipitacao/probabilidade em modo separado ou combinado.
 - `scripts/data/analytics.js`: estatisticas, cards de resumo, calendario climatico, heatmap horario e heatmap semanal.
 - `scripts/data/environmental-insights.js`: ponto de orvalho, risco estimado de mofo, chuva, indice UV e recomendacao de ventilacao compartilhados entre modos interno e publico.
 - `scripts/charts/aqi.js`: AQI estimado da Sala/MQ135, chip no header e popover.

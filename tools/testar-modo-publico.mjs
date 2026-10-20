@@ -38,7 +38,9 @@ verificar.match(visualizacao, /publicChartForecastTemperature/);
 verificar.match(visualizacao, /publicChartForecastRain/);
 verificar.match(visualizacao, /publicChartForecastUv/);
 verificar.ok(
-    visualizacao.indexOf('${cardCanvas("publicChartRain"')
+    visualizacao.indexOf('${cardCanvas("publicChartRainPrecipitation"')
+        < visualizacao.indexOf('${cardCanvas("publicChartRainProbability"')
+        && visualizacao.indexOf('${cardCanvas("publicChartRainProbability"')
         < visualizacao.indexOf('${montarSecaoPrevisaoQuinzeDias')
         && visualizacao.indexOf('${montarSecaoPrevisaoQuinzeDias')
         < visualizacao.indexOf('id="public-solar-container"'),
@@ -59,6 +61,7 @@ verificar.match(zoom, /registrarCards/);
 verificar.match(zoom, /registrarFechamentoPorEscape\(\);\s*raiz\.querySelectorAll/);
 verificar.match(zoom, /ClimateAssets\?\.carregarCssZoom/);
 verificar.match(zoom, /borderDash: serieGrafico\.borderDash/);
+verificar.match(zoom, /hidden: serieGrafico\.hidden/);
 verificar.match(zoom, /graficoOrigem\.\$zoomPlugins/);
 verificar.match(zoom, /graficoOrigem\.\$marcadorAgora/);
 verificar.match(carregador, /function carregarCssZoom\(\)/);

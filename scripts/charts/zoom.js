@@ -85,6 +85,7 @@
                 order: serieGrafico.order,
                 parsing: serieGrafico.parsing,
                 tipoDado: serieGrafico.tipoDado,
+                hidden: serieGrafico.hidden,
             }))
         };
     }
@@ -112,6 +113,8 @@
         }
         if (graficoOrigem.$marcadorAgora) {
             graficoAmpliado.$marcadorAgora = { ...graficoOrigem.$marcadorAgora };
+            graficoAmpliado.$horariosAtivos = [...(graficoOrigem.$horariosAtivos || [])];
+            graficoAmpliado.$tiposAtivos = [...(graficoOrigem.$tiposAtivos || [])];
             graficoAmpliado.update("none");
         }
         sobreposicaoAmpliacao._chart = graficoAmpliado;

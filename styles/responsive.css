@@ -376,7 +376,8 @@
     }
 
     #plotRain,
-    #publicChartRain {
+    #publicChartRainPrecipitation,
+    #publicChartRainProbability {
         height: 200px !important;
     }
 

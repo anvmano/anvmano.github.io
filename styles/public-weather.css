@@ -428,6 +428,10 @@
     min-height: 292px;
 }
 
+.public-metric-charts .plot {
+    margin-top: auto;
+}
+
 @media (min-width: 641px) {
     .public-metric-charts {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -449,15 +453,7 @@
 
 @media (min-width: 1101px) {
     .public-metric-charts {
-        grid-template-columns: repeat(6, minmax(0, 1fr));
-    }
-
-    .public-metric-charts > .chart-card {
-        grid-column: span 2;
-    }
-
-    .public-metric-charts > .chart-card:nth-last-child(-n + 2) {
-        grid-column: span 3;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
 
@@ -751,7 +747,7 @@
     }
 
     .public-metric-charts {
-        align-items: flex-start;
+        align-items: stretch;
     }
 
     .public-app .environment-insight {

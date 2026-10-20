@@ -226,7 +226,7 @@ A validação verifica:
 - Usuários não autorizados permanecem no modo público.
 - Tela pública com cards de temperatura, sensação térmica, umidade, pressão e AQI externo.
 - Tela pública com ventilação recomendada, chuva nas próximas 6h, índice UV e ponto de orvalho/risco estimado de mofo.
-- Tela pública com temperatura, sensação térmica, umidade, pressão e chuva na mesma grade de curto prazo, combinando 24h observadas e 12h de previsão. A previsão começa na próxima hora completa e aparece mais clara e tracejada após o marcador `Agora`.
+- Tela pública com temperatura, sensação térmica, umidade, pressão, precipitação e chance de chuva na mesma grade de curto prazo, combinando 24h observadas e 12h de previsão. Precipitação e chance usam cards separados e sincronizados; a previsão começa na próxima hora completa e aparece mais clara e tracejada após o marcador `Agora`.
 - Bloco público de previsão para 15 dias com mapa compacto de temperatura máxima, chuva e UV, seguido por gráficos sincronizados de temperatura mínima/máxima, probabilidade/volume de chuva e UV máximo. O trecho após o 7º dia sinaliza maior incerteza; o ciclo solar permanece como último gráfico da página.
 - Tela pública com estação do ano e fase da lua.
 - Aba global Estação e abas por dispositivo: Sala, Quarto e Aquário.
@@ -238,7 +238,7 @@ A validação verifica:
 - No modo privado, o card e o gráfico de chuva permanecem ocultos até a consulta de localização retornar dados externos válidos; depois disso exibem a janela de 24h observadas + 12h previstas.
 - Gráficos de temperatura, sensação térmica, umidade, pressão, qualidade do ar e aquário.
 - Hover ou toque sincroniza o horário nos gráficos temporais compatíveis da mesma aba, inclusive chuva externa, sem transformar lacunas de dados em zero.
-- Chuva atual no card e gráfico de 24h anteriores + 12h previstas, com precipitação em milímetros e chance futura em porcentagem.
+- Chuva atual no card; no modo público, precipitação em milímetros e chance futura em porcentagem usam gráficos separados. No modo privado e no PDF, permanecem combinadas no gráfico de 24h anteriores + 12h previstas.
 - Cards com média, mínima, máxima, delta e tendência.
 - Indicadores de qualidade/cobertura aparecem somente quando houver anormalidade ou cobertura inferior a 100%; delta e tendência exigem pelo menos duas leituras válidas.
 - Estado operacional por metrica: `ok`, `parcial`, `desatualizado`, `suspeito` ou `offline`, compartilhado entre UI, exportacao e assistente sem poluir cards integrais.

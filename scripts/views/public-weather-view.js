@@ -299,7 +299,8 @@
                 ${cardCanvas("publicChartFeelsLike", "Sensação Térmica", "Sensação térmica externa")}
                 ${cardCanvas("publicChartHumidity", "Umidade", "Umidade externa")}
                 ${cardCanvas("publicChartPressure", "Pressão", "Pressão externa")}
-                ${cardCanvas("publicChartRain", "Chuva · 24h + previsão 12h", "Precipitação e chance de chuva")}
+                ${cardCanvas("publicChartRainPrecipitation", "Precipitação · 24h anteriores + próximas 12h", "Precipitação observada e prevista")}
+                ${cardCanvas("publicChartRainProbability", "Chance de chuva · 12h anteriores + próximas 12h", "Probabilidade de chuva")}
             </div>
             ${montarSecaoPrevisaoQuinzeDias(dados.previsaoQuinzeDias)}
             <div class="chart-card chart-card--wide" id="public-solar-container">
@@ -831,20 +832,27 @@
     }
 
     function renderizarGraficoChuva(dados) {
-        const canvas = document.getElementById("publicChartRain");
         const janela = window.ClimateChuva.montarJanela(dados.previsaoCurtoPrazo, dados.atualizadoEm);
-        const grafico = window.ClimateChuva.criarGrafico({
-            canvas,
-            janela,
-            graficoExistente: graficos.publicChartRain,
-            cores: window.AppConfig.colors,
-            grupoSincronizacao: "publico",
+        [
+            ["publicChartRainPrecipitation", "precipitacao"],
+            ["publicChartRainProbability", "probabilidade"],
+        ].forEach(([id, modo]) => {
+            const grafico = window.ClimateChuva.criarGrafico({
+                canvas: document.getElementById(id),
+                janela,
+                graficoExistente: graficos[id],
+                cores: window.AppConfig.colors,
+                grupoSincronizacao: "publico",
+                modo,
+            });
+            if (grafico) {
+                graficos[id] = grafico;
+                window.ClimateUI.clearChartMessage(`${id}-container`);
+            } else {
+                delete graficos[id];
+                window.ClimateUI.renderChartMessage(`${id}-container`, `Sem dados de ${modo === "precipitacao" ? "precipitação" : "chance de chuva"} para a localização.`);
+            }
         });
-        if (grafico) {
-            graficos.publicChartRain = grafico;
-        } else {
-            delete graficos.publicChartRain;
-        }
     }
 
     function criarOpcoesGraficoPublico({ janela, unidade }) {
@@ -1000,8 +1008,12 @@
             });
         }
 
-        if (idGrafico === "publicChartRain") {
-            return window.ClimateChuva.obterOpcoes({ cores: window.AppConfig.colors });
+        if (idGrafico === "publicChartRainPrecipitation" || idGrafico === "publicChartRainProbability") {
+            return window.ClimateChuva.obterOpcoes({
+                cores: window.AppConfig.colors,
+                modo: idGrafico === "publicChartRainPrecipitation" ? "precipitacao" : "probabilidade",
+                controleResponsivo: false,
+            });
         }
 
         if (idGrafico === "publicChartForecastRain") {
