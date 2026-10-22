@@ -571,7 +571,7 @@ Impacto da alteracao: Alto.
 
 ## scripts/charts/rain.js
 
-Responsabilidade: classificar chuva atual, montar a janela externa de 24h + 12h e criar graficos separados ou combinados de precipitacao em milimetros e probabilidade. No modo publico, os dois cards usam 24h anteriores + 12h futuras; o combinado privado/PDF preserva sua janela propria.
+Responsabilidade: classificar chuva atual, montar a janela externa de 24h + 12h e criar graficos separados ou combinados de precipitacao em milimetros e probabilidade. No modo publico, os dois cards usam 24h anteriores + 12h futuras; chance separa `Medido` e `Previsao`, usa futuro mais claro/tracejado e escala percentual a esquerda. O combinado privado/PDF preserva sua janela propria.
 
 Dependencias diretas: `ClimateCharts`, `ClimateChartSync`, Chart.js e dados normalizados por `ExternalWeatherService`.
 

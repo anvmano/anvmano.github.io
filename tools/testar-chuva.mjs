@@ -73,8 +73,13 @@ const graficoChuvaCombinada = contexto.ClimateChuva.criarGrafico({
 });
 verificar.equal(graficoChancePublica.data.labels.length, 37, "Chance pública deve usar 24h anteriores e 12h futuras.");
 verificar.equal(graficoChancePublica.$indiceAgora, 24);
+verificar.deepEqual(Array.from(graficoChancePublica.data.datasets, serie => serie.label), ["Medido", "Previsão"]);
+verificar.equal(graficoChancePublica.data.datasets[1].borderDash.join(","), "6,4");
+verificar.equal(graficoChancePublica.options.scales.yProbabilidade.position, "left");
+verificar.equal(graficoChancePublica.options.plugins.legend.display, true);
 verificar.equal(graficoChuvaCombinada.data.labels.length, 25, "Gráfico combinado deve preservar a janela anterior de 12h + 12h.");
 verificar.equal(graficoChuvaCombinada.$indiceAgora, 12);
+verificar.equal(graficoChuvaCombinada.options.scales.yProbabilidade.position, "right");
 
 verificar.equal(contexto.ClimateChuva.analisarAgora({ precipitacao: 0, chuva: 0, codigoTempo: 1 }).rotulo, "Sem chuva agora");
 verificar.equal(contexto.ClimateChuva.analisarAgora({ precipitacao: 0.3, chuva: 0.3, codigoTempo: 61 }).rotulo, "Chovendo agora");

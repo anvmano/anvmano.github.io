@@ -421,6 +421,7 @@ async function testarPublicoResponsivo() {
                         titulo: grafico.canvas.parentElement.querySelector(".chart-label")?.textContent,
                         eixoMilimetros: grafico.options.scales.yMilimetros.display,
                         eixoProbabilidade: grafico.options.scales.yProbabilidade.display,
+                        legendaVisivel: grafico.options.plugins.legend.display,
                     };
                 }, id);
                 const precipitacao = await lerChuva("publicChartRainPrecipitation");
@@ -432,10 +433,28 @@ async function testarPublicoResponsivo() {
                 assert.match(precipitacao.titulo, /24h anteriores \+ próximas 12h/);
                 assert.deepEqual([precipitacao.eixoMilimetros, precipitacao.eixoProbabilidade], [true, false]);
                 assert.equal(chance.total, 37);
-                assert.deepEqual(chance.seriesVisiveis, ["Chance de chuva"]);
+                assert.deepEqual(chance.seriesVisiveis, ["Medido", "Previsão"]);
                 assert.deepEqual([chance.observados, chance.previstos, chance.indiceAgora], [25, 12, 24]);
                 assert.match(chance.titulo, /24h anteriores \+ próximas 12h/);
                 assert.deepEqual([chance.eixoMilimetros, chance.eixoProbabilidade], [false, true]);
+                assert.equal(chance.legendaVisivel, true);
+                assert.equal(await page.evaluate(() => window.Chart.getChart("publicChartRainProbability").options.scales.yProbabilidade.position), "left");
+                if (width === 1440) {
+                    await page.locator("#publicChartRainProbability-container .chart-zoom-button").click();
+                    await page.locator(".plot-zoom-overlay").waitFor();
+                    const chanceAmpliada = await page.locator(".plot--zoom").evaluate(canvas => {
+                        const grafico = window.Chart.getChart(canvas);
+                        return {
+                            legendas: grafico.data.datasets.map(serie => serie.label),
+                            eixo: grafico.options.scales.yProbabilidade.position,
+                            tracejado: grafico.data.datasets[1].borderDash,
+                        };
+                    });
+                    assert.deepEqual(chanceAmpliada.legendas, ["Medido", "Previsão"]);
+                    assert.equal(chanceAmpliada.eixo, "left");
+                    assert.deepEqual(chanceAmpliada.tracejado, [6, 4]);
+                    await page.locator(".plot-zoom-close").click();
+                }
                 const cortes = await page.locator(".public-card .stats-card__value, .public-moon dd").evaluateAll(els => els.filter(el => el.scrollWidth > el.clientWidth + 1).map(el => el.textContent));
                 assert.deepEqual(cortes, []);
                 if (width <= 640) {

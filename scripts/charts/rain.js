@@ -133,8 +133,18 @@
                 observada: (fonteChance?.precipitacao || []).map((valor, indice) => fonteChance.tipos[indice] === "observado" ? valor : null),
                 prevista: (fonteChance?.precipitacao || []).map((valor, indice) => fonteChance.tipos[indice] === "previsao" ? valor : null),
                 probabilidade: [...(fonteChance?.probabilidade || [])],
+                probabilidadeObservada: (fonteChance?.probabilidade || []).map((valor, indice) => fonteChance.tipos[indice] === "observado" ? valor : null),
+                probabilidadePrevista: (fonteChance?.probabilidade || []).map((valor, indice) => fonteChance.tipos[indice] === "previsao" ? valor : null),
             },
         };
+        const valorTransicaoChance = visualizacaoChance.series.probabilidadeObservada[visualizacaoChance.indiceAgora];
+        if (
+            visualizacaoChance.indiceAgora >= 0
+            && numeroOuNulo(valorTransicaoChance) !== null
+            && visualizacaoChance.series.probabilidadePrevista.some(valor => numeroOuNulo(valor) !== null)
+        ) {
+            visualizacaoChance.series.probabilidadePrevista[visualizacaoChance.indiceAgora] = valorTransicaoChance;
+        }
         const valoresDisponiveis = modoFixo === "precipitacao"
             ? [...visualizacaoPrecipitacao.series.observada, ...visualizacaoPrecipitacao.series.prevista]
             : modoFixo === "probabilidade"
@@ -152,58 +162,86 @@
             : modoFixo === "probabilidade"
             ? visualizacaoChance
             : movel ? visualizacaoPrecipitacao : visualizacaoChance;
+        const seriesPrecipitacao = [
+            {
+                label: "Precipitação observada",
+                data: visualizacaoInicial.series.observada,
+                yAxisID: "yMilimetros",
+                backgroundColor: `${corChuva}aa`,
+                borderColor: corChuva,
+                borderWidth: 1,
+                borderRadius: 3,
+                chaveChuva: "observada",
+                tipoDado: "observado",
+                order: 2,
+                hidden: false,
+            },
+            {
+                label: "Precipitação prevista",
+                data: visualizacaoInicial.series.prevista,
+                yAxisID: "yMilimetros",
+                backgroundColor: corPrevisao,
+                borderColor: corPrevisao,
+                borderWidth: 1,
+                borderRadius: 3,
+                chaveChuva: "prevista",
+                tipoDado: "previsao",
+                order: 2,
+                hidden: false,
+            },
+        ];
+        const serieProbabilidade = {
+            type: "line",
+            label: "Chance de chuva",
+            data: visualizacaoInicial.series.probabilidade,
+            yAxisID: "yProbabilidade",
+            borderColor: corProbabilidade,
+            backgroundColor: "transparent",
+            borderWidth: 2,
+            tension: 0.3,
+            pointRadius: 0,
+            pointHitRadius: 18,
+            spanGaps: false,
+            segment: {
+                borderDash: contexto => contexto.chart.$tiposAtivos?.[contexto.p1DataIndex] === "previsao" ? [6, 4] : undefined,
+            },
+            chaveChuva: "probabilidade",
+            tipoDado: "probabilidade",
+            order: 1,
+            hidden: movel,
+        };
+        const seriesProbabilidadePublica = [
+            {
+                ...serieProbabilidade,
+                label: "Medido",
+                data: visualizacaoInicial.series.probabilidadeObservada,
+                chaveChuva: "probabilidadeObservada",
+                tipoDado: "observado",
+                hidden: false,
+                segment: undefined,
+            },
+            {
+                ...serieProbabilidade,
+                label: "Previsão",
+                data: visualizacaoInicial.series.probabilidadePrevista,
+                chaveChuva: "probabilidadePrevista",
+                tipoDado: "previsao",
+                borderColor: "rgba(196, 181, 253, 0.58)",
+                borderDash: [6, 4],
+                hidden: false,
+                segment: undefined,
+            },
+        ];
+        const datasets = modoFixo === "probabilidade"
+            ? seriesProbabilidadePublica
+            : modoFixo === "precipitacao"
+            ? seriesPrecipitacao
+            : [...seriesPrecipitacao, serieProbabilidade];
         const grafico = new Chart(canvas.getContext("2d"), {
             type: "bar",
             data: {
                 labels: visualizacaoInicial.horarios.map(formatarHora),
-                datasets: [
-                    {
-                        label: "Precipitação observada",
-                        data: visualizacaoInicial.series.observada,
-                        yAxisID: "yMilimetros",
-                        backgroundColor: `${corChuva}aa`,
-                        borderColor: corChuva,
-                        borderWidth: 1,
-                        borderRadius: 3,
-                        chaveChuva: "observada",
-                        tipoDado: "observado",
-                        order: 2,
-                        hidden: false,
-                    },
-                    {
-                        label: "Precipitação prevista",
-                        data: visualizacaoInicial.series.prevista,
-                        yAxisID: "yMilimetros",
-                        backgroundColor: corPrevisao,
-                        borderColor: corPrevisao,
-                        borderWidth: 1,
-                        borderRadius: 3,
-                        chaveChuva: "prevista",
-                        tipoDado: "previsao",
-                        order: 2,
-                        hidden: false,
-                    },
-                    {
-                        type: "line",
-                        label: "Chance de chuva",
-                        data: visualizacaoInicial.series.probabilidade,
-                        yAxisID: "yProbabilidade",
-                        borderColor: corProbabilidade,
-                        backgroundColor: "transparent",
-                        borderWidth: 2,
-                        tension: 0.3,
-                        pointRadius: 0,
-                        pointHitRadius: 18,
-                        spanGaps: false,
-                        segment: {
-                            borderDash: contexto => contexto.chart.$tiposAtivos?.[contexto.p1DataIndex] === "previsao" ? [6, 4] : undefined,
-                        },
-                        chaveChuva: "probabilidade",
-                        tipoDado: "probabilidade",
-                        order: 1,
-                        hidden: movel,
-                    },
-                ],
+                datasets,
             },
             options: obterOpcoes({ janela, cores, modo: modoFixo }),
             plugins: [pluginMarcadorAgora, pluginControleResponsivo],
@@ -237,7 +275,7 @@
             interaction: { mode: "index", intersect: false, axis: "x" },
             plugins: {
                 legend: {
-                    display: !movel,
+                    display: modoFixo === "probabilidade" || !movel,
                     labels: {
                         color: cores.text,
                         boxWidth: 12,
@@ -251,7 +289,8 @@
                 tooltip: {
                     mode: "index",
                     intersect: false,
-                    filter: contexto => numeroOuNulo(contexto.raw) !== null,
+                    filter: contexto => numeroOuNulo(contexto.raw) !== null
+                        && !(contexto.dataset.tipoDado === "previsao" && contexto.dataIndex <= contexto.chart.$indiceAgora),
                     callbacks: {
                         title: itens => {
                             const indice = itens[0]?.dataIndex;
@@ -277,13 +316,13 @@
                 },
                 yProbabilidade: {
                     type: "linear",
-                    position: "right",
+                    position: modoFixo === "probabilidade" ? "left" : "right",
                     min: 0,
                     max: 100,
                     display: impressao || modoFixo === "probabilidade" || (!modoFixo && !movel),
                     title: { display: !movel, text: "%", color: cores.text },
                     ticks: { color: cores.text, callback: valor => `${valor}%` },
-                    grid: { drawOnChartArea: false },
+                    grid: modoFixo === "probabilidade" ? { color: cores.grid } : { drawOnChartArea: false },
                 },
             },
         });
@@ -298,7 +337,7 @@
     function sincronizarModoResponsivo(grafico) {
         if (!grafico?.data?.datasets || !grafico.options?.scales) return;
         const movel = estaEmTelaMovel();
-        grafico.options.plugins.legend.display = !movel;
+        grafico.options.plugins.legend.display = grafico.$modoChuvaFixo === "probabilidade" || !movel;
         grafico.options.scales.x.ticks.maxTicksLimit = movel ? 5 : 13;
         grafico.options.scales.yMilimetros.title.display = false;
         grafico.options.scales.yProbabilidade.title.display = !movel;
@@ -359,7 +398,7 @@
         grafico.data.labels = visualizacao.horarios.map(formatarHora);
         grafico.data.datasets.forEach(serie => {
             serie.data = [...(visualizacao.series[serie.chaveChuva] || [])];
-            serie.hidden = serie.chaveChuva === "probabilidade" ? !mostrarProbabilidade : !mostrarPrecipitacao;
+            serie.hidden = serie.yAxisID === "yProbabilidade" ? !mostrarProbabilidade : !mostrarPrecipitacao;
         });
         grafico.options.scales.yMilimetros.display = mostrarPrecipitacao;
         grafico.options.scales.yProbabilidade.display = mostrarProbabilidade;

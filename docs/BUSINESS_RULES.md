@@ -897,6 +897,7 @@ Regras obrigatorias:
 - a previsao resumida continua cobrindo as proximas 6 horas, com maior probabilidade, acumulado e pico em milimetros
 - o grafico cobre as ultimas 24 horas e as proximas 12 horas
 - barras distinguem precipitacao registrada e prevista em milimetros; no modo publico, a linha percentual cobre as 24h anteriores e as proximas 12h
+- no card publico de chance, a escala percentual fica a esquerda e a legenda separa `Medido` da `Previsao`; o trecho futuro e mais claro e tracejado, conectado ao marcador `Agora`
 - no modo publico precipitacao e chance de chuva usam cards separados, sincronizados e com a mesma altura; no privado e no PDF permanecem combinados em largura total
 - no modo publico os dois graficos aparecem apos qualquer consulta valida; no privado o grafico aparece na aba Estacao somente depois da consulta opcional de localizacao
 - coordenadas continuam apenas em memoria e nao devem ser persistidas
