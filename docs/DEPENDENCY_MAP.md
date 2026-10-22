@@ -660,27 +660,6 @@ Quem chama: `scripts/firebase-service.js`, `scripts/chat.js` e `scripts/reports/
 
 Impacto da alteracao: Alto. Regras excessivamente restritivas podem bloquear leitura, chat ou exportacao legitimos.
 
-## legacy/scripts
-
-Responsabilidade: preservar copias historicas fora do runtime. O diretorio e ignorado pelo validador e nao pode ser usado como fonte da aplicacao ativa.
-
-Dependencias diretas:
-
-- DOM
-- URLs de `html2canvas` e `jsPDF` em `AppConfig.firebase`
-- Blob/URL nativos do navegador para JSON
-- `AppConfig`
-- `ClimateData`
-- `ClimateSolar`
-- `ClimateUI.getActiveTabName`
-- `latestData` recebido via `scripts/main.js`
-
-Quem chama: `scripts/main.js`.
-
-Quem e chamado: `scripts/runtime-loader.js` para carregar modulos internos em `window.ClimatePdfReportModules`; carregador sob demanda de html2canvas/jsPDF para PDF e Blob/URL para download JSON.
-
-Impacto da alteracao: Medio a Alto. Pode afetar exportacao PDF/JSON, captura de graficos e download.
-
 ## scripts/views/quarto-view.js
 
 Responsabilidade: renderizar Quarto.
@@ -872,7 +851,7 @@ graph TD
 
 Novos metodos, funcoes e variaveis internas devem seguir PT-BR. Nao traduzir campos Firebase reais, ids/classes DOM, contratos publicos em `window.*`, propriedades de APIs externas, opcoes de bibliotecas ou chaves estruturais ja consumidas entre modulos.
 
-Estado em 08/09/2026: vínculos locais foram traduzidos em todos os componentes ativos. As arestas entre módulos continuam usando os contratos públicos anteriores (`window.*`, membros exportados e chaves de contexto), agora ligados a implementações internas em PT-BR. Essa camada de compatibilidade preserva o grafo de dependências documentado acima. Detalhes e exceções: `docs/nomenclatura-pt-br/RELATORIO.md`.
+Estado em 08/09/2026: vínculos locais foram traduzidos em todos os componentes ativos. As arestas entre módulos continuam usando os contratos públicos anteriores (`window.*`, membros exportados e chaves de contexto), agora ligados a implementações internas em PT-BR. Essa camada de compatibilidade preserva o grafo de dependências documentado acima.
 
 ### `scripts/config.js`
 

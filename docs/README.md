@@ -112,9 +112,6 @@ Bibliotecas carregadas via CDN:
 │   └── testar-modo-publico.mjs Concorrência, estados e zoom público
 └── docs/
     ├── README.md
-    ├── AI_QUICK_CONTEXT.md
-    ├── AI_SYSTEM_PROMPT.md
-    ├── ARCHITECTURE_AI.md
     ├── BUSINESS_RULES.md
     └── DEPENDENCY_MAP.md
 ```
@@ -325,7 +322,7 @@ JSON:
 - Consultas de período usam limite de 30 dias; `últimos dias` usa 7 dias por padrão. O calendário mensal pode consultar o mês completo.
 - O CSS foi dividido em arquivos por responsabilidade dentro de `styles/`.
 - Os renderizadores por aba ficam separados em `scripts/views/`.
-- Copias antigas estao isoladas em `legacy/scripts/` e nao participam do runtime nem do validador. Arquivos ativos seguem a organizacao por responsabilidade em `scripts/`.
+- Os arquivos ativos seguem a organizacao por responsabilidade em `scripts/`.
 - ESLint valida contratos basicos do JavaScript; Prettier esta disponivel por `npm run format`; `scripts/schemas/contracts.js` valida fronteiras Firebase, chat e relatorio.
 - Os listeners Firebase continuam em paths completos. Como as chaves usam `DD-MM-AAAA`, paginacao cronologica segura exige migracao para timestamp ou `AAAA-MM-DD`; nao aplicar `orderByKey` por intervalo no formato atual.
 - A documentação técnica fica centralizada em `docs/`.
@@ -345,8 +342,5 @@ JSON:
 
 Arquivos de apoio para manutenção:
 
-- `docs/AI_QUICK_CONTEXT.md`: resumo rápido para retomada de contexto.
 - `docs/DEPENDENCY_MAP.md`: mapa de dependências e impacto.
-- `docs/ARCHITECTURE_AI.md`: arquitetura detalhada.
 - `docs/BUSINESS_RULES.md`: regras funcionais, decisões e dívida técnica.
-- `docs/AI_SYSTEM_PROMPT.md`: guia de comportamento para manutenção assistida por IA.

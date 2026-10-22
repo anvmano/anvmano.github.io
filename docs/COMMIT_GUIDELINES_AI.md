@@ -1,7 +1,6 @@
 # Diretrizes para Criação de Mensagens de Commit
 
-> Este arquivo é referência detalhada.  
-> Não precisa ser lido em toda tarefa. As regras resumidas do `AI_SYSTEM_PROMPT.md` devem ser usadas como padrão.
+> Este arquivo é a referência para mensagens de commit do projeto.
 
 ## Objetivo
 

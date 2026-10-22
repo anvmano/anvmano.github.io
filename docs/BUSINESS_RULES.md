@@ -18,7 +18,7 @@ Impacto: legibilidade e consistencia com o dominio do projeto.
 
 Criticidade: Media.
 
-Estado verificado em 08/09/2026: uma rodada transversal atualizou os vínculos internos e os testes, preservando aliases nas fronteiras existentes. Chaves como `activeTab`, `selectedDate`, `latestData`, `chartInstances`, `result`, `records`, `status` e `aliases` continuam inalteradas quando fazem parte de contextos ou payloads compartilhados. O inventário de renomeações, as exceções e a regressão completa estão em `docs/nomenclatura-pt-br/RELATORIO.md`.
+Estado verificado em 08/09/2026: uma rodada transversal atualizou os vínculos internos e os testes, preservando aliases nas fronteiras existentes. Chaves como `activeTab`, `selectedDate`, `latestData`, `chartInstances`, `result`, `records`, `status` e `aliases` continuam inalteradas quando fazem parte de contextos ou payloads compartilhados.
 
 ## Regra: formato da data atual Firebase
 
@@ -1361,8 +1361,6 @@ DOM + Chart.js
 # CODIGO MORTO
 
 Nenhum codigo morto de runtime confirmado na varredura atual.
-
-Observacao: copias antigas foram isoladas em `legacy/scripts/`. Elas nao participam do runtime nem da validacao e nao devem receber correcoes destinadas a aplicacao ativa.
 
 ## Qualidade operacional dos sensores
 
