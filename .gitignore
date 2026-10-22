@@ -1,0 +1,7 @@
+# Arquivos internos que nao devem ser publicados
+/UI_UX_ANALYSIS.md
+/docs/nomenclatura-pt-br/
+/docs/AI_QUICK_CONTEXT.md
+/docs/AI_SYSTEM_PROMPT.md
+/docs/ARCHITECTURE_AI.md
+/legacy/scripts/
