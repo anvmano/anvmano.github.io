@@ -300,7 +300,7 @@
                 ${cardCanvas("publicChartHumidity", "Umidade", "Umidade externa")}
                 ${cardCanvas("publicChartPressure", "Pressão", "Pressão externa")}
                 ${cardCanvas("publicChartRainPrecipitation", "Precipitação · 24h anteriores + próximas 12h", "Precipitação observada e prevista")}
-                ${cardCanvas("publicChartRainProbability", "Chance de chuva · 12h anteriores + próximas 12h", "Probabilidade de chuva")}
+                ${cardCanvas("publicChartRainProbability", "Chance de chuva · 24h anteriores + próximas 12h", "Probabilidade de chuva")}
             </div>
             ${montarSecaoPrevisaoQuinzeDias(dados.previsaoQuinzeDias)}
             <div class="chart-card chart-card--wide" id="public-solar-container">
@@ -999,13 +999,23 @@
         graficos.publicChartSolar.$solarDayTimes = eventos;
     }
 
-    function obterOpcoesZoomPublico(idGrafico) {
+    function obterOpcoesZoomPublico(idGrafico, graficoOrigem) {
         const padroes = window.ClimateCharts.createDefaults(window.AppConfig.colors);
         if (idGrafico === "publicChartSolar") {
             return window.ClimateSolar.getSolarTodayOptions({
                 defaults: padroes,
                 colors: window.AppConfig.colors,
             });
+        }
+
+        if (graficoOrigem?.config?.options) {
+            const opcoes = window.ClimateCharts.mergeDeep({}, graficoOrigem.config.options);
+            opcoes.animation = false;
+            opcoes.maintainAspectRatio = false;
+            delete opcoes.onResize;
+            delete opcoes.onHover;
+            delete opcoes.onClick;
+            return opcoes;
         }
 
         if (idGrafico === "publicChartRainPrecipitation" || idGrafico === "publicChartRainProbability") {

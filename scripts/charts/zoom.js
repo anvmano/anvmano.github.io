@@ -57,35 +57,20 @@
     function copiarDadosGrafico(graficoOrigem) {
         return {
             labels: graficoOrigem.data.labels ? [...graficoOrigem.data.labels] : undefined,
-            datasets: graficoOrigem.data.datasets.map(serieGrafico => ({
-                type: serieGrafico.type,
-                label: serieGrafico.label,
+            datasets: graficoOrigem.data.datasets.map((serieGrafico, indice) => ({
+                ...serieGrafico,
                 data: Array.isArray(serieGrafico.data)
                     ? serieGrafico.data.map(item => item && typeof item === "object" ? { ...item } : item)
                     : serieGrafico.data,
-                yAxisID: serieGrafico.yAxisID,
-                borderColor: serieGrafico.borderColor,
-                borderDash: serieGrafico.borderDash,
-                backgroundColor: Array.isArray(serieGrafico.backgroundColor) || typeof serieGrafico.backgroundColor === "string"
+                rawValues: Array.isArray(serieGrafico.rawValues) ? [...serieGrafico.rawValues] : serieGrafico.rawValues,
+                backgroundColor: Array.isArray(serieGrafico.backgroundColor)
+                    ? [...serieGrafico.backgroundColor]
+                    : typeof serieGrafico.backgroundColor === "string"
                     ? serieGrafico.backgroundColor
                     : "transparent",
-                fill: serieGrafico.fill,
-                tension: serieGrafico.tension,
-                borderWidth: serieGrafico.borderWidth,
-                pointRadius: serieGrafico.pointRadius,
                 pointHitRadius: serieGrafico.pointHitRadius || 18,
                 pointHoverRadius: serieGrafico.pointHoverRadius || 6,
-                pointBackgroundColor: serieGrafico.pointBackgroundColor,
-                pointBorderColor: serieGrafico.pointBorderColor,
-                pointHoverBackgroundColor: serieGrafico.pointHoverBackgroundColor,
-                pointHoverBorderColor: serieGrafico.pointHoverBorderColor,
-                pointHoverBorderWidth: serieGrafico.pointHoverBorderWidth,
-                showLine: serieGrafico.showLine,
-                spanGaps: serieGrafico.spanGaps,
-                order: serieGrafico.order,
-                parsing: serieGrafico.parsing,
-                tipoDado: serieGrafico.tipoDado,
-                hidden: serieGrafico.hidden,
+                hidden: !graficoOrigem.isDatasetVisible(indice),
             }))
         };
     }
@@ -99,11 +84,18 @@
         const configuracao = {
             type: graficoOrigem.config.type || "line",
             data: copiarDadosGrafico(graficoOrigem),
-            options: obterOpcoesAmpliacao?.(idOrigem) || {},
+            options: obterOpcoesAmpliacao?.(idOrigem, graficoOrigem) || {},
             plugins,
         };
 
         const graficoAmpliado = new Chart(contextoDestino, configuracao);
+        graficoAmpliado.$zoomKind = graficoOrigem.$zoomKind;
+        graficoAmpliado.$modoChuvaFixo = graficoOrigem.$modoChuvaFixo;
+        graficoAmpliado.$modoChuvaMovel = graficoOrigem.$modoChuvaMovel;
+        graficoAmpliado.$indiceAgora = graficoOrigem.$indiceAgora;
+        graficoAmpliado.$chavesSincronizacao = [...(graficoOrigem.$chavesSincronizacao || [])];
+        graficoAmpliado.$horariosAtivos = [...(graficoOrigem.$horariosAtivos || [])];
+        graficoAmpliado.$tiposAtivos = [...(graficoOrigem.$tiposAtivos || [])];
         if (eGraficoSolar) {
             graficoAmpliado.$solarDayTimes = graficoOrigem.$solarDayTimes;
         }
@@ -113,8 +105,6 @@
         }
         if (graficoOrigem.$marcadorAgora) {
             graficoAmpliado.$marcadorAgora = { ...graficoOrigem.$marcadorAgora };
-            graficoAmpliado.$horariosAtivos = [...(graficoOrigem.$horariosAtivos || [])];
-            graficoAmpliado.$tiposAtivos = [...(graficoOrigem.$tiposAtivos || [])];
             graficoAmpliado.update("none");
         }
         sobreposicaoAmpliacao._chart = graficoAmpliado;

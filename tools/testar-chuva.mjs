@@ -40,6 +40,42 @@ verificar.equal(janela.chance.horarios[janela.chance.indiceAgora + 1], "2026-09-
 verificar.equal(janela.chance.precipitacao[0], 0);
 verificar.equal(janela.chance.probabilidade[0], 24);
 
+contexto.matchMedia = () => ({ matches: false });
+contexto.ClimateCharts = {
+    createDefaults: () => ({ plugins: {}, scales: { y: {} } }),
+    mergeDeep: (destino, origem) => ({ ...destino, ...origem }),
+};
+contexto.Chart = class {
+    constructor(_contexto, configuracao) {
+        this.data = configuracao.data;
+        this.options = configuracao.options;
+        this.canvas = canvasChuva;
+        this.tooltip = { setActiveElements() {} };
+    }
+    update() {}
+    setActiveElements() {}
+};
+const canvasChuva = {
+    getContext: () => ({}),
+    setAttribute() {},
+    parentElement: { querySelector: () => null },
+};
+const graficoChancePublica = contexto.ClimateChuva.criarGrafico({
+    canvas: canvasChuva,
+    janela,
+    cores: {},
+    modo: "probabilidade",
+});
+const graficoChuvaCombinada = contexto.ClimateChuva.criarGrafico({
+    canvas: canvasChuva,
+    janela,
+    cores: {},
+});
+verificar.equal(graficoChancePublica.data.labels.length, 37, "Chance pública deve usar 24h anteriores e 12h futuras.");
+verificar.equal(graficoChancePublica.$indiceAgora, 24);
+verificar.equal(graficoChuvaCombinada.data.labels.length, 25, "Gráfico combinado deve preservar a janela anterior de 12h + 12h.");
+verificar.equal(graficoChuvaCombinada.$indiceAgora, 12);
+
 verificar.equal(contexto.ClimateChuva.analisarAgora({ precipitacao: 0, chuva: 0, codigoTempo: 1 }).rotulo, "Sem chuva agora");
 verificar.equal(contexto.ClimateChuva.analisarAgora({ precipitacao: 0.3, chuva: 0.3, codigoTempo: 61 }).rotulo, "Chovendo agora");
 verificar.equal(contexto.ClimateChuva.analisarAgora({ precipitacao: 0, chuva: 0, codigoTempo: 95 }).chovendo, true);
@@ -73,7 +109,8 @@ verificar.match(codigoChuva, /rain-chart-toggle/);
 verificar.match(codigoChuva, /data-rain-mode="precipitacao"/);
 verificar.match(codigoChuva, /data-rain-mode="probabilidade"/);
 verificar.match(codigoChuva, /limiteTicks = movel \? 5 : 13/);
-verificar.match(codigoChuva, /Chance de chuva · 12h anteriores \+ próximas 12h/);
+verificar.match(codigoChuva, /grafico\.\$modoChuvaFixo === "probabilidade" \? "24h" : "12h"/);
+verificar.match(viewPublica, /Chance de chuva · 24h anteriores \+ próximas 12h/);
 verificar.match(estilosGraficos, /\.rain-chart-toggle/);
 
 const executavel = [

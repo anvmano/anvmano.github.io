@@ -155,7 +155,7 @@ Responsabilidades:
 - `scripts/charts/moon.js`: fase da lua, chip no header, popover e estado lunar por data.
 - `scripts/charts/solar.js`: leitura e renderizacao dos eventos solares, historico nascer/por do sol, ciclo solar do dia, aliases solares centralizados e exposicao de eventos solares para o header.
 - `scripts/ui/ui.js`: estados vazios, mensagens, tabelas ordenaveis com CSV, tabs, swipe touch, colapsaveis e date picker; o seletor e a unica referencia visual global da data consultada na toolbar.
-- `scripts/charts/zoom.js`: ampliacao de graficos por botao/duplo clique em dialogo modal acessivel, aguardando o CSS sob demanda, mantendo a rolagem da pagina, o tooltip ativo no canvas ampliado e restaurando foco ao fechar.
+- `scripts/charts/zoom.js`: ampliacao de graficos por botao/duplo clique em dialogo modal acessivel, aguardando o CSS sob demanda, mantendo a rolagem da pagina, a visibilidade efetiva das series, callbacks/eixos do grafico original, o tooltip ativo no canvas ampliado e restaurando foco ao fechar.
 - `scripts/reports/pdf-report.js`: fachada publica leve da exportacao PDF/JSON, mantendo `window.ClimatePdfReport.setup` e carregando `scripts/reports/pdf-report-*` somente ao exportar.
 - `scripts/reports/pdf-report-config.js`: configuracao das abas, metricas, tabela e inclusao de ciclo solar.
 - `scripts/reports/pdf-report-format.js`: formatacao de datas, valores, status, mensagens e HTML seguro.
@@ -170,7 +170,7 @@ Responsabilidades:
 - `scripts/views/sala-view.js`: renderizacao da aba Sala.
 - `scripts/views/aquario-view.js`: renderizacao da aba Aquario.
 - `scripts/views/solar-view.js`: integracao dos graficos solares usados pela visao global da aba Estacao.
-- `scripts/views/public-weather-view.js`: renderizacao do modo publico por CEP/cidade/localizacao, controle segmentado do modo de busca, escolha acessivel de cidades homonimas, cards, contexto sazonal/lunar, insights ambientais e graficos externos; a grade curta reune temperatura, sensacao, umidade, pressao e chuva com 24h observadas + 12h previstas. Em seguida, um mapa compacto e tres graficos sincronizados mostram temperatura, chuva e UV para 15 dias, com sinalizacao de maior incerteza apos o 7º dia; o ciclo solar fica por ultimo.
+- `scripts/views/public-weather-view.js`: renderizacao do modo publico por CEP/cidade/localizacao, controle segmentado do modo de busca, escolha acessivel de cidades homonimas, cards, contexto sazonal/lunar, insights ambientais e graficos externos; a grade curta reune temperatura, sensacao, umidade, pressao, precipitacao e chance de chuva com 24h observadas + 12h previstas. Em seguida, um mapa compacto e tres graficos sincronizados mostram temperatura, chuva e UV para 15 dias, com sinalizacao de maior incerteza apos o 7º dia; o ciclo solar fica por ultimo.
 - `tools/validate-project.mjs`: validacao estrutural local de sintaxe, referencias, imports CSS e ids.
 - `tools/testar-assistente.mjs`: regressao local de interpretacao de periodos, operacoes e contratos de resposta da assistente.
 - `tools/testar-relatorio.mjs`, `tools/testar-pdf-artifact.mjs`, `tools/testar-pdf-chuva.mjs`, `tools/testar-acessibilidade.mjs`, `tools/testar-axe.mjs`, `tools/testar-qualidade-dados.mjs`, `tools/testar-modo-publico.mjs`, `tools/testar-sincronizacao-graficos.mjs`, `tools/testar-chuva.mjs` e `tools/testar-tabelas.mjs`: regressao de relatorio/artefato, PDF real com chuva, ARIA/contraste, qualidade, fluxo publico, sincronizacao temporal, chuva e tabelas.

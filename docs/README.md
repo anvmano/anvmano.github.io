@@ -238,7 +238,7 @@ A validação verifica:
 - No modo privado, o card e o gráfico de chuva permanecem ocultos até a consulta de localização retornar dados externos válidos; depois disso exibem a janela de 24h observadas + 12h previstas.
 - Gráficos de temperatura, sensação térmica, umidade, pressão, qualidade do ar e aquário.
 - Hover ou toque sincroniza o horário nos gráficos temporais compatíveis da mesma aba, inclusive chuva externa, sem transformar lacunas de dados em zero.
-- Chuva atual no card; no modo público, precipitação em milímetros e chance futura em porcentagem usam gráficos separados. No modo privado e no PDF, permanecem combinadas no gráfico de 24h anteriores + 12h previstas.
+- Chuva atual no card; no modo público, precipitação em milímetros e chance de chuva em porcentagem usam gráficos separados com 24h anteriores + 12h futuras. No modo privado e no PDF, permanecem combinadas conforme o contrato interno existente.
 - Cards com média, mínima, máxima, delta e tendência.
 - Indicadores de qualidade/cobertura aparecem somente quando houver anormalidade ou cobertura inferior a 100%; delta e tendência exigem pelo menos duas leituras válidas.
 - Estado operacional por metrica: `ok`, `parcial`, `desatualizado`, `suspeito` ou `offline`, compartilhado entre UI, exportacao e assistente sem poluir cards integrais.

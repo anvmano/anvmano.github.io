@@ -431,10 +431,10 @@ async function testarPublicoResponsivo() {
                 assert.deepEqual([precipitacao.observados, precipitacao.previstos, precipitacao.indiceAgora], [25, 12, 24]);
                 assert.match(precipitacao.titulo, /24h anteriores \+ próximas 12h/);
                 assert.deepEqual([precipitacao.eixoMilimetros, precipitacao.eixoProbabilidade], [true, false]);
-                assert.equal(chance.total, 25);
+                assert.equal(chance.total, 37);
                 assert.deepEqual(chance.seriesVisiveis, ["Chance de chuva"]);
-                assert.deepEqual([chance.observados, chance.previstos, chance.indiceAgora], [13, 12, 12]);
-                assert.match(chance.titulo, /12h anteriores \+ próximas 12h/);
+                assert.deepEqual([chance.observados, chance.previstos, chance.indiceAgora], [25, 12, 24]);
+                assert.match(chance.titulo, /24h anteriores \+ próximas 12h/);
                 assert.deepEqual([chance.eixoMilimetros, chance.eixoProbabilidade], [false, true]);
                 const cortes = await page.locator(".public-card .stats-card__value, .public-moon dd").evaluateAll(els => els.filter(el => el.scrollWidth > el.clientWidth + 1).map(el => el.textContent));
                 assert.deepEqual(cortes, []);

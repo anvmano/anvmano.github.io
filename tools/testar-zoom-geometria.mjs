@@ -36,13 +36,48 @@ try {
             document.body.appendChild(card);
             const options = { responsive: true, maintainAspectRatio: false, animation: false };
             const chart = new window.Chart(card.querySelector("canvas"), {
-                type: "line", data: { labels: ["10:00", "11:00", "12:00"], datasets: [{ label: "Sala", data: [20, 24, 21] }] }, options,
+                type: "line",
+                data: {
+                    labels: ["10:00", "11:00", "12:00"],
+                    datasets: [
+                        {
+                            label: "Sala",
+                            data: [20, 24, 21],
+                            segment: { borderDash: contexto => contexto.p1DataIndex > 1 ? [6, 4] : undefined },
+                        },
+                        {
+                            type: "bar",
+                            label: "Quarto",
+                            data: [19, 22, 20],
+                            borderRadius: 3,
+                        },
+                    ],
+                },
+                options,
             });
-            window.ClimateZoom.registrarCards(document, { chartInstances: { testeCanvas: chart }, getZoomOptions: () => options });
+            chart.setDatasetVisibility(1, false);
+            chart.update("none");
+            window.ClimateZoom.registrarCards(document, {
+                chartInstances: { testeCanvas: chart },
+                getZoomOptions: (_id, graficoOrigem) => ({ ...graficoOrigem.config.options, animation: false }),
+            });
         });
         await page.locator("#testeZoom .chart-zoom-button").click();
         await page.locator(".plot-zoom-overlay").waitFor();
         await page.waitForTimeout(350);
+        const dadosZoom = await page.locator(".plot--zoom").evaluate(canvas => {
+            const grafico = window.Chart.getChart(canvas);
+            return {
+                segundaSerieVisivel: grafico.isDatasetVisible(1),
+                segundaSerieOculta: grafico.data.datasets[1].hidden,
+                raioBorda: grafico.data.datasets[1].borderRadius,
+                preservouSegmento: typeof grafico.data.datasets[0].segment?.borderDash === "function",
+            };
+        });
+        assert.equal(dadosZoom.segundaSerieVisivel, false, "Zoom não pode reexibir série ocultada pela legenda.");
+        assert.equal(dadosZoom.segundaSerieOculta, true);
+        assert.equal(dadosZoom.raioBorda, 3);
+        assert.equal(dadosZoom.preservouSegmento, true);
         for (const seletor of [".plot-zoom-overlay .chart-card", ".plot--zoom", ".plot-zoom-close"]) {
             const box = await page.locator(seletor).boundingBox();
             assert.ok(box && box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width + 1 && box.y + box.height <= viewport.height + 1, `${seletor} fora da tela em ${viewport.width}x${viewport.height}: ${JSON.stringify(box)}`);

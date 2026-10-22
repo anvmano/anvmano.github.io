@@ -896,7 +896,7 @@ Regras obrigatorias:
 - o card de chuva deve distinguir `Chovendo agora`, `Sem chuva agora` e condicao indisponivel usando precipitacao, chuva e codigo meteorologico atuais
 - a previsao resumida continua cobrindo as proximas 6 horas, com maior probabilidade, acumulado e pico em milimetros
 - o grafico cobre as ultimas 24 horas e as proximas 12 horas
-- barras distinguem precipitacao registrada e prevista em milimetros; a linha percentual representa somente a chance futura de chuva
+- barras distinguem precipitacao registrada e prevista em milimetros; no modo publico, a linha percentual cobre as 24h anteriores e as proximas 12h
 - no modo publico precipitacao e chance de chuva usam cards separados, sincronizados e com a mesma altura; no privado e no PDF permanecem combinados em largura total
 - no modo publico os dois graficos aparecem apos qualquer consulta valida; no privado o grafico aparece na aba Estacao somente depois da consulta opcional de localizacao
 - coordenadas continuam apenas em memoria e nao devem ser persistidas
@@ -1064,6 +1064,8 @@ Interacao:
 - em dispositivos touch, `pointerdown`/`touchstart` dentro do canvas ampliado deve preservar a interacao do Chart.js para tooltip/leitura de dado
 - graficos criados depois da inicializacao, como os do modo publico, devem ser registrados por `registrarCards`
 - o registro dinamico deve instalar o fechamento por `Escape` mesmo quando `setup` do dashboard privado nao foi executado
+- o grafico ampliado deve preservar a visibilidade efetiva escolhida pela legenda, `segment`, `borderRadius`, cores, preenchimento, eixos, callbacks e metadados dos plugins
+- o grafico ampliado nao deve ser registrado nos grupos de sincronizacao nem executar callbacks de resize/interacao da tela de fundo
 - `styles/zoom.css` deve ser carregado e aplicado por `ClimateAssets.carregarCssZoom()` antes da criacao do overlay
 - abrir o zoom deve preservar `window.scrollY`; nao usar rolagem forcada para o topo
 

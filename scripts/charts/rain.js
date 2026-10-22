@@ -113,6 +113,7 @@
         }
         if (!canvas || !window.Chart || !janela?.horarios?.length) return null;
 
+        const modoFixo = modo === "precipitacao" || modo === "probabilidade" ? modo : null;
         const visualizacaoPrecipitacao = {
             horarios: [...janela.horarios],
             tipos: [...janela.tipos],
@@ -123,17 +124,17 @@
                 probabilidade: [],
             },
         };
+        const fonteChance = modoFixo === "probabilidade" ? janela : janela.chance;
         const visualizacaoChance = {
-            horarios: [...(janela.chance?.horarios || [])],
-            tipos: [...(janela.chance?.tipos || [])],
-            indiceAgora: janela.chance?.indiceAgora ?? -1,
+            horarios: [...(fonteChance?.horarios || [])],
+            tipos: [...(fonteChance?.tipos || [])],
+            indiceAgora: fonteChance?.indiceAgora ?? -1,
             series: {
-                observada: (janela.chance?.precipitacao || []).map((valor, indice) => janela.chance.tipos[indice] === "observado" ? valor : null),
-                prevista: (janela.chance?.precipitacao || []).map((valor, indice) => janela.chance.tipos[indice] === "previsao" ? valor : null),
-                probabilidade: [...(janela.chance?.probabilidade || [])],
+                observada: (fonteChance?.precipitacao || []).map((valor, indice) => fonteChance.tipos[indice] === "observado" ? valor : null),
+                prevista: (fonteChance?.precipitacao || []).map((valor, indice) => fonteChance.tipos[indice] === "previsao" ? valor : null),
+                probabilidade: [...(fonteChance?.probabilidade || [])],
             },
         };
-        const modoFixo = modo === "precipitacao" || modo === "probabilidade" ? modo : null;
         const valoresDisponiveis = modoFixo === "precipitacao"
             ? [...visualizacaoPrecipitacao.series.observada, ...visualizacaoPrecipitacao.series.prevista]
             : modoFixo === "probabilidade"
@@ -375,7 +376,7 @@
             titulo.textContent = mostrarProbabilidade && mostrarPrecipitacao
                 ? "Chuva · 12h anteriores + próximas 12h"
                 : mostrarProbabilidade
-                ? "Chance de chuva · 12h anteriores + próximas 12h"
+                ? `Chance de chuva · ${grafico.$modoChuvaFixo === "probabilidade" ? "24h" : "12h"} anteriores + próximas 12h`
                 : "Chuva · 24h anteriores + próximas 12h";
         }
         grafico.canvas?.setAttribute(
@@ -383,7 +384,7 @@
             mostrarProbabilidade && mostrarPrecipitacao
                 ? "Precipitação e probabilidade de chuva nas 12 horas anteriores e próximas 12 horas"
                 : mostrarProbabilidade
-                ? "Probabilidade de chuva nas 12 horas anteriores e próximas 12 horas"
+                ? `Probabilidade de chuva nas ${grafico.$modoChuvaFixo === "probabilidade" ? "24" : "12"} horas anteriores e próximas 12 horas`
                 : "Precipitação nas 24 horas anteriores e próximas 12 horas"
         );
 
