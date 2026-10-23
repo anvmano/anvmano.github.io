@@ -7,14 +7,14 @@
     const graficoSensacaoTermica = document.getElementById(ids.charts.roomFeelsLike).getContext("2d");
     const graficoUmidade = document.getElementById(ids.charts.roomHumidity).getContext("2d");
 
-    function criarTabela(dados) {
+    function criarTabela(dados, dataSelecionada) {
         return ClimateData.createTables([
             camposQuarto.date,
             camposQuarto.time,
             camposQuarto.temperature,
             camposQuarto.feelsLike,
             camposQuarto.humidity,
-        ], dados);
+        ], dados, dataSelecionada === ClimateData.dataAtual());
     }
 
     function renderizar({ data: dados, selectedDate: dataSelecionada, createChart: criarGrafico, colors: cores, ui: interfaceUsuario }) {
@@ -64,7 +64,7 @@
             emptyMessage: `Sem dados de umidade em ${dataSelecionada.replace(/-/g, "/")}.`
         });
 
-        interfaceUsuario.renderTable(ids.tables.room, criarTabela(dadosFiltrados), `Sem registros de temperatura em ${dataSelecionada.replace(/-/g, "/")}.`);
+        interfaceUsuario.renderTable(ids.tables.room, criarTabela(dadosFiltrados, dataSelecionada), `Sem registros de temperatura em ${dataSelecionada.replace(/-/g, "/")}.`);
     }
 
     window.QuartoView = { render: renderizar };

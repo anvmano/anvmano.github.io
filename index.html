@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link href="style.css?v=20261020-1" rel="stylesheet" />
+    <link href="style.css?v=20261023-3" rel="stylesheet" />
     <link rel="preload" href="styles/chat.css?v=20260922-5" as="style" onload="this.onload=null;this.rel='stylesheet'" />
     <noscript><link href="styles/chat.css?v=20260922-5" rel="stylesheet" /></noscript>
 </head>
@@ -182,8 +182,10 @@
 
         <div class="loading-bar" id="loadingBar"></div>
         <div class="container">
+            <p class="sensor-connection-alert" id="sensorConnectionAlert" role="alert" hidden></p>
             <!-- Estação -->
             <div class="tabcontent" id="Tab0" role="tabpanel" aria-labelledby="tabEstacao">
+                <h2 class="station-section-title">Últimas leituras dos sensores</h2>
                 <div class="stats-grid" id="statsEstacao" aria-label="Resumo global da estação">
                     <article class="stats-card station-summary-card station-summary-card--placeholder" aria-hidden="true"></article>
                     <article class="stats-card station-summary-card station-summary-card--placeholder" aria-hidden="true"></article>
@@ -197,6 +199,7 @@
                     <section class="moon-summary" id="moonSummary" aria-label="Fase da lua da data consultada"></section>
                 </div>
                 <section class="environment-insights" id="environmentInsights" aria-label="Recomendações ambientais atuais"></section>
+                <h2 class="station-section-title">Histórico da data selecionada · janela de 24 horas</h2>
                 <div class="charts-grid">
                     <div class="chart-card" id="chart-container-global-temp">
                         <span class="chart-label">Temperatura por Ambiente</span>
@@ -399,17 +402,17 @@
     </script>
 
     <script defer src="scripts/config.js?v=20260922-2"></script>
-    <script defer src="scripts/runtime-loader.js?v=20260923-7"></script>
+    <script defer src="scripts/runtime-loader.js?v=20261023-2"></script>
     <script defer src="scripts/schemas/contracts.js?v=20260922-3"></script>
-    <script defer src="scripts/data/data-utils.js?v=20261023-1"></script>
-    <script defer src="scripts/data/data-quality.js?v=20260816-2"></script>
-    <script defer src="scripts/data/analytics.js?v=20260923-4"></script>
+    <script defer src="scripts/data/data-utils.js?v=20261023-2"></script>
+    <script defer src="scripts/data/data-quality.js?v=20261023-3"></script>
+    <script defer src="scripts/data/analytics.js?v=20261023-2"></script>
     <script defer src="scripts/data/environmental-insights.js?v=20260812-1"></script>
     <script defer src="scripts/charts/solar.js?v=20261023-1"></script>
     <script defer src="scripts/charts/chart-utils.js?v=20261023-1"></script>
     <script defer src="scripts/charts/chart-sync.js?v=20260928-1"></script>
     <script defer src="scripts/charts/rain.js?v=20261022-2"></script>
-    <script defer src="scripts/charts/aqi.js?v=20260623-2"></script>
+    <script defer src="scripts/charts/aqi.js?v=20261023-3"></script>
     <script defer src="scripts/charts/season.js?v=20260622-2"></script>
     <script defer src="scripts/charts/moon.js?v=20260622-6"></script>
     <script defer src="scripts/firebase-service.js?v=20260816-2"></script>
@@ -420,13 +423,13 @@
     <script defer src="scripts/charts/zoom.js?v=20261022-1"></script>
     <script defer src="scripts/reports/pdf-report.js?v=20260816-1"></script>
     <script defer src="scripts/chat.js?v=20260816-2"></script>
-    <script defer src="scripts/views/quarto-view.js?v=20260922-1"></script>
-    <script defer src="scripts/views/aquario-view.js?v=20260922-1"></script>
-    <script defer src="scripts/views/sala-view.js?v=20260922-1"></script>
+    <script defer src="scripts/views/quarto-view.js?v=20261023-2"></script>
+    <script defer src="scripts/views/aquario-view.js?v=20261023-2"></script>
+    <script defer src="scripts/views/sala-view.js?v=20261023-2"></script>
     <script defer src="scripts/views/solar-view.js?v=20260812-1"></script>
-    <script defer src="scripts/views/estacao-view.js?v=20261023-1"></script>
-    <script defer src="scripts/views/public-weather-view.js?v=20261022-1"></script>
-    <script defer src="scripts/main.js?v=20261023-1"></script>
+    <script defer src="scripts/views/estacao-view.js?v=20261023-3"></script>
+    <script defer src="scripts/views/public-weather-view.js?v=20261023-2"></script>
+    <script defer src="scripts/main.js?v=20261023-3"></script>
 </body>
 
 </html>

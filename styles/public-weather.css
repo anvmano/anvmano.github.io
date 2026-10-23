@@ -783,3 +783,15 @@
         min-height: 48px;
     }
 }
+.public-chart-data {
+    margin: 0.75rem 0 1.5rem;
+    color: var(--text-secondary);
+}
+
+.public-chart-data summary { cursor: pointer; }
+.public-chart-data summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.public-chart-data__scroll { overflow-x: auto; margin-top: 0.75rem; }
+.public-chart-data table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.public-chart-data caption { padding: 0.5rem; text-align: left; font-weight: 700; }
+.public-chart-data th,
+.public-chart-data td { padding: 0.45rem 0.65rem; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }

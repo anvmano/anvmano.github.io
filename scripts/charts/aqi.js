@@ -131,15 +131,16 @@
 
         const elementoValor = indicador.querySelector(".aqi-indicator__value");
         const elementoEstado = indicador.querySelector(".aqi-indicator__status");
-        const titulo = `AQI ${resultado.aqi}. AQI estimado da Sala: ${resultado.category.label}. Dominante: ${resultado.dominant.label}.`;
+        const desatualizado = window.ClimateDataQuality?.estaDesatualizada?.(resultado.timestamp) || false;
+        const titulo = `AQI ${resultado.aqi}. AQI estimado da Sala: ${resultado.category.label}. Dominante: ${resultado.dominant.label}.${desatualizado ? " Leitura desatualizada." : ""}`;
 
-        indicador.className = `aqi-indicator aqi-indicator--${resultado.category.className}`;
+        indicador.className = `aqi-indicator aqi-indicator--${desatualizado ? "unknown" : resultado.category.className}`;
         indicador.title = titulo;
         indicador.setAttribute("aria-label", titulo);
-        if (elementoValor) elementoValor.textContent = resultado.aqi;
-        if (elementoEstado) elementoEstado.textContent = resultado.category.label;
+        if (elementoValor) elementoValor.textContent = desatualizado ? "--" : resultado.aqi;
+        if (elementoEstado) elementoEstado.textContent = desatualizado ? "Desatualizado" : resultado.category.label;
 
-        renderizarDetalhes(resultado);
+        renderizarDetalhes(resultado, desatualizado);
     }
 
     function atualizarExterno(dados) {
@@ -278,7 +279,7 @@
         `;
     }
 
-    function renderizarDetalhes(resultado) {
+    function renderizarDetalhes(resultado, desatualizado = false) {
         const principaisPoluentes = resultado.subIndexes.slice(0, 3).map(item => `
             <li>
                 <span>${item.label}</span>
@@ -292,6 +293,7 @@
                 <span>AQI estimado da Sala</span>
                 <strong>${resultado.aqi}</strong>
             </div>
+            ${desatualizado ? '<p class="aqi-popover__text">Leitura desatualizada; confira o horário abaixo.</p>' : ""}
             <div class="aqi-popover__badge aqi-popover__badge--${resultado.category.className}">
                 ${resultado.category.label}
             </div>

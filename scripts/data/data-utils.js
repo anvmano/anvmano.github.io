@@ -173,12 +173,12 @@
         return `${ano}-${mes}-${dia}`;
     }
 
-    function criarTabelas(cabecalhos, dados) {
+    function criarTabelas(cabecalhos, dados, avaliarAtualidade = true) {
         const tabela = document.createElement("table");
         tabela.dataset.exportName = "estacao-climatica";
         const analisesQualidade = Object.fromEntries(cabecalhos.slice(2).map(campo => [
             campo,
-            window.ClimateDataQuality?.analisarSerie?.(dados, campo) || null,
+            window.ClimateDataQuality?.analisarSerie?.(dados, campo, avaliarAtualidade) || null,
         ]));
 
         const linhaCabecalho = tabela.createTHead().insertRow();

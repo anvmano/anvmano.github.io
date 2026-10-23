@@ -302,6 +302,10 @@
                 ${cardCanvas("publicChartRainPrecipitation", "Precipitação · 24h anteriores + próximas 12h", "Precipitação observada e prevista")}
                 ${cardCanvas("publicChartRainProbability", "Chance de chuva · 24h anteriores + próximas 12h", "Probabilidade de chuva")}
             </div>
+            <details class="public-chart-data">
+                <summary>Consultar dados horários dos gráficos em tabela</summary>
+                <div class="public-chart-data__scroll" id="publicHourlyData"></div>
+            </details>
             ${montarSecaoPrevisaoQuinzeDias(dados.previsaoQuinzeDias)}
             <div class="chart-card chart-card--wide" id="public-solar-container">
                 <span class="chart-label">Ciclo Solar do Dia</span>
@@ -330,6 +334,7 @@
         renderizarGraficoLinha("publicChartHumidity", janelaGraficos, "umidade", "Umidade", "%", window.AppConfig.colors.purple);
         renderizarGraficoLinha("publicChartPressure", janelaGraficos, "pressao", "Pressão", "hPa", window.AppConfig.colors.amber);
         renderizarGraficoChuva(dados);
+        renderizarTabelaHoraria(janelaGraficos, dados);
         renderizarPrevisaoQuinzeDias(dados.previsaoQuinzeDias);
         renderizarGraficoSolar(dados.cicloSolar);
         window.ClimateZoom?.registrarCards?.(elementos.publicResults, {
@@ -853,6 +858,45 @@
                 window.ClimateUI.renderChartMessage(`${id}-container`, `Sem dados de ${modo === "precipitacao" ? "precipitação" : "chance de chuva"} para a localização.`);
             }
         });
+    }
+
+    function renderizarTabelaHoraria(janela, dados) {
+        const recipiente = document.getElementById("publicHourlyData");
+        if (!recipiente) return;
+        const linhas = new Map();
+        const adicionar = (horario, valores) => {
+            const instante = new Date(horario).getTime();
+            if (!Number.isFinite(instante)) return;
+            linhas.set(instante, { ...linhas.get(instante), ...valores });
+        };
+        janela.horarios.forEach((horario, indice) => adicionar(horario, {
+            tipo: janela.tipos[indice],
+            temperatura: janela.temperatura[indice],
+            sensacao: janela.sensacaoTermica[indice],
+            umidade: janela.umidade[indice],
+            pressao: janela.pressao[indice],
+        }));
+        const chuva = window.ClimateChuva.montarJanela(dados.previsaoCurtoPrazo, dados.atualizadoEm);
+        chuva.horarios.forEach((horario, indice) => adicionar(horario, {
+            tipo: chuva.tipos[indice] === "observado" ? "medido" : "previsao",
+            precipitacao: chuva.precipitacao[indice],
+        }));
+        chuva.chance.horarios.forEach((horario, indice) => adicionar(horario, {
+            tipo: chuva.chance.tipos[indice] === "observado" ? "medido" : "previsao",
+            probabilidade: chuva.chance.probabilidade[indice],
+        }));
+        const formatar = (valor, unidade) => numeroValido(valor) === null ? "--" : `${numeroValido(valor).toFixed(1)} ${unidade}`;
+        const corpo = [...linhas].sort(([a], [b]) => a - b).map(([instante, linha]) => `
+            <tr><th scope="row">${formatarDataHoraTooltip(instante)}</th><td>${linha.tipo === "previsao" ? "Previsão" : "Medido"}</td>
+                <td>${formatar(linha.temperatura, "°C")}</td><td>${formatar(linha.sensacao, "°C")}</td>
+                <td>${formatar(linha.umidade, "%")}</td><td>${formatar(linha.pressao, "hPa")}</td>
+                <td>${formatar(linha.precipitacao, "mm")}</td><td>${formatar(linha.probabilidade, "%")}</td></tr>
+        `).join("");
+        recipiente.innerHTML = `<table><caption>Dados horários observados e previstos</caption><thead><tr>
+            <th scope="col">Dia e hora</th><th scope="col">Tipo</th><th scope="col">Temperatura</th>
+            <th scope="col">Sensação</th><th scope="col">Umidade</th><th scope="col">Pressão</th>
+            <th scope="col">Precipitação</th><th scope="col">Chance de chuva</th>
+        </tr></thead><tbody>${corpo}</tbody></table>`;
     }
 
     function criarOpcoesGraficoPublico({ janela, unidade }) {

@@ -11,7 +11,7 @@
         };
     }
 
-    function analisarSerie(dados, campo) {
+    function analisarSerie(dados, campo, avaliarAtualidade = true) {
         const leituras = extrairLeituras(dados, campo);
         const configuracao = obterConfiguracao(campo);
         const leiturasEsperadas = calcularLeiturasEsperadas(dados, campo);
@@ -31,7 +31,7 @@
         const limiarCobertura = Number(window.AppConfig?.dataQuality?.minimumCoveragePercent) || 90;
         const incompleta = leiturasValidas > 0 && coberturaPercentual < limiarCobertura;
         const semDados = leiturasValidas === 0;
-        const desatualizada = verificarDesatualizacao(dados, leituras);
+        const desatualizada = avaliarAtualidade && verificarDesatualizacao(leituras);
         const temCritica = [...qualidadePorLeitura.values()].some(item => item.nivel === "critica");
         const temSuspeita = [...qualidadePorLeitura.values()].some(item => item.nivel === "suspeita");
         const ultimaLeitura = leituras.at(-1) || null;
@@ -168,14 +168,17 @@
         avisos.push("Série constante em zero; confirmar se é leitura válida, limite de detecção ou falha do sensor.");
     }
 
-    function verificarDesatualizacao(dados, leituras) {
-        if (!leituras.length || !Object.prototype.hasOwnProperty.call(dados || {}, ClimateData.dataAtual())) return false;
+    function verificarDesatualizacao(leituras) {
+        if (!leituras.length) return false;
         const ultima = leituras[leituras.length - 1];
-        if (ultima.data !== ClimateData.dataAtual()) return true;
-        const ultimaLeituraEm = analisarDataHora(ultima.data, ultima.horario);
-        if (!ultimaLeituraEm) return true;
+        return estaDesatualizada(analisarDataHora(ultima.data, ultima.horario));
+    }
+
+    function estaDesatualizada(ultimaLeituraEm) {
+        const instante = Number(ultimaLeituraEm);
+        if (!ultimaLeituraEm || !Number.isFinite(instante)) return true;
         const limiteMinutos = Number(window.AppConfig?.dataQuality?.staleAfterMinutes) || 150;
-        return Date.now() - ultimaLeituraEm.getTime() > limiteMinutos * 60 * 1000;
+        return Date.now() - instante > limiteMinutos * 60 * 1000;
     }
 
     function analisarDataHora(dados, horario) {
@@ -273,6 +276,7 @@
 
     window.ClimateDataQuality = {
         analisarSerie,
+        estaDesatualizada,
         obterQualidadeLeitura,
         resumirParaExportacao,
         aplicarAoGrafico,

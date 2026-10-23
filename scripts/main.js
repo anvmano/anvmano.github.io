@@ -81,6 +81,18 @@ let firebaseProgressivoAgendado = false;
 let canceladoresFirebase = [];
 let geracaoFirebase = 0;
 let renderEstacaoAgendado = null;
+const falhasFirebase = new Set();
+
+function atualizarAvisoConexao(nome, falhou) {
+    if (falhou) falhasFirebase.add(nome);
+    else falhasFirebase.delete(nome);
+    const aviso = document.getElementById("sensorConnectionAlert");
+    if (!aviso) return;
+    aviso.hidden = falhasFirebase.size === 0;
+    aviso.textContent = falhasFirebase.size
+        ? `Falha ao atualizar ${[...falhasFirebase].join(", ")}. Últimas leituras podem estar desatualizadas; confira o horário em cada card.`
+        : "";
+}
 
 if (window.Chart) ClimateCharts.registerComfortBand();
 
@@ -418,7 +430,13 @@ function configurarIndicadorAstronomico() {
 
     atualizarIndicadorAstronomico();
     if (temporizadorIndicadorAstronomico) clearInterval(temporizadorIndicadorAstronomico);
-    temporizadorIndicadorAstronomico = setInterval(atualizarIndicadorAstronomico, 60000);
+    temporizadorIndicadorAstronomico = setInterval(() => {
+        atualizarIndicadorAstronomico();
+        if (!modoPublicoAtivo && dashboardInternoInicializado) {
+            EstacaoView.renderSummary(dadosMaisRecentes, dataSelecionada);
+            ClimateAqi.update(dadosMaisRecentes.livingRoom);
+        }
+    }, 60000);
 }
 
 function alternarDetalhesAstronomicos() {
@@ -499,6 +517,7 @@ async function configurarEscutasFirebase() {
     if (modoPublicoAtivo || geracaoAtual !== geracaoFirebase || canceladoresFirebase.length) return;
 
     registrarListenerFirebase(FirebaseService.listenToPath(CAMINHOS_FIREBASE.room, dados => {
+        atualizarAvisoConexao("Quarto", false);
         dadosMaisRecentes.room = dados;
         if (!dados) {
             ClimateUI.renderEmptyState(IDS.tables.room, "Sem dados de temperatura.");
@@ -507,9 +526,13 @@ async function configurarEscutasFirebase() {
         }
         if (ClimateUI.getActiveTabName() === "Tab2") renderizarDadosQuarto(dados);
         agendarRenderizacaoEstacao();
-    }, () => ClimateUI.renderEmptyState(IDS.tables.room, "Falha ao carregar dados de temperatura.", "error")));
+    }, () => {
+        atualizarAvisoConexao("Quarto", true);
+        ClimateUI.renderEmptyState(IDS.tables.room, "Falha ao carregar dados de temperatura.", "error");
+    }));
 
     registrarListenerFirebase(FirebaseService.listenToPath(CAMINHOS_FIREBASE.solar, dados => {
+        atualizarAvisoConexao("dados solares", false);
         dadosMaisRecentes.solar = dados;
         if (!dados) {
             const dataFormatada = dataSelecionada.replace(/-/g, "/");
@@ -522,6 +545,7 @@ async function configurarEscutasFirebase() {
         agendarRenderizacaoEstacao();
         atualizarIndicadorAstronomico();
     }, () => {
+        atualizarAvisoConexao("dados solares", true);
         ClimateUI.renderChartMessage(IDS.chartContainers.sunHistory, "Falha ao carregar dados solares.", "error");
         ClimateUI.renderChartMessage(IDS.chartContainers.solarToday, "Falha ao carregar ciclo solar.", "error");
         agendarRenderizacaoEstacao();
@@ -529,6 +553,7 @@ async function configurarEscutasFirebase() {
     }));
 
     registrarListenerFirebase(FirebaseService.listenToPath(CAMINHOS_FIREBASE.aquarium, dados => {
+        atualizarAvisoConexao("Aquário", false);
         dadosMaisRecentes.aquarium = dados;
         if (!dados) {
             ClimateUI.renderEmptyState(IDS.tables.aquarium, "Sem dados do aquário.");
@@ -537,9 +562,13 @@ async function configurarEscutasFirebase() {
         }
         if (ClimateUI.getActiveTabName() === "Tab3") renderizarDadosAquario(dados);
         agendarRenderizacaoEstacao();
-    }, () => ClimateUI.renderEmptyState(IDS.tables.aquarium, "Falha ao carregar dados do aquário.", "error")));
+    }, () => {
+        atualizarAvisoConexao("Aquário", true);
+        ClimateUI.renderEmptyState(IDS.tables.aquarium, "Falha ao carregar dados do aquário.", "error");
+    }));
 
     registrarListenerFirebase(FirebaseService.listenToPath(CAMINHOS_FIREBASE.livingRoom, dados => {
+        atualizarAvisoConexao("Sala", false);
         dadosMaisRecentes.livingRoom = dados;
         if (!dados) {
             ClimateAqi.update(null);
@@ -550,7 +579,10 @@ async function configurarEscutasFirebase() {
         ClimateAqi.update(dados);
         if (ClimateUI.getActiveTabName() === "Tab1") renderizarDadosSala(dados);
         agendarRenderizacaoEstacao();
-    }, () => ClimateUI.renderEmptyState(IDS.tables.livingRoom, "Falha ao carregar dados da sala.", "error")));
+    }, () => {
+        atualizarAvisoConexao("Sala", true);
+        ClimateUI.renderEmptyState(IDS.tables.livingRoom, "Falha ao carregar dados da sala.", "error");
+    }));
 }
 
 function iniciarFirebaseProgressivo() {
@@ -575,6 +607,8 @@ function registrarListenerFirebase(cancelador) {
 
 function pararFirebaseInterno() {
     geracaoFirebase++;
+    falhasFirebase.clear();
+    atualizarAvisoConexao("", false);
     if (renderEstacaoAgendado !== null) cancelAnimationFrame(renderEstacaoAgendado);
     renderEstacaoAgendado = null;
     canceladoresFirebase.forEach(cancelador => {

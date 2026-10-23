@@ -8,7 +8,7 @@
     const graficoTds = document.getElementById(ids.charts.aquariumTds).getContext("2d");
     const graficoTurbidez = document.getElementById(ids.charts.aquariumTurbidity).getContext("2d");
 
-    function criarTabela(dados) {
+    function criarTabela(dados, dataSelecionada) {
         return ClimateData.createTables([
             camposAquario.date,
             camposAquario.time,
@@ -16,7 +16,7 @@
             camposAquario.ph,
             camposAquario.tds,
             camposAquario.turbidity,
-        ], dados);
+        ], dados, dataSelecionada === ClimateData.dataAtual());
     }
 
     function renderizar({ data: dados, selectedDate: dataSelecionada, createChart: criarGrafico, colors: cores, ui: interfaceUsuario }) {
@@ -72,7 +72,7 @@
             emptyMessage: `Sem dados de turbidez em ${dataSelecionada.replace(/-/g, "/")}.`
         });
 
-        interfaceUsuario.renderTable(ids.tables.aquarium, criarTabela(dadosFiltrados), `Sem registros do aquário em ${dataSelecionada.replace(/-/g, "/")}.`);
+        interfaceUsuario.renderTable(ids.tables.aquarium, criarTabela(dadosFiltrados, dataSelecionada), `Sem registros do aquário em ${dataSelecionada.replace(/-/g, "/")}.`);
     }
 
     window.AquarioView = { render: renderizar };

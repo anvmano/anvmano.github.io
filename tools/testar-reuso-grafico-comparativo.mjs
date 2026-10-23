@@ -91,14 +91,25 @@ contexto.__renderizarGraficoComparativo({
 assert.equal(chartInstances.comparativoTemperatura, primeiro);
 assert.equal(instanciasCriadas.length, 1, "Atualização não deve criar outro Chart.");
 assert.equal(primeiro.destruicoes, 0, "Atualização não deve destruir Chart existente.");
-assert.equal(JSON.stringify(primeiro.data.labels), JSON.stringify(["10:00", "10:05"]));
+assert.equal(JSON.stringify(primeiro.data.labels), JSON.stringify(["22/10 10:00", "10:05"]));
 assert.equal(JSON.stringify(primeiro.data.datasets.map(serie => serie.data)), JSON.stringify([[21, 22], [null, 24]]));
 assert.equal(JSON.stringify(primeiro.$chavesSincronizacao), JSON.stringify(["2026-10-22T10:00", "2026-10-22T10:05"]));
 assert.equal(primeiro.$comparisonTitle, "Temperatura");
 assert.equal(primeiro.options.plugins.tooltip.callbacks.label({ parsed: { y: 24 }, dataset: { label: "Quarto" } }), "Quarto: 24.00°");
+assert.equal(primeiro.options.plugins.tooltip.callbacks.title([{ dataIndex: 1 }]), "22/10 10:05");
 assert.equal(primeiro.atualizacoes.at(-1), "none");
 assert.equal(sincronizacao.at(-2)[0], "desregistrar");
 assert.equal(sincronizacao.at(-1)[0], "registrar");
+
+contexto.__renderizarGraficoComparativo({
+    ...opcoes,
+    series: [{ nome: "Sala", cor: "#f00", campo: "temperatura", data: {
+        "22-10-2026": { "23-00": { a: { temperatura: 21 } } },
+        "23-10-2026": { "00-00": { a: { temperatura: 22 } } },
+    } }],
+});
+assert.equal(JSON.stringify(primeiro.data.labels), JSON.stringify(["22/10 23:00", "23/10 00:00"]));
+assert.equal(primeiro.options.plugins.tooltip.callbacks.title([{ dataIndex: 1 }]), "23/10 00:00");
 
 contexto.__renderizarGraficoComparativo({ ...opcoes, series: [serie("Sala", "#f00", [])] });
 assert.equal(primeiro.destruicoes, 1);

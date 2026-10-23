@@ -361,21 +361,21 @@
             };
         }
 
+        const desatualizado = window.ClimateDataQuality?.estaDesatualizada?.(resultado.timestamp) || false;
+
         return {
             titulo: "AQI estimado",
             valor: String(resultado.aqi),
-            detalhePrincipal: resultado.category.label,
+            detalhePrincipal: desatualizado ? `${resultado.category.label} · Desatualizado` : resultado.category.label,
             detalheSecundario: `Dominante: ${resultado.dominant.label} · Última leitura: ${new Date(resultado.timestamp).toLocaleString("pt-BR")}`,
-            tendencia: resultado.category.label,
-            classe: resultado.category.className === "good" ? "stable" : "down",
+            tendencia: desatualizado ? "Desatualizado" : resultado.category.label,
+            classe: desatualizado || resultado.category.className !== "good" ? "down" : "stable",
             temValor: true,
         };
     }
 
     function montarCardUltimaMedicao(titulo, dados, campo, unidade) {
         const registro = obterUltimoRegistro(dados, campo);
-        const dadosHoje = ClimateData.filterDataByDays(dados || {}, 1, ClimateData.dataAtual());
-        const qualidade = window.ClimateDataQuality?.analisarSerie?.(dadosHoje, campo) || null;
         if (!registro) {
             return {
                 titulo,
@@ -387,6 +387,9 @@
                 temValor: false,
             };
         }
+
+        const dadosUltimoDia = ClimateData.filterDataByDays(dados || {}, 1, registro.data);
+        const qualidade = window.ClimateDataQuality?.analisarSerie?.(dadosUltimoDia, campo) || null;
 
         return {
             titulo,
@@ -529,7 +532,11 @@
         }
 
         interfaceUsuario.clearChartMessage(idRecipiente);
-        const rotulos = chaves.map(chave => chave.slice(11));
+        const rotulos = chaves.map((chave, indice) => (
+            indice === 0 || chave.slice(0, 10) !== chaves[indice - 1].slice(0, 10)
+                ? `${chave.slice(8, 10)}/${chave.slice(5, 7)} ${chave.slice(11)}`
+                : chave.slice(11)
+        ));
         const opcoes = ClimateCharts.mergeDeep(padroes, {
             plugins: {
                 legend: {
@@ -545,6 +552,10 @@
                         return valorB - valorA;
                     },
                     callbacks: {
+                        title: itens => {
+                            const chave = chaves[itens[0]?.dataIndex];
+                            return chave ? `${chave.slice(8, 10)}/${chave.slice(5, 7)} ${chave.slice(11)}` : "--";
+                        },
                         label: contexto => {
                             const valor = Number(contexto.parsed.y);
                             const formatado = Number.isFinite(valor) ? valor.toFixed(2) : "--";
@@ -698,6 +709,7 @@
 
     window.EstacaoView = {
         render: renderizar,
+        renderSummary: renderizarResumoGlobal,
         obterDadosExternosAtuais: () => dadosExternosAtuais,
     };
 })();

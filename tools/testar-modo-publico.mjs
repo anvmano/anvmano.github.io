@@ -193,6 +193,24 @@ verificar.equal(janela.horarios[janela.indiceAgora], "2026-08-16T16:00");
 verificar.equal(janela.horarios[janela.indiceAgora + 1], "2026-08-16T17:00");
 verificar.equal(janela.horarios.at(-1), "2026-08-17T04:00");
 
+let tabelaHoraria = "";
+const contextoTabela = { Date, document: { getElementById: () => ({ set innerHTML(valor) { tabelaHoraria = valor; } }) } };
+contextoTabela.window = contextoTabela;
+contextoTabela.ClimateChuva = { montarJanela: () => ({
+    horarios: ["2026-08-16T17:00"], tipos: ["previsao"], precipitacao: [1.2],
+    chance: { horarios: ["2026-08-16T17:00"], tipos: ["previsao"], probabilidade: [60] },
+}) };
+maquinaVirtual.runInNewContext(visualizacao.replace("window.PublicWeatherView = {", "window.PublicWeatherView = { renderizarTabelaHoraria,"), contextoTabela);
+contextoTabela.PublicWeatherView.renderizarTabelaHoraria({
+    horarios: ["2026-08-16T16:00"], tipos: ["medido"],
+    temperatura: [20], sensacaoTermica: [21], umidade: [58], pressao: [1025],
+}, { previsaoCurtoPrazo: [], atualizadoEm: new Date() });
+verificar.match(tabelaHoraria, /<th scope="row">16\/08 16:00<\/th><td>Medido<\/td>/);
+verificar.match(tabelaHoraria, /<th scope="row">16\/08 17:00<\/th><td>Previsão<\/td>/);
+verificar.match(tabelaHoraria, /20\.0 °C/);
+verificar.match(tabelaHoraria, /1\.2 mm/);
+verificar.match(tabelaHoraria, /60\.0 %/);
+
 // Simula duas respostas em ordem invertida usando o mesmo contrato de sequência da view.
 let sequencia = 0;
 let resultadoRenderizado = null;

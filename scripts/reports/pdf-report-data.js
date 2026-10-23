@@ -34,7 +34,7 @@
         const metricas = obterTodasMetricasRelatorio(configuracaoAba);
         const qualidades = Object.fromEntries(metricas.map(metrica => [
             metrica.key,
-            window.ClimateDataQuality?.analisarSerie?.(dadosSelecionados, campos[metrica.key]) || null,
+            window.ClimateDataQuality?.analisarSerie?.(dadosSelecionados, campos[metrica.key], dataSelecionada === ClimateData.dataAtual()) || null,
         ]));
         const linhasDetalhadas = extrairLinhasRelatorio(dadosSelecionados, metricas, campos, qualidades);
         const linhasNormalizadas = construirLinhasNormalizadas(linhasDetalhadas, metricas);

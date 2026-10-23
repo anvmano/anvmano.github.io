@@ -156,6 +156,13 @@
     min-width: 0;
 }
 
+.station-section-title {
+    margin: 1.25rem 0 0.75rem;
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
 .station-summary-card--placeholder {
     min-height: 118px;
     background:

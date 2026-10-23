@@ -49,7 +49,7 @@
         }
 
         configuracao.metrics.forEach(metrica => {
-            const qualidade = window.ClimateDataQuality?.analisarSerie?.(dados, metrica.key) || null;
+            const qualidade = window.ClimateDataQuality?.analisarSerie?.(dados, metrica.key, dataSelecionada === window.ClimateData.dataAtual()) || null;
             const valores = qualidade?.valores || extrairValoresMetrica(dados, metrica.key);
             const estatisticas = calcularEstatisticas(valores, qualidade);
             const card = criarCardEstatisticas(metrica, estatisticas, qualidade);

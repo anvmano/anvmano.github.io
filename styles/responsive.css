@@ -16,7 +16,7 @@
 
     .header-status {
         --header-status-chip-width: auto;
-        --header-status-chip-height: 44px;
+        --header-status-chip-height: 56px;
         width: 100%;
         flex: 1 1 auto;
         justify-content: space-between;
@@ -134,14 +134,33 @@
     .astro-indicator__track {
         left: 10px;
         right: 10px;
-        bottom: 4px;
+        bottom: 14px;
         height: 28px;
     }
 
     .astro-indicator__orb {
         width: 13px;
         height: 13px;
+        bottom: calc(var(--astro-y) + 10px);
     }
+
+    .season-indicator::after,
+    .astro-indicator::after,
+    .moon-indicator::after {
+        position: absolute;
+        right: 0;
+        bottom: 1px;
+        left: 0;
+        color: var(--text-primary);
+        font-size: 0.72rem;
+        font-weight: 700;
+        line-height: 1.1;
+        text-align: center;
+    }
+
+    .season-indicator::after { content: "Estação"; }
+    .astro-indicator::after { content: "Sol"; }
+    .moon-indicator::after { content: "Lua"; }
 
     .header-time {
         display: none;

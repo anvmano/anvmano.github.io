@@ -30,6 +30,7 @@ contexto.ClimateData = {
         return numero;
     },
 };
+contexto.AppConfig.dataQuality.staleAfterMinutes = 150;
 contexto.document = {};
 maquinaVirtual.createContext(contexto);
 
@@ -56,11 +57,23 @@ for (let hora = 0; hora < 24; hora += 1) {
 const temperatura = contexto.ClimateDataQuality.analisarSerie(dados, "temperaturaDS18B20");
 verificar.equal(temperatura.leiturasValidas, 1);
 verificar.equal(temperatura.leiturasEsperadas, 24);
-verificar.equal(temperatura.nivel, "incompleta");
-verificar.equal(temperatura.estado, "parcial");
-verificar.equal(temperatura.rotuloEstado, "Parcial");
+verificar.equal(temperatura.nivel, "desatualizada");
+verificar.equal(temperatura.estado, "desatualizado");
+verificar.equal(temperatura.rotuloEstado, "Desatualizado");
 verificar.equal(temperatura.ultimaLeitura.horario, "00-00");
 verificar.match(temperatura.avisos.join(" "), /1\/24 leituras/);
+verificar.match(temperatura.avisos.join(" "), /sem leitura recente/i);
+verificar.equal(contexto.ClimateDataQuality.analisarSerie(dados, "temperaturaDS18B20", false).estado, "parcial");
+
+const serieCompletaAntiga = { "20-10-2026": Object.fromEntries(Array.from({ length: 24 }, (_, hora) => [
+    `${String(hora).padStart(2, "0")}-00`, { registro: { temperaturaDS18B20: 20 + hora / 10 } },
+])) };
+const qualidadeAntiga = contexto.ClimateDataQuality.analisarSerie(serieCompletaAntiga, "temperaturaDS18B20");
+verificar.equal(qualidadeAntiga.leiturasValidas, 24);
+verificar.equal(qualidadeAntiga.estado, "desatualizado");
+verificar.equal(contexto.ClimateDataQuality.analisarSerie(serieCompletaAntiga, "temperaturaDS18B20", false).estado, "ok");
+verificar.equal(contexto.ClimateDataQuality.estaDesatualizada(Date.now() - 151 * 60 * 1000), true);
+verificar.equal(contexto.ClimateDataQuality.estaDesatualizada(Date.now()), false);
 
 const estatisticaUnica = contexto.ClimateAnalytics.calculateStats(temperatura.valores, temperatura);
 verificar.equal(estatisticaUnica.delta, null);

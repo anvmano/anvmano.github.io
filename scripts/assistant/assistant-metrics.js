@@ -219,7 +219,7 @@
             records: registros,
             stats: calcularEstatisticas(valores),
             qualidade: window.ClimateDataQuality?.resumirParaExportacao?.(
-                window.ClimateDataQuality?.analisarSerie?.({ [dataReferencia]: dadosDia }, metrica.key)
+                window.ClimateDataQuality?.analisarSerie?.({ [dataReferencia]: dadosDia }, metrica.key, dataReferencia === window.ClimateData.dataAtual())
             ) || null,
         };
     }

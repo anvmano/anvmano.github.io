@@ -8,7 +8,7 @@
     const graficoUmidade = document.getElementById(ids.charts.livingRoomHumidity).getContext("2d");
     const graficoPressao = document.getElementById(ids.charts.livingRoomPressure).getContext("2d");
 
-    function criarTabela(dados) {
+    function criarTabela(dados, dataSelecionada) {
         return ClimateData.createTables([
             camposSala.date,
             camposSala.time,
@@ -18,7 +18,7 @@
             camposSala.alcohol,
             camposSala.nh4,
             camposSala.toluene,
-        ], dados);
+        ], dados, dataSelecionada === ClimateData.dataAtual());
     }
 
     function renderizar({ data: dados, selectedDate: dataSelecionada, createChart: criarGrafico, colors: cores, ui: interfaceUsuario }) {
@@ -80,7 +80,7 @@
             emptyMessage: `Sem dados de pressão em ${dataSelecionada.replace(/-/g, "/")}.`
         });
 
-        interfaceUsuario.renderTable(ids.tables.livingRoom, criarTabela(dadosFiltrados), `Sem registros da sala em ${dataSelecionada.replace(/-/g, "/")}.`);
+        interfaceUsuario.renderTable(ids.tables.livingRoom, criarTabela(dadosFiltrados, dataSelecionada), `Sem registros da sala em ${dataSelecionada.replace(/-/g, "/")}.`);
     }
 
     window.SalaView = { render: renderizar };
