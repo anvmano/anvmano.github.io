@@ -206,26 +206,31 @@
         const datasFormatadas = datas.map(d => d.replace(/-/g, "/"));
         const remapear = (listaValores, i1, i2, o1, o2) => listaValores.map(t => ClimateData.mapRange(t, i1, i2, o1, o2));
 
-        if (graficoExistente) graficoExistente.destroy();
+        const graficoAtivo = graficoExistente?.canvas === contextoDesenho.canvas ? graficoExistente : null;
 
         if (!datas.length) {
+            graficoAtivo?.destroy();
             if (aoEstarVazio) aoEstarVazio();
             return null;
         }
 
-        return new Chart(contextoDesenho, {
-            type: "line",
-            data: {
-                labels: datasFormatadas,
-                datasets: [
-                    { label: "Amanhecer",     yAxisID: "yLeft",  data: remapear(horariosAmanhecer,14400,25200,4,7),  borderColor: "#fde68a", backgroundColor: "transparent", tension: 0.4, borderWidth: 2, pointRadius: 0, pointHitRadius: 18, pointHoverRadius: 6, order: 1 },
-                    { label: "Nascer do sol", yAxisID: "yLeft",  data: remapear(horariosNascer,  14400,25200,4,7),  borderColor: "#fb923c", backgroundColor: "transparent", tension: 0.4, borderWidth: 2, pointRadius: 0, pointHitRadius: 18, pointHoverRadius: 6, order: 2 },
-                    { label: "Pôr do sol",    yAxisID: "yRight", data: remapear(horariosPor,   61200,75600,17,21), borderColor: "#f87171", backgroundColor: "transparent", tension: 0.4, borderWidth: 2, pointRadius: 0, pointHitRadius: 18, pointHoverRadius: 6, order: 3 },
-                    { label: "Anoitecer",     yAxisID: "yRight", data: remapear(horariosAnoitecer,61200,75600,17,21), borderColor: "#818cf8", backgroundColor: "transparent", tension: 0.4, borderWidth: 2, pointRadius: 0, pointHitRadius: 18, pointHoverRadius: 6, order: 4 }
-                ]
-            },
-            options: obterOpcoesHistoricoSolar({ defaults: padroes, colors: cores })
-        });
+        const dadosAtualizados = {
+            labels: datasFormatadas,
+            datasets: [
+                { label: "Amanhecer",     yAxisID: "yLeft",  data: remapear(horariosAmanhecer,14400,25200,4,7),  borderColor: "#fde68a", backgroundColor: "transparent", tension: 0.4, borderWidth: 2, pointRadius: 0, pointHitRadius: 18, pointHoverRadius: 6, order: 1 },
+                { label: "Nascer do sol", yAxisID: "yLeft",  data: remapear(horariosNascer,  14400,25200,4,7),  borderColor: "#fb923c", backgroundColor: "transparent", tension: 0.4, borderWidth: 2, pointRadius: 0, pointHitRadius: 18, pointHoverRadius: 6, order: 2 },
+                { label: "Pôr do sol",    yAxisID: "yRight", data: remapear(horariosPor,   61200,75600,17,21), borderColor: "#f87171", backgroundColor: "transparent", tension: 0.4, borderWidth: 2, pointRadius: 0, pointHitRadius: 18, pointHoverRadius: 6, order: 3 },
+                { label: "Anoitecer",     yAxisID: "yRight", data: remapear(horariosAnoitecer,61200,75600,17,21), borderColor: "#818cf8", backgroundColor: "transparent", tension: 0.4, borderWidth: 2, pointRadius: 0, pointHitRadius: 18, pointHoverRadius: 6, order: 4 }
+            ]
+        };
+        const opcoes = obterOpcoesHistoricoSolar({ defaults: padroes, colors: cores });
+        if (graficoAtivo) {
+            graficoAtivo.data = dadosAtualizados;
+            graficoAtivo.options = opcoes;
+            graficoAtivo.update("none");
+            return graficoAtivo;
+        }
+        return new Chart(contextoDesenho, { type: "line", data: dadosAtualizados, options: opcoes });
     }
 
     const pluginFundoDiaSolar = {
@@ -380,9 +385,10 @@
 
     function criarGraficoSolarDia({ data: dados, selectedDate: dataSelecionada, ctx: contextoDesenho, existingChart: graficoExistente, defaults: padroes, colors: cores, onEmpty: aoEstarVazio }) {
         const eventos = obterEventosSolaresDataSelecionada(dados, dataSelecionada);
-        if (graficoExistente) graficoExistente.destroy();
+        const graficoAtivo = graficoExistente?.canvas === contextoDesenho.canvas ? graficoExistente : null;
 
         if (!eventos) {
+            graficoAtivo?.destroy();
             if (aoEstarVazio) aoEstarVazio();
             return null;
         }
@@ -404,7 +410,7 @@
             pontosLuzDiurna[5]
         ];
 
-        const grafico = new Chart(contextoDesenho, {
+        const configuracao = {
             type: "line",
             data: {
                 datasets: [
@@ -435,9 +441,15 @@
             },
             options: obterOpcoesSolarDia({ defaults: padroes, colors: cores }),
             plugins: [pluginFundoDiaSolar]
-        });
+        };
+        const grafico = graficoAtivo || new Chart(contextoDesenho, configuracao);
 
+        if (graficoAtivo) {
+            grafico.data = configuracao.data;
+            grafico.options = configuracao.options;
+        }
         grafico.$solarDayTimes = eventos;
+        if (graficoAtivo) grafico.update("none");
         return grafico;
     }
 

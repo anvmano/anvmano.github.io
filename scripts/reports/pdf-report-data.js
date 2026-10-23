@@ -339,6 +339,7 @@
     }
 
     function obterUltimoRegistroEstacao(dados, campo) {
+        const agora = new Date();
         let ultimo = null;
 
         for (const dataFirebase of Object.keys(dados || {})) {
@@ -348,6 +349,7 @@
             for (const horario of Object.keys(dadosData)) {
                 const valores = obterValoresDoHorarioEstacao(dadosData[horario], campo);
                 if (!valores.length) continue;
+                if (!ClimateData.isValidPastReading(dataFirebase, horario, agora)) continue;
 
                 const chave = `${formatarDataOrdenavelEstacao(dataFirebase)} ${formatarHorarioEstacao(horario)}`;
                 const valor = valores[valores.length - 1];

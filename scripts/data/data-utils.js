@@ -99,8 +99,17 @@
         const { inicio: inicioJanela, fim: fimJanela } = janela;
 
         const filtrado = {};
+        // Datas e horários inválidos podem ser normalizados para o dia vizinho pelo Date.
+        const inicioCandidato = new Date(inicioJanela.getFullYear(), inicioJanela.getMonth(), inicioJanela.getDate() - 1);
+        const fimCandidato = new Date(fimJanela.getFullYear(), fimJanela.getMonth(), fimJanela.getDate() + 2);
+        const janelaValida = !Number.isNaN(inicioJanela.getTime()) && !Number.isNaN(fimJanela.getTime());
+        const datasCandidatas = Object.keys(dados || {}).filter(data => {
+            if (!janelaValida) return true;
+            const inicioData = interpretarDataFirebase(data);
+            return inicioData >= inicioCandidato && inicioData < fimCandidato;
+        });
 
-        for (const dataReferencia of Object.keys(dados || {}).sort((a, b) => interpretarDataFirebase(a) - interpretarDataFirebase(b))) {
+        for (const dataReferencia of datasCandidatas.sort((a, b) => interpretarDataFirebase(a) - interpretarDataFirebase(b))) {
             const dadosData = dados[dataReferencia];
             if (!dadosData || typeof dadosData !== "object") continue;
 
@@ -127,6 +136,20 @@
         if (hora < 0 || hora > 23 || minuto < 0 || minuto > 59) return null;
 
         return new Date(partesData.year, partesData.month - 1, partesData.day, hora, minuto, 0, 0);
+    }
+
+    function leituraNoPassadoValido(dataReferencia, horario, agora = new Date()) {
+        if (!/^\d{1,2}-\d{1,2}-\d{4}$/.test(String(dataReferencia))) return false;
+        const partes = interpretarPartesDataFirebase(dataReferencia);
+        const instante = interpretarDataHoraFirebase(dataReferencia, horario);
+        if (!partes || !instante) return false;
+        const [hora, minuto = 0] = String(horario || "").split("-").map(Number);
+        return instante.getFullYear() === partes.year
+            && instante.getMonth() === partes.month - 1
+            && instante.getDate() === partes.day
+            && instante.getHours() === hora
+            && instante.getMinutes() === minuto
+            && instante <= agora;
     }
 
     function interpretarPartesDataFirebase(dataReferencia) {
@@ -284,6 +307,7 @@
         dataAtual,
         parseFirebaseDate: interpretarDataFirebase,
         parseFirebaseDateTime: interpretarDataHoraFirebase,
+        isValidPastReading: leituraNoPassadoValido,
         filterDataByDays: filtrarDadosPorDias,
         filterDataByRollingHours: filtrarDadosPorJanelaHoras,
         getRollingWindow: obterJanelaHoras,

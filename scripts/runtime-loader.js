@@ -29,7 +29,7 @@
     const MODULOS_RELATORIO = [
         "scripts/reports/pdf-report-config.js?v=20260612-1",
         "scripts/reports/pdf-report-format.js?v=20260612-1",
-        "scripts/reports/pdf-report-data.js?v=20260922-3",
+        "scripts/reports/pdf-report-data.js?v=20261023-1",
         "scripts/reports/pdf-report-dom.js?v=20260923-6",
         "scripts/reports/pdf-report-charts.js?v=20260922-3",
         "scripts/reports/pdf-report-pdf.js?v=20260923-6",

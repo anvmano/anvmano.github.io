@@ -502,10 +502,7 @@
     }) {
         const id = contextoCanvas.canvas.id;
         window.ClimateUI.renderRollingPeriod(idRecipiente, dataSelecionada);
-        if (instanciasGraficos[id]) {
-            window.ClimateChartSync?.desregistrar(instanciasGraficos[id]);
-            instanciasGraficos[id].destroy();
-        }
+        const graficoExistente = instanciasGraficos[id];
 
         const seriesNormalizadas = seriesDados.map(serie => ({
             ...serie,
@@ -515,6 +512,10 @@
         const temDados = seriesNormalizadas.some(serie => serie.pontos.length);
 
         if (!temDados) {
+            if (graficoExistente) {
+                window.ClimateChartSync?.desregistrar(graficoExistente);
+                graficoExistente.destroy();
+            }
             delete instanciasGraficos[id];
             contextoCanvas.clearRect(0, 0, contextoCanvas.canvas.width, contextoCanvas.canvas.height);
             interfaceUsuario.renderChartMessage(idRecipiente, mensagemVazia);
@@ -567,31 +568,39 @@
             },
         });
 
-        instanciasGraficos[id] = new Chart(contextoCanvas, {
+        const dadosAtualizados = {
+            labels: rotulos,
+            datasets: seriesNormalizadas.map(serie => {
+                const mapa = new Map(serie.pontos.map(ponto => [ponto.chave, ponto.valor]));
+                return {
+                    label: serie.nome,
+                    data: chaves.map(chave => mapa.get(chave) ?? null),
+                    borderColor: serie.cor,
+                    backgroundColor: `${serie.cor}22`,
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.35,
+                    pointRadius: 0,
+                    pointHitRadius: 18,
+                    pointHoverRadius: 5,
+                };
+            }),
+        };
+        const grafico = graficoExistente || new Chart(contextoCanvas, {
             type: "line",
-            data: {
-                labels: rotulos,
-                datasets: seriesNormalizadas.map(serie => {
-                    const mapa = new Map(serie.pontos.map(ponto => [ponto.chave, ponto.valor]));
-                    return {
-                        label: serie.nome,
-                        data: chaves.map(chave => mapa.get(chave) ?? null),
-                        borderColor: serie.cor,
-                        backgroundColor: `${serie.cor}22`,
-                        borderWidth: 2,
-                        fill: false,
-                        tension: 0.35,
-                        pointRadius: 0,
-                        pointHitRadius: 18,
-                        pointHoverRadius: 5,
-                    };
-                }),
-            },
+            data: dadosAtualizados,
             options: opcoes,
         });
-        instanciasGraficos[id].$comparisonTitle = titulo;
-        instanciasGraficos[id].$chavesSincronizacao = chaves.map(chave => chave.replace(" ", "T"));
-        window.ClimateChartSync?.registrar(instanciasGraficos[id], "estacao");
+        if (graficoExistente) {
+            window.ClimateChartSync?.desregistrar(grafico);
+            grafico.data = dadosAtualizados;
+            grafico.options = opcoes;
+            grafico.update("none");
+        }
+        grafico.$comparisonTitle = titulo;
+        grafico.$chavesSincronizacao = chaves.map(chave => chave.replace(" ", "T"));
+        window.ClimateChartSync?.registrar(grafico, "estacao");
+        instanciasGraficos[id] = grafico;
     }
 
     function extrairPontosSerie(dados, dataSelecionada, campo) {
@@ -615,17 +624,27 @@
     }
 
     function obterUltimoRegistro(dados, campo) {
+        const agora = new Date();
+        const datas = Object.keys(dados || {}).sort((a, b) => {
+            const chaveA = formatarDataOrdenavel(a);
+            const chaveB = formatarDataOrdenavel(b);
+            return chaveA < chaveB ? 1 : chaveA > chaveB ? -1 : 0;
+        });
         let ultimo = null;
+        let ultimaData = null;
 
-        for (const dataFirebase of Object.keys(dados || {})) {
+        for (const dataFirebase of datas) {
+            const dataOrdenavel = formatarDataOrdenavel(dataFirebase);
+            if (ultimo && dataOrdenavel !== ultimaData) break;
             const dadosData = dados[dataFirebase];
             if (!dadosData || typeof dadosData !== "object") continue;
 
             for (const horario of Object.keys(dadosData)) {
                 const valores = obterValoresDoHorario(dadosData[horario], campo);
                 if (!valores.length) continue;
+                if (!ClimateData.isValidPastReading(dataFirebase, horario, agora)) continue;
 
-                const chave = `${formatarDataOrdenavel(dataFirebase)} ${formatarHorario(horario)}`;
+                const chave = `${dataOrdenavel} ${formatarHorario(horario)}`;
                 const valor = valores[valores.length - 1];
                 if (!ultimo || chave > ultimo.chave) {
                     ultimo = {
@@ -634,6 +653,7 @@
                         data: dataFirebase,
                         horario: formatarHorario(horario),
                     };
+                    ultimaData = dataOrdenavel;
                 }
             }
         }

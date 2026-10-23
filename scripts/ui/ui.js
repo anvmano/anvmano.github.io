@@ -1,6 +1,7 @@
 'use strict';
 
 (function () {
+    let aoAbrirAba = null;
     function renderizarEstadoVazio(id, mensagem, tipo = "empty") {
         const elementoDom = document.getElementById(id);
         if (!elementoDom) return;
@@ -168,9 +169,11 @@
         }
 
         armazenarAbaAtiva(nomeAba);
+        aoAbrirAba?.(nomeAba);
     }
 
-    function configurarAbas(abaPadrao = "Tab1") {
+    function configurarAbas(abaPadrao = "Tab1", aoAbrir = null) {
+        aoAbrirAba = aoAbrir;
         const botoesAbas = document.querySelectorAll(".tablink[data-tab-target]");
         botoesAbas.forEach(botao => {
             botao.addEventListener("click", () => abrirAba(botao.dataset.tabTarget, botao));

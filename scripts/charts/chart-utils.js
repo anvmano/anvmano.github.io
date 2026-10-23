@@ -188,15 +188,14 @@
         onEmpty: aoEstarVazio,
         onReady: aoEstarPronto
     }) {
-        if (graficoExistente) {
-            window.ClimateChartSync?.desregistrar(graficoExistente);
-            graficoExistente.destroy();
-        }
-
         const { hours: horas, [chave]: dadosGrafico } = ClimateData.extractData(dados, [chave]);
 
         const temPontos = Array.isArray(dadosGrafico) && dadosGrafico.some(valor => obterValorNumerico(valor) !== null);
         if (!temPontos) {
+            if (graficoExistente) {
+                window.ClimateChartSync?.desregistrar(graficoExistente);
+                graficoExistente.destroy();
+            }
             contextoCanvas.clearRect(0, 0, contextoCanvas.canvas.width, contextoCanvas.canvas.height);
             if (aoEstarVazio) aoEstarVazio();
             return null;
@@ -241,33 +240,42 @@
             }
         });
 
-        const grafico = new Chart(contextoCanvas, {
+        const dadosAtualizados = {
+            labels: ClimateData.formatHoursArray(horas),
+            datasets: [{
+                label: rotulo,
+                data: dadosGrafico,
+                borderColor: cor,
+                borderWidth: 2,
+                backgroundColor: gradiente,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 0,
+                pointHitRadius: 18,
+                pointHoverRadius: 6,
+                pointHoverBackgroundColor: cor,
+                pointHoverBorderColor: '#0b1120',
+                pointHoverBorderWidth: 2,
+            }]
+        };
+        const grafico = graficoExistente || new Chart(contextoCanvas, {
             type: "line",
-            data: {
-                labels: ClimateData.formatHoursArray(horas),
-                datasets: [{
-                    label: rotulo,
-                    data: dadosGrafico,
-                    borderColor: cor,
-                    borderWidth: 2,
-                    backgroundColor: gradiente,
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 0,
-                    pointHitRadius: 18,
-                    pointHoverRadius: 6,
-                    pointHoverBackgroundColor: cor,
-                    pointHoverBorderColor: '#0b1120',
-                    pointHoverBorderWidth: 2,
-                }]
-            },
+            data: dadosAtualizados,
             options: opcoes
         });
 
+        if (graficoExistente) {
+            grafico.data = dadosAtualizados;
+            grafico.options = opcoes;
+            window.ClimateChartSync?.desregistrar(grafico);
+        }
+
         if (mostrarFaixaConforto) {
             grafico.$comfortBand = faixaConforto;
-            grafico.update();
+        } else {
+            delete grafico.$comfortBand;
         }
+        if (graficoExistente || mostrarFaixaConforto) grafico.update("none");
         if (grupoSincronizacao) window.ClimateChartSync?.registrar(grafico, grupoSincronizacao);
 
         return grafico;
