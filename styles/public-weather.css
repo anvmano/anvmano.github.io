@@ -614,7 +614,7 @@
         max-width: 100%;
     }
     .public-app {
-        padding: 14px 14px calc(5rem + env(safe-area-inset-bottom));
+        padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
     }
 
     .public-hero {
@@ -750,6 +750,11 @@
         align-items: stretch;
     }
 
+    .public-metric-charts,
+    .public-forecast-charts {
+        padding-right: 0;
+    }
+
     .public-app .environment-insight {
         flex: 0 0 min(82vw, 310px);
         min-height: 154px;
@@ -758,9 +763,13 @@
 
     .public-metric-charts .chart-card,
     .public-forecast-charts .chart-card {
-        flex: 0 0 calc(100vw - 64px);
+        flex: 0 0 100%;
         min-height: 286px;
         scroll-snap-align: start;
+    }
+
+    #public-solar-container {
+        margin-bottom: 0;
     }
 
     .public-metric-charts .chart-card {
