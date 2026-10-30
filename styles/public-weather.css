@@ -505,7 +505,8 @@
     left: 0;
     z-index: 2;
     color: var(--text-muted);
-    background: var(--bg-elevated);
+    background: var(--bg-card);
+    box-shadow: -0.75rem 0 0 var(--bg-card), 0.45rem 0 0 var(--bg-card);
     font-size: 0.68rem;
     font-weight: 750;
     text-transform: uppercase;
