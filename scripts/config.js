@@ -212,11 +212,13 @@
             advancedViews: {
                 room: {
                     monthlyCalendar: "monthlyClimateCalendar",
+                    mapaAnual: "mapaAnualQuarto",
                     hourlyHeatmap: "hourlyHeatmap",
                     weeklyHeatmap: "weeklyHeatmap",
                 },
                 livingRoom: {
                     monthlyCalendar: "monthlyClimateCalendarSala",
+                    mapaAnual: "mapaAnualSala",
                     hourlyHeatmap: "hourlyHeatmapSala",
                     weeklyHeatmap: "weeklyHeatmapSala",
                 },

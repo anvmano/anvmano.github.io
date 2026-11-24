@@ -228,9 +228,100 @@
             renderizarCalendarioClimaticoMensal(registrosMes, dataNormalizada, recipientes.monthlyCalendar);
             renderizarMapaCalorHorario(registrosDia, dataNormalizada, recipientes.hourlyHeatmap);
             renderizarMapaCalorSemanal(registrosMes, dataNormalizada, recipientes.weeklyHeatmap);
+            renderizarMapaAnual(dados, chaveMetrica, partesData, recipientes.mapaAnual);
         } catch (erro) {
             window.ClimateDiagnostics?.depurar("Falha ao renderizar visualizações climáticas avançadas.", erro);
         }
+    }
+
+    const resumosAnuais = new WeakMap();
+    const coresAnuais = ["#428cce", "#38aaa6", "#c0bd65", "#e6a04b", "#ea786a"];
+    const faixasAnuais = ["< 18", "18 a < 22", "22 a < 26", "26 a < 30", "≥ 30"];
+
+    function resumirDia(dia, chave, campo) {
+        if (!dia || typeof dia !== "object") return null;
+        const salvo = resumosAnuais.get(dia);
+        if (salvo?.campo === campo) return salvo.resumo;
+        const registros = extrairRegistrosClimaticosMesSelecionado({ [chave]: dia }, campo, chave);
+        const resumo = registros.length ? {
+            media: mediaGrupo(registros, () => "dia").dia,
+            horas: new Set(registros.map(registro => registro.hour)).size,
+        } : null;
+        resumosAnuais.set(dia, { campo, resumo });
+        return resumo;
+    }
+
+    function renderizarMapaAnual(dados, campo, fim, id) {
+        const painel = document.getElementById(id);
+        if (!painel) return;
+        const novoPeriodo = painel.dataset.periodo !== fim.firebaseDate;
+        if (novoPeriodo) {
+            painel.dataset.periodo = fim.firebaseDate;
+            painel.innerHTML = '<div class="anual-rolagem"><div class="anual-grade"></div></div><div class="anual-legenda"></div><output></output>';
+            const legenda = painel.querySelector(".anual-legenda");
+            [...faixasAnuais.map(f => f + " °C"), "Sem dados"].forEach((texto, i) => {
+                const item = document.createElement("span");
+                item.style.setProperty("--cor", coresAnuais[i] || "var(--border)");
+                item.textContent = texto;
+                legenda.append(item);
+            });
+        }
+        const grade = painel.querySelector(".anual-grade");
+        const detalhe = painel.querySelector("output");
+        const dia = new Date(fim.year, fim.month - 1, fim.day - 364, 12);
+        const deslocamento = (dia.getDay() + 6) % 7;
+        if (novoPeriodo) {
+            ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].forEach((nome, i) => {
+                const rotulo = document.createElement("small");
+                rotulo.textContent = nome;
+                rotulo.style.gridArea = (i + 2) + " / 1";
+                grade.append(rotulo);
+            });
+        }
+        const botoes = grade.querySelectorAll("button");
+        for (let i = 0; i < 365; i++, dia.setDate(dia.getDate() + 1)) {
+            const chave = [preencherDigitos(dia.getDate()), preencherDigitos(dia.getMonth() + 1), dia.getFullYear()].join("-");
+            const resumo = resumirDia(dados?.[chave], chave, campo);
+            const botao = botoes[i] || document.createElement("button");
+            if (novoPeriodo) {
+                const coluna = 2 + Math.floor((i + deslocamento) / 7);
+                if (dia.getDate() === 1 || (i === 0 && dia.getDate() <= 24)) {
+                    const mes = document.createElement("small");
+                    mes.textContent = dia.toLocaleString("pt-BR", { month: "short" }).replace(".", "");
+                    mes.style.gridArea = "1 / " + coluna;
+                    grade.append(mes);
+                }
+                botao.style.gridArea = (2 + (i + deslocamento) % 7) + " / " + coluna;
+                botao.type = "button";
+                botao.tabIndex = i === 364 ? 0 : -1;
+                grade.append(botao);
+            }
+            const texto = chave.replaceAll("-", "/") + (resumo
+                ? " · Média: " + resumo.media.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " °C · " + resumo.horas + " de 24 horários"
+                : " · Sem dados");
+            if (botao.title !== texto) {
+                botao.title = texto;
+                botao.setAttribute("aria-label", texto);
+            }
+            botao.style.backgroundColor = resumo ? coresAnuais[[18, 22, 26, 30].filter(limite => resumo.media >= limite).length] : "var(--border)";
+        }
+        const selecionar = botao => {
+            if (botao?.tagName !== "BUTTON") return;
+            grade.querySelector('button[tabindex="0"]').tabIndex = -1;
+            botao.tabIndex = 0;
+            detalhe.textContent = botao.title;
+        };
+        grade.onpointerover = grade.onclick = evento => selecionar(evento.target);
+        if (novoPeriodo) grade.addEventListener("focusin", evento => selecionar(evento.target));
+        grade.onkeydown = evento => {
+            const passos = { ArrowLeft: -7, ArrowRight: 7, ArrowUp: -1, ArrowDown: 1 };
+            if (!(evento.key in passos)) return;
+            evento.preventDefault();
+            const dias = [...grade.querySelectorAll("button")];
+            dias[dias.indexOf(evento.target) + passos[evento.key]]?.focus();
+        };
+        selecionar(grade.querySelector('button[tabindex="0"]'));
+        if (novoPeriodo) grade.parentElement.scrollLeft = grade.parentElement.scrollWidth;
     }
 
     function visualizacoesEstaoRecolhidas(recipientes) {

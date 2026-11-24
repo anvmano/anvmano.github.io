@@ -1,6 +1,21 @@
 /* =====================================================================
    Advanced visualizations
    ===================================================================== */
+.anual-rolagem { overflow-x: auto; overscroll-behavior-x: contain; }
+.anual-grade {
+    display: grid;
+    grid-template-columns: 2rem;
+    grid-auto-columns: minmax(14px, 1fr);
+    grid-template-rows: auto repeat(7, 16px);
+    gap: 3px;
+    padding: 3px;
+}
+.anual-grade small { font-size: 0.68rem; color: var(--text-muted); }
+.anual-grade button { border: 0; border-radius: 3px; padding: 0; cursor: pointer; }
+.anual-grade button:is(:hover, :focus-visible, [tabindex="0"]) { outline: 2px solid var(--text-primary); }
+.anual-legenda { display: flex; flex-wrap: wrap; gap: 0.3rem 0.8rem; margin: 0.75rem 0; font-size: 0.75rem; }
+.anual-legenda span::before { content: ""; display: inline-block; width: 0.75rem; height: 0.75rem; margin-right: 0.25rem; background: var(--cor); }
+.anual-legenda + output { font-size: 0.85rem; }
 .advanced-section {
     background: var(--bg-elevated);
     border: 1px solid var(--border);
