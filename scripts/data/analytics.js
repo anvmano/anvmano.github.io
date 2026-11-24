@@ -218,7 +218,15 @@
             ...(opcoes.containers || {}),
         };
 
-        if (visualizacoesEstaoRecolhidas(recipientes)) return;
+        if (visualizacoesEstaoRecolhidas(recipientes)) {
+            if (!dados) Object.values(recipientes).forEach(id => {
+                const recipiente = document.getElementById(id);
+                if (!recipiente) return;
+                recipiente.replaceChildren();
+                delete recipiente.dataset.periodo;
+            });
+            return;
+        }
 
         const dataNormalizada = partesData.firebaseDate;
         const registrosMes = extrairRegistrosClimaticosMesSelecionado(dados, chaveMetrica, dataNormalizada);

@@ -154,4 +154,20 @@ verificar.match(graficoChuva.stats[0], /Registrado 24h:/);
 verificar.match(graficoChuva.stats[1], /Previsto 12h:/);
 verificar.match(graficoChuva.stats[2], /65%/);
 
+for (const metrica of ["precipitacao", "probabilidadeChuva"]) {
+    const parcial = { ...dadosClimaExterno, previsaoCurtoPrazo: horariosChuva.map(item => ({ ...item, [metrica]: null })) };
+    const resumo = contexto.ClimatePdfReportModules.data.buildStationRainCard(parcial);
+    verificar.equal(resumo.details[metrica === "precipitacao" ? 1 : 0].value, "--");
+    verificar.match(resumo.details[1].label, /parcial/);
+    if (metrica === "precipitacao") {
+        const grafico = contexto.ClimatePdfReportModules.charts.createRainChartCard(parcial);
+        verificar.match(grafico.stats[0], /--/);
+        verificar.match(grafico.stats[1], /--/);
+    }
+}
+const indisponivel = contexto.ClimatePdfReportModules.data.buildStationRainCard({ ...dadosClimaExterno, previsaoCurtoPrazo: [] });
+verificar.equal(indisponivel.status, "Indisponível");
+verificar.equal(indisponivel.details[0].value, "--");
+verificar.equal(indisponivel.details[1].value, "--");
+
 console.log("Testes de regressão do relatório concluídos com sucesso.");

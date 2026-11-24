@@ -208,7 +208,7 @@
     function criarCardGraficoChuva(dadosClimaExterno) {
         const janela = window.ClimateChuva?.montarJanela?.(
             dadosClimaExterno?.previsaoCurtoPrazo || [],
-            dadosClimaExterno?.atualizadoEm
+            dadosClimaExterno?.atualizadoEm, 24, 12, dadosClimaExterno?.fusoHorario
         );
         const precipitacaoObservada = somarPorTipo(janela, "observado");
         const precipitacaoPrevista = somarPorTipo(janela, "previsao");
@@ -224,8 +224,8 @@
             wide: true,
             emptyMessage: "Sem dados horários de chuva para a localização consultada.",
             stats: [
-                `Registrado 24h: ${precipitacaoObservada.toFixed(1)} mm`,
-                `Previsto 12h: ${precipitacaoPrevista.toFixed(1)} mm`,
+                `Registrado 24h: ${formatarAcumuladoChuva(janela, "observado", precipitacaoObservada, 24)}`,
+                `Previsto 12h: ${formatarAcumuladoChuva(janela, "previsao", precipitacaoPrevista, 12)}`,
                 `Maior chance futura: ${Number.isFinite(maiorProbabilidade) ? `${Math.round(maiorProbabilidade)}%` : "--"}`,
             ],
         };
@@ -264,7 +264,7 @@
         const grafico = new Chart(canvas.getContext("2d"), {
             type: "bar",
             data: {
-                labels: janela.horarios.map(formatarHoraChuvaPdf),
+                labels: janela.horarios.map(valor => formatarHoraChuvaPdf(valor, janela.fusoHorario)),
                 datasets: [
                     {
                         label: "Precipitação registrada",
@@ -342,10 +342,17 @@
         ), 0);
     }
 
-    function formatarHoraChuvaPdf(valor) {
+    function formatarHoraChuvaPdf(valor, fusoHorario) {
         const dados = new Date(valor);
         if (Number.isNaN(dados.getTime())) return "--";
-        return `${String(dados.getHours()).padStart(2, "0")}:${String(dados.getMinutes()).padStart(2, "0")}`;
+        return dados.toLocaleTimeString("pt-BR", { timeZone: fusoHorario, hour: "2-digit", minute: "2-digit" });
+    }
+
+    function formatarAcumuladoChuva(janela, tipo, total, esperado) {
+        const validos = (janela?.precipitacao || []).filter((valor, indice) => janela.tipos[indice] === tipo && Number.isFinite(valor));
+        if (!validos.length) return "--";
+        const quantidade = janela.tipos.filter(item => item === tipo).length;
+        return `${total.toFixed(1)} mm${validos.length < quantidade || quantidade < esperado ? " (parcial)" : ""}`;
     }
 
     function extrairSeriePorHorario(dados, dataSelecionada, campo) {

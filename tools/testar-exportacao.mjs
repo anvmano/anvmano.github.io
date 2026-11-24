@@ -45,6 +45,18 @@ try {
         getContext: () => ({ activeTab: "Tab1", selectedDate: "16-08-2026", latestData: {} }),
     }));
 
+    await pagina.evaluate(() => {
+        let tentativas = 0;
+        window.ClimateAssets.carregarRelatorio = async () => {
+            if (++tentativas === 1) throw new Error("Falha inicial simulada nos módulos");
+        };
+    });
+    await pagina.locator("#btnExportData").click();
+    await pagina.waitForFunction(() => !document.getElementById("btnRetryExport").hidden);
+    verificar.match(await pagina.locator("#exportStatus").innerText(), /Falha ao exportar/);
+    await pagina.locator("#btnRetryExport").click();
+    await pagina.waitForFunction(() => document.getElementById("exportStatus").textContent === "Download iniciado.");
+
     await pagina.locator("#btnExportData").click();
     await pagina.locator("#exportStatus").waitFor({ state: "visible" });
     verificar.equal(await pagina.locator("#exportStatus").innerText(), "Download iniciado.");

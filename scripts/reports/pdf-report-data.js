@@ -181,7 +181,7 @@
         const previsao = window.ClimateInsightsAmbientais?.resumirChuva?.(
             dadosClimaExterno.previsaoCurtoPrazo || [],
             dadosClimaExterno.atualizadoEm,
-            6
+            6, dadosClimaExterno.fusoHorario
         );
         if (!estadoAtual || !previsao) return null;
 
@@ -189,9 +189,9 @@
             label: "Chuva externa",
             current: estadoAtual.disponivel ? estadoAtual.rotulo : "--",
             details: [
-                { label: "Maior chance", value: `${Math.round(previsao.probabilidade)}%` },
-                { label: "Acumulado 6h", value: `${previsao.acumulado.toFixed(1)} mm` },
-                { label: "Pico", value: `${previsao.intensidadeMaxima.toFixed(1)} mm/h` },
+                { label: "Maior chance", value: Number.isFinite(previsao.probabilidade) ? `${Math.round(previsao.probabilidade)}%` : "--" },
+                { label: previsao.coberturaParcial ? "Acumulado parcial 6h" : "Acumulado 6h", value: Number.isFinite(previsao.acumulado) ? `${previsao.acumulado.toFixed(1)} mm` : "--" },
+                { label: "Pico", value: Number.isFinite(previsao.intensidadeMaxima) ? `${previsao.intensidadeMaxima.toFixed(1)} mm/h` : "--" },
                 { label: "Origem", value: dadosClimaExterno.origem?.rotulo || "Clima externo" },
             ],
             status: previsao.rotulo,

@@ -25,7 +25,8 @@
     "test:rain": "node tools/testar-chuva.mjs",
     "test:axe": "node tools/testar-axe.mjs",
     "test:tables": "node tools/testar-tabelas.mjs",
-    "test:ui-ux": "node tools/testar-ui-ux.mjs"
+    "test:ui-ux": "node tools/testar-ui-ux.mjs",
+    "test:audit-fixes": "node tools/testar-correcoes-auditoria.mjs"
   },
   "devDependencies": {
     "axe-core": "^4.13.0",

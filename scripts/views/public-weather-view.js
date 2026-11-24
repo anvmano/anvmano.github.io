@@ -76,6 +76,7 @@
     let consultaRestaurada = false;
     let ultimaConsultaExibida = null;
     let modoBusca = "cep";
+    let fusoHorarioConsulta;
     const valoresBusca = { cep: "", cidade: "" };
 
     function configurarModulo({ onLogin: aoEntrar, onLogout: aoSair, getUsuario: obterUsuario, isOwner: ehProprietario } = {}) {
@@ -124,10 +125,13 @@
     }
 
     function mostrar() {
+        const focoPrivado = elementos.privateApp?.contains(document.activeElement)
+            || elementos.chat?.contains(document.activeElement);
         elementos.publicApp?.removeAttribute("hidden");
         elementos.privateApp?.setAttribute("hidden", "");
         elementos.chat?.setAttribute("hidden", "");
         elementos.chat?.classList.add("is-disabled");
+        if (focoPrivado) elementos.entradaBusca?.focus({ preventScroll: true });
         window.ClimateAqi?.updateExternal?.(null);
         publicarEventosSolares(null);
         if (!consultaRestaurada) {
@@ -269,6 +273,7 @@
     async function renderizarDados(dados, idBusca = sequenciaBusca) {
         await window.ClimateAssets.carregarChart();
         if (idBusca !== sequenciaBusca) return false;
+        fusoHorarioConsulta = dados.fusoHorario;
         window.ClimateCharts.registerComfortBand();
         const insights = analisarDadosPublicos(dados);
         const atualidade = calcularAtualidade(dados.atualizadoEm);
@@ -344,7 +349,7 @@
         const chuva = window.ClimateInsightsAmbientais.resumirChuva(
             dados.previsaoCurtoPrazo,
             dados.atualizadoEm,
-            6
+            6, dados.fusoHorario
         );
         const indiceUv = window.ClimateInsightsAmbientais.analisarIndiceUv(
             dados.climaAtual.indiceUv,
@@ -388,7 +393,7 @@
                         status: chuva.rotulo,
                         classe: chuva.classe,
                         descricao: chuva.descricao,
-                        detalhe: chuva.classe === "indisponivel" ? "Sem previsão horária" : `Maior chance ${Math.round(chuva.probabilidade)}% · ${chuva.acumulado.toFixed(1)} mm acumulados · pico ${chuva.intensidadeMaxima.toFixed(1)} mm/h`,
+                        detalhe: chuva.classe === "indisponivel" ? "Sem previsão horária" : window.ClimateInsightsAmbientais.formatarDetalhesChuva(chuva),
                     })}
                     ${montarCardInsight({
                         titulo: "Índice UV",
@@ -832,7 +837,7 @@
     }
 
     function renderizarGraficoChuva(dados) {
-        const janela = window.ClimateChuva.montarJanela(dados.previsaoCurtoPrazo, dados.atualizadoEm);
+        const janela = window.ClimateChuva.montarJanela(dados.previsaoCurtoPrazo, dados.atualizadoEm, 24, 12, dados.fusoHorario);
         [
             ["publicChartRainPrecipitation", "precipitacao"],
             ["publicChartRainProbability", "probabilidade"],
@@ -891,8 +896,8 @@
         const fim = atualizadoEm instanceof Date && !Number.isNaN(atualizadoEm.getTime()) ? atualizadoEm : new Date();
         const inicio = new Date(fim.getTime() - 24 * 60 * 60 * 1000);
         const inicioPrevisao = new Date(fim);
-        inicioPrevisao.setMinutes(0, 0, 0);
-        inicioPrevisao.setHours(inicioPrevisao.getHours() + 1);
+        inicioPrevisao.setUTCMinutes(0, 0, 0);
+        inicioPrevisao.setUTCHours(inicioPrevisao.getUTCHours() + 1);
         const fimPrevisao = new Date(inicioPrevisao.getTime() + horasPrevisao * 60 * 60 * 1000);
         const resultado = {
             horarios: [],
@@ -941,11 +946,7 @@
     function formatarDataHoraTooltip(valor) {
         const dados = new Date(valor);
         if (Number.isNaN(dados.getTime())) return "--";
-        const dia = String(dados.getDate()).padStart(2, "0");
-        const mes = String(dados.getMonth() + 1).padStart(2, "0");
-        const hora = String(dados.getHours()).padStart(2, "0");
-        const minuto = String(dados.getMinutes()).padStart(2, "0");
-        return `${dia}/${mes} ${hora}:${minuto}`;
+        return formatarDataHora(dados);
     }
 
     function renderizarGraficoSolar(eventos) {
@@ -1128,6 +1129,8 @@
             detail: {
                 events: dados?.cicloSolar || null,
                 origem: dados?.origem?.rotulo || null,
+                fusoHorario: dados?.fusoHorario,
+                ciclosSolares: dados?.ciclosSolares,
             }
         }));
     }
@@ -1333,12 +1336,12 @@
         if (!valor) return "--";
         const dados = new Date(valor);
         if (Number.isNaN(dados.getTime())) return "--";
-        return `${String(dados.getHours()).padStart(2, "0")}:${String(dados.getMinutes()).padStart(2, "0")}`;
+        return dados.toLocaleTimeString("pt-BR", { timeZone: fusoHorarioConsulta, hour: "2-digit", minute: "2-digit" });
     }
 
     function formatarDataHora(dados) {
         if (!(dados instanceof Date) || Number.isNaN(dados.getTime())) return "--";
-        return `${String(dados.getDate()).padStart(2, "0")}/${String(dados.getMonth() + 1).padStart(2, "0")} ${String(dados.getHours()).padStart(2, "0")}:${String(dados.getMinutes()).padStart(2, "0")}`;
+        return dados.toLocaleString("pt-BR", { timeZone: fusoHorarioConsulta, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).replace(",", "");
     }
 
     function formatarDataCompleta(dados) {
@@ -1347,6 +1350,7 @@
     }
 
     function dataFirebasePublica(dados) {
+        if (dados?.dataLocal) return dados.dataLocal.split("-").reverse().join("-");
         const dataAtualizacao = dados?.atualizadoEm instanceof Date ? dados.atualizadoEm : null;
         if (!dataAtualizacao || Number.isNaN(dataAtualizacao.getTime())) {
             return window.ClimateData?.dataAtual?.();

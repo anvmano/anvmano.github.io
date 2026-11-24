@@ -123,11 +123,11 @@
 
         let resultado = null;
         for (const termo of tentativas) {
-            resultado = await buscarCoordenadaOpenMeteo(termo);
+            resultado = await buscarCoordenadaOpenMeteo(termo, endereco);
             if (resultado) break;
         }
 
-        if (!resultado) throw new Error("Não foi possível encontrar coordenadas para o CEP.");
+        if (!resultado) throw criarErroEsperado("Não foi possível confirmar cidade e UF deste CEP. Confira o endereço ou use a localização do navegador.", "localizacao_nao_confirmada");
 
         return {
             latitude: Number(resultado.latitude),
@@ -135,9 +135,21 @@
         };
     }
 
-    async function buscarCoordenadaOpenMeteo(termo) {
-        const resultados = await consultarGeocodificacao(termo, 1);
-        return resultados[0] || null;
+    async function buscarCoordenadaOpenMeteo(termo, endereco) {
+        const estados = {
+            AC: "Acre", AL: "Alagoas", AP: "Amapá", AM: "Amazonas", BA: "Bahia", CE: "Ceará",
+            DF: "Distrito Federal", ES: "Espírito Santo", GO: "Goiás", MA: "Maranhão", MT: "Mato Grosso",
+            MS: "Mato Grosso do Sul", MG: "Minas Gerais", PA: "Pará", PB: "Paraíba", PR: "Paraná",
+            PE: "Pernambuco", PI: "Piauí", RJ: "Rio de Janeiro", RN: "Rio Grande do Norte",
+            RS: "Rio Grande do Sul", RO: "Rondônia", RR: "Roraima", SC: "Santa Catarina", SP: "São Paulo",
+            SE: "Sergipe", TO: "Tocantins",
+        };
+        const normalizarEstado = valor => normalizarComparacaoCidade(estados[String(valor).toUpperCase()] || valor);
+        const resultados = await consultarGeocodificacao(termo, 10);
+        return resultados.find(item => String(item.country_code).toUpperCase() === "BR"
+            && normalizarComparacaoCidade(item.name) === normalizarComparacaoCidade(endereco.cidade)
+            && normalizarEstado(item.admin1) === normalizarEstado(endereco.estado)
+            && numeroOuNulo(item.latitude) !== null && numeroOuNulo(item.longitude) !== null) || null;
     }
 
     async function consultarGeocodificacao(termo, quantidade) {
@@ -159,6 +171,7 @@
         url.searchParams.set("latitude", latitude);
         url.searchParams.set("longitude", longitude);
         url.searchParams.set("timezone", "auto");
+        url.searchParams.set("timeformat", "unixtime");
         url.searchParams.set("past_hours", "24");
         url.searchParams.set("forecast_hours", "13");
         url.searchParams.set("forecast_days", "15");
@@ -176,6 +189,7 @@
         url.searchParams.set("latitude", latitude);
         url.searchParams.set("longitude", longitude);
         url.searchParams.set("timezone", "auto");
+        url.searchParams.set("timeformat", "unixtime");
         url.searchParams.set("past_days", "1");
         url.searchParams.set("forecast_days", "1");
         url.searchParams.set("current", "us_aqi");
@@ -260,13 +274,21 @@
     }
 
     function normalizarRespostaPublica({ clima, qualidadeAr, origem }) {
+        const fusoHorario = clima.timezone || undefined;
+        clima = normalizarTemposApi(clima);
+        qualidadeAr = qualidadeAr ? normalizarTemposApi(qualidadeAr) : null;
         const atual = clima.current || {};
         const horarioAtual = atual.time ? new Date(atual.time) : new Date();
-        const eventosSolares = obterEventosSolares(clima.daily, atual.time);
-        const indiceDiario = obterIndiceDiario(clima.daily, atual.time);
+        const dataLocal = formatarDataLocal(horarioAtual, fusoHorario);
+        const eventosSolares = obterEventosSolares(clima.daily, dataLocal, fusoHorario);
+        const indiceDiario = obterIndiceDiario(clima.daily, dataLocal);
 
         return {
             origem,
+            fusoHorario,
+            dataLocal,
+            ciclosSolares: Object.fromEntries((clima.daily?.time || []).map(data =>
+                [data, obterEventosSolares(clima.daily, data, fusoHorario)])),
             atualizadoEm: horarioAtual,
             climaAtual: {
                 temperatura: numeroOuNulo(atual.temperature_2m),
@@ -309,14 +331,14 @@
         };
     }
 
-    function obterEventosSolares(diario, horarioAtual) {
+    function obterEventosSolares(diario, horarioAtual, fusoHorario) {
         const indice = obterIndiceDiario(diario, horarioAtual);
         const nascer = diario?.sunrise?.[indice] ? new Date(diario.sunrise[indice]) : null;
         const por = diario?.sunset?.[indice] ? new Date(diario.sunset[indice]) : null;
         if (!nascer || !por || Number.isNaN(nascer.getTime()) || Number.isNaN(por.getTime())) return null;
 
-        const nascerSolar = horaDecimal(nascer);
-        const porSolar = horaDecimal(por);
+        const nascerSolar = horaDecimal(nascer, fusoHorario);
+        const porSolar = horaDecimal(por, fusoHorario);
         const amanhecerSolar = Math.max(0, nascerSolar - 1);
         const anoitecerSolar = Math.min(24, porSolar + 1);
         const zeniteSolar = nascerSolar + ((porSolar - nascerSolar) / 2);
@@ -368,8 +390,33 @@
         });
     }
 
-    function horaDecimal(dados) {
-        return dados.getHours() + dados.getMinutes() / 60 + dados.getSeconds() / 3600;
+    function horaDecimal(dados, fusoHorario) {
+        const partes = new Intl.DateTimeFormat("en-GB", { timeZone: fusoHorario, hourCycle: "h23", hour: "2-digit", minute: "2-digit", second: "2-digit" }).formatToParts(dados);
+        const valor = tipo => Number(partes.find(parte => parte.type === tipo)?.value || 0);
+        return valor("hour") + valor("minute") / 60 + valor("second") / 3600;
+    }
+
+    function formatarDataLocal(data, fusoHorario) {
+        return new Intl.DateTimeFormat("en-CA", { timeZone: fusoHorario, year: "numeric", month: "2-digit", day: "2-digit" }).format(data);
+    }
+
+    function normalizarTemposApi(resposta) {
+        const instante = valor => {
+            if (typeof valor === "number") return new Date(valor * 1000).toISOString();
+            if (!valor || /(?:Z|[+-]\d\d:\d\d)$/.test(valor) || resposta.utc_offset_seconds === undefined) return valor;
+            return new Date(Date.parse(`${valor}Z`) - resposta.utc_offset_seconds * 1000).toISOString();
+        };
+        return {
+            ...resposta,
+            current: resposta.current ? { ...resposta.current, time: instante(resposta.current.time) } : undefined,
+            hourly: resposta.hourly ? { ...resposta.hourly, time: (resposta.hourly.time || []).map(instante) } : undefined,
+            daily: resposta.daily ? { ...resposta.daily,
+                time: (resposta.daily.time || []).map(valor => typeof valor === "number"
+                    ? formatarDataLocal(new Date(valor * 1000), resposta.timezone) : valor),
+                sunrise: (resposta.daily.sunrise || []).map(instante),
+                sunset: (resposta.daily.sunset || []).map(instante),
+            } : undefined,
+        };
     }
 
     function normalizarSerie(valores) {

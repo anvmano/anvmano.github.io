@@ -4,6 +4,8 @@
     let opcoesConfiguradas = null;
     let assistentePronta = false;
     let carregamentoAssistente = null;
+    let geracaoSessao = 0;
+    let sessaoAtiva = true;
 
     function configurar(opcoes = {}) {
         opcoesConfiguradas = {
@@ -30,10 +32,12 @@
         if (!botao || botao.dataset.lazyChatReady === "true") return;
 
         botao.dataset.lazyChatReady = "true";
-        botao.addEventListener("click", abrirAssistenteSobDemanda, { once: true });
+        botao.addEventListener("click", abrirAssistenteSobDemanda);
     }
 
     async function abrirAssistenteSobDemanda(evento) {
+        if (assistentePronta || !sessaoAtiva) return;
+        const geracao = geracaoSessao;
         evento.preventDefault();
         evento.stopPropagation();
 
@@ -45,9 +49,11 @@
 
         try {
             await carregarAssistente();
+            if (!sessaoAtiva || geracao !== geracaoSessao) return;
             inicializarAssistente();
             window.ClimateAssistant?.ui?.open();
         } catch (erro) {
+            if (!sessaoAtiva || geracao !== geracaoSessao) return;
             window.ClimateDiagnostics?.erro("Falha ao carregar assistente.", erro);
             alert("Não foi possível carregar a assistente agora.");
         } finally {
@@ -61,7 +67,8 @@
     function carregarAssistente() {
         if (window.ClimateAssistant?.ui) return Promise.resolve();
         if (!carregamentoAssistente) {
-            carregamentoAssistente = window.ClimateAssets?.carregarAssistente?.() || Promise.reject(new Error("Carregador da assistente indisponível."));
+            carregamentoAssistente = (window.ClimateAssets?.carregarAssistente?.() || Promise.reject(new Error("Carregador da assistente indisponível.")))
+                .catch(erro => { carregamentoAssistente = null; throw erro; });
         }
         return carregamentoAssistente;
     }
@@ -73,5 +80,16 @@
         assistentePronta = true;
     }
 
-    window.ClimateChat = { setup: configurar };
+    function encerrarSessao() {
+        sessaoAtiva = false;
+        geracaoSessao++;
+        window.ClimateAssistant?.ui?.encerrarSessao();
+    }
+
+    function iniciarSessao() {
+        sessaoAtiva = true;
+        window.ClimateAssistant?.ui?.iniciarSessao();
+    }
+
+    window.ClimateChat = { setup: configurar, encerrarSessao, iniciarSessao };
 })();

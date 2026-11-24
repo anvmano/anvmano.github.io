@@ -102,7 +102,7 @@
         return criarResultado("Extremo", "critico", "Evite o sol direto; pele e olhos podem sofrer dano rapidamente.", valor, maximo);
     }
 
-    function resumirChuva(previsao = [], atualizadoEm = new Date(), quantidadeHoras = 6) {
+    function resumirChuva(previsao = [], atualizadoEm = new Date(), quantidadeHoras = 6, fusoHorario) {
         const inicio = dataValida(atualizadoEm) || new Date();
         const limite = new Date(inicio.getTime() + quantidadeHoras * 60 * 60 * 1000);
         const proximasHoras = previsao.filter(item => {
@@ -116,9 +116,21 @@
 
         const probabilidade = maximoNumerico(proximasHoras.map(item => item.probabilidadeChuva));
         const intensidadeMaxima = maximoNumerico(proximasHoras.map(item => item.precipitacao));
-        const acumulado = proximasHoras.reduce((total, item) => total + (numeroOuNulo(item.precipitacao) ?? 0), 0);
+        const volumes = proximasHoras.map(item => numeroOuNulo(item.precipitacao)).filter(valor => valor !== null);
+        const probabilidades = proximasHoras.map(item => numeroOuNulo(item.probabilidadeChuva)).filter(valor => valor !== null);
+        const acumulado = volumes.length ? volumes.reduce((total, valor) => total + valor, 0) : null;
+        if (!volumes.length && !probabilidades.length) {
+            return { ...criarResultadoIndisponivel("Previsão horária sem métricas de chuva válidas."),
+                probabilidade: null, intensidadeMaxima: null, acumulado: null };
+        }
+        const horarios = [...new Set(proximasHoras.map(item => dataValida(item.horario).getTime()))].sort((a, b) => a - b);
+        const horaMs = 3600000;
+        const coberturaParcial = volumes.length !== proximasHoras.length || probabilidades.length !== proximasHoras.length
+            || horarios[0] - inicio.getTime() >= horaMs || limite.getTime() - horarios.at(-1) >= horaMs
+            || horarios.some((horario, indice) => indice > 0 && horario - horarios[indice - 1] > horaMs);
         const horarioPico = proximasHoras.reduce((pico, item) => {
-            const intensidade = numeroOuNulo(item.precipitacao) ?? 0;
+            const intensidade = numeroOuNulo(item.precipitacao);
+            if (intensidade === null) return pico;
             return !pico || intensidade > pico.intensidade ? { intensidade, horario: item.horario } : pico;
         }, null);
 
@@ -128,20 +140,25 @@
         if ((probabilidade ?? 0) >= LIMIARES.chuvaProvavel || (intensidadeMaxima ?? 0) >= 2.5) {
             rotulo = (intensidadeMaxima ?? 0) >= 10 ? "Chuva forte" : (intensidadeMaxima ?? 0) >= 2.5 ? "Chuva moderada" : "Chuva provável";
             classe = (intensidadeMaxima ?? 0) >= 10 ? "critico" : "alerta";
-            descricao = `Maior intensidade prevista perto de ${formatarHora(horarioPico?.horario)}.`;
+            descricao = horarioPico ? `Maior intensidade prevista perto de ${formatarHora(horarioPico.horario, fusoHorario)}.` : "Probabilidade elevada nos horários disponíveis; volume indisponível.";
         } else if ((probabilidade ?? 0) >= LIMIARES.chuvaPossivel || acumulado >= 0.1) {
             rotulo = "Possibilidade de chuva";
             classe = "atencao";
-            descricao = `Pode chover perto de ${formatarHora(horarioPico?.horario)}.`;
+            descricao = horarioPico ? `Pode chover perto de ${formatarHora(horarioPico.horario, fusoHorario)}.` : "Possibilidade de chuva nos horários disponíveis; volume indisponível.";
+        }
+        if (coberturaParcial) {
+            if (classe === "favoravel") { rotulo = "Previsão parcial"; classe = "atencao"; }
+            descricao += " Cobertura parcial: métricas e acumulado limitados aos horários disponíveis.";
         }
 
         return {
             rotulo,
             classe,
             descricao,
-            probabilidade: probabilidade ?? 0,
-            intensidadeMaxima: intensidadeMaxima ?? 0,
+            probabilidade,
+            intensidadeMaxima,
             acumulado,
+            coberturaParcial,
             periodoHoras: quantidadeHoras,
             horarioPico: horarioPico?.horario || null,
         };
@@ -173,6 +190,7 @@
         }
 
         const ressalvas = [];
+        if (resumoChuva.classe === "indisponivel") ressalvas.push("previsão de chuva indisponível");
         if (umidade !== null && (umidade < 30 || umidade > 78)) ressalvas.push("umidade externa pouco favorável");
         if (temperatura !== null && (temperatura < 16 || temperatura > 30)) ressalvas.push("temperatura externa fora da faixa amena");
         if (resumoChuva.classe === "atencao") ressalvas.push("há possibilidade de chuva");
@@ -269,10 +287,15 @@
         return numeros.length ? Math.max(...numeros) : null;
     }
 
-    function formatarHora(valor) {
+    function formatarHora(valor, fusoHorario) {
         const dados = dataValida(valor);
         if (!dados) return "--:--";
-        return `${String(dados.getHours()).padStart(2, "0")}:${String(dados.getMinutes()).padStart(2, "0")}`;
+        return dados.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: fusoHorario });
+    }
+
+    function formatarDetalhesChuva(chuva) {
+        const formatar = (valor, casas) => Number.isFinite(valor) ? valor.toFixed(casas) : "--";
+        return `Maior chance ${formatar(chuva.probabilidade, 0)}% · ${formatar(chuva.acumulado, 1)} mm ${chuva.coberturaParcial ? "parciais" : "acumulados"} · pico ${formatar(chuva.intensidadeMaxima, 1)} mm/h`;
     }
 
     window.ClimateInsightsAmbientais = {
@@ -280,6 +303,7 @@
         avaliarRiscoMofo,
         analisarIndiceUv,
         resumirChuva,
+        formatarDetalhesChuva,
         recomendarVentilacaoExterna,
         recomendarVentilacaoInterna,
         recomendarVentilacaoCombinada,

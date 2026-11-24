@@ -112,6 +112,9 @@ Bibliotecas carregadas via CDN:
 │   └── testar-modo-publico.mjs Concorrência, estados e zoom público
 └── docs/
     ├── README.md
+    ├── AI_QUICK_CONTEXT.md
+    ├── AI_SYSTEM_PROMPT.md
+    ├── ARCHITECTURE_AI.md
     ├── BUSINESS_RULES.md
     └── DEPENDENCY_MAP.md
 ```
@@ -184,21 +187,19 @@ http://localhost:8080
 Execute:
 
 ```powershell
-npm run validate
-npm run lint
-npm run test:assistant
-npm run test:report
-npm run test:pdf-artifact
-npm run test:export
-npm run test:accessibility
-npm run test:axe
-npm run test:data-quality
-npm run test:public
-npm run test:chart-sync
-npm run test:rain
-npm run test:pdf-rain
-npm run test:tables
+npm test
 ```
+
+O comando consolidado executa `validate`, `lint` e todos os `test:*` registrados em `package.json`. Para isolar os fluxos desta entrega:
+
+```powershell
+npm run test:audit-fixes
+npm run test:mapa-anual
+npm run test:ui-ux
+npm run test:pdf-rain
+npm run test:export
+```
+
 
 A validação verifica:
 
@@ -265,7 +266,7 @@ Os módulos internos de relatório são carregados apenas ao exportar. Exportar 
 
 O relatório cria uma fonte normalizada única filtrada pela data selecionada. Resumo, alertas, gráficos, tabelas e JSON usam esse mesmo recorte; os gráficos do PDF não reutilizam os gráficos visíveis da interface, que podem representar a janela móvel das últimas 24 horas. Valores ausentes permanecem `null`, formam lacunas e não entram nos cálculos de média, mínima ou máxima.
 
-Na aba Estação, depois de consultar a localização, o PDF também inclui o card `Chuva externa` e recria o gráfico de precipitação das últimas 24h + previsão de 12h. O JSON inclui o snapshot normalizado em `climaExterno`; nenhuma coordenada é persistida ou reconsultada durante a exportação.
+Na aba Estação, depois de consultar a localização, o PDF também inclui o card `Chuva externa` e recria o gráfico de precipitação das últimas 24h + previsão de 12h. Em todas as abas, o JSON inclui somente os campos climáticos previstos em `climaExterno`, com origem textual permitida. Latitude, longitude e precisão são excluídas inclusive em objetos aninhados; a exportação não solicita localização nem reconsulta APIs.
 
 Essa fonte também inclui qualidade e cobertura por métrica. Uma única leitura válida mantém seu valor, mas não gera delta/tendência. pH fora da faixa, saltos/repetições e turbidez constante são sinalizados sem substituir ou apagar o valor original.
 
@@ -316,13 +317,13 @@ JSON:
 - Perguntas de comparacao solar no chat calculam localmente duracao do dia, maior/menor duracao de luz no ano da data selecionada por padrao, no mes quando informado ou entre duas datas explicitas, alem de tendencia de nascer/por do sol e comparacao semanal.
 - Perguntas sobre AQI/IAQ/qualidade do ar no chat reutilizam `ClimateAqi.calculate`; CO, CO2, Acetona, Álcool, Amônia e Tolueno são tratados como métricas da Sala/MQ135 quando nenhum ambiente é citado ou quando a aba/ambiente atual não possui essa medição.
 - Perguntas equivalentes aos heatmaps no chat calculam localmente calendário mensal por dia, hora típica do período e mapa semanal por dia/hora antes da redação da IA.
-- Heatmaps visuais de Sala/Quarto só montam o DOM quando `Visualizações Climáticas` é expandido.
+- Heatmaps visuais de Sala/Quarto montam o DOM quando `Visualizações Climáticas` é expandido; a limpeza de dados vazios também alcança seções recolhidas já montadas.
 - Estação do ano e fase da lua são calculadas localmente para contexto visual. A fase lunar é aproximada e não deve ser tratada como efeméride astronômica de alta precisão.
 - Quando ambiente, data, periodo ou operação aparecem de forma informal, a classificação em JSON ajuda a entender erros de digitação e fala natural.
 - Consultas de período usam limite de 30 dias; `últimos dias` usa 7 dias por padrão. O calendário mensal pode consultar o mês completo.
 - O CSS foi dividido em arquivos por responsabilidade dentro de `styles/`.
 - Os renderizadores por aba ficam separados em `scripts/views/`.
-- Os arquivos ativos seguem a organizacao por responsabilidade em `scripts/`.
+- Copias antigas estao isoladas em `legacy/scripts/` e nao participam do runtime nem do validador. Arquivos ativos seguem a organizacao por responsabilidade em `scripts/`.
 - ESLint valida contratos basicos do JavaScript; Prettier esta disponivel por `npm run format`; `scripts/schemas/contracts.js` valida fronteiras Firebase, chat e relatorio.
 - Os listeners Firebase continuam em paths completos. Como as chaves usam `DD-MM-AAAA`, paginacao cronologica segura exige migracao para timestamp ou `AAAA-MM-DD`; nao aplicar `orderByKey` por intervalo no formato atual.
 - A documentação técnica fica centralizada em `docs/`.
@@ -342,5 +343,26 @@ JSON:
 
 Arquivos de apoio para manutenção:
 
+- `docs/AI_QUICK_CONTEXT.md`: resumo rápido para retomada de contexto.
 - `docs/DEPENDENCY_MAP.md`: mapa de dependências e impacto.
+- `docs/ARCHITECTURE_AI.md`: arquitetura detalhada.
 - `docs/BUSINESS_RULES.md`: regras funcionais, decisões e dívida técnica.
+- `docs/AI_SYSTEM_PROMPT.md`: guia de comportamento para manutenção assistida por IA.
+
+## Revisão funcional de 24/11/2026
+
+Para aplicar os contratos no backend e frontend .NET, consulte o [plano de correções para o C#](PLANO_CORRECOES_CSHARP_2026-11-24.md). O destino foi inspecionado em leitura; sua implementação e seus testes permanecem pendentes.
+
+O mapa anual de Sala e Quarto termina na data selecionada e inclui exatamente 365 datas civis, desde fim − 364 dias, inclusive 29/02 quando aplicável. Cada célula usa a média de todas as temperaturas válidas do dia, sem arredondamento intermediário, e informa a quantidade de horas distintas cobertas entre 0 e 23 (até 24 horários). Ausência permanece sem média. Usa a raiz já recebida do Firebase, sem 365 consultas adicionais, e monta a grade ao expandir Visualizações Climáticas. Reutiliza resumos por objeto de dia via `WeakMap`; snapshots novos invalidam pela identidade dos objetos. Mouse, toque e foco atualizam o detalhe; uma célula participa do Tab, setas verticais movem um dia e horizontais sete. A grade tem rolagem horizontal própria e começa no período mais recente. Não integra Aquário, página pública, PDF, JSON ou cálculos da assistente.
+
+Calendário mensal e mapa anual compartilham `coresMediaDiaria` e `corMediaDiaria`: dez cores fixas. Faixas em °C: <15; 15 a <17,5; 17,5 a <20; 20 a <22,5; 22,5 a <25; 25 a <27,5; 27,5 a <30; 30 a <32,5; 32,5 a 35 (inclusive); >35. Dados ausentes têm cor própria. Os mapas horário e semanal usam escala relativa min/max dos valores exibidos, interpolada entre azul, verde e rosa; não compartilham os limites fixos de temperatura dos mapas diário e anual. O texto das células preenchidas usa `#000000`, preservando a paleta e contraste mínimo de 4,5:1.
+
+- Exportação JSON: `montarClimaExternoExportavel` seleciona campos climáticos e origem textual (`tipo`, `rotulo`); a serialização exclui `latitude`, `longitude` e `precisao` em qualquer nível, em todas as abas. Não solicita localização nem consulta APIs ao exportar.
+- Sessão: a transição de autenticação para o público fecha zoom e assistente sem focar controles privados, restaura os estados `inert` e a rolagem, limpa conversa/memória, cache externo privado, gráficos e `latestData`, e cancela listeners. Gerações de sessão invalidam conclusões tardias de carregamento, respostas, localização e exportação. Novo login reutiliza eventos e dependências com sucesso, sem duplicá-los.
+- Snapshot Firebase `null`: limpa cards, gráficos, tabelas e mapas de Sala/Quarto/Aquário, inclusive apresentações inativas já montadas; nova abertura/data continua vazia até receber dados. Erro de conexão preserva as últimas medições com aviso de possível desatualização.
+- Chuva: probabilidade e volume ausentes permanecem `null` de forma independente. Só zeros efetivamente informados indicam zero; previsão sem métricas é indisponível. Lacunas ou cobertura incompleta produzem ressalva e acumulado parcial; ventilação não interpreta ausência como condição externa favorável. Cards e relatório formatam valores ausentes como `--`.
+- CEP: coordenadas fornecidas pela origem são reutilizadas; o fallback só aceita cidade, estado normalizado (sigla/nome) e país BR correspondentes. Sem correspondência segura, retorna erro acionável.
+- Tempo público: Forecast e AQI pedem `timeformat=unixtime`, preservam `fusoHorario`, instantes ISO UTC, `dataLocal` e `ciclosSolares` por data local. Horários exibidos e dia/noite usam o fuso IANA do local consultado, inclusive ao atravessar meia-noite. O privado mantém a referência temporal existente dos sensores. Amanhecer/anoitecer públicos continuam aproximações de uma hora antes/depois de nascer/pôr do sol.
+- Recursos: promessas rejeitadas e elementos de script/CSS com falha saem do cache; fachadas de gráfico, assistente e relatório liberam nova tentativa. Chamadas simultâneas são deduplicadas e sucessos são reutilizados.
+
+Execute `npm test` para validação estrutural, lint e todos os `test:*` de `package.json`. `npm run test:audit-fixes` cobre as regressões desta revisão; `npm run test:mapa-anual` verifica o mapa e a paridade mensal/anual. Os testes de navegador usam Chrome/Edge e alguns exigem CDNs. Resultados e limites estão no [plano de correções](PLANO_CORRECOES_AUDITORIA_2026-11-24.md).

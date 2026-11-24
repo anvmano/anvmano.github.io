@@ -36,6 +36,24 @@ try {
     assert.deepEqual(coresMensais.slice(0, temperaturas.length), cores);
     assert.equal(coresMensais.at(-1), "var(--border)");
     assert.deepEqual(cores, ["99,102,241", "67,133,220", "56,180,237", "36,198,183", "163,214,92", "242,212,80", "255,170,66", "247,122,57", "239,83,80", "239,83,80", "220,57,118"].map(rgb => "rgb(" + rgb.replaceAll(",", ", ") + ")"));
+    const contrastes = await pagina.locator(".calendar-heatmap__day.has-value").evaluateAll(celulas => celulas.map(celula => {
+        const luminancia = cor => {
+            const canais = cor.match(/\d+/g).slice(0, 3).map(Number).map(valor => valor / 255)
+                .map(valor => valor <= 0.04045 ? valor / 12.92 : ((valor + 0.055) / 1.055) ** 2.4);
+            return canais[0] * 0.2126 + canais[1] * 0.7152 + canais[2] * 0.0722;
+        };
+        const estilo = getComputedStyle(celula);
+        const texto = luminancia(estilo.color);
+        const fundo = luminancia(estilo.backgroundColor);
+        return (Math.max(texto, fundo) + 0.05) / (Math.min(texto, fundo) + 0.05);
+    }));
+    assert.ok(contrastes.every(contraste => contraste >= 4.5), "Todas as faixas mensais, incluindo limites e extremos, devem ter contraste AA");
+    await pagina.locator("section").evaluate(el => el.classList.add("is-collapsed"));
+    await pagina.evaluate(() => window.ClimateAnalytics.renderAdvancedClimateViews(null, "29-02-2024", { containers: { mapaAnual: "anual" } }));
+    assert.equal(await dias.count(), 0, "Snapshot nulo apaga o DOM privado recolhido");
+    await pagina.locator("section").evaluate(el => el.classList.remove("is-collapsed"));
+    await pagina.evaluate(renderizar);
+    assert.equal(await dias.count(), 365, "Após limpar, a expansão deve reconstruir o mapa");
 } finally {
     await navegador.close();
 }

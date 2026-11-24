@@ -12,6 +12,8 @@
     let posicaoRolagemTravada = 0;
     let memoriaConversa = null;
     let focoAnterior = null;
+    let geracaoSessao = 0;
+    let sessaoAtiva = true;
     const elementosInertes = new Map();
 
     function configurar(opcoes = {}) {
@@ -54,7 +56,7 @@
     }
 
     function abrirChat() {
-        if (estaAberto) return;
+        if (estaAberto || !sessaoAtiva) return;
         focoAnterior = document.activeElement;
         estaAberto = true;
         clearTimeout(temporizadorFechamento);
@@ -80,7 +82,7 @@
         });
     }
 
-    function fecharChat() {
+    function fecharChat({ restaurarFoco = true } = {}) {
         if (!estaAberto) return;
         estaAberto = false;
         elementos.panel.inert = true;
@@ -91,7 +93,7 @@
         liberarRolagemPagina();
         const destino = focoAnterior?.isConnected && focoAnterior !== document.body && !focoAnterior.closest("[inert]")
             ? focoAnterior : elementos.toggle;
-        destino?.focus({ preventScroll: true });
+        if (restaurarFoco) destino?.focus({ preventScroll: true });
         clearTimeout(temporizadorFechamento);
         temporizadorFechamento = setTimeout(() => {
             if (!estaAberto) elementos.panel?.setAttribute("hidden", "");
@@ -178,7 +180,8 @@
     }
 
     async function enviarPergunta(pergunta) {
-        if (estaOcupado || !pergunta) return;
+        if (estaOcupado || !pergunta || !sessaoAtiva) return;
+        const geracao = geracaoSessao;
 
         if (!estaAberto) abrirChat();
         adicionarMensagem("user", pergunta);
@@ -193,13 +196,15 @@
                 ...contexto,
                 chatMemory: memoriaConversa,
             });
+            if (geracao !== geracaoSessao) return;
             mensagemPensando.textContent = resultado.answer;
             atualizarMemoriaConversa(pergunta, resultado.result);
         } catch (erro) {
+            if (geracao !== geracaoSessao) return;
             window.ClimateDiagnostics?.depurar("Falha no chat com IA.", erro);
             mensagemPensando.textContent = "Não consegui consultar a IA agora. Verifique se o Firebase AI Logic e o App Check estão configurados para este domínio.";
         } finally {
-            definirOcupado(false);
+            if (geracao === geracaoSessao) definirOcupado(false);
         }
     }
 
@@ -223,9 +228,9 @@
         if (valor && estaAberto && (document.activeElement === elementos.input || document.activeElement === elementos.submit || document.activeElement?.matches("[data-chat-question]"))) {
             elementos.close.focus({ preventScroll: true });
         }
-        elementos.submit.disabled = valor;
-        elementos.input.disabled = valor;
-        elementos.quickActions.forEach(botao => {
+        if (elementos.submit) elementos.submit.disabled = valor;
+        if (elementos.input) elementos.input.disabled = valor;
+        elementos.quickActions?.forEach(botao => {
             botao.disabled = valor;
         });
     }
@@ -239,7 +244,27 @@
         return mensagem;
     }
 
+    function encerrarSessao() {
+        sessaoAtiva = false;
+        geracaoSessao++;
+        fecharChat({ restaurarFoco: false });
+        clearTimeout(temporizadorFechamento);
+        elementos.panel?.setAttribute("hidden", "");
+        elementos.messages?.replaceChildren();
+        if (elementos.input) elementos.input.value = "";
+        focoAnterior = null;
+        memoriaConversa = null;
+        definirOcupado(false);
+    }
+
+    function iniciarSessao() {
+        sessaoAtiva = true;
+        if (elementos.messages && !elementos.messages.childElementCount) renderizarMensagemInicial();
+    }
+
     espacoNomes.ui = {
+        encerrarSessao,
+        iniciarSessao,
         setup: configurar,
         open: abrirChat,
         close: fecharChat,

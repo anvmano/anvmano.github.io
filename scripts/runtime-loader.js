@@ -23,17 +23,17 @@
         "scripts/assistant/assistant-intent.js?v=20260816-2",
         "scripts/assistant/assistant-planner.js?v=20260816-2",
         "scripts/assistant/assistant-query.js?v=20260816-2",
-        "scripts/assistant/assistant-ui.js?v=20260923-1",
+        "scripts/assistant/assistant-ui.js?v=20261124-3",
     ];
 
     const MODULOS_RELATORIO = [
         "scripts/reports/pdf-report-config.js?v=20260612-1",
         "scripts/reports/pdf-report-format.js?v=20260612-1",
-        "scripts/reports/pdf-report-data.js?v=20261023-2",
+        "scripts/reports/pdf-report-data.js?v=20261124-3",
         "scripts/reports/pdf-report-dom.js?v=20260923-6",
-        "scripts/reports/pdf-report-charts.js?v=20260922-3",
+        "scripts/reports/pdf-report-charts.js?v=20261124-3",
         "scripts/reports/pdf-report-pdf.js?v=20260923-6",
-        "scripts/reports/pdf-report-export.js?v=20260922-3",
+        "scripts/reports/pdf-report-export.js?v=20261124-3",
     ];
 
     function carregarScriptUmaVez(url, validarGlobal) {
@@ -55,19 +55,23 @@
             const script = document.createElement("script");
             script.src = url;
             script.async = false;
-            script.onload = resolver;
+            script.onload = () => { script.dataset.carregado = "true"; resolver(); };
             script.onerror = () => rejeitar(new Error(`Falha ao carregar ${url}.`));
             document.head.appendChild(script);
         });
 
-        scriptsCarregados.set(url, carregamento);
-        return carregamento;
+        const tentativa = carregamento.catch(erro => {
+            scriptsCarregados.delete(url);
+            document.querySelector(`script[src="${url}"]`)?.remove();
+            throw erro;
+        });
+        scriptsCarregados.set(url, tentativa);
+        return tentativa;
     }
 
     function carregarCssUmaVez(url, id) {
         const chave = id || url;
         if (estilosCarregados.has(chave)) return estilosCarregados.get(chave);
-        if (id && document.getElementById(id)) return Promise.resolve();
 
         const carregamento = new Promise((resolver, rejeitar) => {
             const existente = document.querySelector(`link[href="${url}"]`);
@@ -93,8 +97,13 @@
             document.head.appendChild(ligacao);
         });
 
-        estilosCarregados.set(chave, carregamento);
-        return carregamento;
+        const tentativa = carregamento.catch(erro => {
+            estilosCarregados.delete(chave);
+            document.querySelector(`link[href="${url}"]`)?.remove();
+            throw erro;
+        });
+        estilosCarregados.set(chave, tentativa);
+        return tentativa;
     }
 
     function carregarSequencialmente(urls) {
@@ -132,6 +141,7 @@
     }
 
     window.ClimateAssets = {
+        carregarScriptUmaVez,
         carregarAssistente,
         carregarChart,
         carregarCssRelatorio,

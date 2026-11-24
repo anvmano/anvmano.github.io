@@ -132,7 +132,7 @@ Dependencias diretas: Node.js local.
 
 Quem chama: desenvolvedor.
 
-Quem e chamado: `tools/validate-project.mjs` e `tools/testar-assistente.mjs`.
+Quem é chamado: ESLint, Prettier e as ferramentas registradas em `package.json`; `tools/testar-projeto.mjs` executa validate, lint e todos os test:*.
 
 Impacto da alteracao: Baixo. Nao altera runtime da pagina.
 
@@ -180,7 +180,7 @@ Responsabilidade: carregar recursos pesados sob demanda sem Vite/build tooling.
 
 Dependencias diretas: DOM `document.head`, URLs locais dos modulos de assistente/relatorio, CDN Chart.js.
 
-Quem chama: `scripts/main.js`, `scripts/chat.js`, `scripts/reports/pdf-report.js`.
+Quem chama: `scripts/main.js`, `scripts/chat.js`, `scripts/reports/pdf-report.js`, `scripts/reports/pdf-report-export.js` e `scripts/charts/zoom.js`.
 
 Quem e chamado: navegador ao inserir scripts e folhas de estilo dinamicamente.
 
@@ -660,6 +660,27 @@ Quem chama: `scripts/firebase-service.js`, `scripts/chat.js` e `scripts/reports/
 
 Impacto da alteracao: Alto. Regras excessivamente restritivas podem bloquear leitura, chat ou exportacao legitimos.
 
+## legacy/scripts
+
+Responsabilidade: preservar copias historicas fora do runtime. O diretorio e ignorado pelo validador e nao pode ser usado como fonte da aplicacao ativa.
+
+Dependencias diretas:
+
+- DOM
+- URLs de `html2canvas` e `jsPDF` em `AppConfig.firebase`
+- Blob/URL nativos do navegador para JSON
+- `AppConfig`
+- `ClimateData`
+- `ClimateSolar`
+- `ClimateUI.getActiveTabName`
+- `latestData` recebido via `scripts/main.js`
+
+Quem chama: `scripts/main.js`.
+
+Quem e chamado: `scripts/runtime-loader.js` para carregar modulos internos em `window.ClimatePdfReportModules`; carregador sob demanda de html2canvas/jsPDF para PDF e Blob/URL para download JSON.
+
+Impacto da alteracao: Medio a Alto. Pode afetar exportacao PDF/JSON, captura de graficos e download.
+
 ## scripts/views/quarto-view.js
 
 Responsabilidade: renderizar Quarto.
@@ -851,7 +872,7 @@ graph TD
 
 Novos metodos, funcoes e variaveis internas devem seguir PT-BR. Nao traduzir campos Firebase reais, ids/classes DOM, contratos publicos em `window.*`, propriedades de APIs externas, opcoes de bibliotecas ou chaves estruturais ja consumidas entre modulos.
 
-Estado em 08/09/2026: vínculos locais foram traduzidos em todos os componentes ativos. As arestas entre módulos continuam usando os contratos públicos anteriores (`window.*`, membros exportados e chaves de contexto), agora ligados a implementações internas em PT-BR. Essa camada de compatibilidade preserva o grafo de dependências documentado acima.
+Estado em 08/09/2026: vínculos locais foram traduzidos em todos os componentes ativos. As arestas entre módulos continuam usando os contratos públicos anteriores (`window.*`, membros exportados e chaves de contexto), agora ligados a implementações internas em PT-BR. Essa camada de compatibilidade preserva o grafo de dependências documentado acima. Detalhes e exceções: `docs/nomenclatura-pt-br/RELATORIO.md`.
 
 ### `scripts/config.js`
 
@@ -894,3 +915,50 @@ Responsabilidade: ids e ordem de scripts.
 Pode quebrar: carregamento inteiro, views, CSS.
 
 Nivel: Critico.
+
+## Revisão das dependências em 24/11/2026
+
+`main.js` coordena `encerrarSessao` de ClimateChat, ClimatePdfReport e EstacaoView, além de ClimateZoom.closeZoom. A UI da assistente restaura inert/rolagem e invalida respostas; o exportador usa o carregador compartilhado também para html2canvas/jsPDF. Forecast e AQI normalizam tempos antes de entregar às views e a rain.js. Os testes de integração simulam autenticação, Firebase e APIs; não certificam serviços reais.
+
+- Exportação JSON: `montarClimaExternoExportavel` seleciona campos climáticos e origem textual (`tipo`, `rotulo`); a serialização exclui `latitude`, `longitude` e `precisao` em qualquer nível, em todas as abas. Não solicita localização nem consulta APIs ao exportar.
+- Sessão: a transição de autenticação para o público fecha zoom e assistente sem focar controles privados, restaura os estados `inert` e a rolagem, limpa conversa/memória, cache externo privado, gráficos e `latestData`, e cancela listeners. Gerações de sessão invalidam conclusões tardias de carregamento, respostas, localização e exportação. Novo login reutiliza eventos e dependências com sucesso, sem duplicá-los.
+- Snapshot Firebase `null`: limpa cards, gráficos, tabelas e mapas de Sala/Quarto/Aquário, inclusive apresentações inativas já montadas; nova abertura/data continua vazia até receber dados. Erro de conexão preserva as últimas medições com aviso de possível desatualização.
+- Chuva: probabilidade e volume ausentes permanecem `null` de forma independente. Só zeros efetivamente informados indicam zero; previsão sem métricas é indisponível. Lacunas ou cobertura incompleta produzem ressalva e acumulado parcial; ventilação não interpreta ausência como condição externa favorável. Cards e relatório formatam valores ausentes como `--`.
+- CEP: coordenadas fornecidas pela origem são reutilizadas; o fallback só aceita cidade, estado normalizado (sigla/nome) e país BR correspondentes. Sem correspondência segura, retorna erro acionável.
+- Tempo público: Forecast e AQI pedem `timeformat=unixtime`, preservam `fusoHorario`, instantes ISO UTC, `dataLocal` e `ciclosSolares` por data local. Horários exibidos e dia/noite usam o fuso IANA do local consultado, inclusive ao atravessar meia-noite. O privado mantém a referência temporal existente dos sensores. Amanhecer/anoitecer públicos continuam aproximações de uma hora antes/depois de nascer/pôr do sol.
+- Recursos: promessas rejeitadas e elementos de script/CSS com falha saem do cache; fachadas de gráfico, assistente e relatório liberam nova tentativa. Chamadas simultâneas são deduplicadas e sucessos são reutilizados.
+
+O mapa anual de Sala e Quarto termina na data selecionada e inclui exatamente 365 datas civis, desde fim − 364 dias, inclusive 29/02 quando aplicável. Cada célula usa a média de todas as temperaturas válidas do dia, sem arredondamento intermediário, e informa a quantidade de horas distintas cobertas entre 0 e 23 (até 24 horários). Ausência permanece sem média. Usa a raiz já recebida do Firebase, sem 365 consultas adicionais, e monta a grade ao expandir Visualizações Climáticas. Reutiliza resumos por objeto de dia via `WeakMap`; snapshots novos invalidam pela identidade dos objetos. Mouse, toque e foco atualizam o detalhe; uma célula participa do Tab, setas verticais movem um dia e horizontais sete. A grade tem rolagem horizontal própria e começa no período mais recente. Não integra Aquário, página pública, PDF, JSON ou cálculos da assistente.
+
+### Comandos efetivos
+
+- `npm test` → `node tools/testar-projeto.mjs`
+- `npm run validate` → `node tools/validate-project.mjs`
+- `npm run lint` → `eslint scripts tools`
+- `npm run test:assistant` → `node tools/testar-assistente.mjs`
+- `npm run test:report` → `node tools/testar-relatorio.mjs`
+- `npm run test:pdf-artifact` → `node tools/testar-pdf-artifact.mjs`
+- `npm run test:pdf-rain` → `node tools/testar-pdf-chuva.mjs`
+- `npm run test:export` → `node tools/testar-exportacao.mjs`
+- `npm run test:accessibility` → `node tools/testar-acessibilidade.mjs`
+- `npm run test:zoom` → `node tools/testar-zoom-geometria.mjs`
+- `npm run test:data-quality` → `node tools/testar-qualidade-dados.mjs`
+- `npm run test:public` → `node tools/testar-modo-publico.mjs`
+- `npm run test:mapa-anual` → `node tools/testar-mapa-anual.mjs`
+- `npm run test:chart-sync` → `node tools/testar-sincronizacao-graficos.mjs`
+- `npm run test:chart-reuse` → `node tools/testar-reuso-grafico-linha.mjs`
+- `npm run test:chart-comparison` → `node tools/testar-reuso-grafico-comparativo.mjs`
+- `npm run test:solar-reuse` → `node tools/testar-reuso-graficos-solares.mjs`
+- `npm run test:rolling-window` → `node tools/testar-janela-horas.mjs`
+- `npm run test:firebase-cycle` → `node tools/testar-ciclo-firebase.mjs`
+- `npm run test:inactive-tabs` → `node tools/testar-abas-inativas.mjs`
+- `npm run test:latest-reading` → `node tools/testar-ultimo-registro.mjs`
+- `npm run test:rain` → `node tools/testar-chuva.mjs`
+- `npm run test:axe` → `node tools/testar-axe.mjs`
+- `npm run test:tables` → `node tools/testar-tabelas.mjs`
+- `npm run test:ui-ux` → `node tools/testar-ui-ux.mjs`
+- `npm run test:audit-fixes` → `node tools/testar-correcoes-auditoria.mjs`
+
+Ferramentas: Node assert/VM para cálculo e ciclo de vida; playwright-core com Chrome/Edge para UI e transições; axe-core para acessibilidade; html2canvas/jsPDF e pdfjs-dist para gerar e inspecionar PDFs. ESLint usa globals e Prettier formata arquivos. Não há novo framework de testes.
+
+Referência temporal da API: [Open-Meteo — timeformat e timezone](https://open-meteo.com/en/docs), consultada em 24/11/2026. Instantes Unix são convertidos usando o fuso IANA retornado; a API também documenta as limitações de deslocamento fixo para respostas ISO.

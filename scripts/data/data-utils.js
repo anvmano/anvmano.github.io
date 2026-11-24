@@ -50,6 +50,7 @@
     }
 
     function filtrarDadosPorDias(dados, dias, dataSelecionada, usarDataSelecionada = true) {
+        if (!dados) return {};
         if (usarDataSelecionada && dataSelecionada) {
             const dadosSelecionados = dados[dataSelecionada];
 

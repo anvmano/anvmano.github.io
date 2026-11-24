@@ -122,7 +122,7 @@ function criarGrafico({
     const id = contextoCanvas.canvas.id;
     if (!window.Chart) {
         if (idRecipiente) ClimateUI.renderChartMessage(idRecipiente, "Carregando gráfico...", "loading");
-        carregarChartParaGraficos();
+        carregarChartParaGraficos().catch(() => {});
         return instanciasGraficos[id] || null;
     }
 
@@ -157,10 +157,11 @@ function carregarChartParaGraficos() {
         carregamentoChart = ClimateAssets.carregarChart()
             .then(grafico => {
                 ClimateCharts.registerComfortBand();
-                renderizarPainelDaDataSelecionada();
+                if (!modoPublicoAtivo) renderizarPainelDaDataSelecionada();
                 return grafico;
             })
             .catch(erro => {
+                carregamentoChart = null;
                 window.ClimateDiagnostics?.erro("Falha ao carregar Chart.js.", erro);
                 mostrarFalhaGraficos();
                 throw erro;
@@ -274,6 +275,7 @@ function renderizarDadosSala(dados) {
 }
 
 function renderizarPainelDaDataSelecionada() {
+    if (modoPublicoAtivo) return;
     switch (ClimateUI.getActiveTabName()) {
         case "Tab0":
             if (renderEstacaoAgendado !== null) cancelAnimationFrame(renderEstacaoAgendado);
@@ -281,13 +283,13 @@ function renderizarPainelDaDataSelecionada() {
             renderizarDadosEstacao();
             break;
         case "Tab1":
-            if (dadosMaisRecentes.livingRoom) renderizarDadosSala(dadosMaisRecentes.livingRoom);
+            renderizarDadosSala(dadosMaisRecentes.livingRoom);
             break;
         case "Tab2":
-            if (dadosMaisRecentes.room) renderizarDadosQuarto(dadosMaisRecentes.room);
+            renderizarDadosQuarto(dadosMaisRecentes.room);
             break;
         case "Tab3":
-            if (dadosMaisRecentes.aquarium) renderizarDadosAquario(dadosMaisRecentes.aquarium);
+            renderizarDadosAquario(dadosMaisRecentes.aquarium);
             break;
     }
 }
@@ -296,8 +298,12 @@ function obterValorHoraAtual(agora = new Date()) {
     return agora.getHours() + (agora.getMinutes() / 60) + (agora.getSeconds() / 3600);
 }
 
-function obterEventosSolaresHoje() {
-    if (modoPublicoAtivo) return eventosSolaresPublicos?.events || null;
+function obterEventosSolaresHoje(agora = new Date()) {
+    if (modoPublicoAtivo) {
+        const dataLocal = new Intl.DateTimeFormat("en-CA", { timeZone: eventosSolaresPublicos?.fusoHorario }).format(agora);
+        return eventosSolaresPublicos?.ciclosSolares
+            ? eventosSolaresPublicos.ciclosSolares[dataLocal] || null : eventosSolaresPublicos?.events || null;
+    }
     if (!dadosMaisRecentes.solar) return null;
     return ClimateSolar.getSolarEventsForSelectedDate(dadosMaisRecentes.solar, ClimateData.dataAtual());
 }
@@ -341,7 +347,7 @@ function formatarDuracaoAstronomica(inicio, fim) {
 }
 
 function obterEstadoAstronomico(agora = new Date()) {
-    const eventosSolares = obterEventosSolaresHoje();
+    const eventosSolares = obterEventosSolaresHoje(agora);
     if (modoPublicoAtivo && !eventosSolares) {
         return {
             mode: "unknown",
@@ -355,7 +361,10 @@ function obterEstadoAstronomico(agora = new Date()) {
     }
 
     const eventos = eventosSolares || obterEventosSolaresPadrao();
-    const hora = obterValorHoraAtual(agora);
+    const horaLocal = modoPublicoAtivo && eventosSolaresPublicos?.fusoHorario
+        ? new Intl.DateTimeFormat("en-GB", { timeZone: eventosSolaresPublicos.fusoHorario, hourCycle: "h23", hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(agora).split(":").map(Number)
+        : null;
+    const hora = horaLocal ? horaLocal[0] + horaLocal[1] / 60 + horaLocal[2] / 3600 : obterValorHoraAtual(agora);
     const ehCrepusculo = (hora >= eventos.dawn && hora < eventos.sunrise) || (hora > eventos.sunset && hora <= eventos.dusk);
     const ehDia = hora >= eventos.sunrise && hora <= eventos.sunset;
     const ehCaminhoSolar = hora >= eventos.dawn && hora <= eventos.dusk;
@@ -498,6 +507,8 @@ function configurarCicloSolarPublico() {
         eventosSolaresPublicos = detalhe.events ? {
             events: detalhe.events,
             origem: detalhe.origem || null,
+            fusoHorario: detalhe.fusoHorario,
+            ciclosSolares: detalhe.ciclosSolares,
         } : null;
         atualizarIndicadorAstronomico();
     });
@@ -517,21 +528,24 @@ async function configurarEscutasFirebase() {
     if (modoPublicoAtivo || geracaoAtual !== geracaoFirebase || canceladoresFirebase.length) return;
 
     registrarListenerFirebase(FirebaseService.listenToPath(CAMINHOS_FIREBASE.room, dados => {
+        if (modoPublicoAtivo || geracaoAtual !== geracaoFirebase) return;
         atualizarAvisoConexao("Quarto", false);
         dadosMaisRecentes.room = dados;
         if (!dados) {
-            ClimateUI.renderEmptyState(IDS.tables.room, "Sem dados de temperatura.");
+            renderizarDadosQuarto(null);
             agendarRenderizacaoEstacao();
             return;
         }
         if (ClimateUI.getActiveTabName() === "Tab2") renderizarDadosQuarto(dados);
         agendarRenderizacaoEstacao();
     }, () => {
+        if (modoPublicoAtivo || geracaoAtual !== geracaoFirebase) return;
         atualizarAvisoConexao("Quarto", true);
         ClimateUI.renderEmptyState(IDS.tables.room, "Falha ao carregar dados de temperatura.", "error");
     }));
 
     registrarListenerFirebase(FirebaseService.listenToPath(CAMINHOS_FIREBASE.solar, dados => {
+        if (modoPublicoAtivo || geracaoAtual !== geracaoFirebase) return;
         atualizarAvisoConexao("dados solares", false);
         dadosMaisRecentes.solar = dados;
         if (!dados) {
@@ -545,6 +559,7 @@ async function configurarEscutasFirebase() {
         agendarRenderizacaoEstacao();
         atualizarIndicadorAstronomico();
     }, () => {
+        if (modoPublicoAtivo || geracaoAtual !== geracaoFirebase) return;
         atualizarAvisoConexao("dados solares", true);
         ClimateUI.renderChartMessage(IDS.chartContainers.sunHistory, "Falha ao carregar dados solares.", "error");
         ClimateUI.renderChartMessage(IDS.chartContainers.solarToday, "Falha ao carregar ciclo solar.", "error");
@@ -553,26 +568,29 @@ async function configurarEscutasFirebase() {
     }));
 
     registrarListenerFirebase(FirebaseService.listenToPath(CAMINHOS_FIREBASE.aquarium, dados => {
+        if (modoPublicoAtivo || geracaoAtual !== geracaoFirebase) return;
         atualizarAvisoConexao("Aquário", false);
         dadosMaisRecentes.aquarium = dados;
         if (!dados) {
-            ClimateUI.renderEmptyState(IDS.tables.aquarium, "Sem dados do aquário.");
+            renderizarDadosAquario(null);
             agendarRenderizacaoEstacao();
             return;
         }
         if (ClimateUI.getActiveTabName() === "Tab3") renderizarDadosAquario(dados);
         agendarRenderizacaoEstacao();
     }, () => {
+        if (modoPublicoAtivo || geracaoAtual !== geracaoFirebase) return;
         atualizarAvisoConexao("Aquário", true);
         ClimateUI.renderEmptyState(IDS.tables.aquarium, "Falha ao carregar dados do aquário.", "error");
     }));
 
     registrarListenerFirebase(FirebaseService.listenToPath(CAMINHOS_FIREBASE.livingRoom, dados => {
+        if (modoPublicoAtivo || geracaoAtual !== geracaoFirebase) return;
         atualizarAvisoConexao("Sala", false);
         dadosMaisRecentes.livingRoom = dados;
         if (!dados) {
             ClimateAqi.update(null);
-            ClimateUI.renderEmptyState(IDS.tables.livingRoom, "Sem dados da sala.");
+            renderizarDadosSala(null);
             agendarRenderizacaoEstacao();
             return;
         }
@@ -580,6 +598,7 @@ async function configurarEscutasFirebase() {
         if (ClimateUI.getActiveTabName() === "Tab1") renderizarDadosSala(dados);
         agendarRenderizacaoEstacao();
     }, () => {
+        if (modoPublicoAtivo || geracaoAtual !== geracaoFirebase) return;
         atualizarAvisoConexao("Sala", true);
         ClimateUI.renderEmptyState(IDS.tables.livingRoom, "Falha ao carregar dados da sala.", "error");
     }));
@@ -606,6 +625,11 @@ function registrarListenerFirebase(cancelador) {
 }
 
 function pararFirebaseInterno() {
+    ClimateZoom.closeZoom?.({ restaurarFoco: false });
+    ClimateChat.encerrarSessao?.();
+    ClimatePdfReport.encerrarSessao?.();
+    EstacaoView.encerrarSessao?.();
+    fecharDetalhesAstronomicos();
     geracaoFirebase++;
     falhasFirebase.clear();
     atualizarAvisoConexao("", false);
@@ -622,6 +646,17 @@ function pararFirebaseInterno() {
     Object.keys(dadosMaisRecentes).forEach(chave => {
         dadosMaisRecentes[chave] = null;
     });
+    Object.values(instanciasGraficos).forEach(grafico => {
+        window.ClimateChartSync?.desregistrar(grafico);
+        grafico.destroy();
+    });
+    Object.keys(instanciasGraficos).forEach(chave => delete instanciasGraficos[chave]);
+    if (dashboardInternoInicializado) {
+        renderizarDadosSala(null);
+        renderizarDadosQuarto(null);
+        renderizarDadosAquario(null);
+        EstacaoView.renderSummary(dadosMaisRecentes, dataSelecionada);
+    }
     ClimateAqi.update(null);
 }
 
@@ -635,6 +670,9 @@ function reagirAberturaColapsavel() {
 
 function inicializarDashboardInterno() {
     modoPublicoAtivo = false;
+    ClimateChat.iniciarSessao?.();
+    ClimatePdfReport.iniciarSessao?.();
+    EstacaoView.iniciarSessao?.();
     eventosSolaresPublicos = null;
     atualizarIndicadorAstronomico();
     if (dashboardInternoInicializado) {

@@ -18,7 +18,7 @@ Impacto: legibilidade e consistencia com o dominio do projeto.
 
 Criticidade: Media.
 
-Estado verificado em 08/09/2026: uma rodada transversal atualizou os vínculos internos e os testes, preservando aliases nas fronteiras existentes. Chaves como `activeTab`, `selectedDate`, `latestData`, `chartInstances`, `result`, `records`, `status` e `aliases` continuam inalteradas quando fazem parte de contextos ou payloads compartilhados.
+Estado verificado em 08/09/2026: uma rodada transversal atualizou os vínculos internos e os testes, preservando aliases nas fronteiras existentes. Chaves como `activeTab`, `selectedDate`, `latestData`, `chartInstances`, `result`, `records`, `status` e `aliases` continuam inalteradas quando fazem parte de contextos ou payloads compartilhados. O inventário de renomeações, as exceções e a regressão completa estão em `docs/nomenclatura-pt-br/RELATORIO.md`.
 
 ## Regra: formato da data atual Firebase
 
@@ -512,7 +512,7 @@ Arquivo: `scripts/data/analytics.js`
 
 Metodo: `renderAdvancedClimateViews`
 
-Objetivo: gerar calendario mensal, heatmap por hora e mapa semanal.
+Objetivo: gerar calendário mensal, heatmap por hora, mapa semanal e mapa anual de 365 dias.
 
 Entradas: dados, data selecionada, `metricKey`, containers.
 
@@ -529,7 +529,7 @@ Regra de destaque:
 - calendario mensal destaca o dia selecionado
 - heatmap por hora destaca a hora atual apenas quando a data selecionada e hoje
 - mapa semanal destaca a celula do dia da semana atual e hora atual apenas quando a data selecionada e hoje
-- heatmaps de Sala/Quarto so devem montar o DOM quando a secao de visualizacoes climaticas estiver expandida; abrir o colapsavel dispara novo render da data selecionada
+- heatmaps de Sala/Quarto montam o DOM quando a seção estiver expandida; abrir o colapsável dispara novo render. Snapshot vazio e fim de sessão limpam também seções recolhidas já montadas
 
 Impacto: visualizacoes climaticas de Quarto e Sala.
 
@@ -543,9 +543,9 @@ Criticidade: Alta.
 
 Arquivo: `scripts/data/analytics.js`
 
-Metodo: `getHeatColor(value, scale)`
+Método: `obterCorMapaCalor(valor, escala)`
 
-Objetivo: mapear valor para cor interpolada.
+Objetivo: mapear valores dos mapas horário e semanal para cor interpolada; calendário mensal e mapa anual usam escala fixa própria.
 
 Entradas: valor e escala min/max.
 
@@ -557,7 +557,7 @@ Saidas:
 
 Impacto: leitura visual dos heatmaps.
 
-Dependencias: `getValueScale`.
+Dependências: `obterEscalaValores`.
 
 Se alterada: cores deixam de representar a mesma escala.
 
@@ -672,15 +672,14 @@ Criticidade: Media.
 
 Arquivos: `index.html`, `style.css`, `scripts/main.js`, `scripts/charts/solar.js`
 
-Metodos: `setupAstroIndicator`, `updateAstroIndicator`, `getSolarEventsForSelectedDate`
+Métodos: `configurarIndicadorAstronomico`, `atualizarIndicadorAstronomico`, `getSolarEventsForSelectedDate`
 
 Objetivo: mostrar ao lado do relogio se o periodo atual e dia, noite ou transicao solar, com posicao animada do sol ou da lua.
 
 Entradas:
 
-- horario atual do navegador
-- eventos solares de hoje em `historico/NascePorDoSol`
-- fallback 06:00-18:00 quando dados solares ainda nao carregaram
+- modo privado: horário do navegador e eventos de hoje em `historico/NascePorDoSol`, com fallback 06:00–18:00
+- modo público: instante atual e eventos da data local no fuso do lugar consultado; sem eventos, estado `unknown`, sem aplicar o fallback privado
 
 Saidas: estado visual em `#astroIndicator` com classes `astro-indicator--day`, `astro-indicator--twilight` ou `astro-indicator--night`.
 
@@ -1362,6 +1361,8 @@ DOM + Chart.js
 
 Nenhum codigo morto de runtime confirmado na varredura atual.
 
+Observacao: copias antigas foram isoladas em `legacy/scripts/`. Elas nao participam do runtime nem da validacao e nao devem receber correcoes destinadas a aplicacao ativa.
+
 ## Qualidade operacional dos sensores
 
 - Toda metrica interna deve usar `ClimateDataQuality` como fonte unica de qualidade para UI, PDF/JSON e assistente.
@@ -1500,3 +1501,19 @@ Leia:
 - `index.html`
 - `scripts/config.js`
 - `scripts/data/data-utils.js`
+
+## Contratos revisados em 24/11/2026
+
+- Exportação JSON: `montarClimaExternoExportavel` seleciona campos climáticos e origem textual (`tipo`, `rotulo`); a serialização exclui `latitude`, `longitude` e `precisao` em qualquer nível, em todas as abas. Não solicita localização nem consulta APIs ao exportar.
+- Sessão: a transição de autenticação para o público fecha zoom e assistente sem focar controles privados, restaura os estados `inert` e a rolagem, limpa conversa/memória, cache externo privado, gráficos e `latestData`, e cancela listeners. Gerações de sessão invalidam conclusões tardias de carregamento, respostas, localização e exportação. Novo login reutiliza eventos e dependências com sucesso, sem duplicá-los.
+- Snapshot Firebase `null`: limpa cards, gráficos, tabelas e mapas de Sala/Quarto/Aquário, inclusive apresentações inativas já montadas; nova abertura/data continua vazia até receber dados. Erro de conexão preserva as últimas medições com aviso de possível desatualização.
+- Chuva: probabilidade e volume ausentes permanecem `null` de forma independente. Só zeros efetivamente informados indicam zero; previsão sem métricas é indisponível. Lacunas ou cobertura incompleta produzem ressalva e acumulado parcial; ventilação não interpreta ausência como condição externa favorável. Cards e relatório formatam valores ausentes como `--`.
+- CEP: coordenadas fornecidas pela origem são reutilizadas; o fallback só aceita cidade, estado normalizado (sigla/nome) e país BR correspondentes. Sem correspondência segura, retorna erro acionável.
+- Tempo público: Forecast e AQI pedem `timeformat=unixtime`, preservam `fusoHorario`, instantes ISO UTC, `dataLocal` e `ciclosSolares` por data local. Horários exibidos e dia/noite usam o fuso IANA do local consultado, inclusive ao atravessar meia-noite. O privado mantém a referência temporal existente dos sensores. Amanhecer/anoitecer públicos continuam aproximações de uma hora antes/depois de nascer/pôr do sol.
+- Recursos: promessas rejeitadas e elementos de script/CSS com falha saem do cache; fachadas de gráfico, assistente e relatório liberam nova tentativa. Chamadas simultâneas são deduplicadas e sucessos são reutilizados.
+
+### Mapa anual e escalas de temperatura
+
+O mapa anual de Sala e Quarto termina na data selecionada e inclui exatamente 365 datas civis, desde fim − 364 dias, inclusive 29/02 quando aplicável. Cada célula usa a média de todas as temperaturas válidas do dia, sem arredondamento intermediário, e informa a quantidade de horas distintas cobertas entre 0 e 23 (até 24 horários). Ausência permanece sem média. Usa a raiz já recebida do Firebase, sem 365 consultas adicionais, e monta a grade ao expandir Visualizações Climáticas. Reutiliza resumos por objeto de dia via `WeakMap`; snapshots novos invalidam pela identidade dos objetos. Mouse, toque e foco atualizam o detalhe; uma célula participa do Tab, setas verticais movem um dia e horizontais sete. A grade tem rolagem horizontal própria e começa no período mais recente. Não integra Aquário, página pública, PDF, JSON ou cálculos da assistente.
+
+Calendário mensal e mapa anual compartilham `coresMediaDiaria` e `corMediaDiaria`: dez cores fixas. Faixas em °C: <15; 15 a <17,5; 17,5 a <20; 20 a <22,5; 22,5 a <25; 25 a <27,5; 27,5 a <30; 30 a <32,5; 32,5 a 35 (inclusive); >35. Dados ausentes têm cor própria. Os mapas horário e semanal usam escala relativa min/max dos valores exibidos, interpolada entre azul, verde e rosa; não compartilham os limites fixos de temperatura dos mapas diário e anual. O texto das células preenchidas usa `#000000`, preservando a paleta e contraste mínimo de 4,5:1.

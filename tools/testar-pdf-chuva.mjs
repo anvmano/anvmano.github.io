@@ -35,6 +35,8 @@ const destino = caminho.join(sistemaOperacional.tmpdir(), `relatorio-chuva-teste
 try {
     for (const largura of [390, 1440]) {
     const pagina = await navegador.newPage({ viewport: { width: largura, height: 900 } });
+    // O artefato sintético não pertence a uma sessão autenticada real.
+    await pagina.route("**/scripts/main.js?*", rota => rota.fulfill({ contentType: "text/javascript", body: "" }));
     await pagina.goto(`http://127.0.0.1:${porta}/`, { waitUntil: "domcontentloaded" });
     await pagina.evaluate(async () => {
         await window.ClimateAssets.carregarChart();

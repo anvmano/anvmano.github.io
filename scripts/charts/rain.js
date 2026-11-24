@@ -37,15 +37,16 @@
         },
     };
 
-    function montarJanela(previsao = [], atualizadoEm = new Date(), horasObservadas = HORAS_OBSERVADAS, horasPrevistas = HORAS_PREVISTAS) {
+    function montarJanela(previsao = [], atualizadoEm = new Date(), horasObservadas = HORAS_OBSERVADAS, horasPrevistas = HORAS_PREVISTAS, fusoHorario) {
         const agora = dataValida(atualizadoEm) || new Date();
         const inicio = new Date(agora.getTime() - horasObservadas * 60 * 60 * 1000);
         const inicioProbabilidade = new Date(agora.getTime() - HORAS_PROBABILIDADE_ANTERIORES * 60 * 60 * 1000);
         const inicioPrevisao = new Date(agora);
-        inicioPrevisao.setMinutes(0, 0, 0);
-        inicioPrevisao.setHours(inicioPrevisao.getHours() + 1);
+        inicioPrevisao.setUTCMinutes(0, 0, 0);
+        inicioPrevisao.setUTCHours(inicioPrevisao.getUTCHours() + 1);
         const fimPrevisao = new Date(inicioPrevisao.getTime() + horasPrevistas * 60 * 60 * 1000);
         const resultado = {
+            fusoHorario,
             horarios: [],
             tipos: [],
             precipitacao: [],
@@ -240,7 +241,7 @@
         const grafico = new Chart(canvas.getContext("2d"), {
             type: "bar",
             data: {
-                labels: visualizacaoInicial.horarios.map(formatarHora),
+                labels: visualizacaoInicial.horarios.map(valor => formatarHora(valor, janela.fusoHorario)),
                 datasets,
             },
             options: obterOpcoes({ janela, cores, modo: modoFixo }),
@@ -251,6 +252,7 @@
             precipitacao: visualizacaoPrecipitacao,
             probabilidade: visualizacaoChance,
         };
+        grafico.$fusoHorario = janela.fusoHorario;
         grafico.$indiceAgora = visualizacaoInicial.indiceAgora;
         grafico.$marcadorAgora = { indice: visualizacaoInicial.indiceAgora };
         grafico.$horariosAtivos = [...visualizacaoInicial.horarios];
@@ -295,7 +297,7 @@
                         title: itens => {
                             const indice = itens[0]?.dataIndex;
                             const horario = itens[0]?.chart?.$horariosAtivos?.[indice] || janela?.horarios?.[indice];
-                            return horario ? formatarDataHora(horario) : itens[0]?.label || "--";
+                            return horario ? formatarDataHora(horario, janela?.fusoHorario) : itens[0]?.label || "--";
                         },
                         label: contexto => contexto.dataset.yAxisID === "yProbabilidade"
                             ? `${contexto.dataset.label}: ${Number(contexto.parsed.y).toFixed(0)}%`
@@ -395,7 +397,7 @@
         const visualizacao = grafico.$visualizacoesChuva?.[mostrarProbabilidade ? "probabilidade" : "precipitacao"];
         if (!visualizacao) return;
 
-        grafico.data.labels = visualizacao.horarios.map(formatarHora);
+        grafico.data.labels = visualizacao.horarios.map(valor => formatarHora(valor, grafico.$fusoHorario));
         grafico.data.datasets.forEach(serie => {
             serie.data = [...(visualizacao.series[serie.chaveChuva] || [])];
             serie.hidden = serie.yAxisID === "yProbabilidade" ? !mostrarProbabilidade : !mostrarPrecipitacao;
@@ -455,16 +457,16 @@
         return Number.isFinite(numero) ? numero : null;
     }
 
-    function formatarHora(valor) {
+    function formatarHora(valor, fusoHorario) {
         const dados = dataValida(valor);
         if (!dados) return "--";
-        return `${String(dados.getHours()).padStart(2, "0")}:${String(dados.getMinutes()).padStart(2, "0")}`;
+        return dados.toLocaleTimeString("pt-BR", { timeZone: fusoHorario, hour: "2-digit", minute: "2-digit" });
     }
 
-    function formatarDataHora(valor) {
+    function formatarDataHora(valor, fusoHorario) {
         const dados = dataValida(valor);
         if (!dados) return "--";
-        return `${String(dados.getDate()).padStart(2, "0")}/${String(dados.getMonth() + 1).padStart(2, "0")} ${formatarHora(dados)}`;
+        return dados.toLocaleString("pt-BR", { timeZone: fusoHorario, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).replace(",", "");
     }
 
     window.ClimateChuva = {

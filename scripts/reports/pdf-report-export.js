@@ -99,6 +99,9 @@
     function carregarScriptUnico(url, nomeGlobal) {
         if (!url) return Promise.reject(new Error(`URL ausente para ${nomeGlobal}.`));
         if (window[nomeGlobal]) return Promise.resolve();
+        if (window.ClimateAssets?.carregarScriptUmaVez) {
+            return window.ClimateAssets.carregarScriptUmaVez(url, () => !!window[nomeGlobal]);
+        }
 
         return new Promise((resolver, rejeitar) => {
             const existente = document.querySelector(`script[data-lazy-lib="${nomeGlobal}"]`);
@@ -113,7 +116,7 @@
             script.async = true;
             script.dataset.lazyLib = nomeGlobal;
             script.onload = resolver;
-            script.onerror = () => rejeitar(new Error(`Falha ao carregar ${nomeGlobal}.`));
+            script.onerror = () => { script.remove(); rejeitar(new Error(`Falha ao carregar ${nomeGlobal}.`)); };
             document.head.appendChild(script);
         });
     }
@@ -132,9 +135,10 @@
             // Compatibilidade com o JSON antigo: consumidores existentes ainda encontram `tabela`.
             tabela: relatorio.rows.map(formatarLinhaTabelaDetalhadaJson),
             dadosBrutos: relatorio.selectedData,
-            climaExterno: relatorio.dadosClimaExterno,
+            climaExterno: montarClimaExternoExportavel(relatorio.dadosClimaExterno),
         };
-        const blob = new Blob([JSON.stringify(conteudoEnvio, null, 2)], {
+        const blob = new Blob([JSON.stringify(conteudoEnvio, (chave, valor) =>
+            ["latitude", "longitude", "precisao"].includes(chave) ? undefined : valor, 2)], {
             type: "application/json;charset=utf-8",
         });
         const url = URL.createObjectURL(blob);
@@ -145,6 +149,17 @@
         ligacao.click();
         ligacao.remove();
         URL.revokeObjectURL(url);
+    }
+
+    function montarClimaExternoExportavel(externo) {
+        if (!externo) return null;
+        const { climaAtual, atualizadoEm, fusoHorario, seriesHorarias, previsaoCurtoPrazo,
+            previsaoDiaria, previsaoQuinzeDias, aqi, cicloSolar, ciclosSolares, dataLocal } = externo;
+        return {
+            origem: { tipo: externo.origem?.tipo, rotulo: externo.origem?.rotulo },
+            climaAtual, atualizadoEm, fusoHorario, seriesHorarias, previsaoCurtoPrazo,
+            previsaoDiaria, previsaoQuinzeDias, aqi, cicloSolar, ciclosSolares, dataLocal,
+        };
     }
 
     function formatarCardResumoJson(card) {
@@ -209,6 +224,7 @@
         const configuracaoAba = CONFIGURACAO_ABAS[contexto.activeTab] || CONFIGURACAO_ABAS.Tab0 || CONFIGURACAO_ABAS.Tab1;
         const dataSelecionada = contexto.selectedDate || ClimateData.dataAtual();
         const geradoEm = new Date();
+        const dadosClimaExterno = montarClimaExternoExportavel(contexto.dadosClimaExterno);
         const baseNomeArquivo = `relatorio-estacao-${gerarIdentificadorUrl(configuracaoAba.label)}-${dataSelecionada}`;
         aoAvancar?.("Preparando dados.");
         const fonte = construirFonteDadosRelatorio(configuracaoAba, contexto.latestData || {}, dataSelecionada);
@@ -221,7 +237,7 @@
             contexto.latestData || {},
             dataSelecionada,
             fonte.qualidades,
-            contexto.dadosClimaExterno || null
+            dadosClimaExterno
         );
         const alertas = montarAlertasDiarios(fonte.linhasNormalizadas, configuracaoAba.metrics, fonte.qualidades);
         aoAvancar?.("Gerando gráficos.");
@@ -230,7 +246,7 @@
             latestData: contexto.latestData || {},
             selectedDate: dataSelecionada,
             qualities: fonte.qualidades,
-            dadosClimaExterno: contexto.dadosClimaExterno || null,
+            dadosClimaExterno,
         });
 
         aoAvancar?.("Montando relatório.");
@@ -258,7 +274,7 @@
             normalizedRows: fonte.linhasNormalizadas,
             qualities: fonte.qualidades,
             chartCards: cardsGraficos,
-            dadosClimaExterno: contexto.dadosClimaExterno || null,
+            dadosClimaExterno,
         };
     }
 

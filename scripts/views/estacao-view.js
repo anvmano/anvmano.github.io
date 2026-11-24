@@ -10,6 +10,8 @@
     let mensagemConsultaExterna = "";
     let ultimosDadosInternos = null;
     let dependenciasGraficos = null;
+    let geracaoSessao = 0;
+    let sessaoAtiva = true;
 
     function renderizar({ latestData: dadosMaisRecentes, selectedDate: dataSelecionada, chartInstances: instanciasGraficos, defaults: padroes, colors: cores, ui: interfaceUsuario, ensureChart: garantirGrafico }) {
         dependenciasGraficos = { instanciasGraficos, padroes, cores, interfaceUsuario, garantirGrafico };
@@ -101,7 +103,7 @@
             chuva = window.ClimateInsightsAmbientais.resumirChuva(
                 dadosExternosAtuais.previsaoCurtoPrazo,
                 dadosExternosAtuais.atualizadoEm,
-                6
+                6, dadosExternosAtuais.fusoHorario
             );
             indiceUv = window.ClimateInsightsAmbientais.analisarIndiceUv(
                 dadosExternosAtuais.climaAtual.indiceUv,
@@ -152,14 +154,16 @@
     }
 
     async function consultarClimaExterno() {
-        if (estadoConsultaExterna === "carregando") return;
+        if (estadoConsultaExterna === "carregando" || !sessaoAtiva) return;
+        const geracao = geracaoSessao;
         estadoConsultaExterna = "carregando";
         mensagemConsultaExterna = "Consultando clima da localização do navegador...";
         renderizarInsightsAmbientais(ultimosDadosInternos || {});
 
         try {
             const localizacao = await window.BrowserLocationService.obterLocalizacaoAtual();
-            dadosExternosAtuais = await window.ExternalWeatherService.buscarPorCoordenadas({
+            if (geracao !== geracaoSessao) return;
+            const dados = await window.ExternalWeatherService.buscarPorCoordenadas({
                 latitude: localizacao.latitude,
                 longitude: localizacao.longitude,
                 origem: {
@@ -168,9 +172,12 @@
                     precisao: localizacao.precisao,
                 },
             });
+            if (geracao !== geracaoSessao) return;
+            dadosExternosAtuais = dados;
             estadoConsultaExterna = "sucesso";
             mensagemConsultaExterna = `Clima externo atualizado às ${formatarHoraData(dadosExternosAtuais.atualizadoEm)}.`;
         } catch (erro) {
+            if (geracao !== geracaoSessao) return;
             estadoConsultaExterna = "erro";
             mensagemConsultaExterna = erro?.message || "Não foi possível consultar o clima externo.";
         }
@@ -199,7 +206,7 @@
             status: chuva.rotulo,
             classe: chuva.classe,
             descricao: chuva.descricao,
-            detalhe: chuva.classe === "indisponivel" ? "Sem previsão horária" : `Maior chance ${Math.round(chuva.probabilidade)}% · ${chuva.acumulado.toFixed(1)} mm acumulados · pico ${chuva.intensidadeMaxima.toFixed(1)} mm/h`,
+            detalhe: chuva.classe === "indisponivel" ? "Sem previsão horária" : window.ClimateInsightsAmbientais.formatarDetalhesChuva(chuva),
             acao: montarAcaoLocalizacao(),
         });
     }
@@ -224,14 +231,14 @@
         window.ClimateUI.renderChartContext(ids.chartContainers.rain, `Consulta externa atualizada em ${new Date(dadosExternosAtuais.atualizadoEm).toLocaleString("pt-BR")} · independente da data selecionada`);
         if (!window.Chart) {
             dependencias.interfaceUsuario.renderChartMessage(ids.chartContainers.rain, "Carregando gráfico...", "loading");
-            dependencias.garantirGrafico?.();
+            dependencias.garantirGrafico?.()?.catch(() => {});
             return;
         }
 
         dependencias.interfaceUsuario.clearChartMessage(ids.chartContainers.rain);
         const janela = window.ClimateChuva.montarJanela(
             dadosExternosAtuais.previsaoCurtoPrazo,
-            dadosExternosAtuais.atualizadoEm
+            dadosExternosAtuais.atualizadoEm, 24, 12, dadosExternosAtuais.fusoHorario
         );
         const grafico = window.ClimateChuva.criarGrafico({
             canvas: canvasChuva,
@@ -527,7 +534,7 @@
 
         if (!window.Chart) {
             interfaceUsuario.renderChartMessage(idRecipiente, "Carregando gráfico...", "loading");
-            if (typeof garantirGrafico === "function") garantirGrafico();
+            if (typeof garantirGrafico === "function") garantirGrafico()?.catch(() => {});
             return;
         }
 
@@ -708,6 +715,17 @@
     }
 
     window.EstacaoView = {
+        iniciarSessao: () => { sessaoAtiva = true; },
+        encerrarSessao: () => {
+            sessaoAtiva = false;
+            geracaoSessao++;
+            dadosExternosAtuais = null;
+            ultimosDadosInternos = null;
+            estadoConsultaExterna = "ocioso";
+            mensagemConsultaExterna = "";
+            renderizarInsightsAmbientais({});
+            renderizarGraficoChuvaExterna();
+        },
         render: renderizar,
         renderSummary: renderizarResumoGlobal,
         obterDadosExternosAtuais: () => dadosExternosAtuais,

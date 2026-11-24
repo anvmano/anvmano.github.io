@@ -5,6 +5,7 @@
     let disparadorZoom = null;
     let eventoEscapeRegistrado = false;
     let carregamentoEstilosZoom = null;
+    let geracaoZoom = 0;
 
     function garantirEstilosZoom() {
         if (!carregamentoEstilosZoom) {
@@ -19,8 +20,10 @@
     }
 
     async function abrirZoom(card, opcoesAmpliacao, disparador) {
+        const geracao = geracaoZoom;
         try {
             await garantirEstilosZoom();
+            if (geracao !== geracaoZoom) return;
             tratarAmpliacao(card, opcoesAmpliacao, disparador);
         } catch (erro) {
             window.ClimateDiagnostics?.erro("Falha ao preparar o zoom do gráfico.", erro);
@@ -41,6 +44,7 @@
     }
 
     function fecharAmpliacao({ restaurarFoco = true } = {}) {
+        geracaoZoom++;
         if (!sobreposicaoAmpliacao) return;
         const disparadorAnterior = disparadorZoom;
         const graficoAmpliado = sobreposicaoAmpliacao._chart;
@@ -50,7 +54,12 @@
         disparadorZoom = null;
 
         if (restaurarFoco && disparadorAnterior?.isConnected) {
-            requestAnimationFrame(() => disparadorAnterior.focus({ preventScroll: true }));
+            const geracao = geracaoZoom;
+            requestAnimationFrame(() => {
+                if (geracao === geracaoZoom && !disparadorAnterior.closest("[hidden], [inert]")) {
+                    disparadorAnterior.focus({ preventScroll: true });
+                }
+            });
         }
     }
 

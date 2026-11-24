@@ -1,18 +1,24 @@
 # Plano: Login Google, Modo Interno E Modo Publico
 
-## Status Atual
+## Status Atual — revisão de 24/11/2026
 
 Plano implementado no codigo atual com ajustes em relacao ao desenho original:
 
 - login Google opcional existe em `scripts/auth/auth-service.js`;
 - os usuarios internos autorizados atuais sao `anvmano@gmail.com` e `clarissamikado@gmail.com`;
 - modo publico sem login existe em `scripts/views/public-weather-view.js`;
-- modo publico usa CEP ou localizacao do navegador;
+- modo público usa CEP, pesquisa de cidade brasileira com até cinco opções de cidade/estado ou localização do navegador;
+- inclui gráficos de 24h observadas + 12h previstas, previsão diária de 15 dias, chuva, UV, ventilação e contexto solar no fuso consultado;
+- logout e mudanças remotas de autenticação encerram diálogos e invalidam operações privadas pendentes;
 - modo publico usa BrasilAPI/ViaCEP e Open-Meteo;
 - dashboard interno, listeners Firebase, exportacao interna e assistente IA ficam restritos a usuarios internos autorizados;
 - logout existe no modo publico e no header interno;
 - nao foi criado `styles/auth.css`; os estilos de login ficam integrados ao header e ao modo publico em `styles/header.css`, `styles/public-weather.css` e `styles/responsive.css`;
 - o codigo atual usa e-mails autorizados em `AppConfig.auth.usuariosInternosAutorizados`, nao UID.
+
+## Desenho original — referência histórica
+
+As seções abaixo preservam o planejamento original; o estado implementado está descrito em Status Atual.
 
 ## Objetivo
 

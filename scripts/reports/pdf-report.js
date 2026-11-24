@@ -5,6 +5,8 @@
     let formatoSelecionado = "pdf";
     let carregamentoRelatorio = null;
     let ultimaTentativa = null;
+    let geracaoSessao = 0;
+    let sessaoAtiva = true;
 
     function configurarModulo({ buttonId: idBotao, formatName: nomeFormato = "exportFormat", getContext: obterContextoModulo } = {}) {
         obterContextoAtual = obterContextoModulo;
@@ -17,6 +19,8 @@
     }
 
     async function exportarAbaAtiva(botao) {
+        if (!sessaoAtiva || botao.disabled) return;
+        const geracao = geracaoSessao;
         const formato = obterFormatoSelecionado();
         const textoOriginal = botao.innerText;
         botao.disabled = true;
@@ -64,26 +68,33 @@
                 }
             });
         } catch (erro) {
+            if (geracao !== geracaoSessao) return;
             window.ClimateDiagnostics?.depurar("Erro ao exportar dados.", erro);
             const mensagem = erro?.name === "TimeoutError"
                 ? "A exportação demorou além do esperado. Verifique a conexão e tente novamente."
                 : "Falha ao exportar. Verifique a conexão e tente novamente.";
             atualizarProgresso(mensagem, "error", true);
         } finally {
-            botao.disabled = false;
-            botao.innerText = textoOriginal || obterRotuloBotao(obterFormatoSelecionado());
+            if (geracao === geracaoSessao) {
+                botao.disabled = false;
+                botao.innerText = textoOriginal || obterRotuloBotao(obterFormatoSelecionado());
+            }
         }
     }
 
     function executarComTimeout(acao) {
         const limite = Number(window.AppConfig?.exports?.timeoutMs) || 45000;
         let temporizador;
-        const controle = { cancelado: false };
+        const geracao = geracaoSessao;
+        const controle = {
+            expirado: false,
+            get cancelado() { return this.expirado || geracao !== geracaoSessao; },
+        };
         return Promise.race([
             Promise.resolve().then(() => acao(controle)),
             new Promise((resolver, rejeitar) => {
                 temporizador = setTimeout(() => {
-                    controle.cancelado = true;
+                    controle.expirado = true;
                     const erro = new Error("Tempo limite da exportação excedido.");
                     erro.name = "TimeoutError";
                     rejeitar(erro);
@@ -131,16 +142,16 @@
 
     async function carregarExportador(formato) {
         if (!carregamentoRelatorio) {
-            carregamentoRelatorio = window.ClimateAssets?.carregarRelatorio?.() || Promise.reject(new Error("Carregador do relatório indisponível."));
+            carregamentoRelatorio = (window.ClimateAssets?.carregarRelatorio?.() || Promise.reject(new Error("Carregador do relatório indisponível.")))
+                .catch(erro => { carregamentoRelatorio = null; throw erro; });
         }
 
+        await carregamentoRelatorio;
         if (formato === "pdf") {
             await window.ClimateAssets?.carregarCssRelatorio?.();
             await window.ClimateAssets?.carregarChart?.();
             window.ClimateCharts?.registerComfortBand?.();
         }
-
-        await carregamentoRelatorio;
 
         const exportador = window.ClimatePdfReportModules?.exporter;
         if (!exportador) throw new Error("Exportador de relatório indisponível.");
@@ -149,5 +160,16 @@
 
     window.ClimatePdfReport = {
         setup: configurarModulo,
+        iniciarSessao: () => { sessaoAtiva = true; },
+        encerrarSessao: () => {
+            sessaoAtiva = false;
+            geracaoSessao++;
+            ultimaTentativa = null;
+            document.querySelectorAll(".pdf-render-root").forEach(raiz => raiz.remove());
+            const botao = document.getElementById("btnExportData");
+            if (botao) { botao.disabled = false; botao.innerText = obterRotuloBotao(obterFormatoSelecionado()); }
+            const retorno = document.getElementById("exportFeedback");
+            if (retorno) retorno.hidden = true;
+        },
     };
 })();

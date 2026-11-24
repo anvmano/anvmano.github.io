@@ -13,7 +13,7 @@
         if (!window.Chart) {
             interfaceUsuario.renderChartMessage(ids.chartContainers.sunHistory, "Carregando gráfico...", "loading");
             interfaceUsuario.renderChartMessage(ids.chartContainers.solarToday, "Carregando gráfico...", "loading");
-            if (typeof garantirGrafico === "function") garantirGrafico();
+            if (typeof garantirGrafico === "function") garantirGrafico()?.catch(() => {});
             return;
         }
 
