@@ -24,6 +24,18 @@ try {
     await dias.last().focus();
     await pagina.keyboard.press("ArrowUp");
     assert.match(await pagina.locator("#anual output").textContent(), /29\/02\/2024 · Média: 24,0 °C · 2 de 24 horários/);
+    const temperaturas = [14.9, 15, 17.5, 20, 22.5, 25, 27.5, 30, 32.5, 35, 35.1];
+    const cores = await pagina.evaluate(valores => {
+        const dados = Object.fromEntries(valores.map((Temperatura, i) => [
+            String(i + 1).padStart(2, "0") + "-02-2024", { "10-00": { a: { Temperatura } } },
+        ]));
+        window.ClimateAnalytics.renderAdvancedClimateViews(dados, "29-02-2024", { containers: { mapaAnual: "anual" } });
+        return [...document.querySelectorAll("#anual button")].filter(b => !b.title.includes("Sem dados")).map(b => b.style.backgroundColor);
+    }, temperaturas);
+    const coresMensais = await pagina.locator(".calendar-heatmap__day").evaluateAll(dias => dias.map(dia => dia.style.backgroundColor));
+    assert.deepEqual(coresMensais.slice(0, temperaturas.length), cores);
+    assert.equal(coresMensais.at(-1), "var(--border)");
+    assert.deepEqual(cores, ["99,102,241", "67,133,220", "56,180,237", "36,198,183", "163,214,92", "242,212,80", "255,170,66", "247,122,57", "239,83,80", "239,83,80", "220,57,118"].map(rgb => "rgb(" + rgb.replaceAll(",", ", ") + ")"));
 } finally {
     await navegador.close();
 }

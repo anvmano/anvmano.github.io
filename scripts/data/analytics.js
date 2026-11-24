@@ -235,8 +235,15 @@
     }
 
     const resumosAnuais = new WeakMap();
-    const coresAnuais = ["#428cce", "#38aaa6", "#c0bd65", "#e6a04b", "#ea786a"];
-    const faixasAnuais = ["< 18", "18 a < 22", "22 a < 26", "26 a < 30", "≥ 30"];
+    const coresMediaDiaria = ["#6366F1", "#4385DC", "#38B4ED", "#24C6B7", "#A3D65C", "#F2D450", "#FFAA42", "#F77A39", "#EF5350", "#DC3976"];
+    const faixasAnuais = ["< 15", "15 a < 17,5", "17,5 a < 20", "20 a < 22,5", "22,5 a < 25", "25 a < 27,5", "27,5 a < 30", "30 a < 32,5", "32,5 a 35", "> 35"];
+
+    function corMediaDiaria(media) {
+        if (!Number.isFinite(media)) return "var(--border)";
+        if (media < 15) return coresMediaDiaria[0];
+        if (media > 35) return coresMediaDiaria[9];
+        return coresMediaDiaria[Math.min(8, 1 + Math.floor((media - 15) / 2.5))];
+    }
 
     function resumirDia(dia, chave, campo) {
         if (!dia || typeof dia !== "object") return null;
@@ -261,7 +268,7 @@
             const legenda = painel.querySelector(".anual-legenda");
             [...faixasAnuais.map(f => f + " °C"), "Sem dados"].forEach((texto, i) => {
                 const item = document.createElement("span");
-                item.style.setProperty("--cor", coresAnuais[i] || "var(--border)");
+                item.style.setProperty("--cor", coresMediaDiaria[i] || "var(--border)");
                 item.textContent = texto;
                 legenda.append(item);
             });
@@ -303,7 +310,7 @@
                 botao.title = texto;
                 botao.setAttribute("aria-label", texto);
             }
-            botao.style.backgroundColor = resumo ? coresAnuais[[18, 22, 26, 30].filter(limite => resumo.media >= limite).length] : "var(--border)";
+            botao.style.backgroundColor = corMediaDiaria(resumo?.media);
         }
         const selecionar = botao => {
             if (botao?.tagName !== "BUTTON") return;
@@ -393,7 +400,6 @@
         const diasNoMes = new Date(anoSelecionado, mesSelecionado, 0).getDate();
         const primeiroDiaSemana = new Date(anoSelecionado, mesSelecionado - 1, 1).getDay();
         const valoresPorDia = mediaGrupo(registros, registro => registro.day);
-        const escala = obterEscalaValores(Object.values(valoresPorDia));
 
         adicionarCabecalhosDiasSemana(elementoDom);
 
@@ -408,7 +414,7 @@
             const celula = document.createElement("span");
             celula.className = "heatmap-cell calendar-heatmap__day";
             if (dia === diaSelecionado) celula.classList.add("is-selected");
-            celula.style.backgroundColor = obterCorMapaCalor(valor, escala);
+            celula.style.backgroundColor = corMediaDiaria(valor);
             celula.classList.toggle("has-value", Number.isFinite(valor));
             celula.innerHTML = `<span>${dia}</span><strong>${formatarValorMapaCalor(valor)}</strong>`;
             celula.title = valor == null ? `${preencherDigitos(dia)}/${preencherDigitos(mesSelecionado)} sem dados` : `${preencherDigitos(dia)}/${preencherDigitos(mesSelecionado)} média ${valor.toFixed(1)}°C`;
