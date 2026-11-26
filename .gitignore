@@ -8,3 +8,10 @@
 /docs/COMMIT_GUIDELINES_AI.md
 /docs/PLANO*CSHARP*.md
 /docs/ROTEIRO*CSHARP*.md
+
+# Dependencias, evidencias e arquivos locais de ferramentas
+/node_modules/
+/ui-ux-evidence/
+/.codex-attachments/
+/.codex-remote-attachments/
+/.ua/
