@@ -213,11 +213,9 @@ Atualizar afirmações vigentes com base no comportamento final testado. Preserv
 | [AI_QUICK_CONTEXT.md](AI_QUICK_CONTEXT.md) | Acrescentar o mapa anual e resumir os contratos corrigidos que sejam necessários para manutenção futura. |
 | [AI_SYSTEM_PROMPT.md](AI_SYSTEM_PROMPT.md) | Atualizar os resumos de consulta pública por cidade, mapa anual e comandos de manutenção; conferir o fechamento do bloco de código ao final do arquivo. |
 | [PLANO_LOGIN_GOOGLE_MODO_PUBLICO.md](PLANO_LOGIN_GOOGLE_MODO_PUBLICO.md) | Atualizar a seção “Status Atual” para incluir busca por cidade e recursos públicos posteriores; manter o desenho original identificado como histórico. |
-| [ROTEIRO_CSHARP_HEATMAP_365_DIAS.md](ROTEIRO_CSHARP_HEATMAP_365_DIAS.md) | Substituir a referência às cinco faixas antigas e à constante `coresAnuais`. O código auditado usa `coresMediaDiaria`, dez faixas entre os extremos abaixo de 15 °C e acima de 35 °C, e o teste anual verifica paridade com o calendário mensal. Conferir o estado final da paleta após COR-08. |
 | [ROTEIRO_CSHARP_AJUSTES_RECENTES_2026-10-30.md](ROTEIRO_CSHARP_AJUSTES_RECENTES_2026-10-30.md) | Preservar como referência datada. Qualquer atualização de paridade exige inspecionar novamente o projeto C#; esta auditoria não o revalidou. |
 | [UI_UX_ANALYSIS.md](../UI_UX_ANALYSIS.md) | Acrescentar o resultado atual de contraste e sua correção; alinhar o contrato final sobre rótulos de período dos gráficos ao código vigente; distinguir comandos históricos dos atuais. |
 | [PROMPT_UI_UX_REDESIGN.md](../PROMPT_UI_UX_REDESIGN.md) | Nenhuma correção funcional obrigatória identificada. Preservar como guia de análise, sem tratá-lo como prova de comportamento implementado. |
-| [COMMIT_GUIDELINES_AI.md](COMMIT_GUIDELINES_AI.md) | Nenhuma divergência funcional relevante identificada. Manter como documento de processo. |
 | [RELATORIO.md — nomenclatura](nomenclatura-pt-br/RELATORIO.md) | Preservar o registro histórico. Não apresentar seus testes anteriores como validação da versão atual. |
 
 **Critérios de aceite documental:**

@@ -351,7 +351,6 @@ Arquivos de apoio para manutenção:
 
 ## Revisão funcional de 24/11/2026
 
-Para aplicar os contratos no backend e frontend .NET, consulte o [plano de correções para o C#](PLANO_CORRECOES_CSHARP_2026-11-24.md). O destino foi inspecionado em leitura; sua implementação e seus testes permanecem pendentes.
 
 O mapa anual de Sala e Quarto termina na data selecionada e inclui exatamente 365 datas civis, desde fim − 364 dias, inclusive 29/02 quando aplicável. Cada célula usa a média de todas as temperaturas válidas do dia, sem arredondamento intermediário, e informa a quantidade de horas distintas cobertas entre 0 e 23 (até 24 horários). Ausência permanece sem média. Usa a raiz já recebida do Firebase, sem 365 consultas adicionais, e monta a grade ao expandir Visualizações Climáticas. Reutiliza resumos por objeto de dia via `WeakMap`; snapshots novos invalidam pela identidade dos objetos. Mouse, toque e foco atualizam o detalhe; uma célula participa do Tab, setas verticais movem um dia e horizontais sete. A grade tem rolagem horizontal própria e começa no período mais recente. Não integra Aquário, página pública, PDF, JSON ou cálculos da assistente.
 
