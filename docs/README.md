@@ -231,6 +231,7 @@ A validação verifica:
 - Navegação por clique e swipe touch horizontal, sem capturar a rolagem lateral de tabelas e heatmaps.
 - Seletor global de data.
 - Persistência da aba ativa em `localStorage`.
+- Cabeçalho com chips recolhido ao descer e reexibido ao subir em telas de até 640 px e em dispositivos touch em paisagem com até 540 px de altura. Popovers abertos mantêm o cabeçalho visível; movimento reduzido é respeitado.
 - Gráficos globais de temperatura/umidade por ambiente na aba Estação.
 - Aba Estação com ventilação e risco de mofo a partir dos sensores internos; chuva e UV entram por consulta opcional da localização, mantida somente em memória.
 - No modo privado, o card e o gráfico de chuva permanecem ocultos até a consulta de localização retornar dados externos válidos; depois disso exibem a janela de 24h observadas + 12h previstas.

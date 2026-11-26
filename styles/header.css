@@ -11,7 +11,7 @@
     backdrop-filter: blur(12px);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (pointer: coarse) and (orientation: landscape) and (max-height: 540px) {
     .app-header {
         transition: transform 0.22s ease;
         will-change: transform;
@@ -22,7 +22,7 @@
     }
 }
 
-@media (max-width: 640px) and (prefers-reduced-motion: reduce) {
+@media (max-width: 640px) and (prefers-reduced-motion: reduce), (pointer: coarse) and (orientation: landscape) and (max-height: 540px) and (prefers-reduced-motion: reduce) {
     .app-header {
         transition: none;
     }

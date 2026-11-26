@@ -178,33 +178,66 @@ try {
     verificar.ok(layoutPaisagem.toolbarSemEstouro, "A toolbar em paisagem não deve criar rolagem horizontal.");
     await paginaPaisagem.close();
 
-    const paginaCabecalho = await navegador.newPage({ viewport: { width: 390, height: 844 } });
+    const paginaCabecalho = await navegador.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true });
+    await paginaCabecalho.route("**/scripts/main.js?*", rota => rota.fulfill({ contentType: "text/javascript", body: "" }));
     await paginaCabecalho.goto(`http://127.0.0.1:${porta}/`, { waitUntil: "domcontentloaded" });
     await paginaCabecalho.evaluate(() => {
         document.body.style.minHeight = "3000px";
         document.getElementById("publicApp")?.removeAttribute("hidden");
+        window.ClimateUI.setupMobileHeader();
     });
-    await paginaCabecalho.evaluate(() => window.scrollTo(0, 500));
-    await paginaCabecalho.waitForFunction(() => document.querySelector(".app-header")?.classList.contains("is-hidden-on-scroll"));
-    await paginaCabecalho.waitForFunction(() => document.querySelector(".app-header")?.getBoundingClientRect().bottom <= 1);
-    const cabecalhoOculto = await paginaCabecalho.locator(".app-header").evaluate(elemento => elemento.getBoundingClientRect().bottom <= 1);
-    verificar.equal(cabecalhoOculto, true, "Cabeçalho móvel deve recolher ao rolar para baixo.");
-
-    await paginaCabecalho.evaluate(() => window.scrollTo(0, 320));
-    await paginaCabecalho.waitForFunction(() => !document.querySelector(".app-header")?.classList.contains("is-hidden-on-scroll"));
-    await paginaCabecalho.waitForFunction(() => document.querySelector(".app-header")?.getBoundingClientRect().top >= -1);
-    const cabecalhoVisivel = await paginaCabecalho.locator(".app-header").evaluate(elemento => elemento.getBoundingClientRect().top >= -1);
-    verificar.equal(cabecalhoVisivel, true, "Cabeçalho móvel deve reaparecer ao rolar para cima.");
-
-    await paginaCabecalho.evaluate(() => {
-        document.getElementById("seasonIndicator")?.setAttribute("aria-expanded", "true");
-        window.dispatchEvent(new CustomEvent("header-popover-open", { detail: { source: "season" } }));
-        window.scrollTo(0, 700);
-    });
-    await paginaCabecalho.waitForTimeout(100);
-    const cabecalhoComPopover = await paginaCabecalho.locator(".app-header").evaluate(elemento => !elemento.classList.contains("is-hidden-on-scroll"));
-    verificar.equal(cabecalhoComPopover, true, "Cabeçalho móvel deve permanecer visível com popover aberto.");
+    for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }, { width: 932, height: 430 }, { width: 390, height: 844 }]) {
+        await paginaCabecalho.setViewportSize(viewport);
+        await paginaCabecalho.evaluate(() => window.scrollTo(0, 0));
+        await paginaCabecalho.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        await paginaCabecalho.waitForFunction(() => !document.querySelector(".app-header").classList.contains("is-hidden-on-scroll"));
+        await paginaCabecalho.evaluate(() => window.scrollTo(0, 500));
+        try {
+            await paginaCabecalho.waitForFunction(() => document.querySelector(".app-header").getBoundingClientRect().bottom <= 1, null, { timeout: 2000 });
+        } catch (erro) {
+            const estado = await paginaCabecalho.locator(".app-header").evaluate(el => ({
+                largura: innerWidth, altura: innerHeight, rolagem: scrollY, classe: el.className,
+                impreciso: matchMedia("(pointer: coarse)").matches,
+                alturaCabecalho: el.offsetHeight, base: el.getBoundingClientRect().bottom,
+                transformacao: getComputedStyle(el).transform,
+            }));
+            throw new Error(`Cabeçalho não recolheu: ${JSON.stringify(estado)}`, { cause: erro });
+        }
+        verificar.equal(await paginaCabecalho.locator(".app-header").evaluate(el => el.classList.contains("is-hidden-on-scroll")), true,
+            `Cabeçalho deve recolher ao descer em ${viewport.width}x${viewport.height}.`);
+        await paginaCabecalho.evaluate(() => window.scrollTo(0, 320));
+        await paginaCabecalho.waitForFunction(() => document.querySelector(".app-header").getBoundingClientRect().top >= -1);
+        verificar.equal(await paginaCabecalho.locator(".app-header").evaluate(el => el.classList.contains("is-hidden-on-scroll")), false,
+            "Cabeçalho deve reaparecer ao subir.");
+        await paginaCabecalho.evaluate(() => {
+            document.getElementById("seasonIndicator").setAttribute("aria-expanded", "true");
+            window.dispatchEvent(new CustomEvent("header-popover-open", { detail: { source: "season" } }));
+            window.scrollTo(0, 700);
+        });
+        await paginaCabecalho.waitForTimeout(100);
+        verificar.equal(await paginaCabecalho.locator(".app-header").evaluate(el => el.classList.contains("is-hidden-on-scroll")), false,
+            "Cabeçalho deve permanecer visível com popover aberto nas duas orientações.");
+        await paginaCabecalho.evaluate(() => document.getElementById("seasonIndicator").setAttribute("aria-expanded", "false"));
+    }
+    await paginaCabecalho.setViewportSize({ width: 932, height: 430 });
+    await paginaCabecalho.emulateMedia({ reducedMotion: "reduce" });
+    verificar.equal(await paginaCabecalho.locator(".app-header").evaluate(el => getComputedStyle(el).transitionDuration), "0s");
     await paginaCabecalho.close();
+
+    for (const opcoes of [
+        { viewport: { width: 844, height: 390 }, hasTouch: false },
+        { viewport: { width: 1440, height: 900 }, hasTouch: false },
+        { viewport: { width: 1024, height: 768 }, hasTouch: true },
+    ]) {
+        const paginaFixa = await navegador.newPage(opcoes);
+        await paginaFixa.route("**/scripts/main.js?*", rota => rota.fulfill({ contentType: "text/javascript", body: "" }));
+        await paginaFixa.goto(`http://127.0.0.1:${porta}/`, { waitUntil: "domcontentloaded" });
+        await paginaFixa.evaluate(() => { document.body.style.minHeight = "3000px"; window.ClimateUI.setupMobileHeader(); window.scrollTo(0, 500); });
+        await paginaFixa.waitForTimeout(100);
+        verificar.equal(await paginaFixa.locator(".app-header").evaluate(el => !el.classList.contains("is-hidden-on-scroll") && el.getBoundingClientRect().top >= -1), true,
+            "Desktop com mouse e tablet alto devem manter o cabeçalho fixo.");
+        await paginaFixa.close();
+    }
 
     console.log("Testes axe, contraste e nomes acessíveis concluídos com sucesso.");
 } finally {

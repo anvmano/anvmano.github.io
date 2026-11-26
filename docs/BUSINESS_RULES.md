@@ -1001,6 +1001,14 @@ Se alterada: foco visual, painel exibido e estado ARIA podem divergir.
 
 Criticidade: Media.
 
+## Regra: recolhimento do cabeçalho móvel — revisão de 26/11/2026
+
+Arquivos: `scripts/ui/ui.js` e `styles/header.css`. A condição deve ser idêntica no JavaScript e no CSS: largura até 640 px, ou ponteiro principal impreciso (`pointer: coarse`) em paisagem com altura até 540 px. A segunda condição cobre celulares girados cuja largura ultrapassa 640 px.
+
+Ao descer além da altura do cabeçalho, um deslocamento de pelo menos 8 px recolhe o cabeçalho inteiro, incluindo os chips; ao subir pelo menos 8 px ou retornar ao topo, ele reaparece. Popover aberto, abertura de popover e entrada de foco no cabeçalho o mantêm ou tornam visível. Mudanças da condição de viewport restauram a apresentação e a referência de rolagem. Respeitar `prefers-reduced-motion` nas duas orientações. Desktop com mouse e tablets com altura acima de 540 px continuam com o comportamento fixo existente.
+
+Regressão: `npm run test:axe` cobre 390×844, 844×390 e 932×430, rotação sem recarregar, popover, movimento reduzido, janela desktop baixa com mouse, desktop normal e tablet alto.
+
 ## Regra: navegacao touch entre abas
 
 Arquivo: `scripts/ui/ui.js`

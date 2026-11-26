@@ -294,7 +294,7 @@
         const cabecalho = document.querySelector(".app-header");
         if (!cabecalho || cabecalho.dataset.autoHideReady === "true") return;
 
-        const consultaMovel = window.matchMedia("(max-width: 640px)");
+        const consultaMovel = window.matchMedia("(max-width: 640px), (pointer: coarse) and (orientation: landscape) and (max-height: 540px)");
         const limiteMovimento = 8;
         let posicaoReferencia = Math.max(0, window.scrollY);
         let quadroPendente = false;
