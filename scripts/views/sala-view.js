@@ -21,11 +21,12 @@
         ], dados, dataSelecionada === ClimateData.dataAtual());
     }
 
-    function renderizar({ data: dados, selectedDate: dataSelecionada, createChart: criarGrafico, colors: cores, ui: interfaceUsuario }) {
+    function renderizar({ data: dados, dadosOutroAmbiente, selectedDate: dataSelecionada, createChart: criarGrafico, colors: cores, ui: interfaceUsuario }) {
         const dadosFiltrados = ClimateData.filterDataByDays(dados, 2, dataSelecionada);
         const dadosGrafico = ClimateData.filterDataByRollingHours(dados, dataSelecionada, 24);
         ClimateAnalytics.renderStats("sala", dadosFiltrados, dataSelecionada);
         ClimateAnalytics.renderAdvancedClimateViews(dados, dataSelecionada, {
+            dadosOutroAmbiente, campoOutroAmbiente: campos.room.temperature,
             metricKey: camposSala.temperature,
             containers: ids.advancedViews.livingRoom,
         });

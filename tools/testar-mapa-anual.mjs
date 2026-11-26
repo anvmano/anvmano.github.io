@@ -29,13 +29,21 @@ try {
         const dados = Object.fromEntries(valores.map((Temperatura, i) => [
             String(i + 1).padStart(2, "0") + "-02-2024", { "10-00": { a: { Temperatura } } },
         ]));
-        window.ClimateAnalytics.renderAdvancedClimateViews(dados, "29-02-2024", { containers: { mapaAnual: "anual" } });
+        window.ClimateAnalytics.renderAdvancedClimateViews(dados, "29-02-2024", {
+            containers: { mapaAnual: "anual" }, campoOutroAmbiente: "temp",
+            dadosOutroAmbiente: {
+                "10-01-2024": { "10-00": { a: { temp: 38 }, b: { temp: 42 } } },
+                "01-01-2022": { "10-00": { a: { temp: 99 } } },
+            },
+        });
         return [...document.querySelectorAll("#anual button")].filter(b => !b.title.includes("Sem dados")).map(b => b.style.backgroundColor);
     }, temperaturas);
     const coresMensais = await pagina.locator(".calendar-heatmap__day").evaluateAll(dias => dias.map(dia => dia.style.backgroundColor));
     assert.deepEqual(coresMensais.slice(0, temperaturas.length), cores);
     assert.equal(coresMensais.at(-1), "var(--border)");
-    assert.deepEqual(cores, ["99,102,241", "67,133,220", "56,180,237", "36,198,183", "163,214,92", "242,212,80", "255,170,66", "247,122,57", "239,83,80", "239,83,80", "220,57,118"].map(rgb => "rgb(" + rgb.replaceAll(",", ", ") + ")"));
+    assert.equal(cores[0], "rgb(99, 102, 241)");
+    assert.equal(new Set(cores).size, temperaturas.length);
+    assert.match(await pagina.locator("#anual .anual-legenda").textContent(), /14,9 °C.*40 °C/);
     const contrastes = await pagina.locator(".calendar-heatmap__day.has-value").evaluateAll(celulas => celulas.map(celula => {
         const luminancia = cor => {
             const canais = cor.match(/\d+/g).slice(0, 3).map(Number).map(valor => valor / 255)

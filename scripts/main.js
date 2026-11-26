@@ -226,6 +226,7 @@ function obterOpcoesAmpliacao(idOrigem) {
 
 function renderizarDadosQuarto(dados) {
     QuartoView.render({
+        dadosOutroAmbiente: dadosMaisRecentes.livingRoom,
         data: dados,
         selectedDate: dataSelecionada,
         createChart: criarGrafico,
@@ -266,6 +267,7 @@ function renderizarDadosAquario(dados) {
 
 function renderizarDadosSala(dados) {
     SalaView.render({
+        dadosOutroAmbiente: dadosMaisRecentes.room,
         data: dados,
         selectedDate: dataSelecionada,
         createChart: criarGrafico,
@@ -531,6 +533,7 @@ async function configurarEscutasFirebase() {
         if (modoPublicoAtivo || geracaoAtual !== geracaoFirebase) return;
         atualizarAvisoConexao("Quarto", false);
         dadosMaisRecentes.room = dados;
+        if (ClimateUI.getActiveTabName() === "Tab1" && document.querySelector("#Tab1 .advanced-section:not(.is-collapsed)")) renderizarDadosSala(dadosMaisRecentes.livingRoom);
         if (!dados) {
             renderizarDadosQuarto(null);
             agendarRenderizacaoEstacao();
@@ -588,6 +591,7 @@ async function configurarEscutasFirebase() {
         if (modoPublicoAtivo || geracaoAtual !== geracaoFirebase) return;
         atualizarAvisoConexao("Sala", false);
         dadosMaisRecentes.livingRoom = dados;
+        if (ClimateUI.getActiveTabName() === "Tab2" && document.querySelector("#Tab2 .advanced-section:not(.is-collapsed)")) renderizarDadosQuarto(dadosMaisRecentes.room);
         if (!dados) {
             ClimateAqi.update(null);
             renderizarDadosSala(null);

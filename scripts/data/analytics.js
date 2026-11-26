@@ -233,10 +233,11 @@
         const registrosDia = registrosMes.filter(registro => registro.firebaseDate === dataNormalizada);
 
         try {
-            renderizarCalendarioClimaticoMensal(registrosMes, dataNormalizada, recipientes.monthlyCalendar);
+            const escala = limitesDasMedias(dados, chaveMetrica, partesData, opcoes);
+            renderizarCalendarioClimaticoMensal(registrosMes, dataNormalizada, recipientes.monthlyCalendar, escala);
             renderizarMapaCalorHorario(registrosDia, dataNormalizada, recipientes.hourlyHeatmap);
             renderizarMapaCalorSemanal(registrosMes, dataNormalizada, recipientes.weeklyHeatmap);
-            renderizarMapaAnual(dados, chaveMetrica, partesData, recipientes.mapaAnual);
+            renderizarMapaAnual(dados, chaveMetrica, partesData, recipientes.mapaAnual, escala);
         } catch (erro) {
             window.ClimateDiagnostics?.depurar("Falha ao renderizar visualizações climáticas avançadas.", erro);
         }
@@ -244,13 +245,44 @@
 
     const resumosAnuais = new WeakMap();
     const coresMediaDiaria = ["#6366F1", "#4385DC", "#38B4ED", "#24C6B7", "#A3D65C", "#F2D450", "#FFAA42", "#F77A39", "#EF5350", "#DC3976"];
-    const faixasAnuais = ["< 15", "15 a < 17,5", "17,5 a < 20", "20 a < 22,5", "22,5 a < 25", "25 a < 27,5", "27,5 a < 30", "30 a < 32,5", "32,5 a 35", "> 35"];
+    const canaisDiarios = coresMediaDiaria.map(cor => cor.slice(1).match(/../g).map(canal => parseInt(canal, 16)));
 
-    function corMediaDiaria(media) {
-        if (!Number.isFinite(media)) return "var(--border)";
-        if (media < 15) return coresMediaDiaria[0];
-        if (media > 35) return coresMediaDiaria[9];
-        return coresMediaDiaria[Math.min(8, 1 + Math.floor((media - 15) / 2.5))];
+    function limitesDasMedias(dados, campo, fim, opcoes) {
+        let min = Infinity, max = -Infinity;
+        const dia = new Date(fim.year, fim.month - 1, fim.day - 364, 12);
+        for (let i = 0; i < 365; i++, dia.setDate(dia.getDate() + 1)) {
+            const chave = [preencherDigitos(dia.getDate()), preencherDigitos(dia.getMonth() + 1), dia.getFullYear()].join("-");
+            for (const resumo of [resumirDia(dados?.[chave], chave, campo), resumirDia(opcoes.dadosOutroAmbiente?.[chave], chave, opcoes.campoOutroAmbiente)]) {
+                if (!resumo) continue;
+                min = Math.min(min, resumo.media);
+                max = Math.max(max, resumo.media);
+            }
+        }
+        return { min, max };
+    }
+
+    function corMediaDiaria(media, { min, max }) {
+        if (!Number.isFinite(media) || !Number.isFinite(min)) return "var(--border)";
+        const fracao = min === max ? 0.5 : Math.max(0, Math.min(1, (media - min) / (max - min)));
+        const posicao = fracao * (canaisDiarios.length - 1);
+        const inicio = canaisDiarios[Math.floor(posicao)], fim = canaisDiarios[Math.ceil(posicao)];
+        return "rgb(" + inicio.map((v, i) => Math.round(v + (fim[i] - v) * (posicao % 1))).join(",") + ")";
+    }
+
+    function preencherLegendaDiaria(legenda, escala) {
+        const formatar = v => v.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + " °C";
+        legenda.replaceChildren();
+        if (Number.isFinite(escala.min)) {
+            const barra = document.createElement("b");
+            barra.style.cssText = "width:8rem;height:0.65rem;align-self:center;border-radius:3px";
+            barra.style.background = escala.min === escala.max ? corMediaDiaria(escala.min, escala) : "linear-gradient(90deg," + coresMediaDiaria.join(",") + ")";
+            legenda.append(formatar(escala.min), barra);
+            if (escala.max !== escala.min) legenda.append(formatar(escala.max));
+        }
+        const ausente = document.createElement("span");
+        ausente.style.setProperty("--cor", "var(--border)");
+        ausente.textContent = "Sem dados";
+        legenda.append(ausente);
     }
 
     function resumirDia(dia, chave, campo) {
@@ -266,21 +298,15 @@
         return resumo;
     }
 
-    function renderizarMapaAnual(dados, campo, fim, id) {
+    function renderizarMapaAnual(dados, campo, fim, id, escala) {
         const painel = document.getElementById(id);
         if (!painel) return;
         const novoPeriodo = painel.dataset.periodo !== fim.firebaseDate;
         if (novoPeriodo) {
             painel.dataset.periodo = fim.firebaseDate;
             painel.innerHTML = '<div class="anual-rolagem"><div class="anual-grade"></div></div><div class="anual-legenda"></div><output></output>';
-            const legenda = painel.querySelector(".anual-legenda");
-            [...faixasAnuais.map(f => f + " °C"), "Sem dados"].forEach((texto, i) => {
-                const item = document.createElement("span");
-                item.style.setProperty("--cor", coresMediaDiaria[i] || "var(--border)");
-                item.textContent = texto;
-                legenda.append(item);
-            });
         }
+        preencherLegendaDiaria(painel.querySelector(".anual-legenda"), escala);
         const grade = painel.querySelector(".anual-grade");
         const detalhe = painel.querySelector("output");
         const dia = new Date(fim.year, fim.month - 1, fim.day - 364, 12);
@@ -318,7 +344,7 @@
                 botao.title = texto;
                 botao.setAttribute("aria-label", texto);
             }
-            botao.style.backgroundColor = corMediaDiaria(resumo?.media);
+            botao.style.backgroundColor = corMediaDiaria(resumo?.media, escala);
         }
         const selecionar = botao => {
             if (botao?.tagName !== "BUTTON") return;
@@ -395,7 +421,7 @@
         return registros;
     }
 
-    function renderizarCalendarioClimaticoMensal(registros, dataSelecionada, idRecipiente) {
+    function renderizarCalendarioClimaticoMensal(registros, dataSelecionada, idRecipiente, escala) {
         const elementoDom = document.getElementById(idRecipiente);
         if (!elementoDom) return;
 
@@ -422,12 +448,17 @@
             const celula = document.createElement("span");
             celula.className = "heatmap-cell calendar-heatmap__day";
             if (dia === diaSelecionado) celula.classList.add("is-selected");
-            celula.style.backgroundColor = corMediaDiaria(valor);
+            celula.style.backgroundColor = corMediaDiaria(valor, escala);
             celula.classList.toggle("has-value", Number.isFinite(valor));
             celula.innerHTML = `<span>${dia}</span><strong>${formatarValorMapaCalor(valor)}</strong>`;
             celula.title = valor == null ? `${preencherDigitos(dia)}/${preencherDigitos(mesSelecionado)} sem dados` : `${preencherDigitos(dia)}/${preencherDigitos(mesSelecionado)} média ${valor.toFixed(1)}°C`;
             elementoDom.appendChild(celula);
         }
+        const legenda = document.createElement("div");
+        legenda.className = "anual-legenda";
+        legenda.style.gridColumn = "1 / -1";
+        preencherLegendaDiaria(legenda, escala);
+        elementoDom.append(legenda);
     }
 
     function renderizarMapaCalorHorario(registros, dataSelecionada, idRecipiente) {
